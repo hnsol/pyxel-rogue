@@ -857,25 +857,62 @@ class Game:
             self.msg("You died... [A/Start] to restart."); self.st=ST_DEAD
 
     # ---------- Dash ----------
-    def can_dash(self, dx, dy):
-        """Check if dash can continue."""
-        nx, ny = self.p.x+dx, self.p.y+dy
-        if not self.walkable(nx, ny): return False
-        # Enemy visible?
+    def dash_turn_ok(self,x,y):
+        return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in (T_CORR,T_DOOR)
+
+    def next_dash_dir(self,dx,dy):
+        if dx and dy: return None
+        px,py=self.p.x,self.p.y
+        if dx:
+            opts=[(0,-1),(0,1)]
+        elif dy:
+            opts=[(-1,0),(1,0)]
+        else:
+            return None
+        turns=[d for d in opts if self.dash_turn_ok(px+d[0],py+d[1])]
+        return turns[0] if len(turns)==1 else None
+
+    def dash_should_stop_here(self,dx,dy):
+        px,py=self.p.x,self.p.y
+        tile=self.tm[py][px]
+        if tile in (T_DOOR,T_STAIR): return True
+        if self.gi_at(px,py): return True
+        if tile!=T_CORR: return False
+        if dx and dy: return False
+        fwd=self.dash_turn_ok(px+dx,py+dy)
+        if dx:
+            sides=[(0,-1),(0,1)]
+        else:
+            sides=[(-1,0),(1,0)]
+        side_dirs=[d for d in sides if self.dash_turn_ok(px+d[0],py+d[1])]
+        if fwd and side_dirs:
+            return True
+        if not fwd:
+            nd=self.next_dash_dir(dx,dy)
+            if nd:
+                self.dash_d=nd
+                return False
+            return True
+        return False
+
+    def dash_step(self):
+        dx,dy=self.dash_d
+        nx,ny=self.p.x+dx,self.p.y+dy
+        next_mon=self.mon_at(nx,ny)
         for m in self.mons:
-            if m.alive and (m.x,m.y) in self.visible: return False
-        # Item at destination?
-        if self.gi_at(nx, ny): return False
-        # Stairs at destination?
-        if self.tm[ny][nx] == T_STAIR: return False
-        # Junction? (corridor with >2 exits = intersection)
-        if self.tm[ny][nx] == T_CORR:
-            exits = sum(1 for ddx,ddy in((-1,0),(1,0),(0,-1),(0,1),(1,1),(-1,1),(1,-1),(-1,-1))
-                        if self.walkable(nx+ddx,ny+ddy))
-            if exits > 2: return False
-        # Door? Stop at doors
-        if self.tm[ny][nx] == T_DOOR: return False
-        return True
+            if m.alive and (m.x,m.y) in self.visible and m is not next_mon:
+                self.dashing=False; return
+        if not self.walkable(nx,ny) and not next_mon:
+            nd=self.next_dash_dir(dx,dy)
+            if not nd:
+                self.dashing=False; return
+            self.dash_d=nd
+            dx,dy=nd
+        ox,oy=self.p.x,self.p.y
+        moved=self.try_move(dx,dy)
+        if not moved or (self.p.x,self.p.y)==(ox,oy) or self.st!=ST_PLAY or not self.p.alive:
+            self.dashing=False; return
+        self.dashing=not self.dash_should_stop_here(dx,dy)
 
     # ---------- Menu logic ----------
     def open_menu(self): self.st=ST_MENU; self.mcur=0
@@ -968,6 +1005,7 @@ class Game:
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
     def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
+    def btn_overlay_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B) or self.b_tap
     def btn_menu(self): return self.kp(pyxel.KEY_C) or self.b_tap
     def btn_wait(self):
         return self.kp(pyxel.KEY_PERIOD) or (
@@ -994,7 +1032,7 @@ class Game:
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
         elif self.st in(ST_STATUS,ST_HELP,ST_MAP):
-            if self.btn_a() or self.btn_cancel() or self.btn_b() or self.btn_status() or self.btn_back() or self.btn_r():
+            if self.btn_a() or self.btn_overlay_cancel() or self.btn_status() or self.btn_back() or self.btn_r():
                 self.st=ST_PLAY
 
     def upd_play(self):
@@ -1011,11 +1049,7 @@ class Game:
             self.dash_t+=1
             if self.dash_t>=DASH_INTERVAL:
                 self.dash_t=0
-                dx,dy=self.dash_d
-                if self.can_dash(dx,dy):
-                    self.try_move(dx,dy)
-                else:
-                    self.dashing=False
+                self.dash_step()
             return
 
         # Overlays
@@ -1031,7 +1065,7 @@ class Game:
             if d:
                 self.dashing=True; self.dash_d=d; self.dash_t=0
                 self.b_used=True
-                self.try_move(*d)
+                self.dash_step()
                 return
 
         # Normal direction
@@ -1051,18 +1085,18 @@ class Game:
         d=self.dir_press()
         if d: self.mcur=(self.mcur+d[1])%len(MENU_ACTIONS); return
         if self.btn_a(): self.menu_select(); return
-        if self.btn_cancel() or self.btn_b() or self.btn_menu(): self.close_menu(); return
+        if self.btn_overlay_cancel(): self.close_menu(); return
 
     def upd_item(self):
         d=self.dir_press()
         if d and self.fitems: self.icur=(self.icur+d[1])%len(self.fitems); return
         if self.btn_a(): self.item_confirm(); return
-        if self.btn_cancel() or self.btn_b(): self.st=ST_MENU; return
+        if self.btn_overlay_cancel(): self.st=ST_MENU; return
 
     def upd_dir(self):
         d=self.dir_press()
         if d: self.dir_confirm(*d); return
-        if self.btn_cancel() or self.btn_b(): self.st=ST_ITEM; return
+        if self.btn_overlay_cancel(): self.st=ST_ITEM; return
 
     def open_aux(self):
         self.st=ST_AUX; self.acur=0
@@ -1070,7 +1104,7 @@ class Game:
     def upd_aux(self):
         d=self.dir_press()
         if d: self.acur=(self.acur+d[1])%len(AUX_ACTIONS); return
-        if self.btn_cancel() or self.btn_b(): self.st=ST_PLAY; return
+        if self.btn_overlay_cancel(): self.st=ST_PLAY; return
         if not self.btn_a(): return
         act=AUX_ACTIONS[self.acur]
         if act=="Map": self.st=ST_MAP
