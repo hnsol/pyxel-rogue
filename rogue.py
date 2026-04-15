@@ -3,13 +3,13 @@ PYXEL ROGUE  Phase 3
 Faithful Rogue 5.4 clone  ·  Shiren-style controls  ·  BDF font
 
 Gamepad:                        Keyboard:
-  D-pad        Move (4-dir)      Arrow / HJKL   Move
-  Start+D-pad  Move (diagonal)   YUBN           Diagonal
+  D-pad        Move (8-dir)      Arrow / HJKL   Move
+  Start tap    Diag assist       YUBN           Diagonal
   B + D-pad    Dash (run)        Shift+dir      Dash
   A            Action/Confirm    Z / Enter      Action
   B tap        Menu/Cancel       Esc            Cancel
   A + B        Wait a turn       . (period)     Wait
-  Back         Toggle map        Tab            Map
+  Back         Assist menu       Tab            Assist menu
   X            Status shortcut   I              Status
   R            Help              ?              Help
   Search                         S
@@ -75,6 +75,7 @@ DASH_INTERVAL = 3                # frames between dash steps
 # ===========================================================
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
 ST_DEAD = 4; ST_STATUS = 5; ST_HELP = 6; ST_MAP = 7
+ST_AUX = 8
 
 # ===========================================================
 #  Item categories
@@ -174,6 +175,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
+AUX_ACTIONS = ["Map", "Status", "Help", "Search"]
 
 # ===========================================================
 #  Classes
@@ -289,7 +291,15 @@ class DGen:
     def gen(depth):
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
         sl=[(gx,gy) for gy in range(GRID_R) for gx in range(GRID_C)]
-        random.shuffle(sl); nr=random.randint(6,9); act=set(sl[:nr])
+        random.shuffle(sl); nr=random.randint(6,9)
+        act={random.choice(sl)}
+        while len(act)<nr:
+            frontier=[]
+            for gx,gy in act:
+                for nx,ny in ((gx+1,gy),(gx-1,gy),(gx,gy+1),(gx,gy-1)):
+                    if 0<=nx<GRID_C and 0<=ny<GRID_R and (nx,ny) not in act:
+                        frontier.append((nx,ny))
+            act.add(random.choice(frontier))
         for gx,gy in sl:
             if (gx,gy) not in act: continue
             sx,sy=gx*SEC_W,gy*SEC_H
@@ -307,10 +317,10 @@ class DGen:
                 if (gx,gy) not in sr: continue
                 if gx+1<GRID_C and (gx+1,gy) in sr:
                     p=((gx,gy),(gx+1,gy))
-                    if p not in conn: DGen._corr(tm,sr[(gx,gy)],sr[(gx+1,gy)]); conn.add(p)
+                    if p not in conn: DGen._conn(tm,sr[(gx,gy)],sr[(gx+1,gy)],True); conn.add(p)
                 if gy+1<GRID_R and (gx,gy+1) in sr:
                     p=((gx,gy),(gx,gy+1))
-                    if p not in conn: DGen._corr(tm,sr[(gx,gy)],sr[(gx,gy+1)]); conn.add(p)
+                    if p not in conn: DGen._conn(tm,sr[(gx,gy)],sr[(gx,gy+1)],False); conn.add(p)
         DGen._ensure(tm,rooms); return tm,rooms
     @staticmethod
     def _room(t,r):
@@ -321,26 +331,81 @@ class DGen:
                     elif x==r.x or x==r.x+r.w-1: t[y][x]=T_VWALL
                     else: t[y][x]=T_FLOOR
     @staticmethod
-    def _corr(t,r1,r2):
-        x1,y1,x2,y2=r1.cx,r1.cy,r2.cx,r2.cy
-        if random.random()<.5: DGen._hl(t,x1,x2,y1); DGen._vl(t,y1,y2,x2)
-        else: DGen._vl(t,y1,y2,x1); DGen._hl(t,x1,x2,y2)
+    def _conn(t,r1,r2,horiz=None):
+        """Connect two rooms by choosing wall doors first, like Rogue's conn()."""
+        if horiz is None:
+            horiz = abs(r1.cx-r2.cx) >= abs(r1.cy-r2.cy)
+        if horiz:
+            if r1.cx <= r2.cx:
+                d1=DGen._pick_wall_door(t,r1,"R")
+                d2=DGen._pick_wall_door(t,r2,"L")
+                s=(d1[0]+1,d1[1]); e=(d2[0]-1,d2[1])
+            else:
+                d1=DGen._pick_wall_door(t,r1,"L")
+                d2=DGen._pick_wall_door(t,r2,"R")
+                s=(d1[0]-1,d1[1]); e=(d2[0]+1,d2[1])
+        else:
+            if r1.cy <= r2.cy:
+                d1=DGen._pick_wall_door(t,r1,"D")
+                d2=DGen._pick_wall_door(t,r2,"U")
+                s=(d1[0],d1[1]+1); e=(d2[0],d2[1]-1)
+            else:
+                d1=DGen._pick_wall_door(t,r1,"U")
+                d2=DGen._pick_wall_door(t,r2,"D")
+                s=(d1[0],d1[1]-1); e=(d2[0],d2[1]+1)
+        DGen._door(t,d1); DGen._door(t,d2)
+        DGen._dig_pass(t,s,e,horiz)
+    @staticmethod
+    def _pick_wall_door(t,r,side):
+        if side in ("L","R"):
+            x = r.x if side=="L" else r.x+r.w-1
+            cands=[(x,y) for y in range(r.y+1,r.y+r.h-1)]
+        else:
+            y = r.y if side=="U" else r.y+r.h-1
+            cands=[(x,y) for x in range(r.x+1,r.x+r.w-1)]
+        random.shuffle(cands)
+        for p in cands:
+            if DGen._door_ok(t,p): return p
+        return cands[0]
+    @staticmethod
+    def _door_ok(t,p):
+        x,y=p
+        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
+            nx,ny=x+dx,y+dy
+            if 0<=nx<MAP_W and 0<=ny<MAP_H and t[ny][nx]==T_DOOR:
+                return False
+        return True
+    @staticmethod
+    def _door(t,p):
+        x,y=p
+        if 0<=x<MAP_W and 0<=y<MAP_H: t[y][x]=T_DOOR
+    @staticmethod
+    def _dig_pass(t,s,e,first_horiz):
+        x,y=s; ex,ey=e
+        if first_horiz:
+            turn_x=random.randint(min(x,ex),max(x,ex)) if x!=ex else x
+            DGen._hl(t,x,turn_x,y)
+            DGen._vl(t,y,ey,turn_x)
+            DGen._hl(t,turn_x,ex,ey)
+        else:
+            turn_y=random.randint(min(y,ey),max(y,ey)) if y!=ey else y
+            DGen._vl(t,y,turn_y,x)
+            DGen._hl(t,x,ex,turn_y)
+            DGen._vl(t,turn_y,ey,ex)
     @staticmethod
     def _hl(t,x1,x2,y):
         if not(0<=y<MAP_H): return
         for x in range(min(x1,x2),max(x1,x2)+1):
             if not(0<=x<MAP_W): continue
             v=t[y][x]
-            if v in(T_HWALL,T_VWALL): t[y][x]=T_DOOR
-            elif v==T_VOID: t[y][x]=T_CORR
+            if v==T_VOID or v==T_CORR: t[y][x]=T_CORR
     @staticmethod
     def _vl(t,y1,y2,x):
         if not(0<=x<MAP_W): return
         for y in range(min(y1,y2),max(y1,y2)+1):
             if not(0<=y<MAP_H): continue
             v=t[y][x]
-            if v in(T_HWALL,T_VWALL): t[y][x]=T_DOOR
-            elif v==T_VOID: t[y][x]=T_CORR
+            if v==T_VOID or v==T_CORR: t[y][x]=T_CORR
     @staticmethod
     def _ensure(t,rooms):
         if len(rooms)<=1: return
@@ -356,7 +421,7 @@ class DGen:
         base=flood(rooms[0].cx,rooms[0].cy)
         for r in rooms[1:]:
             if(r.cx,r.cy) not in base:
-                DGen._corr(t,rooms[0],r); base=flood(rooms[0].cx,rooms[0].cy)
+                DGen._conn(t,rooms[0],r); base=flood(rooms[0].cx,rooms[0].cy)
 
 # ===========================================================
 #  Item factory
@@ -412,12 +477,14 @@ class Game:
         self.ident = IdentTable()
         self.msgs = []; self.explored = set(); self.visible = set()
         self.gitems = []; self.mons = []; self.turn = 0
-        self.st = ST_PLAY; self.mcur = 0; self.icur = 0
+        self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.fitems = []
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
         self.b_prev = False; self.b_frames = 0
         self.b_used = False; self.b_tap = False
+        self.diag_assist = False
+        self.death_cause = ""
         self.descend()
         self.msg("Welcome to the Dungeons of Doom!")
 
@@ -534,6 +601,7 @@ class Game:
         if th>=self.p.ac or th==20:
             dmg=max(1,m.atk+random.randint(0,2))
             self.p.hp-=dmg; self.msg(f"The {m.name} hits! ({dmg})")
+            if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                 self.p.arm.ench-=1; self.p.recalc_ac(); self.msg("Your armor weakens!")
             if "steal_gold" in m.flags and self.p.gold>0:
@@ -773,13 +841,20 @@ class Game:
     def end_turn(self):
         self.turn+=1; m=self.p.hunger()
         if m: self.msg(m)
+        if self.p.hp<=0 and not self.death_cause:
+            self.death_cause="starved to death"
+        if not self.p.alive:
+            self.msg("You died... [A/Start] to restart."); self.st=ST_DEAD
+            return
         if self.p.stuck>0: self.p.stuck-=1
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
         for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
-        if not self.p.alive: self.msg("You died... [R] to restart."); self.st=ST_DEAD
+        if not self.p.alive:
+            if not self.death_cause: self.death_cause="died"
+            self.msg("You died... [A/Start] to restart."); self.st=ST_DEAD
 
     # ---------- Dash ----------
     def can_dash(self, dx, dy):
@@ -871,19 +946,18 @@ class Game:
         if self.kp(pyxel.KEY_U): return (1,-1)
         if self.kp(pyxel.KEY_B): return (-1,1)
         if self.kp(pyxel.KEY_N): return (1,1)
-        # GB Shiren-style diagonal: Start + cardinal = diagonal
-        start_held = self.kh(pyxel.GAMEPAD1_BUTTON_START)
-        if start_held:
-            if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_UP):    return (-1,-1)  # NW
-            if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):  return (1,-1)  # NE
-            if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):   return (1,1)   # SE
-            if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):   return (-1,1)  # SW
-        # D-pad simultaneous (natural diagonal)
         u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
-        if u and r and (self.kp(pyxel.KEY_UP)or self.kp(pyxel.KEY_RIGHT)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)): return (1,-1)
-        if u and l and (self.kp(pyxel.KEY_UP)or self.kp(pyxel.KEY_LEFT)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)): return (-1,-1)
-        if d and r and (self.kp(pyxel.KEY_DOWN)or self.kp(pyxel.KEY_RIGHT)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)): return (1,1)
-        if d and l and (self.kp(pyxel.KEY_DOWN)or self.kp(pyxel.KEY_LEFT)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)or self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)): return (-1,1)
+        diag_pressed = (
+            self.kp(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
+                    pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                    pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        )
+        if u and r and diag_pressed: return (1,-1)
+        if u and l and diag_pressed: return (-1,-1)
+        if d and r and diag_pressed: return (1,1)
+        if d and l and diag_pressed: return (-1,1)
+        if self.diag_assist:
+            return None
         # Cardinal
         if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):    return (0,-1)
         if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):  return (0,1)
@@ -893,6 +967,7 @@ class Game:
 
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
+    def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
     def btn_menu(self): return self.kp(pyxel.KEY_C) or self.b_tap
     def btn_wait(self):
         return self.kp(pyxel.KEY_PERIOD) or (
@@ -911,14 +986,15 @@ class Game:
     def update(self):
         self.begin_input()
         if self.st==ST_DEAD:
-            if pyxel.btnp(pyxel.KEY_R): self.new_game()
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
         if self.st==ST_PLAY:   self.upd_play()
         elif self.st==ST_MENU: self.upd_menu()
         elif self.st==ST_ITEM: self.upd_item()
         elif self.st==ST_DIR:  self.upd_dir()
+        elif self.st==ST_AUX:  self.upd_aux()
         elif self.st in(ST_STATUS,ST_HELP,ST_MAP):
-            if self.btn_a() or self.btn_b() or self.btn_status() or self.btn_back() or self.btn_r():
+            if self.btn_a() or self.btn_cancel() or self.btn_b() or self.btn_status() or self.btn_back() or self.btn_r():
                 self.st=ST_PLAY
 
     def upd_play(self):
@@ -944,7 +1020,7 @@ class Game:
 
         # Overlays
         if self.btn_status(): self.st=ST_STATUS; return
-        if self.btn_back():  self.st=ST_MAP; return
+        if self.btn_back():  self.open_aux(); return
         if self.btn_r():     self.st=ST_HELP; return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
@@ -965,7 +1041,8 @@ class Game:
             return
 
         if self.btn_start_tap():
-            self.msg("You hold your facing.")
+            self.diag_assist = not self.diag_assist
+            self.msg(f"Diagonal assist {'ON' if self.diag_assist else 'OFF'}.")
             return
         if self.btn_a(): self.do_action(); return
         if self.btn_menu(): self.open_menu(); return
@@ -974,18 +1051,34 @@ class Game:
         d=self.dir_press()
         if d: self.mcur=(self.mcur+d[1])%len(MENU_ACTIONS); return
         if self.btn_a(): self.menu_select(); return
-        if self.btn_b() or self.btn_menu(): self.close_menu(); return
+        if self.btn_cancel() or self.btn_b() or self.btn_menu(): self.close_menu(); return
 
     def upd_item(self):
         d=self.dir_press()
         if d and self.fitems: self.icur=(self.icur+d[1])%len(self.fitems); return
         if self.btn_a(): self.item_confirm(); return
-        if self.btn_b(): self.st=ST_MENU; return
+        if self.btn_cancel() or self.btn_b(): self.st=ST_MENU; return
 
     def upd_dir(self):
         d=self.dir_press()
         if d: self.dir_confirm(*d); return
-        if self.btn_b(): self.st=ST_ITEM; return
+        if self.btn_cancel() or self.btn_b(): self.st=ST_ITEM; return
+
+    def open_aux(self):
+        self.st=ST_AUX; self.acur=0
+
+    def upd_aux(self):
+        d=self.dir_press()
+        if d: self.acur=(self.acur+d[1])%len(AUX_ACTIONS); return
+        if self.btn_cancel() or self.btn_b(): self.st=ST_PLAY; return
+        if not self.btn_a(): return
+        act=AUX_ACTIONS[self.acur]
+        if act=="Map": self.st=ST_MAP
+        elif act=="Status": self.st=ST_STATUS
+        elif act=="Help": self.st=ST_HELP
+        elif act=="Search":
+            self.st=ST_PLAY
+            self.do_search()
 
     # =====================================================
     #  DRAW
@@ -1001,9 +1094,11 @@ class Game:
         if self.st==ST_MENU: self.draw_menu()
         elif self.st==ST_ITEM: self.draw_isel()
         elif self.st==ST_DIR: self.draw_dirp()
+        elif self.st==ST_AUX: self.draw_aux()
         elif self.st==ST_STATUS: self.draw_status()
         elif self.st==ST_HELP: self.draw_help()
         elif self.st==ST_MAP: self.draw_fullmap()
+        elif self.st==ST_DEAD: self.draw_dead()
 
     def draw_title(self):
         self.txt(ZV_X, 3, "PYXEL ROGUE", 10)
@@ -1086,7 +1181,8 @@ class Game:
         self.txt(sx,sy+56,f"W:{wn}",7)
         self.txt(sx,sy+68,f"Gold:{p.gold}",10)
         # Status effects
-        ey=sy+82
+        self.txt(sx,sy+80,f"Diag Assist:{'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5)
+        ey=sy+94
         if p.state=="hungry": self.txt(sx,ey,"Hungry",9); ey+=12
         elif p.state=="weak": self.txt(sx,ey,"Weak!",8); ey+=12
         elif p.state=="faint": self.txt(sx,ey,"Faint!!",8); ey+=12
@@ -1130,7 +1226,15 @@ class Game:
 
     def draw_dirp(self):
         bx,by=ZV_X+50,ZV_Y+90
-        self._box(bx,by,178,20,"Direction? [D-pad/Start+dir/YUBN]")
+        self._box(bx,by,170,20,"Direction? [D-pad/YUBN]")
+
+    def draw_aux(self):
+        bx,by=ZV_X+20,ZV_Y+8; bw=120; bh=len(AUX_ACTIONS)*14+18
+        self._box(bx,by,bw,bh,"-- Assist --")
+        for i,nm in enumerate(AUX_ACTIONS):
+            ty=by+16+i*14; c=10 if i==self.acur else 7
+            pre=">" if i==self.acur else " "
+            self.txt(bx+4,ty,f"{pre} {nm}",c)
 
     def draw_status(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
@@ -1163,9 +1267,10 @@ class Game:
         self._box(bx,by,bw,bh,"=== Help ===")
         lines=[
             "--- Movement ---",
-            "Arrow/HJKL     4-direction move",
+            "D-pad/Arrows   8-direction move",
             "YUBN           Diagonal move",
-            "Start+D-pad    Diagonal (gamepad)",
+            "Start tap      Diag assist on/off",
+            "Diag assist    Only diagonal D-pad",
             "Shift/B + dir  Dash (auto-run)",
             "",
             "--- Actions ---",
@@ -1177,7 +1282,7 @@ class Game:
             "",
             "--- Info ---",
             "X / I          Status screen",
-            "Back  / Tab    Full map",
+            "Back  / Tab    Assist menu",
             "R     / ?      This help",
             "",
             "Press any button to close",
@@ -1211,6 +1316,20 @@ class Game:
                     c=2 if tile in(T_HWALL,T_VWALL) else 1
                     pyxel.rect(sx,sy,ts-1,ts-1,c)
         self.txt(bx,by+mh+4,"Press any button to close",5)
+
+    def draw_dead(self):
+        bx,by=105,42; bw=270; bh=190
+        self._box(bx,by,bw,bh,"=== R.I.P. ===")
+        p=self.p; x=bx+18; y=by+24
+        self.txt(x,y,"Here lies a brave rogue.",7); y+=22
+        self.txt(x,y,f"Cause: {self.death_cause or 'died'}",8); y+=18
+        self.txt(x,y,f"Depth: {p.depth}",7); y+=14
+        self.txt(x,y,f"Level: {p.level}",7); y+=14
+        self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
+        self.txt(x,y,f"Exp:   {p.exp}",7); y+=14
+        self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
+        self.txt(x,y,"A / Start  New game",10); y+=14
+        self.txt(x,y,"B          Stay here",5)
 
 # ===========================================================
 if __name__=="__main__":
