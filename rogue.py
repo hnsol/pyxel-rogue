@@ -70,9 +70,9 @@ STAT_X = SIDE_X
 STAT_Y = MINI_Y + MINI_PX_H + 8
 
 # Messages
-MSG_X, MSG_Y = SIDE_X, SCR_H - 40
+MSG_LINES = 6
+MSG_X, MSG_Y = SIDE_X, SCR_H - MSG_LINES * TILE_H - 4
 MSG_COLS = SIDE_W // 6
-MSG_LINES = 3
 
 INV_MAX = 26
 DASH_INTERVAL = 3                # frames between dash steps
@@ -1283,32 +1283,44 @@ class Game:
     def draw_stat(self):
         sx,sy=STAT_X,STAT_Y; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
         self.txt(sx,sy,f"Lv:{p.level}",7)
-        self.txt(sx,sy+12,f"HP:{p.hp}/{p.max_hp}",hc)
+        self.txt(sx+42,sy,f"HP:{p.hp}/{p.max_hp}",hc)
         # HP bar
-        bw=80; pyxel.rect(sx,sy+24,bw,4,1)
+        bw=120; pyxel.rect(sx,sy+12,bw,4,1)
         if p.max_hp>0:
             f=max(0,int(bw*p.hp/p.max_hp))
-            pyxel.rect(sx,sy+24,f,4,8 if p.hp<=p.max_hp//3 else 11)
-        self.txt(sx,sy+32,f"Str:{p.st}/{p.max_st}",7)
-        self.txt(sx,sy+44,f"AC:{p.ac}",7)
+            pyxel.rect(sx,sy+12,f,4,8 if p.hp<=p.max_hp//3 else 11)
+        self.txt(sx,sy+20,f"Str:{p.st}/{p.max_st}",7)
+        self.txt(sx+72,sy+20,f"AC:{p.ac}",7)
         wn=self.ident.name(p.wpn)[:18] if p.wpn else "bare hands"
-        self.txt(sx,sy+56,f"W:{wn}",7)
-        self.txt(sx,sy+68,f"Gold:{p.gold}",10)
+        self.txt(sx,sy+32,f"W:{wn}",7)
+        self.txt(sx,sy+44,f"Gold:{p.gold}",10)
         # Status effects
-        self.txt(sx,sy+80,f"Diag Assist:{'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5)
-        ey=sy+94
-        if p.state=="hungry": self.txt(sx,ey,"Hungry",9); ey+=12
-        elif p.state=="weak": self.txt(sx,ey,"Weak!",8); ey+=12
-        elif p.state=="faint": self.txt(sx,ey,"Faint!!",8); ey+=12
-        if p.confused>0: self.txt(sx,ey,"Confused",2); ey+=12
-        if p.blind>0: self.txt(sx,ey,"Blind",13); ey+=12
-        if p.haste>0: self.txt(sx,ey,"Haste",11); ey+=12
+        self.txt(sx,sy+56,f"Diag:{'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5)
+        eff=[]
+        if p.state=="hungry": eff.append("Hungry")
+        elif p.state=="weak": eff.append("Weak")
+        elif p.state=="faint": eff.append("Faint")
+        if p.confused>0: eff.append("Confused")
+        if p.blind>0: eff.append("Blind")
+        if p.haste>0: eff.append("Haste")
+        if eff:
+            s=" ".join(eff)
+            self.txt(sx,sy+70,s[:MSG_COLS],13)
+            if len(s)>MSG_COLS:
+                self.txt(sx,sy+82,s[MSG_COLS:MSG_COLS*2],13)
 
     def draw_msgs(self):
-        ms=self.msgs[-MSG_LINES:]
-        for i,m in enumerate(ms):
-            c=7 if i==len(ms)-1 else 5
-            self.txt(MSG_X,MSG_Y+i*12,m[:MSG_COLS],c)
+        rows=[]
+        for mi,m in enumerate(reversed(self.msgs)):
+            c=7 if mi==0 else 5
+            parts=[m[i:i+MSG_COLS] for i in range(0,len(m),MSG_COLS)] or [""]
+            for part in reversed(parts):
+                rows.append((part,c))
+                if len(rows)>=MSG_LINES: break
+            if len(rows)>=MSG_LINES: break
+        rows=list(reversed(rows))
+        for i,(m,c) in enumerate(rows):
+            self.txt(MSG_X,MSG_Y+i*TILE_H,m,c)
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
