@@ -33,7 +33,7 @@ rogue.py
 ├── Room / Item / Monster / Player / IdentTable / DGen（ダンジョン生成）
 └── Game（メイン: ステートマシン ST_PLAY/MENU/ITEM/DIR/STATUS/HELP/MAP/DEAD）
     ├── update: 入力 → upd_play / upd_menu / upd_item / upd_dir
-    ├── draw:   draw_zoom → draw_mini → draw_stat → draw_msgs → オーバーレイ
+    ├── draw:   右メイン draw_zoom + 左情報列 draw_mini/draw_stat/draw_msgs → オーバーレイ
     └── 各ステートに upd_xxx() と draw_xxx() が1対1で対応
 ```
 
@@ -42,7 +42,8 @@ rogue.py
 ## 画面・マップ
 
 - 現行マップ: 48×24、3×3セクターグリッド
-- 現行画面: 480×310
+- 現行画面: 420×280
+- 現行レイアウト: 左情報列（ミニマップ / ステータス / メッセージ）+ 右メインASCII表示
 - これらは現在の実装値であり、固定仕様ではない
 - ブラウザ、SteamDeck、中華ゲーム機で遊べることを重視し、画面サイズ変更時はレイアウト定数を一箇所で再計算できる設計に寄せる
 
@@ -60,7 +61,7 @@ rogue.py
 - D-pad: 通常は8方向移動
 - Start短押し: 「斜め補助モード」と「8方向移動モード（通常モード）」をトグル
 - 斜め補助モード中のD-padは、左上=NW、右上=NE、右下=SE、左下=SW の同時押しだけを受け付ける。上下左右単体は移動しない
-- 斜め補助モード ON/OFF は右側ステータス欄に表示する
+- 斜め補助モード ON/OFF はステータス欄に表示する
 - Start長押し依存は禁止（携帯機側の電源OFF等に割り当てられることがあるため）
 - Select(Back): 補助メニュー（Map / Status / Help / Search）
 - A: 決定 / 拾う / 階段
@@ -73,7 +74,7 @@ rogue.py
 - フォント標準: `pyxel.Font(os.path.join(os.path.dirname(pyxel.__file__), "examples", "assets", "umplus_j10r.bdf"))`
 - `umplus_j10r.bdf` は ASCII 6px、CJK 10px、日本語対応
 - 将来的なフォント選択は許容する。ただし ASCII ローグ表示に向く可読性を必須条件にする
-- カメラ: デッドゾーン方式。現行値は `DEAD_ZONE = 5` だが、追従開始が遅いので調整対象
+- カメラ: デッドゾーン方式。現行値は横 `DEAD_ZONE_X = 8`、縦 `DEAD_ZONE_Y = 5`
 - ダッシュ: B長押し＋方向を中心候補にする。壁・敵・ドア・分岐・階段で自動停止
 - ダンジョン生成: Rogue 5.4 の C ソース確認を優先し、推測で似せない。通路生成は `do_passages()`, `conn()`, `door()`, `putpass()` の責務分担と比較できる形を保つ
 

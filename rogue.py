@@ -46,25 +46,32 @@ WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR}
 # ===========================================================
 #  Screen layout  (BDF j10r: ASCII 6×~10 px)
 # ===========================================================
-SCR_W, SCR_H = 480, 310
+SCR_W, SCR_H = 420, 280
 TILE_W, TILE_H = 7, 12          # per-char cell in zoom view
 ZV_COLS, ZV_ROWS = 34, 20       # zoom viewport size in tiles
-ZV_X, ZV_Y = 4, 16              # top-left pixel of zoom view
 ZV_PX_W = ZV_COLS * TILE_W      # 238
 ZV_PX_H = ZV_ROWS * TILE_H      # 240
-DEAD_ZONE = 5                    # camera dead zone tiles from edge
+DEAD_ZONE_X = 8                  # camera edge zone; leaves ~50% center still
+DEAD_ZONE_Y = 5
 
-# Right panel
-RP_X = ZV_X + ZV_PX_W + 10      # 252
-MINI_S = 4                       # minimap tile size
-MINI_X, MINI_Y = RP_X, ZV_Y
-MINI_PX_W = MAP_W * MINI_S      # 192
-MINI_PX_H = MAP_H * MINI_S      # 96
-STAT_X = RP_X
+# Left info column
+MINI_S = 3                       # minimap tile size
+MINI_PX_W = MAP_W * MINI_S      # 144
+MINI_PX_H = MAP_H * MINI_S      # 72
+SIDE_X, SIDE_Y = 4, 16
+SIDE_W = MINI_PX_W
+
+# Main zoom view
+ZV_X = SIDE_X + SIDE_W + 12      # 160
+ZV_Y = 16                        # top-left pixel of zoom view
+
+MINI_X, MINI_Y = SIDE_X, SIDE_Y
+STAT_X = SIDE_X
 STAT_Y = MINI_Y + MINI_PX_H + 8
 
 # Messages
-MSG_X, MSG_Y = ZV_X, ZV_Y + ZV_PX_H + 4
+MSG_X, MSG_Y = SIDE_X, SCR_H - 40
+MSG_COLS = SIDE_W // 6
 MSG_LINES = 3
 
 INV_MAX = 26
@@ -578,14 +585,14 @@ class Game:
     def update_cam(self):
         rx = self.p.x - self.cam_x
         ry = self.p.y - self.cam_y
-        if rx < DEAD_ZONE:
-            self.cam_x = max(0, self.p.x - DEAD_ZONE)
-        elif rx >= ZV_COLS - DEAD_ZONE:
-            self.cam_x = min(MAP_W - ZV_COLS, self.p.x - ZV_COLS + DEAD_ZONE + 1)
-        if ry < DEAD_ZONE:
-            self.cam_y = max(0, self.p.y - DEAD_ZONE)
-        elif ry >= ZV_ROWS - DEAD_ZONE:
-            self.cam_y = min(MAP_H - ZV_ROWS, self.p.y - ZV_ROWS + DEAD_ZONE + 1)
+        if rx < DEAD_ZONE_X:
+            self.cam_x = max(0, self.p.x - DEAD_ZONE_X)
+        elif rx >= ZV_COLS - DEAD_ZONE_X:
+            self.cam_x = min(MAP_W - ZV_COLS, self.p.x - ZV_COLS + DEAD_ZONE_X + 1)
+        if ry < DEAD_ZONE_Y:
+            self.cam_y = max(0, self.p.y - DEAD_ZONE_Y)
+        elif ry >= ZV_ROWS - DEAD_ZONE_Y:
+            self.cam_y = min(MAP_H - ZV_ROWS, self.p.y - ZV_ROWS + DEAD_ZONE_Y + 1)
 
     # ---------- FOV ----------
     def update_fov(self):
@@ -1071,7 +1078,10 @@ class Game:
             if not b_now:
                 self.b_menu_guard=False
             return False
-        return self.kp(pyxel.GAMEPAD1_BUTTON_B) or self.b_tap
+        if self.kp(pyxel.GAMEPAD1_BUTTON_B):
+            self.b_used=True
+            return True
+        return self.b_tap
     def btn_menu(self): return self.kp(pyxel.KEY_C) or self.b_tap
     def btn_wait(self):
         return self.kp(pyxel.KEY_PERIOD) or (
@@ -1258,11 +1268,13 @@ class Game:
                     if gi: pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,ICOL.get(gi.cat,7))
                     mo=self.mon_at(x,y)
                     if mo and "invis" not in mo.flags: pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,8)
+                    if tile==T_STAIR: pyxel.rect(sx,sy,MINI_S,MINI_S,10)
                     if x==px and y==py: pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,10)
                 else:
                     # Explored: walls brighter, floors dimmer
-                    c=2 if tile in(T_HWALL,T_VWALL) else 1
-                    pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,c)
+                    c=10 if tile==T_STAIR else 2 if tile in(T_HWALL,T_VWALL) else 1
+                    sz=MINI_S if tile==T_STAIR else MINI_S-1
+                    pyxel.rect(sx,sy,sz,sz,c)
         # Viewport rectangle
         vx1=ox+self.cam_x*MINI_S; vy1=oy+self.cam_y*MINI_S
         vw=ZV_COLS*MINI_S; vh=ZV_ROWS*MINI_S
@@ -1296,7 +1308,7 @@ class Game:
         ms=self.msgs[-MSG_LINES:]
         for i,m in enumerate(ms):
             c=7 if i==len(ms)-1 else 5
-            self.txt(MSG_X,MSG_Y+i*12,m[:65],c)
+            self.txt(MSG_X,MSG_Y+i*12,m[:MSG_COLS],c)
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
@@ -1342,27 +1354,29 @@ class Game:
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
         self._box(bx,by,bw,bh,"=== Status ===")
         p=self.p; y=by+18; x=bx+8
-        self.txt(x,y,f"Depth: {p.depth}",7);   y+=14
-        self.txt(x,y,f"Level: {p.level}",7);   y+=14
-        self.txt(x,y,f"HP:    {p.hp}/{p.max_hp}",7); y+=14
-        self.txt(x,y,f"Str:   {p.st}/{p.max_st}",7); y+=14
-        self.txt(x,y,f"AC:    {p.ac}",7);       y+=14
-        self.txt(x,y,f"Exp:   {p.exp}  (next: {p.EXP_T[min(p.level,len(p.EXP_T)-1)]})",7); y+=14
-        self.txt(x,y,f"Gold:  {p.gold}",10);    y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",5);  y+=14
-        self.txt(x,y,f"Food:  {p.food}",7);     y+=20
-        self.txt(x,y,"-- Equipment --",10); y+=14
+        self.txt(x,y,f"Depth: {p.depth}",7); y+=13
+        self.txt(x,y,f"Level: {p.level}",7); y+=13
+        self.txt(x,y,f"HP:    {p.hp}/{p.max_hp}",7); y+=13
+        self.txt(x,y,f"Str:   {p.st}/{p.max_st}",7); y+=13
+        self.txt(x,y,f"AC:    {p.ac}",7); y+=13
+        self.txt(x,y,f"Exp:   {p.exp}",7); y+=13
+        self.txt(x,y,f"Next:  {p.EXP_T[min(p.level,len(p.EXP_T)-1)]}",5); y+=13
+        self.txt(x,y,f"Gold:  {p.gold}",10); y+=13
+        self.txt(x,y,f"Turn:  {self.turn}",5); y+=13
+        self.txt(x,y,f"Food:  {p.food}",7)
+        y=by+18; x=bx+178
+        self.txt(x,y,"-- Equipment --",10); y+=13
         wn=self.ident.name(p.wpn) if p.wpn else "bare hands"
         an=self.ident.name(p.arm) if p.arm else "no armor"
-        self.txt(x,y,f"Weapon: {wn}",7); y+=14
-        self.txt(x,y,f"Armor:  {an}",7); y+=20
-        self.txt(x,y,"-- Inventory --",10); y+=14
+        self.txt(x,y,f"Weapon: {wn[:22]}",7); y+=13
+        self.txt(x,y,f"Armor:  {an[:22]}",7); y+=18
+        self.txt(x,y,"-- Inventory --",10); y+=13
         for i,it in enumerate(p.inv[:12]):
             lt=chr(ord('a')+i); ln=self.ident.name(it)
             eq=""
             if it is p.wpn: eq=" (wielded)"
             elif it is p.arm: eq=" (worn)"
-            self.txt(x,y,f"{lt}) {ln}{eq}",7); y+=12
+            self.txt(x,y,f"{lt}) {(ln+eq)[:24]}",7); y+=12
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
@@ -1392,7 +1406,7 @@ class Game:
         y=by+18
         for ln in lines:
             c=10 if ln.startswith("---") else 7
-            self.txt(bx+8,y,ln,c); y+=13
+            self.txt(bx+8,y,ln,c); y+=11
 
     def draw_fullmap(self):
         # Full-screen map overlay using larger tiles
