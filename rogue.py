@@ -69,6 +69,10 @@ MSG_LINES = 3
 
 INV_MAX = 26
 DASH_INTERVAL = 3                # frames between dash steps
+HUNGERTIME = 1300
+MORETIME = 150
+STOMACHSIZE = 2000
+STARVETIME = 850
 
 # ===========================================================
 #  UI states
@@ -222,9 +226,10 @@ class Player:
            40000,80000,160000,320000,640000,1300000,2600000,5200000]
     def __init__(s):
         s.x=s.y=0; s.hp=s.max_hp=16; s.st=s.max_st=16
-        s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=1300
+        s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
         s.confused=s.blind=s.haste=s.stuck=0
+        s.quiet=0
         s.facing=(0,1)
     @property
     def alive(s): return s.hp>0
@@ -234,16 +239,34 @@ class Player:
             s.level+=1; g=random.randint(3,8); s.max_hp+=g; s.hp+=g; return True
         return False
     def hunger(s):
+        prev=s.state
         s.food-=1
         if s.food<=0:
-            prev=s.state; s.state="faint"; s.hp-=1
-            if s.food%20==0 or prev!="faint": return "You faint from lack of food."
-        elif s.food<150:
-            if s.state!="weak": s.state="weak"; return "You are weak."
-        elif s.food<300:
-            if s.state!="hungry": s.state="hungry"; return "You feel hungry."
-        else: s.state="normal"
+            if s.food < -STARVETIME:
+                s.hp=0; s.state="faint"; return "You starve to death."
+            if random.randrange(5)==0:
+                s.stuck=max(s.stuck,random.randint(4,11))
+                s.state="faint"; return "You faint from lack of food."
+            s.state="faint"; return None
+        if s.food<MORETIME:
+            s.state="weak"
+            return "You are weak." if prev!="weak" else None
+        if s.food<2*MORETIME:
+            s.state="hungry"
+            return "You feel hungry." if prev!="hungry" else None
+        s.state="normal"
         return None
+    def heal_tick(s):
+        if s.hp>=s.max_hp: return
+        s.quiet+=1
+        old=s.hp
+        if s.level<8:
+            if s.quiet+(s.level<<1)>20:
+                s.hp+=1
+        elif s.quiet>=3:
+            s.hp+=random.randint(1,max(1,s.level-7))
+        if s.hp!=old:
+            s.hp=min(s.hp,s.max_hp); s.quiet=0
     def recalc_ac(s):
         s.ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else 10
     def melee_dmg(s):
@@ -481,8 +504,10 @@ class Game:
         self.cact = None; self.fitems = []
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
+        self.dash_steps = 0
         self.b_prev = False; self.b_frames = 0
         self.b_used = False; self.b_tap = False
+        self.b_menu_guard = False
         self.diag_assist = False
         self.death_cause = ""
         self.descend()
@@ -735,7 +760,8 @@ class Game:
         p.rm_item(it)
 
     def eat(self,it):
-        self.p.food+=it.data["nut"]; self.p.state="normal"
+        self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+random.randrange(400))
+        self.p.state="normal"
         self.msg(f"You eat the {it.data['name']}. Yum!"); self.p.rm_item(it)
 
     def wield(self,it):
@@ -840,7 +866,8 @@ class Game:
 
     def end_turn(self):
         self.turn+=1; m=self.p.hunger()
-        if m: self.msg(m)
+        if m:
+            self.msg(m); self.dashing=False
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
         if not self.p.alive:
@@ -850,6 +877,7 @@ class Game:
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
+        self.p.heal_tick()
         for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
@@ -859,6 +887,33 @@ class Game:
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):
         return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in (T_CORR,T_DOOR)
+
+    def dash_door_stop(self,dx,dy):
+        if self.dash_steps<1 or not self.room_at(self.p.x,self.p.y):
+            return False
+        px,py=self.p.x,self.p.y
+        for oy in (-1,0,1):
+            for ox in (-1,0,1):
+                if ox==0 and oy==0: continue
+                x,y=px+ox,py+oy
+                if not(0<=x<MAP_W and 0<=y<MAP_H): continue
+                if self.tm[y][x]!=T_DOOR: continue
+                if not self._dash_ahead(dx,dy,ox,oy): continue
+                if dx and not dy and ox!=0: continue
+                if dy and not dx and oy!=0: continue
+                return True
+        return False
+
+    def _dash_ahead(self,dx,dy,ox,oy):
+        if dx and dy:
+            if dx==dy:
+                return ox+oy == dx+dy
+            return oy-ox == dy-dx
+        if dx:
+            return ox==dx or ox==0
+        if dy:
+            return oy==dy or oy==0
+        return False
 
     def next_dash_dir(self,dx,dy):
         if dx and dy: return None
@@ -877,6 +932,7 @@ class Game:
         tile=self.tm[py][px]
         if tile in (T_DOOR,T_STAIR): return True
         if self.gi_at(px,py): return True
+        if self.dash_door_stop(dx,dy): return True
         if tile!=T_CORR: return False
         if dx and dy: return False
         fwd=self.dash_turn_ok(px+dx,py+dy)
@@ -912,11 +968,14 @@ class Game:
         moved=self.try_move(dx,dy)
         if not moved or (self.p.x,self.p.y)==(ox,oy) or self.st!=ST_PLAY or not self.p.alive:
             self.dashing=False; return
+        self.dash_steps+=1
         self.dashing=not self.dash_should_stop_here(dx,dy)
 
     # ---------- Menu logic ----------
-    def open_menu(self): self.st=ST_MENU; self.mcur=0
-    def close_menu(self): self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.fitems=[]
+    def open_menu(self):
+        self.st=ST_MENU; self.mcur=0
+        self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
+    def close_menu(self): self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.fitems=[]; self.b_menu_guard=False
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
@@ -1005,7 +1064,14 @@ class Game:
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
     def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
-    def btn_overlay_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B) or self.b_tap
+    def btn_overlay_cancel(self):
+        if self.kp(pyxel.KEY_ESCAPE): return True
+        b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
+        if self.b_menu_guard:
+            if not b_now:
+                self.b_menu_guard=False
+            return False
+        return self.kp(pyxel.GAMEPAD1_BUTTON_B) or self.b_tap
     def btn_menu(self): return self.kp(pyxel.KEY_C) or self.b_tap
     def btn_wait(self):
         return self.kp(pyxel.KEY_PERIOD) or (
@@ -1064,6 +1130,7 @@ class Game:
             d = self.dir_press()
             if d:
                 self.dashing=True; self.dash_d=d; self.dash_t=0
+                self.dash_steps=0
                 self.b_used=True
                 self.dash_step()
                 return
@@ -1100,6 +1167,7 @@ class Game:
 
     def open_aux(self):
         self.st=ST_AUX; self.acur=0
+        self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
 
     def upd_aux(self):
         d=self.dir_press()
