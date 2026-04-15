@@ -4,15 +4,15 @@ Faithful Rogue 5.4 clone  ·  Shiren-style controls  ·  BDF font
 
 Gamepad:                        Keyboard:
   D-pad        Move (4-dir)      Arrow / HJKL   Move
-  L + D-pad    Move (diagonal)   YUBN           Diagonal
+  Start+D-pad  Move (diagonal)   YUBN           Diagonal
   B + D-pad    Dash (run)        Shift+dir      Dash
   A            Action/Confirm    Z / Enter      Action
-  B            Cancel            Esc            Cancel
-  X            Menu (items)      C              Menu
-  Y            Wait a turn       . (period)     Wait
-  Start        Status screen     S              Status
+  B tap        Menu/Cancel       Esc            Cancel
+  A + B        Wait a turn       . (period)     Wait
   Back         Toggle map        Tab            Map
+  X            Status shortcut   I              Status
   R            Help              ?              Help
+  Search                         S
 """
 
 import pyxel
@@ -164,6 +164,7 @@ DIR8 = {
     "N":(0,-1),"S":(0,1),"W":(-1,0),"E":(1,0),
     "NW":(-1,-1),"NE":(1,-1),"SW":(-1,1),"SE":(1,1),
 }
+B_TAP_FRAMES = 8
 
 # ===========================================================
 #  Menu actions
@@ -221,7 +222,8 @@ class Player:
         s.x=s.y=0; s.hp=s.max_hp=16; s.st=s.max_st=16
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=1300
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
-        s.confused=s.blind=s.haste=0
+        s.confused=s.blind=s.haste=s.stuck=0
+        s.facing=(0,1)
     @property
     def alive(s): return s.hp>0
     def lvlup(s):
@@ -414,6 +416,8 @@ class Game:
         self.cact = None; self.fitems = []
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
+        self.b_prev = False; self.b_frames = 0
+        self.b_used = False; self.b_tap = False
         self.descend()
         self.msg("Welcome to the Dungeons of Doom!")
 
@@ -541,7 +545,7 @@ class Game:
             if "confuse" in m.flags and random.random()<.3:
                 self.p.confused=random.randint(10,20); self.msg("You feel confused!")
             if "freeze" in m.flags and random.random()<.3:
-                self.msg("You can't move!")
+                self.p.stuck=max(self.p.stuck,random.randint(2,4)); self.msg("You can't move!")
             if "steal_item" in m.flags and self.p.inv:
                 t=random.choice(self.p.inv)
                 if t is not self.p.wpn and t is not self.p.arm:
@@ -624,14 +628,19 @@ class Game:
             if p.arm: p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg(f"Your armor glows!")
             else: self.msg("You feel a sense of loss.")
         elif nm=="remove curse":
-            for i in p.inv: i.cursed=False; self.msg("Somebody watches over you.")
+            changed=False
+            for i in (p.wpn,p.arm):
+                if i and i.cursed:
+                    i.cursed=False; changed=True
+            self.msg("Your equipment feels lighter." if changed else "Somebody watches over you.")
         elif nm=="aggravate monsters":
             for mo in self.mons: mo.held=mo.scared=0; self.msg("You hear a humming noise.")
         elif nm=="scare monster":
             for mo in self.mons:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=random.randint(10,20)
             self.msg("Maniacal laughter echoes.")
-        elif nm=="sleep": self.msg("You fall asleep.")
+        elif nm=="sleep":
+            p.stuck=max(p.stuck,random.randint(4,8)); self.msg("You fall asleep.")
         elif nm=="teleportation":
             r=random.choice(self.rooms); p.x,p.y=r.inner(); self.update_fov(); self._center_cam()
             self.msg("You are teleported!")
@@ -711,6 +720,8 @@ class Game:
         p = self.p
         if p.confused>0:
             dx,dy = random.choice([-1,0,1]), random.choice([-1,0,1])
+        if dx or dy:
+            p.facing=(dx,dy)
         nx, ny = p.x+dx, p.y+dy
         m = self.mon_at(nx, ny)
         if m: self.p_attack(m); self.end_turn(); return True
@@ -723,6 +734,25 @@ class Game:
                 self.msg(f"You see a {self.ident.name(gi)} here.")
             self.update_fov(); self.update_cam(); self.end_turn(); return True
         return False
+
+    def do_search(self, front_only=False):
+        p=self.p
+        dirs=[p.facing] if front_only else list(DIR8.values())
+        found=False
+        for dx,dy in dirs:
+            nx,ny=p.x+dx,p.y+dy
+            if 0<=nx<MAP_W and 0<=ny<MAP_H:
+                # Hidden traps and passages will plug into this hook in Phase 4.
+                found = found or False
+        self.msg("You find nothing." if not found else "You found something!")
+        self.end_turn()
+
+    def do_action(self):
+        p=self.p; px,py=p.x,p.y
+        if self.tm[py][px]==T_STAIR or self.gi_at(px,py):
+            self.do_pickup(); return
+        self.msg("You swing at empty air.")
+        self.do_search(front_only=True)
 
     def do_pickup(self):
         p=self.p; px,py=p.x,p.y
@@ -743,6 +773,7 @@ class Game:
     def end_turn(self):
         self.turn+=1; m=self.p.hunger()
         if m: self.msg(m)
+        if self.p.stuck>0: self.p.stuck-=1
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
@@ -804,11 +835,28 @@ class Game:
         self.close_menu(); self.end_turn()
 
     def dir_confirm(self,dx,dy):
+        self.p.facing=(dx,dy)
         self.throw(self.fitems[self.icur],dx,dy); self.close_menu(); self.end_turn()
 
     # ---------- Input helpers ----------
     def kp(self,*ks): return any(pyxel.btnp(k) for k in ks)
     def kh(self,*ks): return any(pyxel.btn(k) for k in ks)
+
+    def begin_input(self):
+        self.b_tap=False
+        b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
+        if b_now:
+            self.b_frames = self.b_frames+1 if self.b_prev else 1
+        else:
+            if self.b_prev and not self.b_used and self.b_frames<=B_TAP_FRAMES:
+                self.b_tap=True
+            self.b_frames=0; self.b_used=False
+        self.b_prev=b_now
+        if b_now and (self.kh(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
+                              pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                              pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+                      or self.kh(pyxel.GAMEPAD1_BUTTON_A)):
+            self.b_used=True
 
     GP = pyxel.GAMEPAD1_BUTTON_DPAD_UP
     def _held_up(self): return self.kh(pyxel.KEY_UP, pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
@@ -823,9 +871,9 @@ class Game:
         if self.kp(pyxel.KEY_U): return (1,-1)
         if self.kp(pyxel.KEY_B): return (-1,1)
         if self.kp(pyxel.KEY_N): return (1,1)
-        # L-shoulder diagonal: L + cardinal = diagonal
-        l_held = self.kh(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER)
-        if l_held:
+        # GB Shiren-style diagonal: Start + cardinal = diagonal
+        start_held = self.kh(pyxel.GAMEPAD1_BUTTON_START)
+        if start_held:
             if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_UP):    return (-1,-1)  # NW
             if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):  return (1,-1)  # NE
             if self.kp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):   return (1,1)   # SE
@@ -844,10 +892,16 @@ class Game:
         return None
 
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
-    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
-    def btn_x(self): return self.kp(pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_X)
-    def btn_y(self): return self.kp(pyxel.KEY_PERIOD, pyxel.GAMEPAD1_BUTTON_Y)
-    def btn_start(self): return self.kp(pyxel.KEY_S, pyxel.GAMEPAD1_BUTTON_START)
+    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
+    def btn_menu(self): return self.kp(pyxel.KEY_C) or self.b_tap
+    def btn_wait(self):
+        return self.kp(pyxel.KEY_PERIOD) or (
+            self.kh(pyxel.GAMEPAD1_BUTTON_A) and self.kh(pyxel.GAMEPAD1_BUTTON_B)
+            and (self.kp(pyxel.GAMEPAD1_BUTTON_A) or self.kp(pyxel.GAMEPAD1_BUTTON_B))
+        )
+    def btn_search(self): return self.kp(pyxel.KEY_S)
+    def btn_status(self): return self.kp(pyxel.KEY_I, pyxel.GAMEPAD1_BUTTON_X)
+    def btn_start_tap(self): return self.kp(pyxel.GAMEPAD1_BUTTON_START)
     def btn_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH, pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
     def dash_held(self):
@@ -855,6 +909,7 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
+        self.begin_input()
         if self.st==ST_DEAD:
             if pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
@@ -863,14 +918,20 @@ class Game:
         elif self.st==ST_ITEM: self.upd_item()
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st in(ST_STATUS,ST_HELP,ST_MAP):
-            if self.btn_a() or self.btn_b() or self.btn_start() or self.btn_back() or self.btn_r():
+            if self.btn_a() or self.btn_b() or self.btn_status() or self.btn_back() or self.btn_r():
                 self.st=ST_PLAY
 
     def upd_play(self):
+        if self.p.stuck>0:
+            self.msg("You are unable to move.")
+            self.end_turn()
+            return
+
         # Dash continuation
         if self.dashing:
             if not self.dash_held():
                 self.dashing=False; return
+            self.b_used=True
             self.dash_t+=1
             if self.dash_t>=DASH_INTERVAL:
                 self.dash_t=0
@@ -882,15 +943,18 @@ class Game:
             return
 
         # Overlays
-        if self.btn_start(): self.st=ST_STATUS; return
+        if self.btn_status(): self.st=ST_STATUS; return
         if self.btn_back():  self.st=ST_MAP; return
         if self.btn_r():     self.st=ST_HELP; return
+        if self.btn_wait():  self.do_wait(); return
+        if self.btn_search(): self.do_search(); return
 
         # Dash start: B/Shift held + direction
         if self.dash_held():
             d = self.dir_press()
             if d:
                 self.dashing=True; self.dash_d=d; self.dash_t=0
+                self.b_used=True
                 self.try_move(*d)
                 return
 
@@ -900,15 +964,17 @@ class Game:
             self.try_move(*d)
             return
 
-        if self.btn_a(): self.do_pickup(); return
-        if self.btn_x(): self.open_menu(); return
-        if self.btn_y(): self.do_wait(); return
+        if self.btn_start_tap():
+            self.msg("You hold your facing.")
+            return
+        if self.btn_a(): self.do_action(); return
+        if self.btn_menu(): self.open_menu(); return
 
     def upd_menu(self):
         d=self.dir_press()
         if d: self.mcur=(self.mcur+d[1])%len(MENU_ACTIONS); return
         if self.btn_a(): self.menu_select(); return
-        if self.btn_b() or self.btn_x(): self.close_menu(); return
+        if self.btn_b() or self.btn_menu(): self.close_menu(); return
 
     def upd_item(self):
         d=self.dir_press()
@@ -1064,7 +1130,7 @@ class Game:
 
     def draw_dirp(self):
         bx,by=ZV_X+50,ZV_Y+90
-        self._box(bx,by,160,20,"Direction? [D-pad/YUBN]")
+        self._box(bx,by,178,20,"Direction? [D-pad/Start+dir/YUBN]")
 
     def draw_status(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
@@ -1099,16 +1165,18 @@ class Game:
             "--- Movement ---",
             "Arrow/HJKL     4-direction move",
             "YUBN           Diagonal move",
-            "L + D-pad      Diagonal (gamepad)",
+            "Start+D-pad    Diagonal (gamepad)",
             "Shift/B + dir  Dash (auto-run)",
             "",
             "--- Actions ---",
             "A / Z / Enter  Pickup / Stairs",
-            "X / C          Open menu",
-            "Y / .          Wait one turn",
+            "B tap / C      Open menu",
+            "A+B / .        Wait one turn",
+            "A on empty     Swing / search front",
+            "S              Search around",
             "",
             "--- Info ---",
-            "Start / S      Status screen",
+            "X / I          Status screen",
             "Back  / Tab    Full map",
             "R     / ?      This help",
             "",
