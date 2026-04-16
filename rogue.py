@@ -159,6 +159,8 @@ class TextCatalog:
             "the scroll turns to dust as you pick it up":"巻き物は拾うと灰になった。",
             "Pickup ON.":"自動拾い ON。",
             "Pickup OFF.":"自動拾い OFF。",
+            "Language: English.":"Language: English.",
+            "Language: Japanese.":"言語: 日本語。",
             "Diagonal assist ON.":"斜め補助モード ON。",
             "Diagonal assist OFF.":"斜め補助モード OFF。",
             "You died... [A/Start] to restart.":"あなたは死んだ... [A/Start] で再開。",
@@ -178,11 +180,13 @@ class TextCatalog:
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
             "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
             "Status":"Status", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
+            "Language":"Language",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
             "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
             "Status":"状態", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
+            "Language":"言語",
         },
     }
 
@@ -301,7 +305,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Status", "Help", "Search", "Pickup"]
+AUX_ACTIONS = ["Status", "Help", "Search", "Pickup", "Language"]
 
 # ===========================================================
 #  Classes
@@ -661,6 +665,10 @@ class Game:
         self.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
         if hasattr(self, "ident"):
             self.ident.set_lang(self.lang)
+
+    def toggle_lang(self):
+        self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN)
+        self.msg("Language: Japanese." if self.lang == LANG_JA else "Language: English.")
 
     def descend(self):
         self.p.depth += 1
@@ -1431,6 +1439,9 @@ class Game:
             self.auto_pickup = not self.auto_pickup
             self.msg("Pickup ON." if self.auto_pickup else "Pickup OFF.")
             self.st=ST_PLAY
+        elif act=="Language":
+            self.toggle_lang()
+            self.st=ST_PLAY
         self.dir_pending=None
 
     # =====================================================
@@ -1515,7 +1526,8 @@ class Game:
         state = p.state if p.state else "normal"
         self.txt(sx,sy,f"Food {state}",13 if p.state!="normal" else 7); sy+=12
         self.txt(sx,sy,f"Diag {'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5); sy+=12
-        self.txt(sx,sy,f"Pickup {'ON' if self.auto_pickup else 'OFF'}",11 if self.auto_pickup else 5); sy+=18
+        self.txt(sx,sy,f"Pickup {'ON' if self.auto_pickup else 'OFF'}",11 if self.auto_pickup else 5); sy+=12
+        self.txt(sx,sy,f"Lang {self.lang.upper()}",7); sy+=18
         self.txt(sx,sy,"-- Equip --",10); sy+=12
         wn=self.ident.name(p.wpn) if p.wpn else "bare hands"
         an=self.ident.name(p.arm) if p.arm else "no armor"

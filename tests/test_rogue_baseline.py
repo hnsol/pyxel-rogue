@@ -103,7 +103,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (336, 288))
-        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search", "Pickup"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search", "Pickup", "Language"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -176,6 +176,57 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(en.rooms), len(ja.rooms))
         self.assertEqual(len(en.mons), len(ja.mons))
         self.assertEqual(len(en.gitems), len(ja.gitems))
+
+    def test_assist_language_toggle_changes_display_layer_only(self):
+        game = new_game(seed=24, lang=rogue.LANG_EN)
+        before = (
+            game.turn,
+            game.p.x,
+            game.p.y,
+            len(game.p.inv),
+            len(game.mons),
+            len(game.gitems),
+            tuple(game.ident.pk),
+            tuple(game.ident.sk),
+        )
+
+        game.st = rogue.ST_AUX
+        game.acur = rogue.AUX_ACTIONS.index("Language")
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+        )
+        game.update()
+        self.assertEqual(game.lang, rogue.LANG_JA)
+        self.assertEqual(game.ident.lang, rogue.LANG_JA)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("言語: 日本語。", game.msgs)
+        self.assertEqual(
+            before,
+            (
+                game.turn,
+                game.p.x,
+                game.p.y,
+                len(game.p.inv),
+                len(game.mons),
+                len(game.gitems),
+                tuple(game.ident.pk),
+                tuple(game.ident.sk),
+            ),
+        )
+        self.assertEqual(rogue.TextCatalog.menu(game.lang, "Language"), "言語")
+
+        rogue.pyxel.set_input()
+        game.st = rogue.ST_AUX
+        game.acur = rogue.AUX_ACTIONS.index("Language")
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+        )
+        game.update()
+        self.assertEqual(game.lang, rogue.LANG_EN)
+        self.assertEqual(game.ident.lang, rogue.LANG_EN)
+        self.assertIn("Language: English.", game.msgs)
 
     def test_baseline_hunger_heal_and_pickup(self):
         game = new_game(seed=31)
@@ -281,6 +332,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any("Exp:   0/10" in c for c in calls))
         self.assertTrue(any("Arm " in c or c.startswith("Armor:") for c in calls))
         self.assertTrue(any("Pickup ON" in c for c in calls))
+        self.assertTrue(any("Lang EN" in c for c in calls))
 
     def test_direction_pending_merges_cardinal_inputs_into_one_diagonal(self):
         game = new_game(seed=36)

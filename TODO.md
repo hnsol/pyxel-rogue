@@ -18,6 +18,7 @@
 - ✅ Rogue 5.4 `pickup` オプション相当の自動ピックアップON/OFF
 - ✅ 探索済み視界外セルで床上アイテムを表示し、モンスターは非表示にする
 - ✅ 投げたアイテムの非ブロッキング飛翔アニメーション
+- ✅ ゲーム中の日英切り替え入口（Select補助メニューの Language）
 
 注意: 現行実装は Start+D-pad / X / R / Back を含むが、操作方針は A/B/Start/Select + D-pad 中心に再設計予定。
 
@@ -70,6 +71,7 @@
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
 - [x] Select(Back) 補助メニューから Map を削除し、Status / Help / Search に整理
 - [x] Select+A quick throw / Select+B search を追加
+- [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理
 - [x] Rogue 5.4 `passages.c` 準拠の通常部屋通路生成へ修正
 - [x] 旧コンパクトレイアウト（512×320化で置き換え予定）
@@ -84,6 +86,7 @@
 - [ ] 複数 BDF フォント選択 + レイアウト自動再計算
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
 - [ ] 日本語/英語切替（全メッセージ辞書化、umplus_j10r は CJK 対応済み）
+- [ ] HUD / Status / Help / Death の文言辞書化
 - [ ] BGM 導入方式検討
   - `8bit-bgm-generator` 調査
   - `pyxel-hadegame` の `pyxelhg/bgm/bgm_generator.py` 確認
