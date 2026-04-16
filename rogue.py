@@ -19,6 +19,12 @@ import pyxel
 import random
 import os
 
+LANG_EN = "en"
+LANG_JA = "ja"
+DEFAULT_LANG = os.environ.get("PYXEL_ROGUE_LANG", LANG_EN).lower()
+if DEFAULT_LANG not in (LANG_EN, LANG_JA):
+    DEFAULT_LANG = LANG_EN
+
 # ===========================================================
 #  Font
 # ===========================================================
@@ -95,6 +101,120 @@ CAT_POT = "pot"; CAT_SCR = "scr"; CAT_FOOD = "food"
 CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_GOLD = "gold"
 ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_GOLD:"*"}
 ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_GOLD:10}
+
+# ===========================================================
+#  Text catalog
+# ===========================================================
+POT_JA = {
+    "healing":"体力が回復する", "extra healing":"体力がとても回復する",
+    "poison":"毒の", "gain strength":"強さが増す",
+    "restore strength":"強さが元にもどる", "confusion":"頭が混乱する",
+    "blindness":"目が見えなくなる", "haste self":"素早くなる",
+    "see invisible":"見えないものが見える", "raise level":"経験が増す",
+    "detect monster":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
+}
+SCR_JA = {
+    "identify":"持ちものの種類がわかる", "enchant weapon":"武器に魔法をかける",
+    "enchant armor":"よろいに魔法をかける", "remove curse":"のろいを解く",
+    "aggravate monsters":"怪物を怒らせる", "scare monster":"怪物を近寄せない",
+    "sleep":"眠りにおちる", "teleportation":"テレポートする",
+    "create monster":"怪物を作りだす", "magic mapping":"魔法の地図の",
+    "hold monster":"怪物を封じこめる", "blank paper":"白紙の",
+}
+FOOD_JA = {"food ration":"食糧", "slime-mold":"こけもも"}
+WEAPON_JA = {
+    "mace":"ほこ", "long sword":"長い剣", "short bow":"弓", "arrow":"矢",
+    "dagger":"短剣", "two-handed sword":"大きな剣", "dart":"投げ矢",
+    "shuriken":"手裏剣", "spear":"ほこ",
+}
+ARMOR_JA = {
+    "leather armor":"革のよろい", "ring mail":"かたびら",
+    "studded leather":"鋲打ち革のよろい", "scale mail":"うろこのよろい",
+    "chain mail":"鎖かたびら", "splint mail":"延金のよろい",
+    "banded mail":"帯金のよろい", "plate mail":"鋼鉄のよろい",
+}
+MONSTER_JA = {
+    "aquator":"水ごけの怪物", "bat":"大こうもり", "centaur":"ケンタウロス",
+    "dragon":"ドラゴン", "emu":"大うずら", "venus flytrap":"はえとりぐさ",
+    "griffin":"翼ライオン", "hobgoblin":"小鬼", "ice monster":"氷の怪物",
+    "jabberwock":"巨大トカゲ", "kestrel":"大はやぶさ",
+    "leprechaun":"金持ち妖精", "medusa":"メデューサ", "nymph":"ニンフ",
+    "orc":"欲ばり鬼", "phantom":"幽霊", "quagga":"大つのじか",
+    "rattlesnake":"がらがらへび", "snake":"へび", "troll":"巨人",
+    "ur-vile":"一角獣", "vampire":"バンパイア", "wraith":"死霊",
+    "xeroc":"物まねの怪物", "yeti":"雪男", "zombie":"ゾンビ",
+}
+POT_COLOR_JA = {
+    "blue":"青い", "red":"赤い", "green":"緑の", "grey":"灰色の",
+    "brown":"茶色の", "clear":"透明な", "pink":"ピンクの",
+    "white":"白い", "purple":"紫の", "yellow":"黄色い",
+    "plaid":"水色の", "amber":"琥珀色の",
+}
+
+class TextCatalog:
+    MSG = {
+        LANG_EN: {},
+        LANG_JA: {
+            "Welcome to the Dungeons of Doom!":"やあ、ローグ。 運命の洞窟へようこそ...",
+            "You feel hungry.":"空腹になってきた。",
+            "You are weak.":"空腹のせいで力がなくなってきた。",
+            "You faint from lack of food.":"空腹で、目がくらくらする。",
+            "You starve to death.":"空腹で、もう死にそうだ。",
+            "You find nothing.":"何も見つからなかった。",
+            "You found something!":"何かを見つけた！",
+            "Nothing here.":"ここには、何もない。",
+            "Your pack is full.":"もうこれ以上、物は持てない。",
+            "Diagonal assist ON.":"斜め補助モード ON。",
+            "Diagonal assist OFF.":"斜め補助モード OFF。",
+            "You died... [A/Start] to restart.":"あなたは死んだ... [A/Start] で再開。",
+            "You defeated the {monster}. ({exp} exp)":"{monster}を倒した。 ({exp} exp)",
+            "Welcome to level {level}!":"レベル{level}へようこそ。",
+            "You hit the {monster} ({dmg}).":"{monster}への攻撃は命中した。 ({dmg})",
+            "You miss the {monster}.":"{monster}への攻撃はそれた。",
+            "The {monster} hits! ({dmg})":"{monster}の攻撃は命中した。 ({dmg})",
+            "The {monster} misses.":"{monster}の攻撃はそれた。",
+            "You found {gold} gold.":"{gold}個の金塊を見つけた。",
+            "Picked up {gold} gold.":"{gold}個の金塊を拾った。",
+            "You see a {item} here.":"{item}の上にいる。",
+            "You pick up the {item}.":"{item}を手に入れた。",
+        },
+    }
+    MENU = {
+        LANG_EN: {
+            "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
+            "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
+            "Map":"Map", "Status":"Status", "Help":"Help", "Search":"Search",
+        },
+        LANG_JA: {
+            "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
+            "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
+            "Map":"地図", "Status":"状態", "Help":"ヘルプ", "Search":"探す",
+        },
+    }
+
+    @staticmethod
+    def msg(lang, key, **kw):
+        s = TextCatalog.MSG.get(lang, {}).get(key, key)
+        return s.format(**kw) if kw else s
+
+    @staticmethod
+    def menu(lang, key):
+        return TextCatalog.MENU.get(lang, {}).get(key, key)
+
+    @staticmethod
+    def monster(lang, name):
+        return MONSTER_JA.get(name, name) if lang == LANG_JA else name
+
+    @staticmethod
+    def item_kind(lang, cat, name):
+        if lang != LANG_JA:
+            return name
+        if cat == CAT_POT: return POT_JA.get(name, name)
+        if cat == CAT_SCR: return SCR_JA.get(name, name)
+        if cat == CAT_FOOD: return FOOD_JA.get(name, name)
+        if cat == CAT_WPN: return WEAPON_JA.get(name, name)
+        if cat == CAT_ARM: return ARMOR_JA.get(name, name)
+        return name
 
 # ===========================================================
 #  Dice
@@ -292,7 +412,8 @@ class Player:
         if s.arm is it: s.arm=None; s.recalc_ac()
 
 class IdentTable:
-    def __init__(s):
+    def __init__(s, lang=LANG_EN):
+        s.lang = lang
         s.pcol=random.sample(POT_COLORS,len(POTIONS))
         syls=list(SCR_SYLS); random.shuffle(syls)
         s.snam=[]
@@ -300,18 +421,30 @@ class IdentTable:
             n=random.randint(2,3); st=(i*3)%len(syls)
             s.snam.append(" ".join(syls[(st+j)%len(syls)] for j in range(n)))
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
-    def name(s,it):
+    def set_lang(s, lang):
+        s.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
+    def name(s,it,lang=None):
+        lang = s.lang if lang is None else lang
         if it.cat==CAT_POT:
-            return f"potion of {POTIONS[it.kind]['name']}" if s.pk[it.kind] else f"{s.pcol[it.kind]} potion"
+            if s.pk[it.kind]:
+                nm=TextCatalog.item_kind(lang, CAT_POT, POTIONS[it.kind]["name"])
+                return f"potion of {nm}" if lang==LANG_EN else f"{nm}水薬"
+            col=s.pcol[it.kind]
+            return f"{col} potion" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬"
         if it.cat==CAT_SCR:
-            return f"scroll of {SCROLLS[it.kind]['name']}" if s.sk[it.kind] else f"scroll [{s.snam[it.kind]}]"
-        if it.cat==CAT_FOOD: return it.data["name"]
+            if s.sk[it.kind]:
+                nm=TextCatalog.item_kind(lang, CAT_SCR, SCROLLS[it.kind]["name"])
+                return f"scroll of {nm}" if lang==LANG_EN else f"{nm}巻き物"
+            return f"scroll [{s.snam[it.kind]}]" if lang==LANG_EN else f"巻き物 [{s.snam[it.kind]}]"
+        if it.cat==CAT_FOOD: return TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
         if it.cat==CAT_WPN:
             e=it.ench; q=f" ({it.qty})" if it.stackable and it.qty>1 else ""
-            return f"{'+' if e>=0 else ''}{e} {it.data['name']}{q}"
+            nm=TextCatalog.item_kind(lang, CAT_WPN, it.data["name"])
+            return f"{'+' if e>=0 else ''}{e} {nm}{q}"
         if it.cat==CAT_ARM:
-            e=it.ench; return f"{'+' if e>=0 else ''}{e} {it.data['name']}"
-        return "something"
+            e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
+            return f"{'+' if e>=0 else ''}{e} {nm}"
+        return "something" if lang==LANG_EN else "何者か"
 
 # ===========================================================
 #  Dungeon generator
@@ -493,6 +626,7 @@ class Game:
     def __init__(self):
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30)
         self.font = pyxel.Font(FONT_PATH)
+        self.lang = DEFAULT_LANG
         self.new_game()
         pyxel.run(self.update, self.draw)
 
@@ -501,10 +635,12 @@ class Game:
 
     # ---------- Init ----------
     def new_game(self):
+        if not hasattr(self, "lang"):
+            self.lang = DEFAULT_LANG
         self.p = Player()
         inv,w,a = start_inv()
         self.p.inv=inv; self.p.wpn=w; self.p.arm=a; self.p.recalc_ac()
-        self.ident = IdentTable()
+        self.ident = IdentTable(self.lang)
         self.msgs = []; self.explored = set(); self.visible = set()
         self.gitems = []; self.mons = []; self.turn = 0
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
@@ -519,6 +655,11 @@ class Game:
         self.death_cause = ""
         self.descend()
         self.msg("Welcome to the Dungeons of Doom!")
+
+    def set_lang(self, lang):
+        self.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
+        if hasattr(self, "ident"):
+            self.ident.set_lang(self.lang)
 
     def descend(self):
         self.p.depth += 1
@@ -579,7 +720,8 @@ class Game:
         for r in self.rooms:
             if r.x<x<r.x+r.w-1 and r.y<y<r.y+r.h-1: return r
         return None
-    def msg(self,t): self.msgs.append(t); self.msgs=self.msgs[-100:]
+    def msg(self,t,**kw):
+        self.msgs.append(TextCatalog.msg(self.lang,t,**kw)); self.msgs=self.msgs[-100:]
 
     # ---------- Camera ----------
     def update_cam(self):
@@ -616,23 +758,25 @@ class Game:
 
     # ---------- Combat ----------
     def p_attack(self, m):
+        mn=TextCatalog.monster(self.lang,m.name)
         th=random.randint(1,20)+self.p.level
         wb=self.p.wpn.ench if self.p.wpn else 0
         if th+wb>=10-m.df or th==20:
             dmg=max(1,self.p.melee_dmg())
             m.hp-=dmg
             if not m.alive:
-                self.msg(f"You defeated the {m.name}. ({m.exp} exp)")
+                self.msg("You defeated the {monster}. ({exp} exp)",monster=mn,exp=m.exp)
                 self.p.exp+=m.exp
-                if self.p.lvlup(): self.msg(f"Welcome to level {self.p.level}!")
-            else: self.msg(f"You hit the {m.name} ({dmg}).")
-        else: self.msg(f"You miss the {m.name}.")
+                if self.p.lvlup(): self.msg("Welcome to level {level}!",level=self.p.level)
+            else: self.msg("You hit the {monster} ({dmg}).",monster=mn,dmg=dmg)
+        else: self.msg("You miss the {monster}.",monster=mn)
 
     def m_attack(self,m):
+        mn=TextCatalog.monster(self.lang,m.name)
         th=random.randint(1,20)
         if th>=self.p.ac or th==20:
             dmg=max(1,m.atk+random.randint(0,2))
-            self.p.hp-=dmg; self.msg(f"The {m.name} hits! ({dmg})")
+            self.p.hp-=dmg; self.msg("The {monster} hits! ({dmg})",monster=mn,dmg=dmg)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                 self.p.arm.ench-=1; self.p.recalc_ac(); self.msg("Your armor weakens!")
@@ -650,7 +794,7 @@ class Game:
                 t=random.choice(self.p.inv)
                 if t is not self.p.wpn and t is not self.p.arm:
                     self.p.rm_item(t); self.msg(f"She stole your {self.ident.name(t)}!")
-        else: self.msg(f"The {m.name} misses.")
+        else: self.msg("The {monster} misses.",monster=mn)
 
     def m_turn(self,m):
         if not m.alive: return
@@ -830,9 +974,9 @@ class Game:
             p.x, p.y = nx, ny
             gi = self.gi_at(nx,ny)
             if gi and gi.cat==CAT_GOLD:
-                p.gold+=gi.qty; self.gitems.remove(gi); self.msg(f"You found {gi.qty} gold.")
+                p.gold+=gi.qty; self.gitems.remove(gi); self.msg("You found {gold} gold.",gold=gi.qty)
             elif gi:
-                self.msg(f"You see a {self.ident.name(gi)} here.")
+                self.msg("You see a {item} here.",item=self.ident.name(gi))
             self.update_fov(); self.update_cam(); self.end_turn(); return True
         return False
 
@@ -863,9 +1007,9 @@ class Game:
         gi=self.gi_at(px,py)
         if gi:
             if gi.cat==CAT_GOLD:
-                p.gold+=gi.qty; self.gitems.remove(gi); self.msg(f"Picked up {gi.qty} gold.")
+                p.gold+=gi.qty; self.gitems.remove(gi); self.msg("Picked up {gold} gold.",gold=gi.qty)
             elif p.add_item(gi):
-                self.gitems.remove(gi); self.msg(f"You pick up the {self.ident.name(gi)}.")
+                self.gitems.remove(gi); self.msg("You pick up the {item}.",item=self.ident.name(gi))
             else: self.msg("Your pack is full.")
         else: self.msg("Nothing here.")
 
@@ -1333,7 +1477,7 @@ class Game:
         for i,(nm,_) in enumerate(MENU_ACTIONS):
             ty=by+16+i*14; c=10 if i==self.mcur else 7
             pre=">" if i==self.mcur else " "
-            self.txt(bx+4,ty,f"{pre} {nm}",c)
+            self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
     def draw_isel(self):
         bx,by=ZV_X+20,ZV_Y+8; n=min(len(self.fitems),10); bw=220; bh=n*14+20
@@ -1360,7 +1504,7 @@ class Game:
         for i,nm in enumerate(AUX_ACTIONS):
             ty=by+16+i*14; c=10 if i==self.acur else 7
             pre=">" if i==self.acur else " "
-            self.txt(bx+4,ty,f"{pre} {nm}",c)
+            self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
     def draw_status(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40

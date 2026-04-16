@@ -19,9 +19,14 @@ python3 rogue.py
 
 ```bash
 python3 -c "import ast; ast.parse(open('rogue.py').read()); print('OK')"
+python3 -m unittest
 ```
 
-ロジックテストは Pyxel を mock して実行可能（手順は DESIGN.md 末尾に記載）。
+ロジックテストは `tests/test_rogue_baseline.py` で Pyxel を mock して実行する。日本語切替込みの確認は次で行う。
+
+```bash
+PYXEL_ROGUE_LANG=ja python3 -m unittest
+```
 
 ## コード構造
 
@@ -30,6 +35,7 @@ python3 -c "import ast; ast.parse(open('rogue.py').read()); print('OK')"
 ```
 rogue.py
 ├── 定数・テーブル（POTIONS[12], SCROLLS[12], WEAPONS[9], ARMORS[8], BESTIARY[26]）
+├── TextCatalog / LANG_EN / LANG_JA（日英切替・代表文言）
 ├── Room / Item / Monster / Player / IdentTable / DGen（ダンジョン生成）
 └── Game（メイン: ステートマシン ST_PLAY/MENU/ITEM/DIR/STATUS/HELP/MAP/DEAD）
     ├── update: 入力 → upd_play / upd_menu / upd_item / upd_dir
@@ -53,7 +59,9 @@ rogue.py
 - カテゴリ: `CAT_POT`, `CAT_SCR`, `CAT_WPN`, `CAT_ARM`, `CAT_FOOD`, `CAT_GOLD`
 - **データ駆動**: 新要素はテーブル追加で対応。コード分岐は最小限
 - 全テキスト描画は `self.txt(x, y, s, col)` 経由
+- ゲームログやUI文言は、段階的に `TextCatalog` 経由へ寄せる。新規文言は直書きだけで増やさず、日英切替を意識する
 - 原作 Rogue 5.4 と照合しやすいよう、ゲームロジックと表示・入力処理の責務を混ぜすぎない
+- Rogue2.Official は日本語表現の準拠元、Rogue 5.4 C ソースはゲーム挙動の準拠元として扱う
 
 ## 操作方針
 
@@ -73,6 +81,7 @@ rogue.py
 
 - フォント標準: `pyxel.Font(os.path.join(os.path.dirname(pyxel.__file__), "examples", "assets", "umplus_j10r.bdf"))`
 - `umplus_j10r.bdf` は ASCII 6px、CJK 10px、日本語対応
+- 日本語表示は `PYXEL_ROGUE_LANG=ja python3 rogue.py` で確認できる。現状は代表文言・用語のみ対応で、全メッセージ辞書化は継続タスク
 - 将来的なフォント選択は許容する。ただし ASCII ローグ表示に向く可読性を必須条件にする
 - カメラ: デッドゾーン方式。現行値は横 `DEAD_ZONE_X = 8`、縦 `DEAD_ZONE_Y = 5`
 - ダッシュ: B長押し＋方向を中心候補にする。壁・敵・ドア・分岐・階段で自動停止
@@ -81,6 +90,8 @@ rogue.py
 ## 禁止・注意事項
 
 - Rogue 5.4 にない要素を追加しない（バージョン選択機能で対応予定）
+- バージョン選択機能は短期的には低優先度。現行ターゲットは Rogue 5.4 に固定し、将来の切替に備えて依存方向だけ整える
+- 忠実度修正では、既知バグを baseline として固定しない。Rogue 5.4 の期待値テストを先に追加してから修正する
 - 解像度変更時はレイアウト定数を全て再計算すること
 - マップ本体は ASCII ローグライク描画を保つ
 - Pyxel Web で動かすことを前提に、デスクトップ固有の挙動へ依存しすぎない
