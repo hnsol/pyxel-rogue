@@ -12,7 +12,7 @@
 - ✅ インベントリ（最大26個 a〜z）、装備スロット、呪い
 - ✅ 空腹度（hungry → weak → faint）
 - ✅ BDF フォント / カメラ デッドゾーン / 8方向移動 / ダッシュ
-- ✅ オーバーレイ3種（Status / Help / Full Map）
+- ✅ 主要オーバーレイ（Status / Help / Death）
 - ✅ 最小ロジックテスト基盤（Pyxel mock + `python3 -m unittest`）
 - ✅ 薄い日英切替基盤（`TextCatalog`, `PYXEL_ROGUE_LANG`, 代表文言・用語）
 - ✅ Rogue 5.4 `pickup` オプション相当の自動ピックアップON/OFF
@@ -27,6 +27,16 @@
 目的: Rogue 5.4 のゲームロジックを完成させ、原作と同じ挙動か検証できる状態に近づける。
 
 進め方: 既知バグや忠実度修正は、現状追認テストではなく Rogue 5.4 C ソースに基づく期待値テストを先に追加してから直す。baseline テストは、翻訳層やUI整理で壊れてほしくない現状の保護に使う。
+
+完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
+
+推奨順:
+
+1. search / 隠しドア / 隠し通路 / 罠
+2. 指輪
+3. 杖と方向指定 zap
+4. Amulet of Yendor / 帰還勝利
+5. remove curse, sleep, scare monster, Xeroc, 盗み後ワープ, 迷路部屋などの忠実度バグ
 
 - [ ] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
@@ -43,6 +53,7 @@
 - [ ] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
 - [ ] **隠しドア・隠し通路**
 - [ ] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
+- [ ] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
 - [x] Rogue 5.4 `pick_up()` 準拠の拾得基礎（自動拾得、金直接加算、満杯文言、scare monster 再拾得消滅）
 - [ ] `scroll of scare monster` の床上効果（床に置いた巻物でモンスターが怯える挙動）
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
@@ -89,6 +100,7 @@
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
 - [ ] 日本語/英語切替（全メッセージ辞書化、umplus_j10r は CJK 対応済み）
 - [ ] HUD / Status / Help / Death の文言辞書化
+- [ ] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする
 - [ ] BGM 導入方式検討
   - `8bit-bgm-generator` 調査
   - `pyxel-hadegame` の `pyxelhg/bgm/bgm_generator.py` 確認
