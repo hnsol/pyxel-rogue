@@ -154,7 +154,10 @@ class TextCatalog:
             "You find nothing.":"何も見つからなかった。",
             "You found something!":"何かを見つけた！",
             "Nothing here.":"ここには、何もない。",
-            "Your pack is full.":"もうこれ以上、物は持てない。",
+            "pack too full":"もうこれ以上、物は持てない。",
+            "the scroll turns to dust as you pick it up":"巻き物は拾うと灰になった。",
+            "Pickup ON.":"自動拾い ON。",
+            "Pickup OFF.":"自動拾い OFF。",
             "Diagonal assist ON.":"斜め補助モード ON。",
             "Diagonal assist OFF.":"斜め補助モード OFF。",
             "You died... [A/Start] to restart.":"あなたは死んだ... [A/Start] で再開。",
@@ -164,8 +167,7 @@ class TextCatalog:
             "You miss the {monster}.":"{monster}への攻撃はそれた。",
             "The {monster} hits! ({dmg})":"{monster}の攻撃は命中した。 ({dmg})",
             "The {monster} misses.":"{monster}の攻撃はそれた。",
-            "You found {gold} gold.":"{gold}個の金塊を見つけた。",
-            "Picked up {gold} gold.":"{gold}個の金塊を拾った。",
+            "{gold} gold pieces":"{gold}個の金塊",
             "You see a {item} here.":"{item}の上にいる。",
             "You pick up the {item}.":"{item}を手に入れた。",
         },
@@ -174,12 +176,12 @@ class TextCatalog:
         LANG_EN: {
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
             "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
-            "Status":"Status", "Help":"Help", "Search":"Search",
+            "Status":"Status", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
             "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
-            "Status":"状態", "Help":"ヘルプ", "Search":"探す",
+            "Status":"状態", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
         },
     }
 
@@ -297,7 +299,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Status", "Help", "Search"]
+AUX_ACTIONS = ["Status", "Help", "Search", "Pickup"]
 
 # ===========================================================
 #  Classes
@@ -317,6 +319,7 @@ class Item:
         s.uid=Item._nid; Item._nid+=1
         s.cat=cat; s.kind=kind; s.ench=ench; s.cursed=cursed; s.qty=qty
         s.x=s.y=0
+        s.picked_up=False
     @property
     def data(s):
         if s.cat==CAT_POT: return POTIONS[s.kind]
@@ -643,6 +646,9 @@ class Game:
         self.b_used = False; self.b_tap = False
         self.b_menu_guard = False
         self.diag_assist = False
+        self.auto_pickup = True
+        self.dir_pending = None
+        self.throw_anim = None
         self.death_cause = ""
         self.descend()
         self.msg("Welcome to the Dungeons of Doom!")
@@ -938,25 +944,30 @@ class Game:
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
         self.gitems.append(it); self.msg(f"You drop the {self.ident.name(it)}.")
 
+    def is_scare_monster(self,it):
+        return it.cat==CAT_SCR and SCROLLS[it.kind]["name"]=="scare monster"
+
     def throw(self,it,dx,dy):
         p=self.p
         if it is p.wpn and it.cursed: self.msg("Can't let go!"); return
         if it.stackable and it.qty>1:
             thrown=Item(it.cat,it.kind,it.ench,it.cursed,1); it.qty-=1
         else: p.rm_item(it); thrown=it
-        tx,ty=p.x,p.y
+        tx,ty=p.x,p.y; path=[]
         for _ in range(8):
             nx,ny=tx+dx,ty+dy
             if not self.walkable(nx,ny): break
-            tx,ty=nx,ny
+            tx,ty=nx,ny; path.append((tx,ty))
             m=self.mon_at(tx,ty)
             if m:
+                self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
                 dmg=max(1,roll(it.data.get("hurl","1d2"))+it.ench if it.cat==CAT_WPN else roll("1d2"))
                 m.hp-=dmg; self.msg(f"The {self.ident.name(thrown)} hits the {m.name}. ({dmg})")
                 if not m.alive:
                     self.msg(f"The {m.name} is defeated!"); p.exp+=m.exp
                     if p.lvlup(): self.msg(f"Welcome to level {p.level}!")
                 return
+        self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
         thrown.x,thrown.y=tx,ty; self.gitems.append(thrown)
 
     # ---------- Movement & turns ----------
@@ -972,8 +983,8 @@ class Game:
         if self.walkable(nx, ny):
             p.x, p.y = nx, ny
             gi = self.gi_at(nx,ny)
-            if gi and gi.cat==CAT_GOLD:
-                p.gold+=gi.qty; self.gitems.remove(gi); self.msg("You found {gold} gold.",gold=gi.qty)
+            if gi and self.auto_pickup:
+                self.pickup_at(nx,ny)
             elif gi:
                 self.msg("You see a {item} here.",item=self.ident.name(gi))
             self.update_fov(); self.update_cam(); self.end_turn(); return True
@@ -1003,14 +1014,28 @@ class Game:
         if self.tm[py][px]==T_STAIR:
             self.msg(f"You descend to depth {p.depth+1}..."); self.descend()
             self.msg(f"Dungeon depth {p.depth}."); return
-        gi=self.gi_at(px,py)
-        if gi:
-            if gi.cat==CAT_GOLD:
-                p.gold+=gi.qty; self.gitems.remove(gi); self.msg("Picked up {gold} gold.",gold=gi.qty)
-            elif p.add_item(gi):
-                self.gitems.remove(gi); self.msg("You pick up the {item}.",item=self.ident.name(gi))
-            else: self.msg("Your pack is full.")
-        else: self.msg("Nothing here.")
+        if not self.pickup_at(px,py):
+            self.msg("Nothing here.")
+
+    def pickup_at(self,x,y):
+        p=self.p
+        gi=self.gi_at(x,y)
+        if not gi:
+            return False
+        if gi.cat==CAT_GOLD:
+            p.gold+=gi.qty; self.gitems.remove(gi); self.msg("{gold} gold pieces",gold=gi.qty)
+            return True
+        if self.is_scare_monster(gi) and gi.picked_up:
+            self.gitems.remove(gi)
+            self.ident.sk[gi.kind]=True
+            self.msg("the scroll turns to dust as you pick it up")
+            return True
+        if p.add_item(gi):
+            gi.picked_up=True
+            self.gitems.remove(gi); self.msg("You pick up the {item}.",item=self.ident.name(gi))
+            return True
+        self.msg("pack too full")
+        return True
 
     def do_wait(self): self.end_turn()
 
@@ -1123,9 +1148,11 @@ class Game:
 
     # ---------- Menu logic ----------
     def open_menu(self):
-        self.st=ST_MENU; self.mcur=0
+        self.st=ST_MENU; self.mcur=0; self.dir_pending=None
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
-    def close_menu(self): self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.fitems=[]; self.b_menu_guard=False
+    def close_menu(self):
+        self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.fitems=[]
+        self.b_menu_guard=False; self.dir_pending=None
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
@@ -1188,27 +1215,32 @@ class Game:
     def dir_press(self):
         """Return (dx,dy) for direction pressed this frame (btnp), or None."""
         # Diagonal keys (vi: Y U B N)
-        if self.kp(pyxel.KEY_Y): return (-1,-1)
-        if self.kp(pyxel.KEY_U): return (1,-1)
-        if self.kp(pyxel.KEY_B): return (-1,1)
-        if self.kp(pyxel.KEY_N): return (1,1)
+        if self.kp(pyxel.KEY_Y): self.dir_pending=None; return (-1,-1)
+        if self.kp(pyxel.KEY_U): self.dir_pending=None; return (1,-1)
+        if self.kp(pyxel.KEY_B): self.dir_pending=None; return (-1,1)
+        if self.kp(pyxel.KEY_N): self.dir_pending=None; return (1,1)
         u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
         diag_pressed = (
             self.kp(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
                     pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
                     pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
         )
-        if u and r and diag_pressed: return (1,-1)
-        if u and l and diag_pressed: return (-1,-1)
-        if d and r and diag_pressed: return (1,1)
-        if d and l and diag_pressed: return (-1,1)
+        if u and r and diag_pressed: self.dir_pending=None; return (1,-1)
+        if u and l and diag_pressed: self.dir_pending=None; return (-1,-1)
+        if d and r and diag_pressed: self.dir_pending=None; return (1,1)
+        if d and l and diag_pressed: self.dir_pending=None; return (-1,1)
         if self.diag_assist:
+            self.dir_pending=None
             return None
+        if self.dir_pending:
+            d=self.dir_pending
+            self.dir_pending=None
+            return d
         # Cardinal
-        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):    return (0,-1)
-        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):  return (0,1)
-        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):  return (-1,0)
-        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): return (1,0)
+        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):    self.dir_pending=(0,-1); return None
+        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):  self.dir_pending=(0,1); return None
+        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):  self.dir_pending=(-1,0); return None
+        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): self.dir_pending=(1,0); return None
         return None
 
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
@@ -1242,6 +1274,10 @@ class Game:
     # ---------- Update ----------
     def update(self):
         self.begin_input()
+        if self.throw_anim:
+            self.throw_anim["tick"] += 1
+            if self.throw_anim["tick"] >= len(self.throw_anim["path"]) * self.throw_anim["delay"]:
+                self.throw_anim = None
         if self.st==ST_DEAD:
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
@@ -1295,6 +1331,7 @@ class Game:
             return
 
         if self.btn_start_tap():
+            self.dir_pending=None
             self.diag_assist = not self.diag_assist
             self.msg(f"Diagonal assist {'ON' if self.diag_assist else 'OFF'}.")
             return
@@ -1319,7 +1356,7 @@ class Game:
         if self.btn_overlay_cancel(): self.st=ST_ITEM; return
 
     def open_aux(self):
-        self.st=ST_AUX; self.acur=0
+        self.st=ST_AUX; self.acur=0; self.dir_pending=None
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
 
     def upd_aux(self):
@@ -1333,6 +1370,11 @@ class Game:
         elif act=="Search":
             self.st=ST_PLAY
             self.do_search()
+        elif act=="Pickup":
+            self.auto_pickup = not self.auto_pickup
+            self.msg("Pickup ON." if self.auto_pickup else "Pickup OFF.")
+            self.st=ST_PLAY
+        self.dir_pending=None
 
     # =====================================================
     #  DRAW
@@ -1386,6 +1428,17 @@ class Game:
                 elif exp:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
                     if ch!=" ": self.txt(sx+1,sy+1,ch,1)
+                    gi=self.gi_at(mx,my)
+                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,7))
+
+        if self.throw_anim and self.throw_anim["path"]:
+            idx=min(self.throw_anim["tick"]//self.throw_anim["delay"],len(self.throw_anim["path"])-1)
+            mx,my=self.throw_anim["path"][idx]
+            if (mx,my) in self.visible and not blind:
+                sx = ZV_X + (mx-cx)*TILE_W
+                sy = ZV_Y + (my-cy)*TILE_H
+                if ZV_X <= sx < ZV_X+ZV_PX_W and ZV_Y <= sy < ZV_Y+ZV_PX_H:
+                    self.txt(sx+1,sy+1,self.throw_anim["sym"],self.throw_anim["col"])
 
     def draw_stat(self):
         sx,sy=HUD_X,HUD_Y+16; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
@@ -1397,13 +1450,15 @@ class Game:
             f=max(0,int(bw*p.hp/p.max_hp))
             pyxel.rect(sx,sy,f,4,8 if p.hp<=p.max_hp//3 else 11)
         sy+=12
-        self.txt(sx,sy,f"Lv {p.level}  Exp {p.exp}",7); sy+=12
+        next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
+        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}/{next_exp}",7); sy+=12
         self.txt(sx,sy,f"Str {p.st}/{p.max_st}",7)
-        self.txt(sx+72,sy,f"AC {p.ac}",7); sy+=12
+        self.txt(sx+72,sy,f"Arm {p.ac}",7); sy+=12
         self.txt(sx,sy,f"Gold {p.gold}",10); sy+=12
         state = p.state if p.state else "normal"
         self.txt(sx,sy,f"Food {state}",13 if p.state!="normal" else 7); sy+=12
-        self.txt(sx,sy,f"Diag {'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5); sy+=18
+        self.txt(sx,sy,f"Diag {'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5); sy+=12
+        self.txt(sx,sy,f"Pickup {'ON' if self.auto_pickup else 'OFF'}",11 if self.auto_pickup else 5); sy+=18
         self.txt(sx,sy,"-- Equip --",10); sy+=12
         wn=self.ident.name(p.wpn) if p.wpn else "bare hands"
         an=self.ident.name(p.arm) if p.arm else "no armor"
@@ -1484,9 +1539,10 @@ class Game:
         self.txt(x,y,f"Level: {p.level}",7); y+=13
         self.txt(x,y,f"HP:    {p.hp}/{p.max_hp}",7); y+=13
         self.txt(x,y,f"Str:   {p.st}/{p.max_st}",7); y+=13
-        self.txt(x,y,f"AC:    {p.ac}",7); y+=13
-        self.txt(x,y,f"Exp:   {p.exp}",7); y+=13
-        self.txt(x,y,f"Next:  {p.EXP_T[min(p.level,len(p.EXP_T)-1)]}",5); y+=13
+        next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
+        self.txt(x,y,f"Armor: {p.ac}",7); y+=13
+        self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=13
+        self.txt(x,y,f"Pickup:{' ON' if self.auto_pickup else ' OFF'}",5); y+=13
         self.txt(x,y,f"Gold:  {p.gold}",10); y+=13
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=13
         self.txt(x,y,f"Food:  {p.food}",7)
@@ -1517,6 +1573,7 @@ class Game:
             "",
             "--- Actions ---",
             "A / Z / Enter  Pickup / Stairs",
+            "Pickup option   Select menu toggle",
             "B tap / C      Open menu",
             "A+B / .        Wait one turn",
             "A on empty     Swing / search front",
@@ -1543,7 +1600,8 @@ class Game:
         self.txt(x,y,f"Depth: {p.depth}",7); y+=14
         self.txt(x,y,f"Level: {p.level}",7); y+=14
         self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
-        self.txt(x,y,f"Exp:   {p.exp}",7); y+=14
+        next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
+        self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
         self.txt(x,y,"A / Start  New game",10); y+=14
         self.txt(x,y,"B          Stay here",5)

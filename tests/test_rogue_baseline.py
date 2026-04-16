@@ -17,7 +17,7 @@ def install_pyxel_mock():
     pyxel.rect = lambda *a, **kw: None
     pyxel.rectb = lambda *a, **kw: None
     pyxel.__file__ = os.path.join(os.getcwd(), "pyxel", "__init__.py")
-    for key in [
+    for i, key in enumerate([
         "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
         "KEY_H", "KEY_J", "KEY_K", "KEY_L",
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
@@ -32,8 +32,8 @@ def install_pyxel_mock():
         "GAMEPAD1_BUTTON_BACK", "GAMEPAD1_BUTTON_START",
         "GAMEPAD1_BUTTON_DPAD_UP", "GAMEPAD1_BUTTON_DPAD_DOWN",
         "GAMEPAD1_BUTTON_DPAD_LEFT", "GAMEPAD1_BUTTON_DPAD_RIGHT",
-    ]:
-        setattr(pyxel, key, 0)
+    ]):
+        setattr(pyxel, key, i)
 
     class MockFont:
         def __init__(self, *a, **kw):
@@ -83,7 +83,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (336, 288))
-        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search", "Pickup"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -179,7 +179,118 @@ class RogueBaselineTest(unittest.TestCase):
         game.do_pickup()
         self.assertEqual(game.p.gold, 42)
         self.assertNotIn(gold, game.gitems)
-        self.assertIn("Picked up 42 gold.", game.msgs)
+        self.assertIn("42 gold pieces", game.msgs)
+
+    def test_auto_pickup_can_be_toggled_and_manual_pickup_still_works(self):
+        game = new_game(seed=32)
+        game.mons = []
+        x, y = game.p.x + 1, game.p.y
+        if not game.walkable(x, y):
+            x, y = game.p.x - 1, game.p.y
+        dx, dy = x - game.p.x, y - game.p.y
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = x, y
+        game.gitems = [item]
+        self.assertTrue(game.auto_pickup)
+
+        game.try_move(dx, dy)
+        self.assertIn(item, game.p.inv)
+        self.assertNotIn(item, game.gitems)
+        self.assertTrue(item.picked_up)
+
+        game = new_game(seed=32)
+        game.mons = []
+        x, y = game.p.x + 1, game.p.y
+        if not game.walkable(x, y):
+            x, y = game.p.x - 1, game.p.y
+        dx, dy = x - game.p.x, y - game.p.y
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = x, y
+        game.gitems = [item]
+        game.auto_pickup = False
+        game.try_move(dx, dy)
+        self.assertNotIn(item, game.p.inv)
+        self.assertIn(item, game.gitems)
+        game.do_pickup()
+        self.assertIn(item, game.p.inv)
+        self.assertNotIn(item, game.gitems)
+
+    def test_pickup_pack_full_and_scare_monster_dust(self):
+        game = new_game(seed=33)
+        game.gitems = []
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
+        item = rogue.Item(rogue.CAT_FOOD, 1)
+        item.x, item.y = game.p.x, game.p.y
+        game.gitems.append(item)
+        game.do_pickup()
+        self.assertIn(item, game.gitems)
+        self.assertIn("pack too full", game.msgs)
+
+        game.p.inv = []
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.picked_up = True
+        scroll.x, scroll.y = game.p.x, game.p.y
+        game.gitems = [scroll]
+        game.do_pickup()
+        self.assertNotIn(scroll, game.gitems)
+        self.assertNotIn(scroll, game.p.inv)
+        self.assertIn("the scroll turns to dust as you pick it up", game.msgs)
+
+    def test_explored_items_remain_drawn_but_monsters_do_not(self):
+        game = new_game(seed=34)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+        game.visible = set()
+        game.explored = {(game.p.x, game.p.y)}
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = game.p.x, game.p.y
+        game.gitems = [item]
+        game.mons = [rogue.Monster(game.p.x, game.p.y, "Z", "zombie", 1, 1, 1, 1, "")]
+        game.draw_zoom()
+        self.assertIn(item.sym, calls)
+        self.assertNotIn("Z", calls)
+
+    def test_status_and_hud_show_exp_denominator_and_armor_label(self):
+        game = new_game(seed=35)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+        game.draw_stat()
+        game.draw_status()
+        self.assertTrue(any("Exp 0/10" in c for c in calls))
+        self.assertTrue(any("Exp:   0/10" in c for c in calls))
+        self.assertTrue(any("Arm " in c or c.startswith("Armor:") for c in calls))
+        self.assertTrue(any("Pickup ON" in c for c in calls))
+
+    def test_direction_pending_merges_cardinal_inputs_into_one_diagonal(self):
+        game = new_game(seed=36)
+        held = {rogue.pyxel.KEY_LEFT}
+        pressed = {rogue.pyxel.KEY_LEFT}
+        rogue.pyxel.btn = lambda k: k in held
+        rogue.pyxel.btnp = lambda k: k in pressed
+        self.assertIsNone(game.dir_press())
+        self.assertEqual(game.dir_pending, (-1, 0))
+
+        held = {rogue.pyxel.KEY_LEFT, rogue.pyxel.KEY_UP}
+        pressed = {rogue.pyxel.KEY_UP}
+        self.assertEqual(game.dir_press(), (-1, -1))
+        self.assertIsNone(game.dir_pending)
+        rogue.pyxel.btn = lambda *a: False
+        rogue.pyxel.btnp = lambda *a: False
+
+    def test_throw_records_non_blocking_animation_path(self):
+        game = new_game(seed=37)
+        game.mons = []
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 2, 2
+        for x in range(2, 7):
+            game.tm[2][x] = rogue.T_FLOOR
+        item = rogue.Item(rogue.CAT_WPN, 4)
+        game.p.inv = [item]
+        game.throw(item, 1, 0)
+        self.assertIsNotNone(game.throw_anim)
+        self.assertEqual(game.throw_anim["path"], [(3, 2), (4, 2), (5, 2), (6, 2)])
+        self.assertEqual((game.gitems[-1].x, game.gitems[-1].y), (6, 2))
 
     def test_baseline_combat_message_uses_catalog(self):
         game = new_game(seed=41, lang=rogue.LANG_JA)
