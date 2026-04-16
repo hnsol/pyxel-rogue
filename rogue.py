@@ -6,13 +6,14 @@ Gamepad:                        Keyboard:
   D-pad        Move (8-dir)      Arrow / HJKL   Move
   Start tap    Diag assist       YUBN           Diagonal
   B + D-pad    Dash (run)        Shift+dir      Dash
-  A            Action/Confirm    Z / Enter      Action
+  A            Action/Search     Z / Enter      Action
   B tap        Menu/Cancel       Esc            Cancel
   A + B        Wait a turn       . (period)     Wait
   Back         Assist menu       Tab            Assist menu
+  Back + A     Quick throw       Tab + Z        Quick throw
+  Back + B     Search            S              Search
   X            Status shortcut   I              Status
   R            Help              ?              Help
-  Search                         S
 """
 
 import pyxel
@@ -290,6 +291,7 @@ DIR8 = {
     "NW":(-1,-1),"NE":(1,-1),"SW":(-1,1),"SE":(1,1),
 }
 B_TAP_FRAMES = 8
+BACK_TAP_FRAMES = 8
 
 # ===========================================================
 #  Menu actions
@@ -644,6 +646,8 @@ class Game:
         self.dash_steps = 0
         self.b_prev = False; self.b_frames = 0
         self.b_used = False; self.b_tap = False
+        self.back_prev = False; self.back_frames = 0
+        self.back_used = False; self.back_tap = False
         self.b_menu_guard = False
         self.diag_assist = False
         self.auto_pickup = True
@@ -1156,6 +1160,11 @@ class Game:
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
+        self.start_item_action(aname, cat)
+
+    def start_item_action(self, aname, cat=None):
+        if cat is None:
+            cat = next((c for n,c in MENU_ACTIONS if n == aname), None)
         self.cact = aname; p = self.p
         if aname=="Take off":
             self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm]
@@ -1192,7 +1201,9 @@ class Game:
 
     def begin_input(self):
         self.b_tap=False
+        self.back_tap=False
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
+        back_now=self.back_held()
         if b_now:
             self.b_frames = self.b_frames+1 if self.b_prev else 1
         else:
@@ -1205,6 +1216,15 @@ class Game:
                               pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
                       or self.kh(pyxel.GAMEPAD1_BUTTON_A)):
             self.b_used=True
+        if back_now:
+            self.back_frames = self.back_frames+1 if self.back_prev else 1
+        else:
+            if self.back_prev and not self.back_used and self.back_frames<=BACK_TAP_FRAMES:
+                self.back_tap=True
+            self.back_frames=0; self.back_used=False
+        self.back_prev=back_now
+        if back_now and self.kh(pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B):
+            self.back_used=True
 
     GP = pyxel.GAMEPAD1_BUTTON_DPAD_UP
     def _held_up(self): return self.kh(pyxel.KEY_UP, pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
@@ -1243,7 +1263,21 @@ class Game:
         if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): self.dir_pending=(1,0); return None
         return None
 
+    def held_dir(self):
+        u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
+        dx = -1 if l and not r else 1 if r and not l else 0
+        dy = -1 if u and not d else 1 if d and not u else 0
+        if dx and dy:
+            return (dx,dy)
+        if self.diag_assist:
+            return None
+        return (dx,dy) if (dx or dy) else None
+
+    def dir_held_any(self):
+        return self._held_up() or self._held_dn() or self._held_lt() or self._held_rt()
+
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
+    def held_a(self): return self.kh(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
     def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
     def btn_overlay_cancel(self):
@@ -1262,11 +1296,26 @@ class Game:
         return self.kp(pyxel.KEY_PERIOD) or (
             self.kh(pyxel.GAMEPAD1_BUTTON_A) and self.kh(pyxel.GAMEPAD1_BUTTON_B)
             and (self.kp(pyxel.GAMEPAD1_BUTTON_A) or self.kp(pyxel.GAMEPAD1_BUTTON_B))
+            and not self.dir_held_any()
         )
     def btn_search(self): return self.kp(pyxel.KEY_S)
     def btn_status(self): return self.kp(pyxel.KEY_I, pyxel.GAMEPAD1_BUTTON_X)
     def btn_start_tap(self): return self.kp(pyxel.GAMEPAD1_BUTTON_START)
-    def btn_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
+    def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
+    def back_held(self): return self.kh(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
+    def btn_back(self): return self.back_tap
+    def btn_select_a(self):
+        hit = (self.back_held() and self.btn_a()) or (self.kp_back() and self.held_a())
+        if hit:
+            self.back_used=True; self.b_used=True
+        return hit
+    def btn_select_b(self):
+        hit = (self.back_held() and self.kp(pyxel.GAMEPAD1_BUTTON_B)) or (
+            self.kp_back() and self.kh(pyxel.GAMEPAD1_BUTTON_B)
+        )
+        if hit:
+            self.back_used=True; self.b_used=True
+        return hit
     def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH, pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
     def dash_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT, pyxel.GAMEPAD1_BUTTON_B)
@@ -1308,6 +1357,14 @@ class Game:
             return
 
         # Overlays
+        if self.btn_select_a():
+            self.start_item_action("Throw")
+            self.dir_pending=None
+            return
+        if self.btn_select_b():
+            self.do_search()
+            self.dir_pending=None
+            return
         if self.btn_status(): self.st=ST_STATUS; return
         if self.btn_back():  self.open_aux(); return
         if self.btn_r():     self.st=ST_HELP; return
@@ -1316,7 +1373,7 @@ class Game:
 
         # Dash start: B/Shift held + direction
         if self.dash_held():
-            d = self.dir_press()
+            d = self.held_dir()
             if d:
                 self.dashing=True; self.dash_d=d; self.dash_t=0
                 self.dash_steps=0
@@ -1573,11 +1630,12 @@ class Game:
             "",
             "--- Actions ---",
             "A / Z / Enter  Pickup / Stairs",
+            "A on empty     Search front",
+            "A+B / .        Wait one turn",
+            "Back+A         Quick throw",
+            "Back+B / S     Search around",
             "Pickup option   Select menu toggle",
             "B tap / C      Open menu",
-            "A+B / .        Wait one turn",
-            "A on empty     Swing / search front",
-            "S              Search around",
             "",
             "--- Info ---",
             "X / I          Status screen",
