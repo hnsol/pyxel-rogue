@@ -85,6 +85,12 @@ HP自然回復と空腹は Rogue 5.4 の `daemons.c` にある `doctor()` / `sto
 
 残差分として、通路番号付き passages、暗い部屋、Xeroc のアイテム擬態、指輪・杖・cancellation とAIの完全連携、迷路部屋 / gone room は未完了。これらは Phase 4 後続で原作関数を確認しながら接続する。
 
+## 武器メカニクス
+
+武器は Rogue 5.4 の `weapons.c:init_dam`, `fight.c:roll_em`, `things.c:inv_name/new_thing`, `scrolls.c:S_ENCH` を基準にする。武器は命中補正 `hit_plus` とダメージ補正 `dam_plus` を別々に持ち、表示も `+1,+1 mace (weapon in hand)` のように2値で出す。近接・投擲とも Strength の命中/ダメージ補正を通し、arrow + bow のような launcher 補正も原作に合わせて合算する。
+
+防具は当面既存の `ench` 表現を維持する。ring of dexterity / increase damage は未実装だが、後で `fight.c:roll_em` 相当に加算できるよう、武器計算は小さな helper に分けている。
+
 ## フォント
 
 Pyxel 標準フォント 4×6px は小さく、ASCII ローグの可読性に不安があった。`pyxel.Font(path)` で BDF 読込可能と判明し、現行では Pyxel 同梱の `umplus_j10r.bdf` を標準にしている。ASCII 6px / CJK 10px / 7187文字で日本語にも対応する。

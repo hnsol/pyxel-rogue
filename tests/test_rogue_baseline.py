@@ -126,10 +126,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(armor, inv[1])
         self.assertEqual(weapon.cat, rogue.CAT_WPN)
         self.assertEqual(weapon.data["name"], "mace")
-        self.assertEqual(weapon.ench, 1)
+        self.assertEqual(weapon.hit_plus, 1)
+        self.assertEqual(weapon.dam_plus, 1)
+        self.assertEqual(inv[2].data["name"], "arrow")
+        self.assertEqual(inv[2].hit_plus, 0)
+        self.assertEqual(inv[2].dam_plus, 0)
+        self.assertEqual(inv[2].qty, 25)
+        self.assertEqual(inv[3].data["name"], "short bow")
+        self.assertEqual(inv[3].hit_plus, 1)
+        self.assertEqual(inv[3].dam_plus, 0)
         self.assertEqual(armor.cat, rogue.CAT_ARM)
         self.assertEqual(armor.data["name"], "leather armor")
         self.assertEqual(armor.ench, 1)
+
+    def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
+        ident = rogue.IdentTable()
+        mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)
+        bow = rogue.Item(rogue.CAT_WPN, 2, hit_plus=1, dam_plus=0)
+        arrows = rogue.Item(rogue.CAT_WPN, 3, hit_plus=0, dam_plus=0, qty=25)
+        self.assertEqual(ident.name(mace, rogue.LANG_EN), "+1,+1 mace")
+        self.assertEqual(ident.name(bow, rogue.LANG_EN), "+1,+0 short bow")
+        self.assertEqual(ident.name(arrows, rogue.LANG_EN), "25 +0,+0 arrows")
+
+        game = new_game(seed=7)
+        self.assertEqual(game.item_name(game.p.wpn), "+1,+1 mace (weapon in hand)")
 
     def test_dungeon_stair_is_reachable(self):
         random.seed(11)
@@ -409,6 +429,83 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNotNone(game.throw_anim)
         self.assertEqual(game.throw_anim["path"], [(3, 2), (4, 2), (5, 2), (6, 2)])
         self.assertEqual((game.gitems[-1].x, game.gitems[-1].y), (6, 2))
+
+    def test_melee_damage_uses_weapon_damage_plus_and_strength(self):
+        game = new_game(seed=38)
+        game.p.wpn = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=1)
+        monster = rogue.Monster(game.p.x + 1, game.p.y, "H", "hobgoblin", 20, 0, 100, 0, "")
+        old_randint = rogue.random.randint
+        try:
+            rogue.random.randint = lambda a, b: b
+            game.p_attack(monster)
+        finally:
+            rogue.random.randint = old_randint
+        self.assertEqual(monster.hp, 10)
+
+    def test_enchant_weapon_increments_one_weapon_plus(self):
+        game = new_game(seed=39)
+        weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=0, cursed=True)
+        scroll = rogue.Item(rogue.CAT_SCR, 1)
+        game.p.wpn = weapon
+        game.p.inv = [weapon, scroll]
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.use_scr(scroll)
+        finally:
+            rogue.random.randrange = old_randrange
+        self.assertFalse(weapon.cursed)
+        self.assertEqual((weapon.hit_plus, weapon.dam_plus), (1, 0))
+
+    def test_random_weapon_generation_changes_hit_plus_only(self):
+        old_random = rogue.random.random
+        old_randint = rogue.random.randint
+        old_randrange = rogue.random.randrange
+        seq = iter([9, 2])
+        try:
+            rogue.random.random = lambda: 0.70
+            rogue.random.randint = lambda a, b: a
+            rogue.random.randrange = lambda n: next(seq)
+            item = rogue.make_item(depth=10)
+        finally:
+            rogue.random.random = old_random
+            rogue.random.randint = old_randint
+            rogue.random.randrange = old_randrange
+        self.assertEqual(item.cat, rogue.CAT_WPN)
+        self.assertTrue(item.cursed)
+        self.assertEqual(item.hit_plus, -3)
+        self.assertEqual(item.dam_plus, 0)
+
+    def test_arrow_with_bow_uses_hurl_damage_and_bow_pluses(self):
+        game = new_game(seed=40)
+        bow = rogue.Item(rogue.CAT_WPN, 2, hit_plus=2, dam_plus=3)
+        arrow = rogue.Item(rogue.CAT_WPN, 3, hit_plus=1, dam_plus=4)
+        game.p.wpn = bow
+        monster = rogue.Monster(game.p.x + 1, game.p.y, "H", "hobgoblin", 30, 0, 100, 0, "")
+        old_randint = rogue.random.randint
+        try:
+            rogue.random.randint = lambda a, b: b
+            hit, dmg = game.roll_player_attack(monster, arrow, thrown=True)
+        finally:
+            rogue.random.randint = old_randint
+        self.assertTrue(hit)
+        self.assertEqual(dmg, 14)
+
+    def test_missed_thrown_weapon_falls_without_damage(self):
+        game = new_game(seed=40)
+        set_open_floor(game)
+        arrow = rogue.Item(rogue.CAT_WPN, 3, hit_plus=0, dam_plus=0)
+        monster = rogue.Monster(game.p.x + 2, game.p.y, "H", "hobgoblin", 8, 0, 0, 0, "")
+        game.p.inv = [arrow]
+        game.mons = [monster]
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.throw(arrow, 1, 0)
+        finally:
+            rogue.random.randrange = old_randrange
+        self.assertEqual(monster.hp, 8)
+        self.assertIn(arrow, game.gitems)
 
     def test_baseline_combat_message_uses_catalog(self):
         game = new_game(seed=41, lang=rogue.LANG_JA)

@@ -302,16 +302,19 @@ SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
 FOODS = [{"name":"food ration","nut":900},{"name":"slime-mold","nut":700}]
 
 WEAPONS = [
-    {"name":"mace","dam":"2d4","hurl":"1d3","wield":True},
-    {"name":"long sword","dam":"3d4","hurl":"1d2","wield":True},
-    {"name":"short bow","dam":"1d1","hurl":"1d1","wield":True},
-    {"name":"arrow","dam":"1d1","hurl":"2d3","wield":False,"stack":True},
-    {"name":"dagger","dam":"1d6","hurl":"1d4","wield":True},
-    {"name":"two-handed sword","dam":"4d4","hurl":"1d2","wield":True},
-    {"name":"dart","dam":"1d1","hurl":"1d3","wield":False,"stack":True},
-    {"name":"shuriken","dam":"1d2","hurl":"2d4","wield":False,"stack":True},
-    {"name":"spear","dam":"2d3","hurl":"1d6","wield":True},
+    {"name":"mace","damage":"2d4","hurl_damage":"1d3","wield":True},
+    {"name":"long sword","damage":"3d4","hurl_damage":"1d2","wield":True},
+    {"name":"short bow","damage":"1d1","hurl_damage":"1d1","wield":True},
+    {"name":"arrow","damage":"1d1","hurl_damage":"2d3","wield":False,"stack":True,"missile":True,"launcher":2},
+    {"name":"dagger","damage":"1d6","hurl_damage":"1d4","wield":True,"missile":True},
+    {"name":"two-handed sword","damage":"4d4","hurl_damage":"1d2","wield":True},
+    {"name":"dart","damage":"1d1","hurl_damage":"1d3","wield":False,"stack":True,"missile":True},
+    {"name":"shuriken","damage":"1d2","hurl_damage":"2d4","wield":False,"stack":True,"missile":True},
+    {"name":"spear","damage":"2d3","hurl_damage":"1d6","wield":True,"missile":True},
 ]
+
+STR_PLUS = [-7,-6,-5,-4,-3,-2,-1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,2,2,2,2,2,2,3]
+ADD_DAM = [-7,-6,-5,-4,-3,-2,-1,0,0,0,0,0,0,0,0,0,1,1,2,3,3,4,5,5,5,5,5,5,5,5,5,6]
 
 ARMORS = [
     {"name":"leather armor","ac":8},{"name":"ring mail","ac":7},
@@ -382,9 +385,17 @@ class Room:
 
 class Item:
     _nid=0
-    def __init__(s,cat,kind,ench=0,cursed=False,qty=1):
+    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None):
         s.uid=Item._nid; Item._nid+=1
-        s.cat=cat; s.kind=kind; s.ench=ench; s.cursed=cursed; s.qty=qty
+        s.cat=cat; s.kind=kind; s.cursed=cursed; s.qty=qty
+        if cat==CAT_WPN:
+            s.hit_plus = ench if hit_plus is None else hit_plus
+            s.dam_plus = 0 if dam_plus is None else dam_plus
+            s.ench = s.hit_plus
+        else:
+            s.ench=ench
+            s.hit_plus = 0 if hit_plus is None else hit_plus
+            s.dam_plus = 0 if dam_plus is None else dam_plus
         s.x=s.y=0
         s.picked_up=False
     @property
@@ -399,6 +410,8 @@ class Item:
     def stackable(s): return s.cat==CAT_WPN and s.data.get("stack",False)
     @property
     def sym(s): return ISYM.get(s.cat,"?")
+    def plus_key(s):
+        return (s.hit_plus,s.dam_plus) if s.cat==CAT_WPN else (s.ench,0)
 
 class Monster:
     def __init__(s,x,y,sym,name,hp,atk,df,exp,fl):
@@ -467,13 +480,15 @@ class Player:
             s.hp=min(s.hp,s.max_hp); s.quiet=0
     def recalc_ac(s):
         s.ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else 10
-    def melee_dmg(s):
-        return roll(s.wpn.data["dam"])+s.wpn.ench if s.wpn else roll("1d2")
+    def str_hit_plus(s):
+        return STR_PLUS[max(0,min(s.st,len(STR_PLUS)-1))]
+    def str_dam_plus(s):
+        return ADD_DAM[max(0,min(s.st,len(ADD_DAM)-1))]
     def inv_full(s): return len(s.inv)>=INV_MAX
     def add_item(s,it):
         if it.stackable:
             for i in s.inv:
-                if i.cat==it.cat and i.kind==it.kind and i.ench==it.ench:
+                if i.cat==it.cat and i.kind==it.kind and i.plus_key()==it.plus_key():
                     i.qty+=it.qty; return True
         if s.inv_full(): return False
         s.inv.append(it); return True
@@ -509,9 +524,13 @@ class IdentTable:
             return f"scroll [{s.snam[it.kind]}]" if lang==LANG_EN else f"巻き物 [{s.snam[it.kind]}]"
         if it.cat==CAT_FOOD: return TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
         if it.cat==CAT_WPN:
-            e=it.ench; q=f" ({it.qty})" if it.stackable and it.qty>1 else ""
             nm=TextCatalog.item_kind(lang, CAT_WPN, it.data["name"])
-            return f"{'+' if e>=0 else ''}{e} {nm}{q}"
+            if it.stackable and it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
+                nm = f"{nm}s"
+            hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
+            dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
+            prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
+            return f"{prefix}{hp},{dp} {nm}"
         if it.cat==CAT_ARM:
             e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
             return f"{'+' if e>=0 else ''}{e} {nm}"
@@ -674,18 +693,24 @@ def make_item(depth):
     if c<.64: return Item(CAT_FOOD,random.randint(0,len(FOODS)-1))
     if c<.82:
         k=random.randint(0,len(WEAPONS)-1)
-        e=random.randint(-1,2) if depth>3 else random.randint(0,1)
-        q=random.randint(2,8) if WEAPONS[k].get("stack") else 1
-        return Item(CAT_WPN,k,ench=e,cursed=e<0,qty=q)
+        r=random.randrange(100)
+        hit_plus=0
+        cursed=False
+        if r<10:
+            hit_plus-=random.randrange(3)+1; cursed=True
+        elif r<15:
+            hit_plus+=random.randrange(3)+1
+        q=random.randint(8,15) if WEAPONS[k].get("stack") else 1
+        return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q)
     k=random.randint(0,len(ARMORS)-1)
     e=random.randint(-1,2) if depth>3 else random.randint(0,1)
     return Item(CAT_ARM,k,ench=e,cursed=e<0)
 
 def start_inv():
-    w=Item(CAT_WPN,0,ench=1)        # mace +1
+    w=Item(CAT_WPN,0,hit_plus=1,dam_plus=1) # mace +1,+1
     a=Item(CAT_ARM,0,ench=1)        # leather +1
-    ar=Item(CAT_WPN,3,ench=0,qty=25)# arrows
-    b=Item(CAT_WPN,2,ench=1)        # bow +1
+    ar=Item(CAT_WPN,3,hit_plus=0,dam_plus=0,qty=25)# arrows
+    b=Item(CAT_WPN,2,hit_plus=1,dam_plus=0) # bow +1,+0
     f=Item(CAT_FOOD,0)              # ration
     return [w,a,ar,b,f],w,a
 
@@ -703,6 +728,12 @@ class Game:
 
     def txt(self, x, y, s, c):
         pyxel.text(x, y, str(s), c, self.font)
+
+    def item_name(self,it):
+        name=self.ident.name(it)
+        if it is self.p.wpn: return f"{name} (weapon in hand)"
+        if it is self.p.arm: return f"{name} (being worn)"
+        return name
 
     # ---------- Init ----------
     def new_game(self):
@@ -953,19 +984,59 @@ class Game:
         self.explored |= self.visible
 
     # ---------- Combat ----------
+    def swing_hits(self, at_lvl, op_arm, wplus):
+        need = (20 - at_lvl) - op_arm
+        return random.randrange(20) + wplus >= need
+
+    def player_weapon_profile(self, weap=None, thrown=False):
+        hplus = dplus = 0
+        damage = "1d2"
+        if weap and weap.cat == CAT_WPN:
+            data = weap.data
+            hplus += weap.hit_plus
+            dplus += weap.dam_plus
+            damage = data["damage"]
+            if thrown:
+                launcher = data.get("launcher")
+                if data.get("missile") and launcher is not None and self.p.wpn and self.p.wpn.kind == launcher:
+                    damage = data["hurl_damage"]
+                    hplus += self.p.wpn.hit_plus
+                    dplus += self.p.wpn.dam_plus
+                elif launcher is None:
+                    damage = data["hurl_damage"]
+        return damage, hplus, dplus
+
+    def roll_player_attack(self, m, weap=None, thrown=False):
+        damage_expr, hplus, dplus = self.player_weapon_profile(weap, thrown)
+        if not m.running:
+            hplus += 4
+        hplus += self.p.str_hit_plus()
+        if not self.swing_hits(self.p.level, m.df, hplus):
+            return False, 0
+        total = 0
+        for part in damage_expr.split("/"):
+            total += roll(part)
+        total = max(0, total + dplus + self.p.str_dam_plus())
+        return True, total
+
+    def award_monster_kill(self, m, translated_name=None):
+        mn = translated_name or TextCatalog.monster(self.lang,m.name)
+        self.p.exp+=m.exp
+        if self.p.held_by is m:
+            self.p.held_by=None
+        if self.p.lvlup():
+            self.msg("Welcome to level {level}!",level=self.p.level)
+        return mn
+
     def p_attack(self, m):
         self.runto(m)
         mn=TextCatalog.monster(self.lang,m.name)
-        th=random.randint(1,20)+self.p.level
-        wb=self.p.wpn.ench if self.p.wpn else 0
-        if th+wb>=10-m.df or th==20:
-            dmg=max(1,self.p.melee_dmg())
+        hit,dmg=self.roll_player_attack(m,self.p.wpn,False)
+        if hit:
             m.hp-=dmg
             if not m.alive:
                 self.msg("You defeated the {monster}. ({exp} exp)",monster=mn,exp=m.exp)
-                self.p.exp+=m.exp
-                if self.p.held_by is m: self.p.held_by=None
-                if self.p.lvlup(): self.msg("Welcome to level {level}!",level=self.p.level)
+                self.award_monster_kill(m,mn)
             else: self.msg("You hit the {monster} ({dmg}).",monster=mn,dmg=dmg)
         else: self.msg("You miss the {monster}.",monster=mn)
 
@@ -1208,7 +1279,12 @@ class Game:
                 self.msg(f"It is a {self.ident.name(t)}.")
             else: self.msg("You feel vaguely uneasy.")
         elif nm=="enchant weapon":
-            if p.wpn: p.wpn.ench+=1; p.wpn.cursed=False; self.msg(f"Your {p.wpn.data['name']} glows blue!")
+            if p.wpn:
+                p.wpn.cursed=False
+                if random.randrange(2)==0: p.wpn.hit_plus+=1
+                else: p.wpn.dam_plus+=1
+                p.wpn.ench=p.wpn.hit_plus
+                self.msg(f"Your {p.wpn.data['name']} glows blue!")
             else: self.msg("You feel a sense of loss.")
         elif nm=="enchant armor":
             if p.arm: p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg(f"Your armor glows!")
@@ -1284,28 +1360,56 @@ class Game:
     def is_scare_monster(self,it):
         return it.cat==CAT_SCR and SCROLLS[it.kind]["name"]=="scare monster"
 
+    def fall_position(self,x,y):
+        choice=None; cnt=0
+        for yy in range(y-1,y+2):
+            for xx in range(x-1,x+2):
+                if (xx,yy)==(self.p.x,self.p.y): continue
+                if not (0<=xx<MAP_W and 0<=yy<MAP_H): continue
+                if not self.walkable(xx,yy) or self.tm[yy][xx]==T_DOOR: continue
+                if self.mon_at(xx,yy) or self.gi_at(xx,yy): continue
+                cnt+=1
+                if random.randrange(cnt)==0:
+                    choice=(xx,yy)
+        return choice
+
+    def drop_thrown(self,it,x,y,around=True):
+        pos=self.fall_position(x,y) if around else None
+        pos=pos or ((x,y) if self.walkable(x,y) and not self.gi_at(x,y) else None)
+        if not pos:
+            if it.cat==CAT_WPN: self.msg(f"The {it.data['name']} vanishes as it hits the ground.")
+            return
+        it.x,it.y=pos; self.gitems.append(it)
+
     def throw(self,it,dx,dy):
         p=self.p
         if it is p.wpn and it.cursed: self.msg("Can't let go!"); return
         if it.stackable and it.qty>1:
-            thrown=Item(it.cat,it.kind,it.ench,it.cursed,1); it.qty-=1
+            thrown=Item(it.cat,it.kind,cursed=it.cursed,qty=1,hit_plus=it.hit_plus,dam_plus=it.dam_plus); it.qty-=1
         else: p.rm_item(it); thrown=it
         tx,ty=p.x,p.y; path=[]
-        for _ in range(8):
+        for _ in range(max(MAP_W,MAP_H)):
             nx,ny=tx+dx,ty+dy
-            if not self.walkable(nx,ny): break
-            tx,ty=nx,ny; path.append((tx,ty))
-            m=self.mon_at(tx,ty)
+            if not (0<=nx<MAP_W and 0<=ny<MAP_H): break
+            m=self.mon_at(nx,ny)
             if m:
+                tx,ty=nx,ny; path.append((tx,ty))
                 self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
-                dmg=max(1,roll(it.data.get("hurl","1d2"))+it.ench if it.cat==CAT_WPN else roll("1d2"))
-                m.hp-=dmg; self.msg(f"The {self.ident.name(thrown)} hits the {m.name}. ({dmg})")
-                if not m.alive:
-                    self.msg(f"The {m.name} is defeated!"); p.exp+=m.exp
-                    if p.lvlup(): self.msg(f"Welcome to level {p.level}!")
+                self.runto(m)
+                hit,dmg=self.roll_player_attack(m,thrown,True)
+                mn=TextCatalog.monster(self.lang,m.name)
+                if hit:
+                    m.hp-=dmg; self.msg(f"The {self.ident.name(thrown)} hits the {mn}. ({dmg})")
+                    if not m.alive:
+                        self.msg(f"The {mn} is defeated!"); self.award_monster_kill(m,mn)
+                else:
+                    self.msg(f"The {self.ident.name(thrown)} misses the {mn}.")
+                    self.drop_thrown(thrown,tx,ty)
                 return
+            if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR: break
+            tx,ty=nx,ny; path.append((tx,ty))
         self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
-        thrown.x,thrown.y=tx,ty; self.gitems.append(thrown)
+        self.drop_thrown(thrown,tx,ty,around=False)
 
     # ---------- Movement & turns ----------
     def try_move(self, dx, dy):
@@ -2044,8 +2148,8 @@ class Game:
         self.txt(sx,sy,f"Pickup {'ON' if self.auto_pickup else 'OFF'}",11 if self.auto_pickup else 5); sy+=12
         self.txt(sx,sy,f"Lang {self.lang.upper()}",7); sy+=18
         self.txt(sx,sy,"-- Equip --",10); sy+=12
-        wn=self.ident.name(p.wpn) if p.wpn else "bare hands"
-        an=self.ident.name(p.arm) if p.arm else "no armor"
+        wn=self.item_name(p.wpn) if p.wpn else "bare hands"
+        an=self.item_name(p.arm) if p.arm else "no armor"
         self.txt(sx,sy,f"W {wn[:22]}",7); sy+=12
         self.txt(sx,sy,f"A {an[:22]}",7); sy+=18
         self.txt(sx,sy,"-- Effect --",10); sy+=12
@@ -2096,9 +2200,7 @@ class Game:
             ri=st+i; ty=by+16+i*14
             idx=self.p.inv.index(it) if it in self.p.inv else 0
             lt=chr(ord('a')+idx)
-            ln=self.ident.name(it)
-            if it is self.p.wpn: ln+=" *W"
-            elif it is self.p.arm: ln+=" *A"
+            ln=self.item_name(it)
             c=10 if ri==self.icur else 7
             pre=">" if ri==self.icur else " "
             self.txt(bx+4,ty,f"{pre}{lt}) {ln[:32]}",c)
@@ -2133,17 +2235,14 @@ class Game:
         self.txt(x,y,f"Food:  {p.food}",7)
         y=by+18; x=bx+178
         self.txt(x,y,"-- Equipment --",10); y+=13
-        wn=self.ident.name(p.wpn) if p.wpn else "bare hands"
-        an=self.ident.name(p.arm) if p.arm else "no armor"
+        wn=self.item_name(p.wpn) if p.wpn else "bare hands"
+        an=self.item_name(p.arm) if p.arm else "no armor"
         self.txt(x,y,f"Weapon: {wn[:22]}",7); y+=13
         self.txt(x,y,f"Armor:  {an[:22]}",7); y+=18
         self.txt(x,y,"-- Inventory --",10); y+=13
         for i,it in enumerate(p.inv[:12]):
-            lt=chr(ord('a')+i); ln=self.ident.name(it)
-            eq=""
-            if it is p.wpn: eq=" (wielded)"
-            elif it is p.arm: eq=" (worn)"
-            self.txt(x,y,f"{lt}) {(ln+eq)[:24]}",7); y+=12
+            lt=chr(ord('a')+i); ln=self.item_name(it)
+            self.txt(x,y,f"{lt}) {ln[:24]}",7); y+=12
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
