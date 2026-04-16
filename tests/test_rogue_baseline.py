@@ -550,6 +550,44 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(attacked, [])
         self.assertEqual((monster.x, monster.y), (5, 5))
 
+    def test_running_monster_routes_around_blocked_door_diagonal(self):
+        game = new_game(seed=490)
+        set_open_floor(game)
+        game.tm[5][5] = rogue.T_DOOR
+        game.tm[4][5] = rogue.T_HWALL
+        game.p.x, game.p.y = 5, 5
+        monster = rogue.Monster(6, 4, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster.running = True
+        game.mons = [monster]
+        attacked = []
+        game.m_attack = lambda m: attacked.append(m)
+
+        game.m_turn(monster)
+
+        self.assertEqual(attacked, [])
+        self.assertEqual((monster.x, monster.y), (6, 5))
+
+    def test_monster_in_other_room_heads_for_exit_before_hero(self):
+        game = new_game(seed=491)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        left = rogue.Room(1, 1, 5, 5)
+        right = rogue.Room(10, 1, 5, 5)
+        game.rooms = [left, right]
+        rogue.DGen._room(game.tm, left)
+        rogue.DGen._room(game.tm, right)
+        game.tm[3][5] = rogue.T_DOOR
+        game.tm[3][10] = rogue.T_DOOR
+        for x in range(6, 10):
+            game.tm[3][x] = rogue.T_CORR
+        game.p.x, game.p.y = 12, 3
+        monster = rogue.Monster(3, 3, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster.running = True
+        game.mons = [monster]
+
+        game.m_turn(monster)
+
+        self.assertEqual((monster.x, monster.y), (4, 3))
+
     def test_diagonal_attack_works_when_orthogonal_tiles_are_open(self):
         game = new_game(seed=50)
         set_open_floor(game)
@@ -562,6 +600,103 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.try_move(1, -1))
         self.assertEqual(attacked, [monster])
         self.assertEqual(game.turn, 1)
+
+    def test_monster_does_not_move_until_running(self):
+        game = new_game(seed=501)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = rogue.Monster(7, 5, "H", "hobgoblin", 10, 0, 100, 5, "")
+        game.mons = [monster]
+
+        game.m_turn(monster)
+
+        self.assertFalse(monster.running)
+        self.assertEqual((monster.x, monster.y), (7, 5))
+
+    def test_visible_mean_monster_can_wake_and_run(self):
+        game = new_game(seed=502)
+        set_open_floor(game)
+        monster = rogue.Monster(game.p.x + 2, game.p.y, "H", "hobgoblin", 10, 0, 100, 5, "")
+        game.mons = [monster]
+        game.visible.add((monster.x, monster.y))
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 1
+            game.wake_visible_monsters()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertTrue(monster.running)
+
+    def test_ice_monster_freezes_on_every_hit(self):
+        game = new_game(seed=503)
+        set_open_floor(game)
+        game.p.ac = 0
+        game.p.hp = 99
+        monster = rogue.Monster(game.p.x + 1, game.p.y, "I", "ice monster", 10, 0, 100, 5, "freeze")
+
+        game.m_attack(monster)
+
+        self.assertGreaterEqual(game.p.no_command, 2)
+        self.assertIn("you are frozen", game.msgs)
+
+    def test_rattlesnake_poison_strength_depends_on_save(self):
+        game = new_game(seed=504)
+        set_open_floor(game)
+        game.p.ac = 0
+        game.p.hp = 99
+        game.p.st = 10
+        monster = rogue.Monster(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 0, 100, 5, "poison")
+
+        game.save_vs_poison = lambda: False
+        game.m_attack(monster)
+        self.assertEqual(game.p.st, 9)
+
+        game.save_vs_poison = lambda: True
+        game.m_attack(monster)
+        self.assertEqual(game.p.st, 9)
+
+    def test_flying_monster_gets_extra_chase_move_at_distance(self):
+        game = new_game(seed=505)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = rogue.Monster(9, 5, "K", "kestrel", 10, 0, 100, 5, "fly")
+        monster.running = True
+        game.mons = [monster]
+
+        game.m_turn(monster)
+
+        self.assertEqual((monster.x, monster.y), (7, 5))
+
+    def test_monster_chase_avoids_scare_monster_scroll_on_floor(self):
+        game = new_game(seed=507)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = 6, 5
+        game.gitems = [scroll]
+        monster = rogue.Monster(7, 5, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster.running = True
+        game.mons = [monster]
+
+        game.m_turn(monster)
+
+        self.assertNotEqual((monster.x, monster.y), (6, 5))
+
+    def test_held_monster_skips_turn_and_counts_down(self):
+        game = new_game(seed=506)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = rogue.Monster(7, 5, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster.running = True
+        monster.held = 2
+        game.mons = [monster]
+
+        game.m_turn(monster)
+
+        self.assertEqual(monster.held, 1)
+        self.assertEqual((monster.x, monster.y), (7, 5))
 
     def test_wait_select_shortcuts_and_empty_action_search(self):
         game = new_game(seed=46)

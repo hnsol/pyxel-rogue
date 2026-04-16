@@ -81,6 +81,9 @@ STARVETIME = 850
 MAX_TRAPS = 10
 BEARTIME = 3
 SLEEPTIME = 5
+BORE_LEVEL = 50
+DEST_PLAYER = "player"
+DEST_GOLD = "gold"
 
 # ===========================================================
 #  UI states
@@ -196,6 +199,14 @@ class TextCatalog:
             "You miss the {monster}.":"{monster}への攻撃はそれた。",
             "The {monster} hits! ({dmg})":"{monster}の攻撃は命中した。 ({dmg})",
             "The {monster} misses.":"{monster}の攻撃はそれた。",
+            "{monster}'s gaze has confused you":"{monster}の凝視で混乱した。",
+            "your purse feels lighter":"財布が軽くなった気がする。",
+            "You feel weaker!":"力が弱くなった！",
+            "you suddenly feel weaker":"突然、弱くなった気がする。",
+            "You feel confused!":"混乱してきた！",
+            "you are frozen":"凍りついた。",
+            "you are being held":"押さえつけられている。",
+            "you are still stuck in the bear trap":"まだくくり罠に捕まっている。",
             "{gold} gold pieces":"{gold}個の金塊",
             "You see a {item} here.":"{item}の上にいる。",
             "You pick up the {item}.":"{item}を手に入れた。",
@@ -394,7 +405,9 @@ class Monster:
         s.x,s.y,s.sym,s.name=x,y,sym,name
         s.hp=s.max_hp=hp; s.atk=atk; s.df=df; s.exp=exp
         s.flags=set(fl.split(",")) if fl else set()
-        s.held=s.scared=0
+        s.held=s.scared=s.confused=0
+        s.running=False; s.dest=DEST_PLAYER; s.turn=True
+        s.mean=True; s.target=False; s.found=False; s.vf_hit=0
     @property
     def alive(s): return s.hp>0
 
@@ -405,11 +418,19 @@ class Player:
         s.x=s.y=0; s.hp=s.max_hp=16; s.st=s.max_st=16
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
-        s.confused=s.blind=s.haste=s.stuck=0
+        s.confused=s.blind=s.haste=0
+        s.no_command=s.no_move=0
+        s.held_by=None
         s.quiet=0
         s.facing=(0,1)
     @property
     def alive(s): return s.hp>0
+    @property
+    def stuck(s):
+        return max(s.no_command, s.no_move)
+    @stuck.setter
+    def stuck(s, v):
+        s.no_command = max(s.no_command, v)
     def lvlup(s):
         if s.level>=len(s.EXP_T): return False
         if s.exp>=s.EXP_T[s.level]:
@@ -422,7 +443,7 @@ class Player:
             if s.food < -STARVETIME:
                 s.hp=0; s.state="faint"; return "You starve to death."
             if random.randrange(5)==0:
-                s.stuck=max(s.stuck,random.randint(4,11))
+                s.no_command=max(s.no_command,random.randint(4,11))
                 s.state="faint"; return "You faint from lack of food."
             s.state="faint"; return None
         if s.food<MORETIME:
@@ -856,6 +877,39 @@ class Game:
         for r in self.rooms:
             if r.x<x<r.x+r.w-1 and r.y<y<r.y+r.h-1: return r
         return None
+    def room_containing(self,x,y):
+        for r in self.rooms:
+            if r.x<=x<r.x+r.w and r.y<=y<r.y+r.h: return r
+        return None
+    def room_for_ai(self,x,y,actor=False):
+        if not (0<=x<MAP_W and 0<=y<MAP_H):
+            return None
+        tile=self.tm[y][x]
+        if tile==T_CORR or (actor and tile==T_DOOR):
+            return "corridor"
+        if tile==T_DOOR:
+            return self.room_near_door(x,y) or "corridor"
+        return self.room_containing(x,y)
+    def room_near_door(self,x,y):
+        for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):
+            r=self.room_at(x+dx,y+dy) or self.room_containing(x+dx,y+dy)
+            if r: return r
+        return None
+    def room_exits(self,room):
+        exits=[]
+        for x in range(room.x,room.x+room.w):
+            for y in (room.y,room.y+room.h-1):
+                if 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x]==T_DOOR:
+                    exits.append((x,y))
+        for y in range(room.y,room.y+room.h):
+            for x in (room.x,room.x+room.w-1):
+                if 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x]==T_DOOR:
+                    exits.append((x,y))
+        return list(dict.fromkeys(exits))
+    def dist2(self,a,b):
+        return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])
+    def same_ai_room(self,a,b):
+        return a is not None and a==b
     def msg(self,t,**kw):
         self.msgs.append(TextCatalog.msg(self.lang,t,**kw)); self.msgs=self.msgs[-100:]
 
@@ -900,6 +954,7 @@ class Game:
 
     # ---------- Combat ----------
     def p_attack(self, m):
+        self.runto(m)
         mn=TextCatalog.monster(self.lang,m.name)
         th=random.randint(1,20)+self.p.level
         wb=self.p.wpn.ench if self.p.wpn else 0
@@ -909,9 +964,52 @@ class Game:
             if not m.alive:
                 self.msg("You defeated the {monster}. ({exp} exp)",monster=mn,exp=m.exp)
                 self.p.exp+=m.exp
+                if self.p.held_by is m: self.p.held_by=None
                 if self.p.lvlup(): self.msg("Welcome to level {level}!",level=self.p.level)
             else: self.msg("You hit the {monster} ({dmg}).",monster=mn,dmg=dmg)
         else: self.msg("You miss the {monster}.",monster=mn)
+
+    def monster_has_magic_item_to_steal(self):
+        for it in self.p.inv:
+            if it is self.p.wpn or it is self.p.arm:
+                continue
+            if it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM):
+                return it
+        return None
+
+    def remove_monster(self,m):
+        if m in self.mons:
+            self.mons.remove(m)
+
+    def runto(self,m,dest=DEST_PLAYER):
+        m.running=True; m.held=0; m.dest=dest
+
+    def aggravate_monsters(self):
+        for mo in self.mons:
+            mo.held=mo.scared=0
+            self.runto(mo)
+
+    def wake_monster(self,m):
+        if not m.alive:
+            return
+        if not m.running and m.mean and m.held<=0 and rnd(3)!=0:
+            self.runto(m)
+        if m.sym=="M" and m.running and not self.p.blind and not m.found:
+            m.found=True
+            if not self.save_vs_magic():
+                self.p.confused=max(self.p.confused,random.randint(15,25))
+                mn=TextCatalog.monster(self.lang,m.name)
+                self.msg("{monster}'s gaze has confused you",monster=mn)
+        if "steal_gold" in m.flags and not m.running:
+            self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
+
+    def wake_visible_monsters(self):
+        for mo in self.mons:
+            if (mo.x,mo.y) in self.visible:
+                self.wake_monster(mo)
+
+    def save_vs_magic(self):
+        return rnd(20) < 7 + self.p.level//2
 
     def m_attack(self,m):
         mn=TextCatalog.monster(self.lang,m.name)
@@ -921,26 +1019,114 @@ class Game:
             self.p.hp-=dmg; self.msg("The {monster} hits! ({dmg})",monster=mn,dmg=dmg)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
-                self.p.arm.ench-=1; self.p.recalc_ac(); self.msg("Your armor weakens!")
+                self.rust_armor()
             if "steal_gold" in m.flags and self.p.gold>0:
-                s=min(self.p.gold,random.randint(10,50)); self.p.gold-=s; self.msg(f"Steals {s} gold!")
-            if "poison" in m.flags and random.random()<.3 and self.p.st>6:
+                s=min(self.p.gold,random.randint(10,50)+random.randint(10,50))
+                self.p.gold-=s; self.msg("your purse feels lighter")
+                self.remove_monster(m); return
+            if "poison" in m.flags and not self.save_vs_poison() and self.p.st>3:
                 self.p.st-=1; self.msg("You feel weaker!")
-            if "drain" in m.flags and random.random()<.3:
-                self.p.max_hp=max(1,self.p.max_hp-1); self.msg("You feel drained!")
-            if "confuse" in m.flags and random.random()<.3:
+            if "drain_level" in m.flags and rnd(100)<15:
+                if self.p.level>1:
+                    self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1])
+                self.p.max_hp=max(1,self.p.max_hp-roll("1d10"))
+                self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("you suddenly feel weaker")
+            if "drain" in m.flags and rnd(100)<30:
+                loss=roll("1d3")
+                self.p.max_hp=max(1,self.p.max_hp-loss)
+                self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("you suddenly feel weaker")
+            if "confuse" in m.flags and not self.save_vs_magic():
                 self.p.confused=random.randint(10,20); self.msg("You feel confused!")
-            if "freeze" in m.flags and random.random()<.3:
-                self.p.stuck=max(self.p.stuck,random.randint(2,4)); self.msg("You can't move!")
-            if "steal_item" in m.flags and self.p.inv:
-                t=random.choice(self.p.inv)
-                if t is not self.p.wpn and t is not self.p.arm:
+            if "freeze" in m.flags:
+                self.p.no_command+=rnd(2)+2
+                if self.p.no_command>BORE_LEVEL:
+                    self.p.hp=0; self.death_cause="hypothermia"
+                self.msg("you are frozen")
+            if "hold" in m.flags:
+                m.vf_hit+=1
+                self.p.held_by=m
+                self.p.hp-=1
+                if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
+            if "steal_item" in m.flags:
+                t=self.monster_has_magic_item_to_steal()
+                if t:
                     self.p.rm_item(t); self.msg(f"She stole your {self.ident.name(t)}!")
+                    self.remove_monster(m); return
         else: self.msg("The {monster} misses.",monster=mn)
 
     def m_turn(self,m):
         if not m.alive: return
+        if not m.running: return
+        self.move_monst(m)
+        if m.alive and "fly" in m.flags and self.dist2((m.x,m.y),(self.p.x,self.p.y))>=3:
+            self.move_monst(m)
+
+    def move_monst(self,m):
         if m.held>0: m.held-=1; return
+        if self.do_chase(m)==-1:
+            return
+        m.turn=not m.turn
+
+    def do_chase(self,m):
+        dest=self.find_dest(m)
+        rer=self.room_for_ai(m.x,m.y,actor=True)
+        ree=self.room_for_ai(dest[0],dest[1],actor=False)
+        chase_dest=dest
+        if rer!=ree and hasattr(rer,"x"):
+            exits=self.room_exits(rer)
+            if exits:
+                chase_dest=min(exits,key=lambda p:self.dist2(p,dest))
+        moved_or_attack=self.chase(m,chase_dest)
+        if moved_or_attack=="attack":
+            return 0
+        if m.dest!=DEST_PLAYER and (m.x,m.y)==dest:
+            self.collect_monster_dest(m,dest)
+        return 0
+
+    def room_gold_target(self,m):
+        mr=self.room_for_ai(m.x,m.y)
+        gold=[]
+        for it in self.gitems:
+            if it.cat==CAT_GOLD and self.room_for_ai(it.x,it.y)==mr:
+                gold.append((it.x,it.y))
+        if not gold:
+            return None
+        return min(gold,key=lambda p:self.dist2((m.x,m.y),p))
+
+    def find_dest(self,m):
+        if "steal_gold" in m.flags and m.dest==DEST_GOLD:
+            target=self.room_gold_target(m)
+            if target:
+                return target
+            m.dest=DEST_PLAYER
+        return (self.p.x,self.p.y)
+
+    def collect_monster_dest(self,m,dest):
+        gi=self.gi_at(*dest)
+        if gi and gi.cat==CAT_GOLD:
+            self.gitems.remove(gi)
+            m.dest=DEST_PLAYER
+
+    def random_monster_move(self,m):
+        dirs=list(DIR8.values())+[(0,0)]
+        random.shuffle(dirs)
+        for dx,dy in dirs:
+            nx,ny=m.x+dx,m.y+dy
+            if dx==dy==0:
+                return (m.x,m.y)
+            if self.can_monster_step(m,nx,ny) and self.diag_ok(m.x,m.y,nx,ny):
+                return (nx,ny)
+        return (m.x,m.y)
+
+    def can_monster_step(self,m,x,y):
+        if (x,y)==(self.p.x,self.p.y):
+            return True
+        if not self.walkable(x,y) or self.mon_at(x,y):
+            return False
+        gi=self.gi_at(x,y)
+        return not (gi and self.is_scare_monster(gi))
+
+    def chase(self,m,dest):
         px,py=self.p.x,self.p.y
         if m.scared>0:
             m.scared-=1
@@ -953,21 +1139,34 @@ class Game:
             if self.walkable(nx,ny) and not self.mon_at(nx,ny) and not(nx==px and ny==py):
                 m.x,m.y=nx,ny
             return
-        dist=abs(m.x-px)+abs(m.y-py)
-        if "erratic" in m.flags and random.random()<.5:
-            dx,dy=random.choice([-1,0,1]),random.choice([-1,0,1])
-        elif dist<=8 and (m.x,m.y) in self.visible:
-            dx=(1 if m.x<px else -1 if m.x>px else 0)
-            dy=(1 if m.y<py else -1 if m.y>py else 0)
-            if dx and dy:
-                if random.random()<.5: dx=0
-                else: dy=0
-        else: return
         if "regen" in m.flags and m.hp<m.max_hp and random.random()<.3: m.hp+=1
-        nx,ny=m.x+dx,m.y+dy
-        if not self.diag_ok(m.x,m.y,nx,ny): return
-        if nx==px and ny==py: self.m_attack(m); return
-        if self.walkable(nx,ny) and not self.mon_at(nx,ny): m.x,m.y=nx,ny
+        if (m.confused>0 and rnd(5)!=0) or (m.sym=="P" and rnd(5)==0) or (m.sym=="B" and rnd(2)==0):
+            nx,ny=self.random_monster_move(m)
+            if (nx,ny)==(px,py):
+                self.m_attack(m); return "attack"
+            m.x,m.y=nx,ny
+            if m.confused>0 and rnd(20)==0: m.confused=0
+            return "move"
+        cur=self.dist2((m.x,m.y),dest)
+        best=(m.x,m.y); bestd=cur; ties=1
+        for dx,dy in DIR8.values():
+            nx,ny=m.x+dx,m.y+dy
+            if not self.diag_ok(m.x,m.y,nx,ny):
+                continue
+            if (nx,ny)==(px,py):
+                if dest==(px,py):
+                    self.m_attack(m); return "attack"
+                continue
+            if not self.can_monster_step(m,nx,ny):
+                continue
+            d=self.dist2((nx,ny),dest)
+            if d<bestd:
+                best=(nx,ny); bestd=d; ties=1
+            elif d==bestd and best!=(m.x,m.y) and rnd(ties+1)==0:
+                best=(nx,ny); ties+=1
+        if best!=(m.x,m.y):
+            m.x,m.y=best
+        return "move"
 
     # ---------- Item effects ----------
     def use_pot(self,it):
@@ -1021,13 +1220,13 @@ class Game:
                     i.cursed=False; changed=True
             self.msg("Your equipment feels lighter." if changed else "Somebody watches over you.")
         elif nm=="aggravate monsters":
-            for mo in self.mons: mo.held=mo.scared=0; self.msg("You hear a humming noise.")
+            self.aggravate_monsters(); self.msg("You hear a humming noise.")
         elif nm=="scare monster":
             for mo in self.mons:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=random.randint(10,20)
             self.msg("Maniacal laughter echoes.")
         elif nm=="sleep":
-            p.stuck=max(p.stuck,random.randint(4,8)); self.msg("You fall asleep.")
+            p.no_command=max(p.no_command,random.randint(4,8)); self.msg("You fall asleep.")
         elif nm=="teleportation":
             r=random.choice(self.rooms); p.x,p.y=r.inner(); self.update_fov(); self._center_cam()
             self.msg("You are teleported!")
@@ -1111,6 +1310,16 @@ class Game:
     # ---------- Movement & turns ----------
     def try_move(self, dx, dy):
         p = self.p
+        if p.held_by and not p.held_by.alive:
+            p.held_by=None
+        if p.held_by and (p.x+dx,p.y+dy)!=(p.held_by.x,p.held_by.y):
+            self.msg("you are being held")
+            return False
+        if p.no_move>0:
+            p.no_move-=1
+            self.msg("you are still stuck in the bear trap")
+            self.end_turn()
+            return True
         if p.confused>0:
             dx,dy = random.choice([-1,0,1]), random.choice([-1,0,1])
         if dx or dy:
@@ -1133,7 +1342,8 @@ class Game:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
                 self.msg("You see a {item} here.",item=self.ident.name(gi))
-            self.update_fov(); self.update_cam(); self.end_turn(); return True
+            self.update_fov(); self.wake_visible_monsters()
+            self.update_cam(); self.end_turn(); return True
         return False
 
     def do_search(self, front_only=False):
@@ -1190,10 +1400,10 @@ class Game:
             self.msg("you fell into a trap!")
             self.descend()
         elif name=="bear trap":
-            self.p.stuck=max(self.p.stuck,BEARTIME)
+            self.p.no_move=max(self.p.no_move,BEARTIME)
             self.msg("you are caught in a bear trap")
         elif name=="sleeping gas trap":
-            self.p.stuck=max(self.p.stuck,SLEEPTIME)
+            self.p.no_command=max(self.p.no_command,SLEEPTIME)
             self.msg("a strange white mist envelops you and you fall asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):
@@ -1303,7 +1513,7 @@ class Game:
         if not self.p.alive:
             self.msg("You died... [A/Start] to restart."); self.st=ST_DEAD
             return
-        if self.p.stuck>0: self.p.stuck-=1
+        if self.p.no_command>0: self.p.no_command-=1
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
@@ -1642,7 +1852,7 @@ class Game:
                 self.st=ST_PLAY
 
     def upd_play(self):
-        if self.p.stuck>0:
+        if self.p.no_command>0:
             self.msg("You are unable to move.")
             self.end_turn()
             return
