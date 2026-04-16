@@ -80,7 +80,7 @@
 - [x] Rogue 5.4 `diag_ok()` 相当の斜め移動・斜め近接攻撃・モンスター接触制限
 - [x] Rogue 5.4 `doctor()` 相当のHP自然回復
 - [x] Rogue 5.4 `stomach()` 相当の空腹緩和
-- [ ] XYLR依存の撤去または任意ショートカット化
+- [x] ゲームパッド XYLR / ショルダー依存の撤去（キーボード操作は正式対応として維持）
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
 - [x] Select(Back) 補助メニューから Map を削除し、Status / Help / Search に整理
 - [x] Select+A quick throw / Select+B search を追加

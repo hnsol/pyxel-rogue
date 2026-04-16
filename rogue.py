@@ -12,8 +12,8 @@ Gamepad:                        Keyboard:
   Back         Assist menu       Tab            Assist menu
   Back + A     Quick throw       Tab + Z        Quick throw
   Back + B     Search            S              Search
-  X            Status shortcut   I              Status
-  R            Help              ?              Help
+                                I              Status
+                                ?              Help
 """
 
 import pyxel
@@ -1326,7 +1326,7 @@ class Game:
             and not self.dir_held_any()
         )
     def btn_search(self): return self.kp(pyxel.KEY_S)
-    def btn_status(self): return self.kp(pyxel.KEY_I, pyxel.GAMEPAD1_BUTTON_X)
+    def btn_status(self): return self.kp(pyxel.KEY_I)
     def btn_start_tap(self): return self.kp(pyxel.GAMEPAD1_BUTTON_START)
     def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def back_held(self): return self.kh(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
@@ -1343,7 +1343,7 @@ class Game:
         if hit:
             self.back_used=True; self.b_used=True
         return hit
-    def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH, pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
+    def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH)
     def dash_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT, pyxel.GAMEPAD1_BUTTON_B)
 
@@ -1669,9 +1669,10 @@ class Game:
             "B tap / C      Open menu",
             "",
             "--- Info ---",
-            "X / I          Status screen",
+            "Back menu      Status / Help",
+            "I              Status screen",
             "Back  / Tab    Assist menu",
-            "R     / ?      This help",
+            "?              This help",
             "",
             "Press any button to close",
         ]

@@ -351,6 +351,49 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.dir_pending)
         rogue.pyxel.set_input()
 
+    def test_extra_gamepad_buttons_have_no_play_shortcuts(self):
+        for button in (
+            rogue.pyxel.GAMEPAD1_BUTTON_X,
+            rogue.pyxel.GAMEPAD1_BUTTON_Y,
+            rogue.pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER,
+            rogue.pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER,
+        ):
+            with self.subTest(button=button):
+                game = new_game(seed=36)
+                set_open_floor(game)
+                start = (game.p.x, game.p.y, game.st, game.turn)
+                rogue.pyxel.set_input(held={button}, pressed={button})
+                game.update()
+                self.assertEqual((game.p.x, game.p.y, game.st, game.turn), start)
+
+    def test_keyboard_status_help_and_vi_diagonals_remain_supported(self):
+        game = new_game(seed=36)
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_I}, pressed={rogue.pyxel.KEY_I})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_STATUS)
+
+        game = new_game(seed=36)
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_QUESTION},
+            pressed={rogue.pyxel.KEY_QUESTION},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_HELP)
+
+        for key, direction in (
+            (rogue.pyxel.KEY_Y, (-1, -1)),
+            (rogue.pyxel.KEY_U, (1, -1)),
+            (rogue.pyxel.KEY_B, (-1, 1)),
+            (rogue.pyxel.KEY_N, (1, 1)),
+        ):
+            with self.subTest(key=key):
+                game = new_game(seed=36)
+                set_open_floor(game)
+                px, py = game.p.x, game.p.y
+                rogue.pyxel.set_input(held={key}, pressed={key})
+                game.update()
+                self.assertEqual((game.p.x, game.p.y), (px + direction[0], py + direction[1]))
+
     def test_throw_records_non_blocking_animation_path(self):
         game = new_game(seed=37)
         game.mons = []
