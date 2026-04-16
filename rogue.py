@@ -1,6 +1,6 @@
 """
 PYXEL ROGUE  Phase 3
-Faithful Rogue 5.4 clone  ·  Shiren-style controls  ·  BDF font
+Faithful Rogue 5.4.4 clone  ·  Shiren-style controls  ·  BDF font
 
 Gamepad:                        Keyboard:
   D-pad        Move (8-dir)      Arrow / HJKL   Move
@@ -274,7 +274,7 @@ def rnd(n):
     return random.randrange(n) if n > 0 else 0
 
 # ===========================================================
-#  Item data  (Rogue 5.4)
+#  Item data  (Rogue 5.4.4)
 # ===========================================================
 POTIONS = [
     {"name":"healing","prob":13},{"name":"extra healing","prob":5},
@@ -332,7 +332,7 @@ TRAPS = [
 RAINBOW = ["red","orange","yellow","green","blue","violet"]
 
 # ===========================================================
-#  Bestiary  (Rogue 5.4)
+#  Bestiary  (Rogue 5.4.4)
 # ===========================================================
 BESTIARY = [
     ("A","aquator",30,7,2,20,9,"rust"),("B","bat",3,1,0,1,1,"erratic,fly"),
@@ -822,7 +822,7 @@ class Game:
                     it=make_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
 
     def _secret_chance(self, denom):
-        # Rogue 5.4 passages.c: rnd(10)+1 < level, then a per-feature rnd().
+        # Rogue 5.4.4 passages.c: rnd(10)+1 < level, then a per-feature rnd().
         return rnd(10)+1 < self.p.depth and rnd(denom)==0
 
     def _hide_secret_features(self):
@@ -842,7 +842,7 @@ class Game:
         return T_VWALL if left or right else T_HWALL
 
     def _spawn_traps(self):
-        # Rogue 5.4 new_level.c: if rnd(10) < level, place rnd(level/4)+1 traps.
+        # Rogue 5.4.4 new_level.c: if rnd(10) < level, place rnd(level/4)+1 traps.
         if rnd(10) >= self.p.depth:
             return
         n=min(MAX_TRAPS,rnd(self.p.depth//4)+1)
