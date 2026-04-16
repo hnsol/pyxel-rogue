@@ -52,33 +52,24 @@ WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR}
 # ===========================================================
 #  Screen layout  (BDF j10r: ASCII 6×~10 px)
 # ===========================================================
-SCR_W, SCR_H = 420, 280
+SCR_W, SCR_H = 512, 320
 TILE_W, TILE_H = 7, 12          # per-char cell in zoom view
-ZV_COLS, ZV_ROWS = 34, 20       # zoom viewport size in tiles
-ZV_PX_W = ZV_COLS * TILE_W      # 238
-ZV_PX_H = ZV_ROWS * TILE_H      # 240
+ZV_COLS, ZV_ROWS = MAP_W, MAP_H # full 48×24 dungeon view
+ZV_PX_W = ZV_COLS * TILE_W      # 336
+ZV_PX_H = ZV_ROWS * TILE_H      # 288
 DEAD_ZONE_X = 8                  # camera edge zone; leaves ~50% center still
 DEAD_ZONE_Y = 5
 
-# Left info column
-MINI_S = 3                       # minimap tile size
-MINI_PX_W = MAP_W * MINI_S      # 144
-MINI_PX_H = MAP_H * MINI_S      # 72
-SIDE_X, SIDE_Y = 4, 16
-SIDE_W = MINI_PX_W
-
-# Main zoom view
-ZV_X = SIDE_X + SIDE_W + 12      # 160
-ZV_Y = 16                        # top-left pixel of zoom view
-
-MINI_X, MINI_Y = SIDE_X, SIDE_Y
-STAT_X = SIDE_X
-STAT_Y = MINI_Y + MINI_PX_H + 8
+# Main view + right HUD
+ZV_X, ZV_Y = 4, 4                # top-left pixel of full dungeon view
+HUD_X = ZV_X + ZV_PX_W + 10
+HUD_Y = ZV_Y
+HUD_W = SCR_W - HUD_X - 4
 
 # Messages
-MSG_LINES = 6
-MSG_X, MSG_Y = SIDE_X, SCR_H - MSG_LINES * TILE_H - 4
-MSG_COLS = SIDE_W // 6
+MSG_LINES = 2
+MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * TILE_H - 2
+MSG_COLS = (SCR_W - MSG_X * 2) // 6
 
 INV_MAX = 26
 DASH_INTERVAL = 3                # frames between dash steps
@@ -91,8 +82,8 @@ STARVETIME = 850
 #  UI states
 # ===========================================================
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
-ST_DEAD = 4; ST_STATUS = 5; ST_HELP = 6; ST_MAP = 7
-ST_AUX = 8
+ST_DEAD = 4; ST_STATUS = 5; ST_HELP = 6
+ST_AUX = 7
 
 # ===========================================================
 #  Item categories
@@ -183,12 +174,12 @@ class TextCatalog:
         LANG_EN: {
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
             "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
-            "Map":"Map", "Status":"Status", "Help":"Help", "Search":"Search",
+            "Status":"Status", "Help":"Help", "Search":"Search",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
             "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
-            "Map":"地図", "Status":"状態", "Help":"ヘルプ", "Search":"探す",
+            "Status":"状態", "Help":"ヘルプ", "Search":"探す",
         },
     }
 
@@ -306,7 +297,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Map", "Status", "Help", "Search"]
+AUX_ACTIONS = ["Status", "Help", "Search"]
 
 # ===========================================================
 #  Classes
@@ -672,8 +663,10 @@ class Game:
         self._center_cam(); self.update_fov()
 
     def _center_cam(self):
-        self.cam_x = max(0, min(self.p.x - ZV_COLS//2, MAP_W - ZV_COLS))
-        self.cam_y = max(0, min(self.p.y - ZV_ROWS//2, MAP_H - ZV_ROWS))
+        max_x = max(0, MAP_W - ZV_COLS)
+        max_y = max(0, MAP_H - ZV_ROWS)
+        self.cam_x = max(0, min(self.p.x - ZV_COLS//2, max_x))
+        self.cam_y = max(0, min(self.p.y - ZV_ROWS//2, max_y))
 
     def _spawn_mons(self):
         d=self.p.depth; n=random.randint(3,4+d)
@@ -725,16 +718,22 @@ class Game:
 
     # ---------- Camera ----------
     def update_cam(self):
+        max_x = max(0, MAP_W - ZV_COLS)
+        max_y = max(0, MAP_H - ZV_ROWS)
+        if max_x == 0:
+            self.cam_x = 0
+        if max_y == 0:
+            self.cam_y = 0
         rx = self.p.x - self.cam_x
         ry = self.p.y - self.cam_y
-        if rx < DEAD_ZONE_X:
+        if max_x and rx < DEAD_ZONE_X:
             self.cam_x = max(0, self.p.x - DEAD_ZONE_X)
-        elif rx >= ZV_COLS - DEAD_ZONE_X:
-            self.cam_x = min(MAP_W - ZV_COLS, self.p.x - ZV_COLS + DEAD_ZONE_X + 1)
-        if ry < DEAD_ZONE_Y:
+        elif max_x and rx >= ZV_COLS - DEAD_ZONE_X:
+            self.cam_x = min(max_x, self.p.x - ZV_COLS + DEAD_ZONE_X + 1)
+        if max_y and ry < DEAD_ZONE_Y:
             self.cam_y = max(0, self.p.y - DEAD_ZONE_Y)
-        elif ry >= ZV_ROWS - DEAD_ZONE_Y:
-            self.cam_y = min(MAP_H - ZV_ROWS, self.p.y - ZV_ROWS + DEAD_ZONE_Y + 1)
+        elif max_y and ry >= ZV_ROWS - DEAD_ZONE_Y:
+            self.cam_y = min(max_y, self.p.y - ZV_ROWS + DEAD_ZONE_Y + 1)
 
     # ---------- FOV ----------
     def update_fov(self):
@@ -1251,7 +1250,7 @@ class Game:
         elif self.st==ST_ITEM: self.upd_item()
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
-        elif self.st in(ST_STATUS,ST_HELP,ST_MAP):
+        elif self.st in(ST_STATUS,ST_HELP):
             if self.btn_a() or self.btn_overlay_cancel() or self.btn_status() or self.btn_back() or self.btn_r():
                 self.st=ST_PLAY
 
@@ -1329,8 +1328,7 @@ class Game:
         if self.btn_overlay_cancel(): self.st=ST_PLAY; return
         if not self.btn_a(): return
         act=AUX_ACTIONS[self.acur]
-        if act=="Map": self.st=ST_MAP
-        elif act=="Status": self.st=ST_STATUS
+        if act=="Status": self.st=ST_STATUS
         elif act=="Help": self.st=ST_HELP
         elif act=="Search":
             self.st=ST_PLAY
@@ -1343,7 +1341,6 @@ class Game:
         pyxel.cls(0)
         self.draw_title()
         self.draw_zoom()
-        self.draw_mini()
         self.draw_stat()
         self.draw_msgs()
         # Overlays
@@ -1353,12 +1350,10 @@ class Game:
         elif self.st==ST_AUX: self.draw_aux()
         elif self.st==ST_STATUS: self.draw_status()
         elif self.st==ST_HELP: self.draw_help()
-        elif self.st==ST_MAP: self.draw_fullmap()
         elif self.st==ST_DEAD: self.draw_dead()
 
     def draw_title(self):
-        self.txt(ZV_X, 3, "PYXEL ROGUE", 10)
-        self.txt(ZV_X+80, 3, f"Depth:{self.p.depth}  Turn:{self.turn}", 5)
+        self.txt(HUD_X, 3, "PYXEL ROGUE", 10)
 
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
@@ -1392,54 +1387,29 @@ class Game:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
                     if ch!=" ": self.txt(sx+1,sy+1,ch,1)
 
-    def draw_mini(self):
-        ox,oy=MINI_X,MINI_Y; px,py=self.p.x,self.p.y
-        self.txt(ox,oy-10,"MAP",6)
-        pyxel.rectb(ox-1,oy-1,MINI_PX_W+2,MINI_PX_H+2,1)
-        COL={T_FLOOR:5,T_HWALL:13,T_VWALL:13,T_DOOR:9,T_CORR:5,T_STAIR:10}
-        for y in range(MAP_H):
-            for x in range(MAP_W):
-                vis=(x,y) in self.visible; exp=(x,y) in self.explored
-                if not(vis or exp): continue
-                tile=self.tm[y][x]
-                if tile==T_VOID: continue
-                sx=ox+x*MINI_S; sy=oy+y*MINI_S
-                if vis:
-                    c=COL.get(tile,5)
-                    # Rooms: fill interior
-                    pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,c)
-                    gi=self.gi_at(x,y)
-                    if gi: pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,ICOL.get(gi.cat,7))
-                    mo=self.mon_at(x,y)
-                    if mo and "invis" not in mo.flags: pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,8)
-                    if tile==T_STAIR: pyxel.rect(sx,sy,MINI_S,MINI_S,10)
-                    if x==px and y==py: pyxel.rect(sx,sy,MINI_S-1,MINI_S-1,10)
-                else:
-                    # Explored: walls brighter, floors dimmer
-                    c=10 if tile==T_STAIR else 2 if tile in(T_HWALL,T_VWALL) else 1
-                    sz=MINI_S if tile==T_STAIR else MINI_S-1
-                    pyxel.rect(sx,sy,sz,sz,c)
-        # Viewport rectangle
-        vx1=ox+self.cam_x*MINI_S; vy1=oy+self.cam_y*MINI_S
-        vw=ZV_COLS*MINI_S; vh=ZV_ROWS*MINI_S
-        pyxel.rectb(vx1,vy1,vw,vh,10)
-
     def draw_stat(self):
-        sx,sy=STAT_X,STAT_Y; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
-        self.txt(sx,sy,f"Lv:{p.level}",7)
-        self.txt(sx+42,sy,f"HP:{p.hp}/{p.max_hp}",hc)
-        # HP bar
-        bw=120; pyxel.rect(sx,sy+12,bw,4,1)
+        sx,sy=HUD_X,HUD_Y+16; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
+        self.txt(sx,sy,f"Depth {p.depth}",7)
+        self.txt(sx+72,sy,f"Turn {self.turn}",5); sy+=14
+        self.txt(sx,sy,f"HP {p.hp}/{p.max_hp}",hc); sy+=11
+        bw=HUD_W-10; pyxel.rect(sx,sy,bw,4,1)
         if p.max_hp>0:
             f=max(0,int(bw*p.hp/p.max_hp))
-            pyxel.rect(sx,sy+12,f,4,8 if p.hp<=p.max_hp//3 else 11)
-        self.txt(sx,sy+20,f"Str:{p.st}/{p.max_st}",7)
-        self.txt(sx+72,sy+20,f"AC:{p.ac}",7)
-        wn=self.ident.name(p.wpn)[:18] if p.wpn else "bare hands"
-        self.txt(sx,sy+32,f"W:{wn}",7)
-        self.txt(sx,sy+44,f"Gold:{p.gold}",10)
-        # Status effects
-        self.txt(sx,sy+56,f"Diag:{'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5)
+            pyxel.rect(sx,sy,f,4,8 if p.hp<=p.max_hp//3 else 11)
+        sy+=12
+        self.txt(sx,sy,f"Lv {p.level}  Exp {p.exp}",7); sy+=12
+        self.txt(sx,sy,f"Str {p.st}/{p.max_st}",7)
+        self.txt(sx+72,sy,f"AC {p.ac}",7); sy+=12
+        self.txt(sx,sy,f"Gold {p.gold}",10); sy+=12
+        state = p.state if p.state else "normal"
+        self.txt(sx,sy,f"Food {state}",13 if p.state!="normal" else 7); sy+=12
+        self.txt(sx,sy,f"Diag {'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5); sy+=18
+        self.txt(sx,sy,"-- Equip --",10); sy+=12
+        wn=self.ident.name(p.wpn) if p.wpn else "bare hands"
+        an=self.ident.name(p.arm) if p.arm else "no armor"
+        self.txt(sx,sy,f"W {wn[:22]}",7); sy+=12
+        self.txt(sx,sy,f"A {an[:22]}",7); sy+=18
+        self.txt(sx,sy,"-- Effect --",10); sy+=12
         eff=[]
         if p.state=="hungry": eff.append("Hungry")
         elif p.state=="weak": eff.append("Weak")
@@ -1447,11 +1417,11 @@ class Game:
         if p.confused>0: eff.append("Confused")
         if p.blind>0: eff.append("Blind")
         if p.haste>0: eff.append("Haste")
-        if eff:
-            s=" ".join(eff)
-            self.txt(sx,sy+70,s[:MSG_COLS],13)
-            if len(s)>MSG_COLS:
-                self.txt(sx,sy+82,s[MSG_COLS:MSG_COLS*2],13)
+        if not eff:
+            eff.append("None")
+        for e in eff[:5]:
+            self.txt(sx,sy,e,13 if e!="None" else 5)
+            sy+=12
 
     def draw_msgs(self):
         rows=[]
@@ -1563,31 +1533,6 @@ class Game:
         for ln in lines:
             c=10 if ln.startswith("---") else 7
             self.txt(bx+8,y,ln,c); y+=11
-
-    def draw_fullmap(self):
-        # Full-screen map overlay using larger tiles
-        bx,by=20,10; ts=6  # tile size for full map
-        mw=MAP_W*ts; mh=MAP_H*ts
-        self._box(bx-2,by-2,mw+4,mh+20,"=== Map ===")
-        px,py=self.p.x,self.p.y
-        COL={T_FLOOR:5,T_HWALL:13,T_VWALL:13,T_DOOR:9,T_CORR:5,T_STAIR:10}
-        for y in range(MAP_H):
-            for x in range(MAP_W):
-                vis=(x,y) in self.visible; exp=(x,y) in self.explored
-                if not(vis or exp): continue
-                tile=self.tm[y][x]
-                if tile==T_VOID: continue
-                sx=bx+x*ts; sy=by+y*ts
-                if vis:
-                    c=COL.get(tile,5)
-                    pyxel.rect(sx,sy,ts-1,ts-1,c)
-                    mo=self.mon_at(x,y)
-                    if mo and "invis" not in mo.flags: pyxel.rect(sx,sy,ts-1,ts-1,8)
-                    if x==px and y==py: pyxel.rect(sx,sy,ts-1,ts-1,10)
-                else:
-                    c=2 if tile in(T_HWALL,T_VWALL) else 1
-                    pyxel.rect(sx,sy,ts-1,ts-1,c)
-        self.txt(bx,by+mh+4,"Press any button to close",5)
 
     def draw_dead(self):
         bx,by=105,42; bw=270; bh=190

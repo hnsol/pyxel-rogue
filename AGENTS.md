@@ -37,9 +37,9 @@ rogue.py
 ├── 定数・テーブル（POTIONS[12], SCROLLS[12], WEAPONS[9], ARMORS[8], BESTIARY[26]）
 ├── TextCatalog / LANG_EN / LANG_JA（日英切替・代表文言）
 ├── Room / Item / Monster / Player / IdentTable / DGen（ダンジョン生成）
-└── Game（メイン: ステートマシン ST_PLAY/MENU/ITEM/DIR/STATUS/HELP/MAP/DEAD）
+└── Game（メイン: ステートマシン ST_PLAY/MENU/ITEM/DIR/STATUS/HELP/DEAD）
     ├── update: 入力 → upd_play / upd_menu / upd_item / upd_dir
-    ├── draw:   右メイン draw_zoom + 左情報列 draw_mini/draw_stat/draw_msgs → オーバーレイ
+    ├── draw:   48×24メインASCII + 右サイドHUD + 下ログ → オーバーレイ
     └── 各ステートに upd_xxx() と draw_xxx() が1対1で対応
 ```
 
@@ -48,8 +48,11 @@ rogue.py
 ## 画面・マップ
 
 - 現行マップ: 48×24、3×3セクターグリッド
-- 現行画面: 420×280
-- 現行レイアウト: 左情報列（ミニマップ / ステータス / メッセージ）+ 右メインASCII表示
+- 目標画面: 512×320
+- 目標レイアウト: 48×24メインASCII常時全表示 + 右サイドHUD + 下ログ
+- メインASCII描画領域: 48×24タイル、現行セル 7×12px なら 336×288px
+- ミニマップとSelectから開く全体マップは置かず、探索情報はメインASCII表示へ集約する
+- 右サイドHUDは HP/Str/AC/Food/装備/状態異常/入力モードなど、状態確認の読みやすさを補助する用途に限定する
 - これらは現在の実装値であり、固定仕様ではない
 - ブラウザ、SteamDeck、中華ゲーム機で遊べることを重視し、画面サイズ変更時はレイアウト定数を一箇所で再計算できる設計に寄せる
 
@@ -71,7 +74,7 @@ rogue.py
 - 斜め補助モード中のD-padは、左上=NW、右上=NE、右下=SE、左下=SW の同時押しだけを受け付ける。上下左右単体は移動しない
 - 斜め補助モード ON/OFF はステータス欄に表示する
 - Start長押し依存は禁止（携帯機側の電源OFF等に割り当てられることがあるため）
-- Select(Back): 補助メニュー（Map / Status / Help / Search）
+- Select(Back): 補助メニュー（Status / Help / Search）
 - A: 決定 / 拾う / 階段
 - B: 短押しでメニュー/キャンセル、長押し+方向でダッシュ。ダッシュ後に離した瞬間の短押し誤発火を避ける
 - X/Y/L/R: 当面は必須操作に割り当てない。将来のショートカット予約
@@ -83,7 +86,7 @@ rogue.py
 - `umplus_j10r.bdf` は ASCII 6px、CJK 10px、日本語対応
 - 日本語表示は `PYXEL_ROGUE_LANG=ja python3 rogue.py` で確認できる。現状は代表文言・用語のみ対応で、全メッセージ辞書化は継続タスク
 - 将来的なフォント選択は許容する。ただし ASCII ローグ表示に向く可読性を必須条件にする
-- カメラ: デッドゾーン方式。現行値は横 `DEAD_ZONE_X = 8`、縦 `DEAD_ZONE_Y = 5`
+- カメラ: 48×24常時全表示では通常スクロール不要。将来マップサイズ変更時に破綻しない互換処理として残す
 - ダッシュ: B長押し＋方向を中心候補にする。壁・敵・ドア・分岐・階段で自動停止
 - ダンジョン生成: Rogue 5.4 の C ソース確認を優先し、推測で似せない。通路生成は `do_passages()`, `conn()`, `door()`, `putpass()` の責務分担と比較できる形を保つ
 

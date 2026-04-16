@@ -79,6 +79,18 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def test_full_map_layout_baseline(self):
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
+        self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
+        self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (336, 288))
+        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search"])
+
+        game = new_game(seed=5)
+        game.cam_x = 99
+        game.cam_y = 99
+        game.update_cam()
+        self.assertEqual((game.cam_x, game.cam_y), (0, 0))
+
     def test_module_loads_and_new_game_emits_welcome(self):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)
