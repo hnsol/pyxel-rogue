@@ -26,7 +26,9 @@
 
 目的: Rogue 5.4 のゲームロジックを完成させ、原作と同じ挙動か検証できる状態に近づける。
 
-進め方: 既知バグや忠実度修正は、現状追認テストではなく Rogue 5.4 C ソースに基づく期待値テストを先に追加してから直す。baseline テストは、翻訳層やUI整理で壊れてほしくない現状の保護に使う。
+進め方: ゲームメカニクスは常に Rogue 5.4 C ソースを一次情報にする。各 Phase 4 タスクは、該当する原作ファイル・関数・定数・テーブルの確認、Rogue 5.4 期待値テスト、実装、英語/日本語テストの順で進める。既知バグや忠実度修正は、現状追認テストではなく Rogue 5.4 C ソースに基づく期待値テストを先に追加してから直す。baseline テストは、翻訳層やUI整理で壊れてほしくない現状の保護に使う。
+
+罠・隠し要素の実装では、Rogue 5.4 の `new_level.c`, `passages.c`, `command.c`, `move.c` にある生成頻度、発見率、ターン消費、踏んだ時の効果を明示してから実装する。推測、現代ローグライクの慣習、Rogue2.Official、既存 Pyxel 実装をゲーム挙動の正解にしない。
 
 完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
 
@@ -47,11 +49,11 @@
   - light, invisibility, lightning, fire, cold, polymorph,
     missile, haste monster, slow monster, drain life,
     nothing, teleport away, teleport to, cancellation
-- [ ] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
+- [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
-- [ ] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
-- [ ] **隠しドア・隠し通路**
+- [x] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
+- [x] **隠しドア・隠し通路**
 - [ ] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
 - [ ] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
 - [x] Rogue 5.4 `pick_up()` 準拠の拾得基礎（自動拾得、金直接加算、満杯文言、scare monster 再拾得消滅）

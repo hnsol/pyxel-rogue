@@ -76,6 +76,8 @@ def set_open_floor(game):
     game.rooms = [rogue.Room(1, 1, rogue.MAP_W - 2, rogue.MAP_H - 2)]
     game.mons = []
     game.gitems = []
+    game.traps = {}
+    game.hidden_tiles = {}
     game.p.x = rogue.MAP_W // 2
     game.p.y = rogue.MAP_H // 2
     game.update_fov()
@@ -684,6 +686,117 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.turn, 0)
         self.assertIn("You have found teleport trap.", game.msgs)
+
+    def test_rogue54_rnd_and_trap_spawn_frequency_shape(self):
+        self.assertEqual(rogue.rnd(0), 0)
+        game = new_game(seed=55)
+        set_open_floor(game)
+        game.p.depth = 1
+        old_randrange = rogue.random.randrange
+        old_shuffle = rogue.random.shuffle
+        try:
+            rogue.random.randrange = lambda n: n - 1
+            game._spawn_traps()
+            self.assertEqual(game.traps, {})
+
+            rogue.random.randrange = lambda n: 0
+            rogue.random.shuffle = lambda seq: None
+            game._spawn_traps()
+            self.assertEqual(len(game.traps), 1)
+            self.assertEqual(next(iter(game.traps.values())), 0)
+        finally:
+            rogue.random.randrange = old_randrange
+            rogue.random.shuffle = old_shuffle
+
+    def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
+        game = new_game(seed=56)
+        set_open_floor(game)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[5][4] = rogue.T_FLOOR
+        game.tm[5][5] = rogue.T_DOOR
+        game.tm[5][6] = rogue.T_CORR
+        game.tm[6][6] = rogue.T_CORR
+        game.p.depth = 1
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game._hide_secret_features()
+            self.assertEqual(game.hidden_tiles, {})
+
+            game.p.depth = 2
+            game._hide_secret_features()
+            self.assertEqual(game.hidden_tiles[(5, 5)], rogue.T_DOOR)
+            self.assertEqual(game.hidden_tiles[(6, 5)], rogue.T_CORR)
+            self.assertEqual(game.tm[5][5], rogue.T_VWALL)
+            self.assertEqual(game.tm[5][6], rogue.T_VOID)
+        finally:
+            rogue.random.randrange = old_randrange
+
+    def test_search_reveals_hidden_door_passage_and_trap_with_rogue54_rates(self):
+        game = new_game(seed=57)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.hidden_tiles[(px + 1, py)] = rogue.T_DOOR
+        game.tm[py][px + 1] = rogue.T_VWALL
+        game.hidden_tiles[(px, py + 1)] = rogue.T_CORR
+        game.tm[py + 1][px] = rogue.T_VOID
+        game.traps[(px - 1, py)] = 1
+        game.tm[py][px - 1] = rogue.T_FLOOR
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.do_search()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(game.tm[py][px + 1], rogue.T_DOOR)
+        self.assertEqual(game.tm[py + 1][px], rogue.T_CORR)
+        self.assertEqual(game.tm[py][px - 1], rogue.T_TRAP)
+        self.assertEqual(game.turn, 1)
+        self.assertIn("You found something!", game.msgs)
+
+    def test_search_failure_keeps_hidden_features_hidden(self):
+        game = new_game(seed=58)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.hidden_tiles[(px + 1, py)] = rogue.T_DOOR
+        game.tm[py][px + 1] = rogue.T_VWALL
+        game.traps[(px - 1, py)] = 1
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: n - 1
+            game.do_search()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(game.tm[py][px + 1], rogue.T_VWALL)
+        self.assertEqual(game.tm[py][px - 1], rogue.T_FLOOR)
+        self.assertIn("You find nothing.", game.msgs)
+
+    def test_stepping_on_hidden_bear_trap_reveals_it_and_spends_turn(self):
+        game = new_game(seed=59)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        game.traps[(x, y)] = 3
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (x, y))
+        self.assertEqual(game.tm[y][x], rogue.T_TRAP)
+        self.assertGreater(game.p.stuck, 0)
+        self.assertEqual(game.turn, 1)
+        self.assertIn("you are caught in a bear trap", game.msgs)
+
+    def test_poison_save_uses_rogue54_level_scaled_threshold(self):
+        game = new_game(seed=60)
+        game.p.level = 4
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 8
+            self.assertTrue(game.save_vs_poison())
+            rogue.random.randrange = lambda n: 9
+            self.assertFalse(game.save_vs_poison())
+        finally:
+            rogue.random.randrange = old_randrange
 
 
 if __name__ == "__main__":

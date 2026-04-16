@@ -78,6 +78,9 @@ HUNGERTIME = 1300
 MORETIME = 150
 STOMACHSIZE = 2000
 STARVETIME = 850
+MAX_TRAPS = 10
+BEARTIME = 3
+SLEEPTIME = 5
 
 # ===========================================================
 #  UI states
@@ -156,6 +159,27 @@ class TextCatalog:
             "You found something!":"何かを見つけた！",
             "no trap there":"そこには罠はない。",
             "You have found {trap}.":"{trap}を見つけている。",
+            "you fell into a trap!":"落とし穴に落ちた！",
+            "you are caught in a bear trap":"くくり罠にかかった。",
+            "a strange white mist envelops you and you fall asleep":"白い霧に包まれ、眠ってしまった。",
+            "oh no! An arrow shot you":"矢に撃たれた！",
+            "an arrow shoots past you":"矢がかすめて飛んでいった。",
+            "a small dart just hit you in the shoulder":"小さな毒矢が肩に刺さった。",
+            "a small dart whizzes by your ear and vanishes":"小さな毒矢が耳元をかすめて消えた。",
+            "a gush of water hits you on the head":"水しぶきが頭に降りかかった。",
+            "the rust vanishes instantly":"さびはすぐに消えた。",
+            "your armor weakens":"よろいが弱くなった。",
+            "you are suddenly in a parallel dimension":"突然、別の次元に迷い込んだ。",
+            "the light in here suddenly seems {color}":"あたりの光が突然{color}に見えた。",
+            "you feel a sting in the side of your neck":"首筋にちくりと痛みを感じた。",
+            "multi-colored lines swirl around you, then fade":"色とりどりの線が渦巻き、やがて消えた。",
+            "a {color} light flashes in your eyes":"{color}の光が目の前で閃いた。",
+            "a spike shoots past your ear!":"トゲが耳元を飛び抜けた！",
+            "{color} sparks dance across your armor":"{color}の火花がよろいの上で踊った。",
+            "you suddenly feel very thirsty":"突然、とても喉が渇いた。",
+            "you feel time speed up suddenly":"時間が急に速くなったように感じた。",
+            "time now seems to be going slower":"時間がゆっくり流れているように感じる。",
+            "your pack turns {color}!":"荷物が{color}に変わった！",
             "Nothing here.":"ここには、何もない。",
             "pack too full":"もうこれ以上、物は持てない。",
             "the scroll turns to dust as you pick it up":"巻き物は拾うと灰になった。",
@@ -235,6 +259,9 @@ class TextCatalog:
 def roll(s):
     n, d = s.split("d"); return sum(random.randint(1, int(d)) for _ in range(int(n)))
 
+def rnd(n):
+    return random.randrange(n) if n > 0 else 0
+
 # ===========================================================
 #  Item data  (Rogue 5.4)
 # ===========================================================
@@ -288,6 +315,7 @@ TRAPS = [
     {"name":"teleport trap"}, {"name":"dart trap"},
     {"name":"rust trap"}, {"name":"mysterious trap"},
 ]
+RAINBOW = ["red","orange","yellow","green","blue","violet"]
 
 # ===========================================================
 #  Bestiary  (Rogue 5.4)
@@ -665,7 +693,7 @@ class Game:
         self.ident = IdentTable(self.lang)
         self.msgs = []; self.explored = set(); self.visible = set()
         self.gitems = []; self.mons = []; self.turn = 0
-        self.traps = {}
+        self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
         self.cam_x = self.cam_y = 0
@@ -696,11 +724,13 @@ class Game:
     def descend(self):
         self.p.depth += 1
         self.tm, self.rooms = DGen.gen(self.p.depth)
-        self.mons=[]; self.gitems=[]; self.traps={}; self.visible=set(); self.explored=set()
+        self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
+        self.visible=set(); self.explored=set()
         px,py = self.rooms[0].inner()
         self.p.x,self.p.y = px,py
         sr=self.rooms[-1]; sx,sy=sr.inner(); self.tm[sy][sx]=T_STAIR
         self._spawn_mons(); self._spawn_items()
+        self._hide_secret_features(); self._spawn_traps()
         self._center_cam(); self.update_fov()
 
     def _center_cam(self):
@@ -739,6 +769,44 @@ class Game:
                 if self.tm[iy][ix]==T_FLOOR and not self.gi_at(ix,iy):
                     it=make_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
 
+    def _secret_chance(self, denom):
+        # Rogue 5.4 passages.c: rnd(10)+1 < level, then a per-feature rnd().
+        return rnd(10)+1 < self.p.depth and rnd(denom)==0
+
+    def _hide_secret_features(self):
+        for y in range(MAP_H):
+            for x in range(MAP_W):
+                tile=self.tm[y][x]
+                if tile==T_DOOR and self._secret_chance(5):
+                    self.hidden_tiles[(x,y)]=T_DOOR
+                    self.tm[y][x]=self._hidden_door_wall_tile(x,y)
+                elif tile==T_CORR and self._secret_chance(40):
+                    self.hidden_tiles[(x,y)]=T_CORR
+                    self.tm[y][x]=T_VOID
+
+    def _hidden_door_wall_tile(self,x,y):
+        left = 0<=x-1<MAP_W and self.tm[y][x-1] in (T_FLOOR,T_CORR,T_STAIR)
+        right = 0<=x+1<MAP_W and self.tm[y][x+1] in (T_FLOOR,T_CORR,T_STAIR)
+        return T_VWALL if left or right else T_HWALL
+
+    def _spawn_traps(self):
+        # Rogue 5.4 new_level.c: if rnd(10) < level, place rnd(level/4)+1 traps.
+        if rnd(10) >= self.p.depth:
+            return
+        n=min(MAX_TRAPS,rnd(self.p.depth//4)+1)
+        cands=[
+            (x,y)
+            for y,row in enumerate(self.tm)
+            for x,tile in enumerate(row)
+            if tile==T_FLOOR
+            and (x,y)!=(self.p.x,self.p.y)
+            and not self.gi_at(x,y)
+            and not self.mon_at(x,y)
+        ]
+        random.shuffle(cands)
+        for x,y in cands[:n]:
+            self.traps[(x,y)]=rnd(len(TRAPS))
+
     # ---------- Helpers ----------
     def mon_at(self,x,y):
         for m in self.mons:
@@ -758,6 +826,19 @@ class Game:
         if self.tm[y][x]!=T_TRAP:
             return None
         return self.traps.get((x,y),0)
+    def reveal_hidden_at(self,x,y):
+        tile=self.hidden_tiles.pop((x,y),None)
+        if tile is None:
+            return False
+        self.tm[y][x]=tile
+        self.explored.add((x,y))
+        return True
+    def reveal_trap_at(self,x,y):
+        if (x,y) not in self.traps:
+            return False
+        self.tm[y][x]=T_TRAP
+        self.explored.add((x,y))
+        return True
     def walkable(self,x,y):
         return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in WALKABLE
     def diag_ok(self,sx,sy,ex,ey):
@@ -1041,10 +1122,16 @@ class Game:
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
             p.x, p.y = nx, ny
+            trapped = (nx,ny) in self.traps
+            if trapped:
+                self.trigger_trap(nx,ny)
+                if not self.p.alive or self.st!=ST_PLAY:
+                    self.end_turn()
+                    return True
             gi = self.gi_at(nx,ny)
-            if gi and self.auto_pickup:
+            if gi and self.auto_pickup and not trapped:
                 self.pickup_at(nx,ny)
-            elif gi:
+            elif gi and not trapped:
                 self.msg("You see a {item} here.",item=self.ident.name(gi))
             self.update_fov(); self.update_cam(); self.end_turn(); return True
         return False
@@ -1053,13 +1140,114 @@ class Game:
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
+        probinc=(3 if p.confused>0 else 0)+(2 if p.blind>0 else 0)
         for dx,dy in dirs:
             nx,ny=p.x+dx,p.y+dy
             if 0<=nx<MAP_W and 0<=ny<MAP_H:
-                # Hidden traps and passages will plug into this hook in Phase 4.
-                found = found or False
+                hidden=self.hidden_tiles.get((nx,ny))
+                if hidden==T_DOOR and rnd(5+probinc)==0:
+                    found = self.reveal_hidden_at(nx,ny) or found
+                elif hidden==T_CORR and rnd(3+probinc)==0:
+                    found = self.reveal_hidden_at(nx,ny) or found
+                elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rnd(2+probinc)==0:
+                    found = self.reveal_trap_at(nx,ny) or found
         self.msg("You find nothing." if not found else "You found something!")
+        if found:
+            self.update_fov()
         self.end_turn()
+
+    def trap_hits(self, bonus=0):
+        th=random.randint(1,20)+bonus
+        return th>=self.p.ac or th-bonus==20
+
+    def save_vs_poison(self):
+        return rnd(20) < 7 + self.p.level//2
+
+    def drop_arrow_at_player(self):
+        if self.gi_at(self.p.x,self.p.y):
+            return
+        arrow=Item(CAT_WPN,3,qty=1)
+        arrow.x,arrow.y=self.p.x,self.p.y
+        self.gitems.append(arrow)
+
+    def teleport_player(self):
+        cands=[
+            (x,y)
+            for y,row in enumerate(self.tm)
+            for x,tile in enumerate(row)
+            if tile in WALKABLE and tile!=T_TRAP and not self.mon_at(x,y)
+        ]
+        if cands:
+            self.p.x,self.p.y=random.choice(cands)
+            self.update_fov(); self._center_cam()
+
+    def trigger_trap(self,x,y):
+        self.reveal_trap_at(x,y)
+        kind=self.traps.get((x,y),0)
+        name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
+        self.dashing=False
+        if name=="trap door":
+            self.msg("you fell into a trap!")
+            self.descend()
+        elif name=="bear trap":
+            self.p.stuck=max(self.p.stuck,BEARTIME)
+            self.msg("you are caught in a bear trap")
+        elif name=="sleeping gas trap":
+            self.p.stuck=max(self.p.stuck,SLEEPTIME)
+            self.msg("a strange white mist envelops you and you fall asleep")
+        elif name=="arrow trap":
+            if self.trap_hits(self.p.level-1):
+                self.p.hp-=roll("1d6")
+                if self.p.hp<=0 and not self.death_cause:
+                    self.death_cause="an arrow killed you"
+                self.msg("oh no! An arrow shot you")
+            else:
+                self.drop_arrow_at_player()
+                self.msg("an arrow shoots past you")
+        elif name=="teleport trap":
+            self.teleport_player()
+        elif name=="dart trap":
+            if self.trap_hits(self.p.level+1):
+                self.p.hp-=roll("1d4")
+                if self.p.st>3 and not self.save_vs_poison():
+                    self.p.st-=1
+                if self.p.hp<=0 and not self.death_cause:
+                    self.death_cause="a poisoned dart killed you"
+                self.msg("a small dart just hit you in the shoulder")
+            else:
+                self.msg("a small dart whizzes by your ear and vanishes")
+        elif name=="rust trap":
+            self.msg("a gush of water hits you on the head")
+            self.rust_armor()
+        elif name=="mysterious trap":
+            self.mysterious_trap_msg()
+
+    def rust_armor(self):
+        arm=self.p.arm
+        if not arm or arm.data["name"]=="leather armor":
+            return
+        if arm.ench>-3:
+            arm.ench-=1
+            self.p.recalc_ac()
+            self.msg("your armor weakens")
+
+    def mysterious_trap_msg(self):
+        color=random.choice(RAINBOW)
+        msgs=[
+            ("you are suddenly in a parallel dimension",{}),
+            ("the light in here suddenly seems {color}",{"color":color}),
+            ("you feel a sting in the side of your neck",{}),
+            ("multi-colored lines swirl around you, then fade",{}),
+            ("a {color} light flashes in your eyes",{"color":color}),
+            ("a spike shoots past your ear!",{}),
+            ("{color} sparks dance across your armor",{"color":color}),
+            ("you suddenly feel very thirsty",{}),
+            ("you feel time speed up suddenly",{}),
+            ("time now seems to be going slower",{}),
+            ("your pack turns {color}!",{"color":color}),
+        ]
+        key,kw=random.choice(msgs)
+        self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
         x,y=self.p.x+dx,self.p.y+dy
