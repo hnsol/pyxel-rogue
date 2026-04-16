@@ -435,6 +435,89 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.dashing)
         self.assertEqual(game.dash_d, (1, -1))
 
+    def test_diag_assist_does_not_block_menu_vertical_navigation(self):
+        game = new_game(seed=47)
+        game.diag_assist = True
+
+        game.open_menu()
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+        )
+        game.update()
+        self.assertEqual(game.mcur, 1)
+
+        game.st = rogue.ST_ITEM
+        game.fitems = [rogue.Item(rogue.CAT_FOOD, 0), rogue.Item(rogue.CAT_FOOD, 0)]
+        game.icur = 0
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+        )
+        game.update()
+        self.assertEqual(game.icur, 1)
+
+        game.open_aux()
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+        )
+        game.update()
+        self.assertEqual(game.acur, 1)
+
+    def test_diagonal_attack_is_blocked_through_door_corner(self):
+        game = new_game(seed=48)
+        set_open_floor(game)
+        game.tm[5][5] = rogue.T_DOOR
+        game.tm[4][5] = rogue.T_HWALL
+        game.p.x, game.p.y = 5, 5
+        monster = rogue.Monster(6, 4, "H", "hobgoblin", 10, 0, 100, 5, "")
+        game.mons = [monster]
+        attacked = []
+        game.p_attack = lambda m: attacked.append(m)
+
+        self.assertFalse(game.try_move(1, -1))
+        self.assertEqual(attacked, [])
+        self.assertEqual(game.turn, 0)
+
+    def test_monster_diagonal_attack_is_blocked_through_door_corner(self):
+        game = new_game(seed=49)
+        set_open_floor(game)
+        game.tm[5][5] = rogue.T_DOOR
+        game.tm[4][5] = rogue.T_HWALL
+        game.p.x, game.p.y = 6, 4
+        monster = rogue.Monster(5, 5, "B", "bat", 10, 0, 100, 5, "erratic")
+        game.mons = [monster]
+        game.visible = {(5, 5), (6, 4)}
+        attacked = []
+        game.m_attack = lambda m: attacked.append(m)
+        old_random = rogue.random.random
+        old_choice = rogue.random.choice
+        try:
+            choices = iter([1, -1])
+            rogue.random.random = lambda: 0
+            rogue.random.choice = lambda seq: next(choices)
+            game.m_turn(monster)
+        finally:
+            rogue.random.random = old_random
+            rogue.random.choice = old_choice
+
+        self.assertEqual(attacked, [])
+        self.assertEqual((monster.x, monster.y), (5, 5))
+
+    def test_diagonal_attack_works_when_orthogonal_tiles_are_open(self):
+        game = new_game(seed=50)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = rogue.Monster(6, 4, "H", "hobgoblin", 10, 0, 100, 5, "")
+        game.mons = [monster]
+        attacked = []
+        game.p_attack = lambda m: attacked.append(m)
+
+        self.assertTrue(game.try_move(1, -1))
+        self.assertEqual(attacked, [monster])
+        self.assertEqual(game.turn, 1)
+
     def test_wait_select_shortcuts_and_empty_action_search(self):
         game = new_game(seed=46)
         set_open_floor(game)

@@ -727,6 +727,17 @@ class Game:
         return None
     def walkable(self,x,y):
         return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in WALKABLE
+    def diag_ok(self,sx,sy,ex,ey):
+        if not (0<=ex<MAP_W and 0<=ey<MAP_H):
+            return False
+        if sx==ex or sy==ey:
+            return True
+        return (
+            0<=sx<MAP_W and 0<=sy<MAP_H
+            and self.tm[ey][ex] in WALKABLE
+            and self.tm[ey][sx] in WALKABLE
+            and self.tm[sy][ex] in WALKABLE
+        )
     def room_at(self,x,y):
         for r in self.rooms:
             if r.x<x<r.x+r.w-1 and r.y<y<r.y+r.h-1: return r
@@ -840,6 +851,7 @@ class Game:
         else: return
         if "regen" in m.flags and m.hp<m.max_hp and random.random()<.3: m.hp+=1
         nx,ny=m.x+dx,m.y+dy
+        if not self.diag_ok(m.x,m.y,nx,ny): return
         if nx==px and ny==py: self.m_attack(m); return
         if self.walkable(nx,ny) and not self.mon_at(nx,ny): m.x,m.y=nx,ny
 
@@ -990,6 +1002,8 @@ class Game:
         if dx or dy:
             p.facing=(dx,dy)
         nx, ny = p.x+dx, p.y+dy
+        if not self.diag_ok(p.x,p.y,nx,ny):
+            return False
         m = self.mon_at(nx, ny)
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
@@ -1284,6 +1298,11 @@ class Game:
     def dir_held_any(self):
         return self._held_up() or self._held_dn() or self._held_lt() or self._held_rt()
 
+    def menu_vertical_press(self):
+        if self.kp(pyxel.KEY_UP, pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP): return -1
+        if self.kp(pyxel.KEY_DOWN, pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): return 1
+        return 0
+
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def held_a(self): return self.kh(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
@@ -1404,14 +1423,14 @@ class Game:
         if self.btn_menu(): self.open_menu(); return
 
     def upd_menu(self):
-        d=self.dir_press()
-        if d: self.mcur=(self.mcur+d[1])%len(MENU_ACTIONS); return
+        dy=self.menu_vertical_press()
+        if dy: self.mcur=(self.mcur+dy)%len(MENU_ACTIONS); return
         if self.btn_a(): self.menu_select(); return
         if self.btn_overlay_cancel(): self.close_menu(); return
 
     def upd_item(self):
-        d=self.dir_press()
-        if d and self.fitems: self.icur=(self.icur+d[1])%len(self.fitems); return
+        dy=self.menu_vertical_press()
+        if dy and self.fitems: self.icur=(self.icur+dy)%len(self.fitems); return
         if self.btn_a(): self.item_confirm(); return
         if self.btn_overlay_cancel(): self.st=ST_MENU; return
 
@@ -1425,8 +1444,8 @@ class Game:
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
 
     def upd_aux(self):
-        d=self.dir_press()
-        if d: self.acur=(self.acur+d[1])%len(AUX_ACTIONS); return
+        dy=self.menu_vertical_press()
+        if dy: self.acur=(self.acur+dy)%len(AUX_ACTIONS); return
         if self.btn_overlay_cancel(): self.st=ST_PLAY; return
         if not self.btn_a(): return
         act=AUX_ACTIONS[self.acur]
