@@ -83,9 +83,10 @@ rogue.py
 - 斜め補助モード中のD-padは、左上=NW、右上=NE、右下=SE、左下=SW の同時押しだけを受け付ける。上下左右単体は移動しない
 - 斜め補助モード ON/OFF はステータス欄に表示する
 - Start長押し依存は禁止（携帯機側の電源OFF等に割り当てられることがあるため）
-- Select(Back): 補助メニュー（Status / Help / Search / Pickup / Language）+ chord ショートカット
+- Select(Back): 補助メニュー（Status / Help / Search / Trap / Pickup / Language）+ chord ショートカット
 - Select+A: quick throw（投げるアイテム選択へ直接入る）
 - Select+B: 周囲8マス search
+- Select+D-pad: 発見済み罠の種類確認（Rogue 5.4 `^` + 方向相当、ターン非消費）
 - A: 決定 / 拾う / 階段 / 空押し時は正面1マス search
 - A+B: 足踏み専用。search は兼ねない
 - B: 短押しでメニュー/キャンセル、長押し+方向でダッシュ。ダッシュ後に離した瞬間の短押し誤発火を避ける

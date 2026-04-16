@@ -84,6 +84,7 @@
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
 - [x] Select(Back) 補助メニューから Map を削除し、Status / Help / Search に整理
 - [x] Select+A quick throw / Select+B search を追加
+- [x] Rogue 5.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / 補助メニュー Trap / Shift+6）
 - [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理
 - [x] Rogue 5.4 `passages.c` 準拠の通常部屋通路生成へ修正

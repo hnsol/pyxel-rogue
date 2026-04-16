@@ -30,7 +30,7 @@ def install_pyxel_mock():
         "KEY_H", "KEY_J", "KEY_K", "KEY_L",
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
         "KEY_Z", "KEY_X", "KEY_C", "KEY_S",
-        "KEY_I",
+        "KEY_I", "KEY_6",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_PERIOD",
         "KEY_QUESTION", "KEY_SLASH", "KEY_R",
         "KEY_SHIFT", "KEY_LSHIFT", "KEY_RSHIFT",
@@ -103,7 +103,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (336, 288))
-        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search", "Pickup", "Language"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search", "Trap", "Pickup", "Language"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -606,6 +606,84 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ITEM)
         self.assertEqual(game.cact, "Throw")
         self.assertEqual(game.fitems, game.p.inv)
+
+    def test_select_direction_inspects_visible_trap_without_spending_turn(self):
+        game = new_game(seed=51)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        game.tm[y][x] = rogue.T_TRAP
+        game.traps[(x, y)] = 1
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("You have found arrow trap.", game.msgs)
+
+    def test_trap_inspect_reports_no_trap_and_does_not_reveal_hidden_traps(self):
+        game = new_game(seed=52)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        game.traps[(x, y)] = 2
+
+        game.inspect_trap(1, 0)
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.tm[y][x], rogue.T_FLOOR)
+        self.assertIn("no trap there", game.msgs)
+
+    def test_aux_trap_enters_direction_prompt_and_inspects_trap(self):
+        game = new_game(seed=53)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        game.tm[y][x] = rogue.T_TRAP
+        game.traps[(x, y)] = 3
+        game.open_aux()
+        game.acur = rogue.AUX_ACTIONS.index("Trap")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Trap")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("You have found bear trap.", game.msgs)
+
+    def test_keyboard_caret_enters_trap_direction_prompt(self):
+        game = new_game(seed=54)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        game.tm[y][x] = rogue.T_TRAP
+        game.traps[(x, y)] = 4
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_6},
+            pressed={rogue.pyxel.KEY_6},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Trap")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_RIGHT},
+            pressed={rogue.pyxel.KEY_RIGHT},
+        )
+        game.update()
+        self.assertEqual(game.turn, 0)
+        self.assertIn("You have found teleport trap.", game.msgs)
 
 
 if __name__ == "__main__":

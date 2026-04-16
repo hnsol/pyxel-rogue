@@ -42,13 +42,13 @@ RM_MIN_W, RM_MAX_W = 5, 12
 RM_MIN_H, RM_MAX_H = 4, 7
 
 # Tiles
-T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR = range(7)
+T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
 TILE_CH = {
     T_VOID: (" ", 0), T_FLOOR: (".", 5), T_HWALL: ("-", 6),
     T_VWALL: ("|", 6), T_DOOR: ("+", 9), T_CORR: ("#", 5),
-    T_STAIR: ("%", 10),
+    T_STAIR: ("%", 10), T_TRAP: ("^", 8),
 }
-WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR}
+WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}
 
 # ===========================================================
 #  Screen layout  (BDF j10r: ASCII 6×~10 px)
@@ -154,6 +154,8 @@ class TextCatalog:
             "You starve to death.":"空腹で、もう死にそうだ。",
             "You find nothing.":"何も見つからなかった。",
             "You found something!":"何かを見つけた！",
+            "no trap there":"そこには罠はない。",
+            "You have found {trap}.":"{trap}を見つけている。",
             "Nothing here.":"ここには、何もない。",
             "pack too full":"もうこれ以上、物は持てない。",
             "the scroll turns to dust as you pick it up":"巻き物は拾うと灰になった。",
@@ -180,13 +182,22 @@ class TextCatalog:
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
             "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
             "Status":"Status", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
-            "Language":"Language",
+            "Trap":"Trap", "Language":"Language",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
             "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
             "Status":"状態", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
-            "Language":"言語",
+            "Trap":"罠", "Language":"言語",
+        },
+    }
+    TRAP = {
+        LANG_EN: {},
+        LANG_JA: {
+            "trap door":"落とし穴", "arrow trap":"矢の罠",
+            "sleeping gas trap":"眠りガスの罠", "bear trap":"くくり罠",
+            "teleport trap":"テレポートの罠", "dart trap":"毒矢の罠",
+            "rust trap":"さびの罠", "mysterious trap":"不思議な罠",
         },
     }
 
@@ -198,6 +209,10 @@ class TextCatalog:
     @staticmethod
     def menu(lang, key):
         return TextCatalog.MENU.get(lang, {}).get(key, key)
+
+    @staticmethod
+    def trap(lang, key):
+        return TextCatalog.TRAP.get(lang, {}).get(key, key)
 
     @staticmethod
     def monster(lang, name):
@@ -267,6 +282,13 @@ ARMORS = [
     {"name":"banded mail","ac":4},{"name":"plate mail","ac":3},
 ]
 
+TRAPS = [
+    {"name":"trap door"}, {"name":"arrow trap"},
+    {"name":"sleeping gas trap"}, {"name":"bear trap"},
+    {"name":"teleport trap"}, {"name":"dart trap"},
+    {"name":"rust trap"}, {"name":"mysterious trap"},
+]
+
 # ===========================================================
 #  Bestiary  (Rogue 5.4)
 # ===========================================================
@@ -305,7 +327,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Status", "Help", "Search", "Pickup", "Language"]
+AUX_ACTIONS = ["Status", "Help", "Search", "Trap", "Pickup", "Language"]
 
 # ===========================================================
 #  Classes
@@ -643,8 +665,9 @@ class Game:
         self.ident = IdentTable(self.lang)
         self.msgs = []; self.explored = set(); self.visible = set()
         self.gitems = []; self.mons = []; self.turn = 0
+        self.traps = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
-        self.cact = None; self.fitems = []
+        self.cact = None; self.dact = None; self.fitems = []
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
         self.dash_steps = 0
@@ -673,7 +696,7 @@ class Game:
     def descend(self):
         self.p.depth += 1
         self.tm, self.rooms = DGen.gen(self.p.depth)
-        self.mons=[]; self.gitems=[]; self.visible=set(); self.explored=set()
+        self.mons=[]; self.gitems=[]; self.traps={}; self.visible=set(); self.explored=set()
         px,py = self.rooms[0].inner()
         self.p.x,self.p.y = px,py
         sr=self.rooms[-1]; sx,sy=sr.inner(); self.tm[sy][sx]=T_STAIR
@@ -725,6 +748,16 @@ class Game:
         for i in self.gitems:
             if i.x==x and i.y==y: return i
         return None
+    def trap_name(self,kind):
+        if isinstance(kind,int):
+            kind=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else "trap"
+        return TextCatalog.trap(self.lang,kind)
+    def visible_trap_at(self,x,y):
+        if not (0<=x<MAP_W and 0<=y<MAP_H):
+            return None
+        if self.tm[y][x]!=T_TRAP:
+            return None
+        return self.traps.get((x,y),0)
     def walkable(self,x,y):
         return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in WALKABLE
     def diag_ok(self,sx,sy,ex,ey):
@@ -1028,6 +1061,14 @@ class Game:
         self.msg("You find nothing." if not found else "You found something!")
         self.end_turn()
 
+    def inspect_trap(self,dx,dy):
+        x,y=self.p.x+dx,self.p.y+dy
+        trap=self.visible_trap_at(x,y)
+        if trap is None:
+            self.msg("no trap there")
+        else:
+            self.msg("You have found {trap}.",trap=self.trap_name(trap))
+
     def do_action(self):
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR or self.gi_at(px,py):
@@ -1177,7 +1218,7 @@ class Game:
         self.st=ST_MENU; self.mcur=0; self.dir_pending=None
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
     def close_menu(self):
-        self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.fitems=[]
+        self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
         self.b_menu_guard=False; self.dir_pending=None
 
     def menu_select(self):
@@ -1203,7 +1244,8 @@ class Game:
     def item_confirm(self):
         if not self.fitems: self.close_menu(); return
         it=self.fitems[self.icur]; a=self.cact
-        if a=="Throw": self.st=ST_DIR; return
+        if a=="Throw":
+            self.dact="Throw"; self.st=ST_DIR; return
         if a=="Quaff":   self.use_pot(it)
         elif a=="Read":  self.use_scr(it)
         elif a=="Eat":   self.eat(it)
@@ -1214,12 +1256,19 @@ class Game:
         self.close_menu(); self.end_turn()
 
     def dir_confirm(self,dx,dy):
+        if self.dact=="Trap":
+            self.inspect_trap(dx,dy)
+            self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
+            return
         self.p.facing=(dx,dy)
         self.throw(self.fitems[self.icur],dx,dy); self.close_menu(); self.end_turn()
 
+    def start_trap_inspect(self):
+        self.cact="Trap"; self.dact="Trap"; self.st=ST_DIR; self.dir_pending=None
+
     # ---------- Input helpers ----------
-    def kp(self,*ks): return any(pyxel.btnp(k) for k in ks)
-    def kh(self,*ks): return any(pyxel.btn(k) for k in ks)
+    def kp(self,*ks): return any(k is not None and pyxel.btnp(k) for k in ks)
+    def kh(self,*ks): return any(k is not None and pyxel.btn(k) for k in ks)
 
     def begin_input(self):
         self.b_tap=False
@@ -1246,6 +1295,8 @@ class Game:
             self.back_frames=0; self.back_used=False
         self.back_prev=back_now
         if back_now and self.kh(pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B):
+            self.back_used=True
+        if back_now and self.dir_held_any():
             self.back_used=True
 
     GP = pyxel.GAMEPAD1_BUTTON_DPAD_UP
@@ -1284,6 +1335,21 @@ class Game:
         if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):  self.dir_pending=(-1,0); return None
         if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): self.dir_pending=(1,0); return None
         return None
+
+    def dir_prompt_press(self):
+        if self.kp(pyxel.KEY_Y): return (-1,-1)
+        if self.kp(pyxel.KEY_U): return (1,-1)
+        if self.kp(pyxel.KEY_B): return (-1,1)
+        if self.kp(pyxel.KEY_N): return (1,1)
+        u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
+        pressed=self.kp(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
+                        pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                        pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        if not pressed:
+            return None
+        dx = -1 if l and not r else 1 if r and not l else 0
+        dy = -1 if u and not d else 1 if d and not u else 0
+        return (dx,dy) if (dx or dy) else None
 
     def held_dir(self):
         u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
@@ -1326,6 +1392,9 @@ class Game:
             and not self.dir_held_any()
         )
     def btn_search(self): return self.kp(pyxel.KEY_S)
+    def btn_trap_inspect(self):
+        return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT) \
+            and self.kp(getattr(pyxel,"KEY_6",None))
     def btn_status(self): return self.kp(pyxel.KEY_I)
     def btn_start_tap(self): return self.kp(pyxel.GAMEPAD1_BUTTON_START)
     def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
@@ -1343,6 +1412,24 @@ class Game:
         if hit:
             self.back_used=True; self.b_used=True
         return hit
+    def select_dir_press(self):
+        if not self.back_held():
+            return None
+        u=self.kh(pyxel.KEY_UP, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+        d=self.kh(pyxel.KEY_DOWN, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+        l=self.kh(pyxel.KEY_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
+        r=self.kh(pyxel.KEY_RIGHT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        pressed=self.kp(pyxel.KEY_UP, pyxel.KEY_DOWN, pyxel.KEY_LEFT, pyxel.KEY_RIGHT,
+                        pyxel.GAMEPAD1_BUTTON_DPAD_UP, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                        pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        if not pressed:
+            return None
+        dx = -1 if l and not r else 1 if r and not l else 0
+        dy = -1 if u and not d else 1 if d and not u else 0
+        if dx or dy:
+            self.back_used=True
+            return (dx,dy)
+        return None
     def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH)
     def dash_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT, pyxel.GAMEPAD1_BUTTON_B)
@@ -1384,6 +1471,11 @@ class Game:
             return
 
         # Overlays
+        sd=self.select_dir_press()
+        if sd:
+            self.inspect_trap(*sd)
+            self.dir_pending=None
+            return
         if self.btn_select_a():
             self.start_item_action("Throw")
             self.dir_pending=None
@@ -1397,6 +1489,7 @@ class Game:
         if self.btn_r():     self.st=ST_HELP; return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
+        if self.btn_trap_inspect(): self.start_trap_inspect(); return
 
         # Dash start: B/Shift held + direction
         if self.dash_held():
@@ -1435,9 +1528,12 @@ class Game:
         if self.btn_overlay_cancel(): self.st=ST_MENU; return
 
     def upd_dir(self):
-        d=self.dir_press()
+        d=self.dir_prompt_press()
         if d: self.dir_confirm(*d); return
-        if self.btn_overlay_cancel(): self.st=ST_ITEM; return
+        if self.btn_overlay_cancel():
+            self.st=ST_PLAY if self.dact=="Trap" else ST_ITEM
+            self.dact=None if self.st==ST_PLAY else self.dact
+            return
 
     def open_aux(self):
         self.st=ST_AUX; self.acur=0; self.dir_pending=None
@@ -1454,6 +1550,8 @@ class Game:
         elif act=="Search":
             self.st=ST_PLAY
             self.do_search()
+        elif act=="Trap":
+            self.start_trap_inspect()
         elif act=="Pickup":
             self.auto_pickup = not self.auto_pickup
             self.msg("Pickup ON." if self.auto_pickup else "Pickup OFF.")
@@ -1609,7 +1707,8 @@ class Game:
 
     def draw_dirp(self):
         bx,by=ZV_X+50,ZV_Y+90
-        self._box(bx,by,170,20,"Direction? [D-pad/YUBN]")
+        title="Trap direction? [D-pad/YUBN]" if self.dact=="Trap" else "Direction? [D-pad/YUBN]"
+        self._box(bx,by,190 if self.dact=="Trap" else 170,20,title)
 
     def draw_aux(self):
         bx,by=ZV_X+20,ZV_Y+8; bw=120; bh=len(AUX_ACTIONS)*14+18
