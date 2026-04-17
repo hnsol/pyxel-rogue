@@ -42,6 +42,9 @@ GRID_C, GRID_R = 3, 3
 SEC_W, SEC_H = MAP_W // GRID_C, MAP_H // GRID_R
 RM_MIN_W, RM_MAX_W = 5, 12
 RM_MIN_H, RM_MAX_H = 4, 7
+ROOM_DARK = "dark"
+ROOM_GONE = "gone"
+ROOM_MAZE = "maze"
 
 # Tiles
 T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
@@ -415,11 +418,21 @@ AUX_ACTIONS = ["Status", "Help", "Search", "Trap", "Pickup", "Language"]
 #  Classes
 # ===========================================================
 class Room:
-    def __init__(s,x,y,w,h): s.x,s.y,s.w,s.h=x,y,w,h
+    def __init__(s,x,y,w,h,flags=None):
+        s.x,s.y,s.w,s.h=x,y,w,h
+        s.flags=set(flags or ())
     @property
     def cx(s): return s.x+s.w//2
     @property
     def cy(s): return s.y+s.h//2
+    @property
+    def is_dark(s): return ROOM_DARK in s.flags
+    @property
+    def is_gone(s): return ROOM_GONE in s.flags
+    @property
+    def is_maze(s): return ROOM_MAZE in s.flags
+    @property
+    def usable(s): return not s.is_gone
     def inner(s):
         return random.randint(s.x+1,s.x+s.w-2),random.randint(s.y+1,s.y+s.h-2)
 
@@ -600,17 +613,9 @@ class DGen:
     def gen(depth):
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
         sl=[(gx,gy) for gy in range(GRID_R) for gx in range(GRID_C)]
-        random.shuffle(sl); nr=random.randint(6,9)
-        act={random.choice(sl)}
-        while len(act)<nr:
-            frontier=[]
-            for gx,gy in act:
-                for nx,ny in ((gx+1,gy),(gx-1,gy),(gx,gy+1),(gx,gy-1)):
-                    if 0<=nx<GRID_C and 0<=ny<GRID_R and (nx,ny) not in act:
-                        frontier.append((nx,ny))
-            act.add(random.choice(frontier))
+        random.shuffle(sl)
+        gone=set(sl[:rnd(4)])
         for gx,gy in sl:
-            if (gx,gy) not in act: continue
             sx,sy=gx*SEC_W,gy*SEC_H
             rw=random.randint(RM_MIN_W,min(RM_MAX_W,SEC_W-2))
             rh=random.randint(RM_MIN_H,min(RM_MAX_H,SEC_H-2))
@@ -618,8 +623,18 @@ class DGen:
             ry=sy+random.randint(1,max(1,SEC_H-rh-1))
             if rx+rw>MAP_W-1: rw=MAP_W-1-rx
             if ry+rh>MAP_H-1: rh=MAP_H-1-ry
-            r=Room(rx,ry,rw,rh); rooms.append(r); sr[(gx,gy)]=r
-            DGen._room(tm,r)
+            flags=set()
+            if (gx,gy) in gone:
+                flags.add(ROOM_GONE)
+            elif rnd(10) < depth - 1:
+                flags.add(ROOM_MAZE if rnd(15)==0 else ROOM_DARK)
+            r=Room(rx,ry,rw,rh,flags); rooms.append(r); sr[(gx,gy)]=r
+            if r.is_gone:
+                continue
+            if r.is_maze:
+                DGen._maze_room(tm,r)
+            else:
+                DGen._room(tm,r)
         conn=set()
         for gy in range(GRID_R):
             for gx in range(GRID_C):
@@ -633,6 +648,8 @@ class DGen:
         DGen._ensure(tm,rooms); return tm,rooms
     @staticmethod
     def _room(t,r):
+        if r.is_gone:
+            return
         for y in range(r.y,r.y+r.h):
             for x in range(r.x,r.x+r.w):
                 if 0<=y<MAP_H and 0<=x<MAP_W:
@@ -640,30 +657,91 @@ class DGen:
                     elif x==r.x or x==r.x+r.w-1: t[y][x]=T_VWALL
                     else: t[y][x]=T_FLOOR
     @staticmethod
+    def _maze_room(t,r):
+        for y in range(r.y,r.y+r.h):
+            for x in range(r.x,r.x+r.w):
+                if 0<=y<MAP_H and 0<=x<MAP_W:
+                    t[y][x]=T_VOID
+        cells=[
+            (x,y)
+            for y in range(r.y+1,r.y+r.h-1,2)
+            for x in range(r.x+1,r.x+r.w-1,2)
+        ]
+        if not cells:
+            return
+        start=random.choice(cells)
+        t[start[1]][start[0]]=T_CORR
+        seen={start}; stack=[start]
+        while stack:
+            x,y=stack[-1]
+            nxt=[]
+            for dx,dy in ((2,0),(-2,0),(0,2),(0,-2)):
+                nx,ny=x+dx,y+dy
+                if r.x<nx<r.x+r.w-1 and r.y<ny<r.y+r.h-1 and (nx,ny) not in seen:
+                    nxt.append((nx,ny,dx,dy))
+            if not nxt:
+                stack.pop()
+                continue
+            nx,ny,dx,dy=random.choice(nxt)
+            t[y+dy//2][x+dx//2]=T_CORR
+            t[ny][nx]=T_CORR
+            seen.add((nx,ny)); stack.append((nx,ny))
+    @staticmethod
     def _conn(t,r1,r2,horiz=None):
         """Connect two rooms by choosing wall doors first, like Rogue's conn()."""
         if horiz is None:
             horiz = abs(r1.cx-r2.cx) >= abs(r1.cy-r2.cy)
         if horiz:
             if r1.cx <= r2.cx:
-                d1=DGen._pick_wall_door(t,r1,"R")
-                d2=DGen._pick_wall_door(t,r2,"L")
-                s=(d1[0]+1,d1[1]); e=(d2[0]-1,d2[1])
+                d1,s=DGen._exit(t,r1,"R",outward=True)
+                d2,e=DGen._exit(t,r2,"L",outward=True)
             else:
-                d1=DGen._pick_wall_door(t,r1,"L")
-                d2=DGen._pick_wall_door(t,r2,"R")
-                s=(d1[0]-1,d1[1]); e=(d2[0]+1,d2[1])
+                d1,s=DGen._exit(t,r1,"L",outward=True)
+                d2,e=DGen._exit(t,r2,"R",outward=True)
         else:
             if r1.cy <= r2.cy:
-                d1=DGen._pick_wall_door(t,r1,"D")
-                d2=DGen._pick_wall_door(t,r2,"U")
-                s=(d1[0],d1[1]+1); e=(d2[0],d2[1]-1)
+                d1,s=DGen._exit(t,r1,"D",outward=True)
+                d2,e=DGen._exit(t,r2,"U",outward=True)
             else:
-                d1=DGen._pick_wall_door(t,r1,"U")
-                d2=DGen._pick_wall_door(t,r2,"D")
-                s=(d1[0],d1[1]-1); e=(d2[0],d2[1]+1)
-        DGen._door(t,d1); DGen._door(t,d2)
+                d1,s=DGen._exit(t,r1,"U",outward=True)
+                d2,e=DGen._exit(t,r2,"D",outward=True)
+        if d1 is not None: DGen._door(t,d1)
+        if d2 is not None: DGen._door(t,d2)
         DGen._dig_pass(t,s,e,horiz)
+    @staticmethod
+    def _exit(t,r,side,outward=True):
+        if r.is_gone:
+            p=DGen._passage_side_point(r,side)
+            DGen._corr(t,p)
+            return None,p
+        if r.is_maze:
+            p=DGen._maze_exit(t,r,side)
+            return None,p
+        door=DGen._pick_wall_door(t,r,side)
+        x,y=door
+        dx,dy={"L":(-1,0),"R":(1,0),"U":(0,-1),"D":(0,1)}[side]
+        return door,(x+dx,y+dy) if outward else door
+    @staticmethod
+    def _passage_side_point(r,side):
+        if side=="L": return r.x,r.cy
+        if side=="R": return r.x+r.w-1,r.cy
+        if side=="U": return r.cx,r.y
+        return r.cx,r.y+r.h-1
+    @staticmethod
+    def _maze_exit(t,r,side):
+        if side in ("L","R"):
+            xs=range(r.x+1,r.x+r.w-1)
+            target_x = r.x if side=="L" else r.x+r.w-1
+            cands=[(x,y) for y in range(r.y+1,r.y+r.h-1) for x in xs if t[y][x]==T_CORR]
+            cands.sort(key=lambda p: abs(p[0]-target_x))
+        else:
+            ys=range(r.y+1,r.y+r.h-1)
+            target_y = r.y if side=="U" else r.y+r.h-1
+            cands=[(x,y) for x in range(r.x+1,r.x+r.w-1) for y in ys if t[y][x]==T_CORR]
+            cands.sort(key=lambda p: abs(p[1]-target_y))
+        p=random.choice(cands[:max(1,min(4,len(cands)))]) if cands else DGen._passage_side_point(r,side)
+        DGen._corr(t,p)
+        return p
     @staticmethod
     def _pick_wall_door(t,r,side):
         if side in ("L","R"):
@@ -689,18 +767,28 @@ class DGen:
         x,y=p
         if 0<=x<MAP_W and 0<=y<MAP_H: t[y][x]=T_DOOR
     @staticmethod
+    def _corr(t,p):
+        x,y=p
+        if 0<=x<MAP_W and 0<=y<MAP_H: t[y][x]=T_CORR
+    @staticmethod
     def _dig_pass(t,s,e,first_horiz):
         x,y=s; ex,ey=e
         if first_horiz:
-            turn_x=random.randint(min(x,ex),max(x,ex)) if x!=ex else x
+            turn_x=DGen._turn_coord(x,ex)
             DGen._hl(t,x,turn_x,y)
             DGen._vl(t,y,ey,turn_x)
             DGen._hl(t,turn_x,ex,ey)
         else:
-            turn_y=random.randint(min(y,ey),max(y,ey)) if y!=ey else y
+            turn_y=DGen._turn_coord(y,ey)
             DGen._vl(t,y,turn_y,x)
             DGen._hl(t,x,ex,turn_y)
             DGen._vl(t,turn_y,ey,ex)
+    @staticmethod
+    def _turn_coord(a,b):
+        lo,hi=min(a,b),max(a,b)
+        if hi-lo <= 2:
+            return random.randint(lo,hi) if a!=b else a
+        return random.randint(lo+1,hi-1)
     @staticmethod
     def _hl(t,x1,x2,y):
         if not(0<=y<MAP_H): return
@@ -717,6 +805,7 @@ class DGen:
             if v==T_VOID or v==T_CORR: t[y][x]=T_CORR
     @staticmethod
     def _ensure(t,rooms):
+        rooms=[r for r in rooms if r.usable]
         if len(rooms)<=1: return
         def flood(sx,sy):
             vis=set();stk=[(sx,sy)]
@@ -847,14 +936,32 @@ class Game:
     def descend(self):
         self.p.depth += 1
         self.tm, self.rooms = DGen.gen(self.p.depth)
+        usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
-        px,py = self.rooms[0].inner()
+        px,py = self.random_room_tile(random.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
-        sr=self.rooms[-1]; sx,sy=sr.inner(); self.tm[sy][sx]=T_STAIR
+        sr=random.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
         self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
         self._hide_secret_features(); self._spawn_traps()
         self._center_cam(); self.update_fov()
+
+    def usable_rooms(self):
+        return [room for room in self.rooms if room.usable] or self.rooms
+
+    def room_tiles(self, room, tiles):
+        return [
+            (x,y)
+            for y in range(room.y+1,room.y+room.h-1)
+            for x in range(room.x+1,room.x+room.w-1)
+            if 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in tiles
+        ]
+
+    def random_room_tile(self, room, tiles):
+        cands=self.room_tiles(room, tiles)
+        if cands:
+            return random.choice(cands)
+        return room.inner()
 
     def _center_cam(self):
         max_x = max(0, MAP_W - ZV_COLS)
@@ -866,10 +973,11 @@ class Game:
         d=self.p.depth; n=random.randint(3,4+d)
         cands=[b for b in BESTIARY if b.min_depth<=d]
         if not cands: cands=[b for b in BESTIARY if b.min_depth<=3]
+        rooms=self.usable_rooms()
         for _ in range(n):
-            rm=random.choice(self.rooms); e=random.choice(cands)
+            rm=random.choice(rooms); e=random.choice(cands)
             for _ in range(30):
-                mx,my=rm.inner()
+                mx,my=self.random_room_tile(rm, WALKABLE)
                 if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
                    and not(mx==self.p.x and my==self.p.y):
                     self.mons.append(Monster(
@@ -880,18 +988,19 @@ class Game:
 
     def _spawn_items(self):
         d=self.p.depth
+        rooms=self.usable_rooms()
         for _ in range(random.randint(1,3)):
-            rm=random.choice(self.rooms)
+            rm=random.choice(rooms)
             for _ in range(20):
-                ix,iy=rm.inner()
-                if self.tm[iy][ix]==T_FLOOR and not self.gi_at(ix,iy):
+                ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
+                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
                     g=Item(CAT_GOLD,0); g.qty=random.randint(1,10)*d; g.x,g.y=ix,iy
                     self.gitems.append(g); break
         for _ in range(random.randint(2,4+d//3)):
-            rm=random.choice(self.rooms)
+            rm=random.choice(rooms)
             for _ in range(20):
-                ix,iy=rm.inner()
-                if self.tm[iy][ix]==T_FLOOR and not self.gi_at(ix,iy):
+                ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
+                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
                     it=make_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
 
     def _spawn_amulet(self):
@@ -1063,7 +1172,7 @@ class Game:
         self.visible = set()
         px,py = self.p.x,self.p.y
         room = self.room_at(px,py)
-        if room:
+        if room and room.usable and not (room.is_dark or room.is_maze):
             for ry in range(room.y, room.y+room.h):
                 for rx in range(room.x, room.x+room.w):
                     if 0<=rx<MAP_W and 0<=ry<MAP_H:
@@ -1401,7 +1510,7 @@ class Game:
         elif nm=="sleep":
             p.no_command=max(p.no_command,random.randint(4,8)); self.msg("You fall asleep.")
         elif nm=="teleportation":
-            r=random.choice(self.rooms); p.x,p.y=r.inner(); self.update_fov(); self._center_cam()
+            r=random.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
             self.msg("You are teleported!")
         elif nm=="create monster":
             for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):

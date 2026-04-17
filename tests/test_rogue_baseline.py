@@ -260,6 +260,80 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(stairs), 1)
         self.assertIn(stairs[0], seen)
 
+    def test_v5_dungeon_generation_can_create_dark_and_maze_rooms(self):
+        dark_seen = False
+        maze_seen = False
+        for seed in range(400):
+            random.seed(seed)
+            _tm, rooms = rogue.DGen.gen(depth=20)
+            dark_seen = dark_seen or any(getattr(room, "is_dark", False) for room in rooms)
+            maze_seen = maze_seen or any(getattr(room, "is_maze", False) for room in rooms)
+            if dark_seen and maze_seen:
+                break
+
+        self.assertTrue(dark_seen)
+        self.assertTrue(maze_seen)
+
+    def test_dark_room_visibility_stays_local_until_lit(self):
+        game = new_game(seed=12)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        dark = rogue.Room(5, 5, 8, 6, flags={rogue.ROOM_DARK})
+        game.rooms = [dark]
+        rogue.DGen._room(game.tm, dark)
+        game.p.x, game.p.y = 7, 7
+
+        game.update_fov()
+
+        self.assertIn((7, 7), game.visible)
+        self.assertIn((8, 7), game.visible)
+        self.assertNotIn((11, 9), game.visible)
+
+    def test_gone_rooms_connect_as_passage_without_wall_doors(self):
+        gone = rogue.Room(2, 2, 8, 5, flags={rogue.ROOM_GONE})
+        normal = rogue.Room(18, 2, 8, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, gone)
+        rogue.DGen._room(tm, normal)
+
+        rogue.DGen._conn(tm, gone, normal, True)
+
+        self.assertEqual(tm[gone.cy][gone.x + gone.w - 1], rogue.T_CORR)
+        self.assertNotEqual(tm[gone.cy][gone.x + gone.w - 1], rogue.T_DOOR)
+
+    def test_gone_room_visibility_behaves_like_corridor(self):
+        game = new_game(seed=13)
+        gone = rogue.Room(5, 5, 8, 6, flags={rogue.ROOM_GONE})
+        game.rooms = [gone]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[7][7] = rogue.T_CORR
+        game.p.x, game.p.y = 7, 7
+
+        game.update_fov()
+
+        self.assertIn((7, 7), game.visible)
+        self.assertNotIn((11, 9), game.visible)
+
+    def test_room_passage_does_not_turn_along_horizontal_wall_row(self):
+        top = rogue.Room(18, 2, 8, 5)
+        bottom = rogue.Room(18, 14, 8, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, top)
+        rogue.DGen._room(tm, bottom)
+        old_randint = rogue.random.randint
+        try:
+            rogue.random.randint = lambda a, b: a
+            rogue.DGen._conn(tm, top, bottom, False)
+        finally:
+            rogue.random.randint = old_randint
+
+        wall_adjacent_y = top.y + top.h
+        doorway_x = next(x for x in range(top.x, top.x + top.w) if tm[wall_adjacent_y][x] == rogue.T_CORR)
+        wall_hugging = [
+            x for x in range(rogue.MAP_W)
+            if x != doorway_x and tm[wall_adjacent_y][x] == rogue.T_CORR
+        ]
+        self.assertEqual(wall_hugging, [])
+
     def test_rogue_544_amulet_spawns_on_depth_26(self):
         game = new_game(seed=260)
         game.p.depth = 25
