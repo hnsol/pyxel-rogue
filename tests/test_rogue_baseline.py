@@ -274,6 +274,47 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(dark_seen)
         self.assertTrue(maze_seen)
 
+    def test_rogue544_rooms_keep_fixed_sector_order(self):
+        random.seed(2)
+        _tm, rooms = rogue.DGen.gen(depth=1)
+
+        sectors = [(room.cx // rogue.SEC_W, room.cy // rogue.SEC_H) for room in rooms]
+
+        self.assertEqual(
+            sectors,
+            [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (0, 2), (1, 2), (2, 2)],
+        )
+
+    def test_rogue544_passage_graph_uses_spanning_tree_plus_extra_edges(self):
+        random.seed(8)
+        edges = rogue.DGen._passage_edges()
+
+        self.assertGreaterEqual(len(edges), rogue.GRID_C * rogue.GRID_R - 1)
+        self.assertLessEqual(len(edges), rogue.GRID_C * rogue.GRID_R - 1 + 4)
+        self.assertEqual(len(edges), len(set(tuple(sorted(edge)) for edge in edges)))
+        self.assertNotEqual(len(edges), 12)
+
+        seen = {0}
+        changed = True
+        while changed:
+            changed = False
+            for a, b in edges:
+                if a in seen and b not in seen:
+                    seen.add(b)
+                    changed = True
+                elif b in seen and a not in seen:
+                    seen.add(a)
+                    changed = True
+        self.assertEqual(seen, set(range(rogue.GRID_C * rogue.GRID_R)))
+
+    def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
+        random.seed(0)
+        _tm, rooms = rogue.DGen.gen(depth=1)
+        gone_rooms = [room for room in rooms if room.is_gone]
+
+        self.assertTrue(gone_rooms)
+        self.assertTrue(all((room.w, room.h) == (1, 1) for room in gone_rooms))
+
     def test_dark_room_visibility_stays_local_until_lit(self):
         game = new_game(seed=12)
         game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]

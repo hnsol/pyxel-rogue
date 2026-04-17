@@ -609,25 +609,55 @@ class IdentTable:
 #  Dungeon generator
 # ===========================================================
 class DGen:
+    PASS_CONN = (
+        (1, 3),
+        (0, 2, 4),
+        (1, 5),
+        (0, 4, 6),
+        (1, 3, 5, 7),
+        (2, 4, 8),
+        (3, 7),
+        (4, 6, 8),
+        (5, 7),
+    )
+
     @staticmethod
     def gen(depth):
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
-        sl=[(gx,gy) for gy in range(GRID_R) for gx in range(GRID_C)]
-        random.shuffle(sl)
-        gone=set(sl[:rnd(4)])
-        for gx,gy in sl:
-            sx,sy=gx*SEC_W,gy*SEC_H
-            rw=random.randint(RM_MIN_W,min(RM_MAX_W,SEC_W-2))
-            rh=random.randint(RM_MIN_H,min(RM_MAX_H,SEC_H-2))
-            rx=sx+random.randint(1,max(1,SEC_W-rw-1))
-            ry=sy+random.randint(1,max(1,SEC_H-rh-1))
-            if rx+rw>MAP_W-1: rw=MAP_W-1-rx
-            if ry+rh>MAP_H-1: rh=MAP_H-1-ry
+        gone=set()
+        for _ in range(rnd(4)):
+            while True:
+                i=rnd(GRID_C*GRID_R)
+                if i not in gone:
+                    gone.add(i); break
+        for i in range(GRID_C*GRID_R):
+            gx,gy=i%GRID_C,i//GRID_C
+            top_x,top_y=gx*SEC_W+1,gy*SEC_H
             flags=set()
-            if (gx,gy) in gone:
+            if i in gone:
                 flags.add(ROOM_GONE)
             elif rnd(10) < depth - 1:
                 flags.add(ROOM_MAZE if rnd(15)==0 else ROOM_DARK)
+            if ROOM_GONE in flags:
+                rx=top_x+rnd(SEC_W-2)+1
+                ry=top_y+rnd(SEC_H-2)+1
+                while not (0 < ry < MAP_H-1):
+                    ry=top_y+rnd(SEC_H-2)+1
+                rw,rh=1,1
+            elif ROOM_MAZE in flags:
+                rw,rh=SEC_W-1,SEC_H-1
+                rx,ry=top_x,top_y
+                if rx==1: rx=0
+                if ry==0:
+                    ry+=1; rh-=1
+            else:
+                while True:
+                    rw=rnd(SEC_W-4)+4
+                    rh=rnd(SEC_H-4)+4
+                    rx=top_x+rnd(SEC_W-rw)
+                    ry=top_y+rnd(SEC_H-rh)
+                    if ry!=0:
+                        break
             r=Room(rx,ry,rw,rh,flags); rooms.append(r); sr[(gx,gy)]=r
             if r.is_gone:
                 continue
@@ -635,17 +665,50 @@ class DGen:
                 DGen._maze_room(tm,r)
             else:
                 DGen._room(tm,r)
-        conn=set()
-        for gy in range(GRID_R):
-            for gx in range(GRID_C):
-                if (gx,gy) not in sr: continue
-                if gx+1<GRID_C and (gx+1,gy) in sr:
-                    p=((gx,gy),(gx+1,gy))
-                    if p not in conn: DGen._conn(tm,sr[(gx,gy)],sr[(gx+1,gy)],True); conn.add(p)
-                if gy+1<GRID_R and (gx,gy+1) in sr:
-                    p=((gx,gy),(gx,gy+1))
-                    if p not in conn: DGen._conn(tm,sr[(gx,gy)],sr[(gx,gy+1)],False); conn.add(p)
+        for a,b in DGen._passage_edges():
+            DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1)
         DGen._ensure(tm,rooms); return tm,rooms
+
+    @staticmethod
+    def _passage_edges():
+        """Rogue 5.4.4 passages.c: do_passages() room graph selection."""
+        ingraph=[False]*(GRID_C*GRID_R)
+        isconn=[[False]*(GRID_C*GRID_R) for _ in range(GRID_C*GRID_R)]
+        edges=[]
+        roomcount=1
+        r1=rnd(GRID_C*GRID_R)
+        ingraph[r1]=True
+        while roomcount < GRID_C*GRID_R:
+            picked=None; choices=0
+            for i in DGen.PASS_CONN[r1]:
+                if not ingraph[i]:
+                    choices+=1
+                    if rnd(choices)==0:
+                        picked=i
+            if choices==0:
+                while True:
+                    r1=rnd(GRID_C*GRID_R)
+                    if ingraph[r1]:
+                        break
+            else:
+                r2=picked
+                ingraph[r2]=True
+                edges.append((r1,r2))
+                isconn[r1][r2]=isconn[r2][r1]=True
+                roomcount+=1
+        for _ in range(rnd(5)):
+            r1=rnd(GRID_C*GRID_R)
+            picked=None; choices=0
+            for i in DGen.PASS_CONN[r1]:
+                if not isconn[r1][i]:
+                    choices+=1
+                    if rnd(choices)==0:
+                        picked=i
+            if choices!=0:
+                r2=picked
+                edges.append((r1,r2))
+                isconn[r1][r2]=isconn[r2][r1]=True
+        return edges
     @staticmethod
     def _room(t,r):
         if r.is_gone:
