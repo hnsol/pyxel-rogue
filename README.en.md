@@ -65,7 +65,7 @@ Gamepad:
 - B hold + D-pad: Dash
 - A+B: Wait a turn
 - Select: Assist menu
-- Select+A: Quick throw
+- Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles
 - Select+D-pad: Inspect a discovered trap
 

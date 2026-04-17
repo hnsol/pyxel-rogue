@@ -787,6 +787,7 @@ class Game:
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
+        self.throw_dir = None; self.action_origin = ST_PLAY
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
         self.dash_steps = 0
@@ -1289,7 +1290,8 @@ class Game:
             h=max(1,roll("1d4")*p.level); p.hp=min(p.hp+h,p.max_hp); self.msg(f"You feel better. (+{h})")
         elif nm=="extra healing":
             h=max(1,roll("1d8")*p.level); p.hp=min(p.hp+h,p.max_hp+2)
-            if p.hp>p.max_hp: p.max_hp=p.hp; self.msg(f"You feel much better. (+{h})")
+            if p.hp>p.max_hp: p.max_hp=p.hp
+            self.msg(f"You feel much better. (+{h})")
         elif nm=="poison":
             l=random.randint(1,3); p.st=max(1,p.st-l); self.msg(f"You feel sick. (Str -{l})")
         elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("Str +1!")
@@ -1628,8 +1630,10 @@ class Game:
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR:
             self.msg(f"You descend to depth {p.depth+1}..."); self.descend()
-            self.msg(f"Dungeon depth {p.depth}."); return
-        if not self.pickup_at(px,py):
+            self.msg(f"Dungeon depth {p.depth}."); self.end_turn(); return
+        if self.pickup_at(px,py):
+            self.end_turn()
+        else:
             self.msg("Nothing here.")
 
     def pickup_at(self,x,y):
@@ -1767,6 +1771,7 @@ class Game:
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
     def close_menu(self):
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
+        self.throw_dir=None; self.action_origin=ST_PLAY
         self.b_menu_guard=False; self.dir_pending=None
 
     def menu_select(self):
@@ -1776,6 +1781,7 @@ class Game:
     def start_item_action(self, aname, cat=None):
         if cat is None:
             cat = next((c for n,c in MENU_ACTIONS if n == aname), None)
+        self.action_origin = self.st
         self.cact = aname; p = self.p
         if aname=="Take off":
             self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm]
@@ -1787,13 +1793,23 @@ class Game:
             self.fitems=list(p.inv)
         if not self.fitems:
             self.msg(f"Nothing to {aname.lower()}."); self.close_menu(); return
-        self.icur=0; self.st=ST_ITEM
+        self.icur=0
+        if aname=="Throw":
+            self.throw_dir=None; self.dact="Throw"; self.st=ST_DIR
+        else:
+            self.st=ST_ITEM
 
     def item_confirm(self):
         if not self.fitems: self.close_menu(); return
         it=self.fitems[self.icur]; a=self.cact
         if a=="Throw":
-            self.dact="Throw"; self.st=ST_DIR; return
+            if self.throw_dir:
+                dx,dy=self.throw_dir
+                self.p.facing=(dx,dy)
+                self.throw(it,dx,dy); self.close_menu(); self.end_turn()
+            else:
+                self.dact="Throw"; self.st=ST_DIR
+            return
         if a=="Quaff":   self.use_pot(it)
         elif a=="Read":  self.use_scr(it)
         elif a=="Eat":   self.eat(it)
@@ -1808,8 +1824,11 @@ class Game:
             self.inspect_trap(dx,dy)
             self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
             return
-        self.p.facing=(dx,dy)
-        self.throw(self.fitems[self.icur],dx,dy); self.close_menu(); self.end_turn()
+        if self.dact=="Throw":
+            self.throw_dir=(dx,dy)
+            self.dact=None
+            self.st=ST_ITEM
+            return
 
     def start_trap_inspect(self):
         self.cact="Trap"; self.dact="Trap"; self.st=ST_DIR; self.dir_pending=None
@@ -2073,14 +2092,32 @@ class Game:
         dy=self.menu_vertical_press()
         if dy and self.fitems: self.icur=(self.icur+dy)%len(self.fitems); return
         if self.btn_a(): self.item_confirm(); return
-        if self.btn_overlay_cancel(): self.st=ST_MENU; return
+        if self.btn_overlay_cancel():
+            if self.cact=="Throw" and self.throw_dir is not None:
+                if self.action_origin==ST_MENU:
+                    self.st=ST_MENU
+                else:
+                    self.close_menu()
+            else:
+                self.st=ST_MENU
+            self.throw_dir=None
+            return
 
     def upd_dir(self):
         d=self.dir_prompt_press()
         if d: self.dir_confirm(*d); return
         if self.btn_overlay_cancel():
-            self.st=ST_PLAY if self.dact=="Trap" else ST_ITEM
-            self.dact=None if self.st==ST_PLAY else self.dact
+            if self.dact=="Trap":
+                self.st=ST_PLAY
+                self.dact=None
+            elif self.dact=="Throw":
+                if self.action_origin==ST_MENU:
+                    self.st=ST_MENU
+                    self.dact=None
+                else:
+                    self.close_menu()
+            else:
+                self.st=ST_ITEM
             return
 
     def open_aux(self):

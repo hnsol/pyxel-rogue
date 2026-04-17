@@ -330,6 +330,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(gold, game.gitems)
         self.assertIn("42 gold pieces", game.msgs)
 
+    def test_manual_pickup_and_stairs_spend_a_turn(self):
+        game = new_game(seed=310)
+        set_open_floor(game)
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = game.p.x, game.p.y
+        game.gitems = [item]
+
+        game.do_action()
+
+        self.assertEqual(game.turn, 1)
+        self.assertIn(item, game.p.inv)
+
+        game = new_game(seed=311)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        old_depth = game.p.depth
+
+        game.do_action()
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.p.depth, old_depth + 1)
+
     def test_auto_pickup_can_be_toggled_and_manual_pickup_still_works(self):
         game = new_game(seed=32)
         game.mons = []
@@ -539,6 +561,22 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.random.randrange = old_randrange
         self.assertFalse(weapon.cursed)
         self.assertEqual((weapon.hit_plus, weapon.dam_plus), (1, 0))
+
+    def test_extra_healing_reports_recovery_even_without_max_hp_increase(self):
+        game = new_game(seed=390)
+        extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
+        potion = rogue.Item(rogue.CAT_POT, extra_healing)
+        game.p.inv.append(potion)
+        game.p.hp = game.p.max_hp - 5
+        old_randint = rogue.random.randint
+        try:
+            rogue.random.randint = lambda a, b: 1
+            game.use_pot(potion)
+        finally:
+            rogue.random.randint = old_randint
+
+        self.assertEqual(game.p.hp, game.p.max_hp - 4)
+        self.assertIn("You feel much better. (+1)", game.msgs)
 
     def test_random_weapon_generation_changes_hit_plus_only(self):
         old_random = rogue.random.random
@@ -913,16 +951,47 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(searched[-1], True)
 
-    def test_select_a_enters_throw_item_selection(self):
+    def test_select_a_prompts_throw_direction_before_item_selection(self):
         game = new_game(seed=48)
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_A},
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
         )
         game.update()
-        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.st, rogue.ST_DIR)
         self.assertEqual(game.cact, "Throw")
+        self.assertEqual(game.dact, "Throw")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.throw_dir, (1, 0))
         self.assertEqual(game.fitems, game.p.inv)
+
+    def test_quick_throw_cancel_returns_to_play_after_direction_first_flow(self):
+        game = new_game(seed=48)
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_A},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+        )
+        game.update()
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_B},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIsNone(game.throw_dir)
 
     def test_select_direction_inspects_visible_trap_without_spending_turn(self):
         game = new_game(seed=51)

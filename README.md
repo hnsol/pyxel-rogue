@@ -65,7 +65,7 @@ PYXEL_ROGUE_LANG=ja python3 -m unittest
 - B長押し + D-pad: ダッシュ
 - A+B: 足踏み
 - Select: 補助メニュー
-- Select+A: quick throw
+- Select+A: quick throw（方向を選んでからアイテム選択）
 - Select+B: 周囲8マスsearch
 - Select+D-pad: 発見済み罠の種類確認
 

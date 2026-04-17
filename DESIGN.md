@@ -58,7 +58,7 @@ A                     決定 / 拾う / 階段 / 空押し時は正面1マス se
 B短押し               キャンセル / メニュー
 B長押し + D-pad       ダッシュ
 Select(Back)          補助メニュー（Status / Help / Search / Trap / Pickup / Language）
-Select+A              quick throw
+Select+A              quick throw（方向を選んでからアイテム選択）
 Select+B              周囲8マス search
 Select+D-pad          発見済み罠の種類確認（^ + 方向相当）
 A+B                   足踏み
@@ -69,7 +69,7 @@ Start長押しは携帯機側の電源OFF等に割り当てられることがあ
 
 B はダッシュ（ホールド）とキャンセル/メニュー（単押し）を兼務する。ダッシュ開始は `btnp()` ではなく現在ホールド中の方向で判定し、D-pad を先に押してから B、または B を先に押してから D-pad のどちらでも走り始められるようにする。`btn()` と `btnp()` の扱い、離した瞬間の誤発火には注意する。斜め補助モード ON/OFF はステータス欄に表示し、現在の入力モードが常に分かるようにする。
 
-Select(Back) は補助メニューにしつつ、ゲームパッド向け chord レイヤーとしても扱う。Select+A は通常メニュー内の Throw と同じ投擲アイテム選択へ直接入り、Select+B は周囲8マス search を実行する。Select+D-pad は Rogue 5.4.4 の `^` + 方向に相当する Trap Inspect とし、発見済み罠の種類を方向指定で確認する。ステータス、ヘルプ、search、Trap Inspect、自動拾い切替の入口は補助メニューにも残し、A/B/Start/Select + D-pad だけで主要操作を完結させる。マップは常時48×24で全表示するため、補助メニューには置かない。
+Select(Back) は補助メニューにしつつ、ゲームパッド向け chord レイヤーとしても扱う。Select+A は Rogue 5.4.4 の `t` コマンドに寄せ、方向を選んでから投げるアイテムを選択する quick throw とする。Select+B は周囲8マス search を実行する。Select+D-pad は Rogue 5.4.4 の `^` + 方向に相当する Trap Inspect とし、発見済み罠の種類を方向指定で確認する。ステータス、ヘルプ、search、Trap Inspect、自動拾い切替の入口は補助メニューにも残し、A/B/Start/Select + D-pad だけで主要操作を完結させる。マップは常時48×24で全表示するため、補助メニューには置かない。
 
 A+B は足踏み専用にする。search を兼ねると足踏みが search の上位互換になり、Rogue 5.4.4 の `.` と `s` の意味が薄くなるため、周囲 search は Select+B または補助メニュー/キーボード `S` に分ける。A の空押しは、何もない場所での正面1マス search として扱い、探索の手触りを増やしつつ周囲 search とは区別する。
 
