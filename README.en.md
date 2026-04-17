@@ -88,7 +88,7 @@ Keyboard:
 - Tab+Z: Search around all 8 neighboring tiles
 - Tab+C: Quick throw
 - S: Search
-- I: Status
+- I: Inventory
 - ?: Help
 
 ## Current Status

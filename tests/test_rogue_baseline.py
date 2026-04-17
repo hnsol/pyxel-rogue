@@ -110,7 +110,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (336, 288))
-        self.assertEqual(rogue.AUX_ACTIONS, ["Status", "Help", "Search", "Trap", "Pickup", "Language"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -596,17 +596,17 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item.sym, calls)
         self.assertNotIn("Z", calls)
 
-    def test_status_and_hud_show_v5_exp_and_trimmed_mode_labels(self):
+    def test_inventory_overlay_and_hud_show_v5_exp_and_trimmed_mode_labels(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
         game.draw_stat()
-        game.draw_status()
+        game.draw_inventory()
         self.assertTrue(any("Lv 1 Exp 0" in c for c in calls))
-        self.assertTrue(any("Exp:   0" in c for c in calls))
         self.assertFalse(any("Exp 0/10" in c for c in calls))
         self.assertFalse(any("Exp:   0/10" in c for c in calls))
-        self.assertTrue(any("Arm " in c or c.startswith("Armor:") for c in calls))
+        self.assertTrue(any(c.startswith("Arm ") for c in calls))
+        self.assertFalse(any(c.startswith("Armor:") for c in calls))
         self.assertFalse(any("Food normal" in c for c in calls))
         self.assertFalse(any("Diag OFF" in c for c in calls))
         self.assertFalse(any("Pickup ON" in c for c in calls))
@@ -618,6 +618,32 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_stat()
         self.assertTrue(any("Diag ON" in c for c in calls))
         self.assertTrue(any("Pickup OFF" in c for c in calls))
+
+    def test_inventory_overlay_lists_pack_without_status_or_equipment_sections(self):
+        game = new_game(seed=35)
+        game.p.inv = [
+            rogue.Item(rogue.CAT_SCR, 0),
+            rogue.Item(rogue.CAT_WPN, 5),
+        ] + [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX - 2)]
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_inventory()
+
+        text = [s for _, _, s, _ in calls]
+        self.assertIn("=== Inventory ===", text)
+        self.assertNotIn("-- Equip --", text)
+        self.assertFalse(any(s.startswith(("Depth", "Turn", "HP ", "Lv ", "Str ", "Arm ", "Gold", "Food")) for s in text))
+
+        inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
+        self.assertTrue(any(s.startswith("a) scroll ") and len(s) > 18 for _, _, s, _ in inv_lines))
+        self.assertTrue(any(s.startswith("b) ") and "two-handed sword" in s for _, _, s, _ in inv_lines))
+        self.assertTrue(any(s.startswith("z)") for _, _, s, _ in inv_lines))
+        self.assertEqual({x for x, _, _, _ in inv_lines}, {38})
+        first_item = next(c for c in inv_lines if c[2].startswith("a)"))
+        last_item = next(c for c in inv_lines if c[2].startswith("z)"))
+        self.assertEqual(first_item[1] - calls[0][1], 15)
+        self.assertLessEqual(last_item[1], 275)
 
     def test_hud_equipment_omits_inventory_worn_annotations(self):
         game = new_game(seed=36)
@@ -638,7 +664,7 @@ class RogueBaselineTest(unittest.TestCase):
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
 
-        game.draw_status()
+        game.draw_inventory()
 
         self.assertTrue(any(c.startswith("a)") for c in calls))
         self.assertTrue(any(c.startswith("z)") for c in calls))
@@ -702,11 +728,11 @@ class RogueBaselineTest(unittest.TestCase):
                 game.update()
                 self.assertEqual((game.p.x, game.p.y, game.st, game.turn), start)
 
-    def test_keyboard_status_help_and_vi_diagonals_remain_supported(self):
+    def test_keyboard_inventory_help_and_vi_diagonals_remain_supported(self):
         game = new_game(seed=36)
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_I}, pressed={rogue.pyxel.KEY_I})
         game.update()
-        self.assertEqual(game.st, rogue.ST_STATUS)
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
 
         game = new_game(seed=36)
         rogue.pyxel.set_input(

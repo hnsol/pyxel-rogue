@@ -12,7 +12,7 @@ Gamepad:                        Keyboard:
   Back         Assist menu       Tab            Assist menu
   Back + A     Search            S              Search
   Back + B     Quick throw       Tab + C        Quick throw
-                                I              Status
+                                I              Inventory
                                 ?              Help
 """
 
@@ -96,7 +96,7 @@ DEST_GOLD = "gold"
 #  UI states
 # ===========================================================
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
-ST_DEAD = 4; ST_STATUS = 5; ST_HELP = 6
+ST_DEAD = 4; ST_INVENTORY = 5; ST_HELP = 6
 ST_AUX = 7; ST_WIN = 8
 
 # ===========================================================
@@ -226,13 +226,13 @@ class TextCatalog:
         LANG_EN: {
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
             "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
-            "Status":"Status", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
+            "Inventory":"Inventory", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
             "Trap":"Trap", "Language":"Language",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
             "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
-            "Status":"状態", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
+            "Inventory":"持ちもの", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
             "Trap":"罠", "Language":"言語",
         },
     }
@@ -412,7 +412,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Status", "Help", "Search", "Trap", "Pickup", "Language"]
+AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"]
 
 # ===========================================================
 #  Classes
@@ -2200,7 +2200,7 @@ class Game:
     def btn_trap_inspect(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT) \
             and self.kp(getattr(pyxel,"KEY_6",None))
-    def btn_status(self): return self.kp(pyxel.KEY_I)
+    def btn_inventory(self): return self.kp(pyxel.KEY_I)
     def btn_start_tap(self): return self.kp(pyxel.GAMEPAD1_BUTTON_START)
     def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def back_held(self): return self.kh(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
@@ -2257,8 +2257,8 @@ class Game:
         elif self.st==ST_ITEM: self.upd_item()
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
-        elif self.st in(ST_STATUS,ST_HELP):
-            if self.btn_a() or self.btn_overlay_cancel() or self.btn_status() or self.btn_back() or self.btn_r():
+        elif self.st in(ST_INVENTORY,ST_HELP):
+            if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_back() or self.btn_r():
                 self.st=ST_PLAY
 
     def upd_play(self):
@@ -2292,7 +2292,7 @@ class Game:
             self.start_item_action("Throw")
             self.dir_pending=None
             return
-        if self.btn_status(): self.st=ST_STATUS; return
+        if self.btn_inventory(): self.st=ST_INVENTORY; return
         if self.btn_back():  self.open_aux(); return
         if self.btn_r():     self.st=ST_HELP; return
         if self.btn_wait():  self.do_wait(); return
@@ -2371,7 +2371,7 @@ class Game:
         if self.btn_overlay_cancel(): self.st=ST_PLAY; return
         if not self.btn_a(): return
         act=AUX_ACTIONS[self.acur]
-        if act=="Status": self.st=ST_STATUS
+        if act=="Inventory": self.st=ST_INVENTORY
         elif act=="Help": self.st=ST_HELP
         elif act=="Search":
             self.st=ST_PLAY
@@ -2401,7 +2401,7 @@ class Game:
         elif self.st==ST_ITEM: self.draw_isel()
         elif self.st==ST_DIR: self.draw_dirp()
         elif self.st==ST_AUX: self.draw_aux()
-        elif self.st==ST_STATUS: self.draw_status()
+        elif self.st==ST_INVENTORY: self.draw_inventory()
         elif self.st==ST_HELP: self.draw_help()
         elif self.st==ST_DEAD: self.draw_dead()
         elif self.st==ST_WIN: self.draw_win()
@@ -2553,33 +2553,14 @@ class Game:
             pre=">" if i==self.acur else " "
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
-    def draw_status(self):
+    def draw_inventory(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
-        self._box(bx,by,bw,bh,"=== Status ===")
-        p=self.p; y=by+18; x=bx+8
-        self.txt(x,y,f"Depth: {p.depth}",7); y+=13
-        self.txt(x,y,f"Level: {p.level}",7); y+=13
-        self.txt(x,y,f"HP:    {p.hp}/{p.max_hp}",7); y+=13
-        self.txt(x,y,f"Str:   {p.st}/{p.max_st}",7); y+=13
-        self.txt(x,y,f"Armor: {p.ac}",7); y+=13
-        self.txt(x,y,f"Exp:   {p.exp}",7); y+=13
-        self.txt(x,y,f"Pickup:{' ON' if self.auto_pickup else ' OFF'}",5); y+=13
-        self.txt(x,y,f"Gold:  {p.gold}",10); y+=13
-        self.txt(x,y,f"Turn:  {self.turn}",5); y+=13
-        self.txt(x,y,f"Food:  {p.food}",7)
-        y=by+18; x=bx+178
-        self.txt(x,y,"-- Equipment --",10); y+=13
-        wn=self.equip_name(p.wpn) if p.wpn else "bare hands"
-        an=self.equip_name(p.arm) if p.arm else "no armor"
-        self.txt(x,y,f"Weapon: {wn[:22]}",7); y+=13
-        self.txt(x,y,f"Armor:  {an[:22]}",7); y+=18
-        self.txt(x,y,"-- Inventory --",10); y+=13
-        inv_x0, inv_y0 = x, y
+        self._box(bx,by,bw,bh,"=== Inventory ===")
+        p=self.p
+        inv_x0, inv_y0 = bx+8, by+18
         for i,it in enumerate(p.inv):
-            col = i // 13
-            row = i % 13
             lt=chr(ord('a')+i); ln=self.item_name(it)
-            self.txt(inv_x0+col*118,inv_y0+row*12,f"{lt}) {ln[:16]}",7)
+            self.txt(inv_x0,inv_y0+i*9,f"{lt}) {ln[:70]}",7)
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
@@ -2602,8 +2583,8 @@ class Game:
             "B tap / C      Open menu",
             "",
             "--- Info ---",
-            "Back menu      Status / Help",
-            "I              Status screen",
+            "Back menu      Inventory / Help",
+            "I              Inventory",
             "Back  / Tab    Assist menu",
             "?              This help",
             "",

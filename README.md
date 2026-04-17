@@ -88,7 +88,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Tab+Z: 周囲8マスsearch
 - Tab+C: quick throw
 - S: search
-- I: Status
+- I: Inventory
 - ?: Help
 
 ## 主な実装状況

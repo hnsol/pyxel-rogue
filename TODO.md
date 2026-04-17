@@ -12,7 +12,7 @@
 - ✅ インベントリ（最大26個 a〜z）、装備スロット、呪い
 - ✅ 空腹度（hungry → weak → faint）
 - ✅ BDF フォント / カメラ デッドゾーン / 8方向移動 / ダッシュ
-- ✅ 主要オーバーレイ（Status / Help / Death）
+- ✅ 主要オーバーレイ（Inventory / Help / Death）
 - ✅ 最小ロジックテスト基盤（Pyxel mock + `python3 -m unittest`）
 - ✅ 薄い日英切替基盤（`TextCatalog`, `PYXEL_ROGUE_LANG`, 代表文言・用語）
 - ✅ Rogue 5.4.4 `pickup` オプション相当の自動ピックアップON/OFF
@@ -87,7 +87,7 @@
 - [x] Rogue 5.4.4 `stomach()` 相当の空腹緩和
 - [x] ゲームパッド XYLR / ショルダー依存の撤去（キーボード操作は正式対応として維持）
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
-- [x] Select(Back) 補助メニューから Map を削除し、Status / Help / Search に整理
+- [x] Select(Back) 補助メニューから Map と Status を削除し、Inventory / Help / Search に整理
 - [x] Select+A search / Select+B quick throw を追加
 - [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / 補助メニュー Trap / Shift+6）
 - [x] Assist menu からの日英トグル
@@ -105,7 +105,7 @@
 - [ ] 複数 BDF フォント選択 + レイアウト自動再計算
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
 - [ ] 日本語/英語切替（全メッセージ辞書化、umplus_j10r は CJK 対応済み）
-- [ ] HUD / Status / Help / Death の文言辞書化
+- [ ] HUD / Inventory / Help / Death の文言辞書化
 - [ ] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする
 - [ ] BGM 導入方式検討
   - `8bit-bgm-generator` 調査
