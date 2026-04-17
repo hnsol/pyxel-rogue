@@ -64,6 +64,7 @@
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
 - [x] Rattlesnake / Ice monster の Rogue 5.4.4 準拠寄せ（毒セーヴによるStr低下、命中時凍結）
 - [x] 最小 baseline ロジックテスト整備
+- [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）
@@ -155,5 +156,6 @@
 - [x] `python3 -m unittest` でテストを実行可能にする
 - [ ] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
 - [ ] Rogue 5.4.4 メッセージ全文監査（今回の拾得・ステータス周辺以外）
+- [ ] Select(Back) 補助メニューから開くメッセージ履歴ビュー
 - [ ] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
 - [ ] 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加

@@ -86,12 +86,13 @@ Keyboard:
 
 Implemented overview:
 
-- 48x24 ASCII map, 512x320 base layout, right-side HUD, bottom log
+- 48x24 ASCII map, 512x320 base layout, right-side HUD, three-line bottom log
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, identification, inventory, and curses
 - Search, traps, hidden doors, hidden passages, and trap inspection
 - Auto-pickup toggle and throwing animation
+- Tombstone death screen
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - English/Japanese text switching foundation and logic test foundation
 

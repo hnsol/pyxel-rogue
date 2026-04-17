@@ -83,6 +83,11 @@ def set_open_floor(game):
     game.update_fov()
 
 
+def monster_at(x, y, sym="H", name="hobgoblin", hp=10, level=1, armor=5,
+               damage="1x8", exp=3, flags=""):
+    return rogue.Monster(x, y, sym, name, hp, level, armor, damage, exp, flags)
+
+
 def reachable_tiles(tm, start):
     seen = set()
     stack = [start]
@@ -138,6 +143,57 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(armor.cat, rogue.CAT_ARM)
         self.assertEqual(armor.data["name"], "leather armor")
         self.assertEqual(armor.ench, 1)
+
+    def test_rogue_544_monster_table_audit_guards_named_fields(self):
+        specs = {m.sym: m for m in rogue.BESTIARY}
+        self.assertEqual(
+            (specs["H"].name, specs["H"].level, specs["H"].armor, specs["H"].damage, specs["H"].exp),
+            ("hobgoblin", 1, 5, "1x8", 3),
+        )
+        self.assertEqual(
+            (specs["I"].name, specs["I"].level, specs["I"].armor, specs["I"].damage, specs["I"].exp),
+            ("ice monster", 1, 9, "0x0", 5),
+        )
+        self.assertEqual(
+            (specs["C"].name, specs["C"].level, specs["C"].armor, specs["C"].damage, specs["C"].exp),
+            ("centaur", 4, 4, "1x2/1x5/1x5", 17),
+        )
+
+    def test_rogue_544_weapon_table_audit_guards_init_dam_values(self):
+        self.assertEqual(rogue.WEAPONS[0]["damage"], "2d4")
+        self.assertEqual(rogue.WEAPONS[0]["hurl_damage"], "1d3")
+        self.assertEqual(rogue.WEAPONS[3]["damage"], "1d1")
+        self.assertEqual(rogue.WEAPONS[3]["hurl_damage"], "2d3")
+        self.assertEqual(rogue.WEAPONS[3]["launcher"], 2)
+        self.assertTrue(rogue.WEAPONS[3]["missile"])
+
+    def test_rogue_544_swing_thresholds_guard_combat_balance(self):
+        game = new_game(seed=8)
+
+        def hits(attacker_level, defender_armor, hit_plus=0):
+            old_randrange = rogue.random.randrange
+            try:
+                total = 0
+                for result in range(20):
+                    rogue.random.randrange = lambda n, result=result: result
+                    total += int(game.swing_hits(attacker_level, defender_armor, hit_plus))
+                return total
+            finally:
+                rogue.random.randrange = old_randrange
+
+        self.assertEqual(hits(attacker_level=1, defender_armor=3), 4)
+        self.assertEqual(hits(attacker_level=1, defender_armor=7), 8)
+        self.assertEqual(hits(attacker_level=1, defender_armor=5, hit_plus=1), 7)
+
+    def test_rogue_544_damage_expr_parser_handles_monster_attacks(self):
+        old_randint = rogue.random.randint
+        try:
+            rogue.random.randint = lambda a, b: b
+            self.assertEqual(rogue.roll_damage_expr("1x8"), 8)
+            self.assertEqual(rogue.roll_damage_expr("1x2/1x5/1x5"), 12)
+            self.assertEqual(rogue.roll_damage_expr("0x0"), 0)
+        finally:
+            rogue.random.randint = old_randint
 
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
@@ -339,7 +395,7 @@ class RogueBaselineTest(unittest.TestCase):
         item = rogue.Item(rogue.CAT_POT, 0)
         item.x, item.y = game.p.x, game.p.y
         game.gitems = [item]
-        game.mons = [rogue.Monster(game.p.x, game.p.y, "Z", "zombie", 1, 1, 1, 1, "")]
+        game.mons = [monster_at(game.p.x, game.p.y, "Z", "zombie", 1, 2, 8, "1x8", 6)]
         game.draw_zoom()
         self.assertIn(item.sym, calls)
         self.assertNotIn("Z", calls)
@@ -355,6 +411,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any("Arm " in c or c.startswith("Armor:") for c in calls))
         self.assertTrue(any("Pickup ON" in c for c in calls))
         self.assertTrue(any("Lang EN" in c for c in calls))
+
+    def test_message_log_uses_three_rows_with_latest_highlighted(self):
+        game = new_game(seed=35)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.msgs = ["old", "middle", "latest"]
+
+        game.draw_msgs()
+
+        self.assertEqual(rogue.MSG_LINES, 3)
+        self.assertEqual([text for text, _ in calls], ["old", "middle", "latest"])
+        self.assertEqual([color for _, color in calls], [5, 5, 7])
+
+    def test_death_screen_draws_tombstone_by_default(self):
+        game = new_game(seed=35)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+        game.p.gold = 123
+        game.death_cause = "killed by a hobgoblin"
+
+        game.draw_dead()
+
+        self.assertTrue(game.options["tombstone"])
+        self.assertIn("      /    REST    \\", calls)
+        self.assertIn("    |  killed by a  |", calls)
+        self.assertTrue(any("hobgoblin" in c for c in calls))
+        self.assertTrue(any("123 Au" in c for c in calls))
 
     def test_direction_pending_merges_cardinal_inputs_into_one_diagonal(self):
         game = new_game(seed=36)
@@ -433,7 +516,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_melee_damage_uses_weapon_damage_plus_and_strength(self):
         game = new_game(seed=38)
         game.p.wpn = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=1)
-        monster = rogue.Monster(game.p.x + 1, game.p.y, "H", "hobgoblin", 20, 0, 100, 0, "")
+        monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=100, exp=0)
         old_randint = rogue.random.randint
         try:
             rogue.random.randint = lambda a, b: b
@@ -481,7 +564,7 @@ class RogueBaselineTest(unittest.TestCase):
         bow = rogue.Item(rogue.CAT_WPN, 2, hit_plus=2, dam_plus=3)
         arrow = rogue.Item(rogue.CAT_WPN, 3, hit_plus=1, dam_plus=4)
         game.p.wpn = bow
-        monster = rogue.Monster(game.p.x + 1, game.p.y, "H", "hobgoblin", 30, 0, 100, 0, "")
+        monster = monster_at(game.p.x + 1, game.p.y, hp=30, armor=100, exp=0)
         old_randint = rogue.random.randint
         try:
             rogue.random.randint = lambda a, b: b
@@ -495,7 +578,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=40)
         set_open_floor(game)
         arrow = rogue.Item(rogue.CAT_WPN, 3, hit_plus=0, dam_plus=0)
-        monster = rogue.Monster(game.p.x + 2, game.p.y, "H", "hobgoblin", 8, 0, 0, 0, "")
+        monster = monster_at(game.p.x + 2, game.p.y, hp=8, armor=0, exp=0)
         game.p.inv = [arrow]
         game.mons = [monster]
         old_randrange = rogue.random.randrange
@@ -509,7 +592,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_baseline_combat_message_uses_catalog(self):
         game = new_game(seed=41, lang=rogue.LANG_JA)
-        monster = rogue.Monster(game.p.x + 1, game.p.y, "H", "hobgoblin", 1, 0, 100, 5, "")
+        monster = monster_at(game.p.x + 1, game.p.y, hp=1, armor=100, exp=5)
         game.p_attack(monster)
         self.assertFalse(monster.alive)
         self.assertIn("小鬼を倒した。 (5 exp)", game.msgs)
@@ -613,7 +696,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.tm[5][5] = rogue.T_DOOR
         game.tm[4][5] = rogue.T_HWALL
         game.p.x, game.p.y = 5, 5
-        monster = rogue.Monster(6, 4, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(6, 4, hp=10, armor=100, exp=5)
         game.mons = [monster]
         attacked = []
         game.p_attack = lambda m: attacked.append(m)
@@ -628,7 +711,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.tm[5][5] = rogue.T_DOOR
         game.tm[4][5] = rogue.T_HWALL
         game.p.x, game.p.y = 6, 4
-        monster = rogue.Monster(5, 5, "B", "bat", 10, 0, 100, 5, "erratic")
+        monster = monster_at(5, 5, "B", "bat", 10, 1, 100, "1x2", 5, "erratic")
         game.mons = [monster]
         game.visible = {(5, 5), (6, 4)}
         attacked = []
@@ -653,7 +736,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.tm[5][5] = rogue.T_DOOR
         game.tm[4][5] = rogue.T_HWALL
         game.p.x, game.p.y = 5, 5
-        monster = rogue.Monster(6, 4, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(6, 4, hp=10, armor=100, exp=5)
         monster.running = True
         game.mons = [monster]
         attacked = []
@@ -677,7 +760,7 @@ class RogueBaselineTest(unittest.TestCase):
         for x in range(6, 10):
             game.tm[3][x] = rogue.T_CORR
         game.p.x, game.p.y = 12, 3
-        monster = rogue.Monster(3, 3, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(3, 3, hp=10, armor=100, exp=5)
         monster.running = True
         game.mons = [monster]
 
@@ -689,7 +772,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=50)
         set_open_floor(game)
         game.p.x, game.p.y = 5, 5
-        monster = rogue.Monster(6, 4, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(6, 4, hp=10, armor=100, exp=5)
         game.mons = [monster]
         attacked = []
         game.p_attack = lambda m: attacked.append(m)
@@ -702,7 +785,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=501)
         set_open_floor(game)
         game.p.x, game.p.y = 5, 5
-        monster = rogue.Monster(7, 5, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5)
         game.mons = [monster]
 
         game.m_turn(monster)
@@ -713,7 +796,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
-        monster = rogue.Monster(game.p.x + 2, game.p.y, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(game.p.x + 2, game.p.y, hp=10, armor=100, exp=5)
         game.mons = [monster]
         game.visible.add((monster.x, monster.y))
         old_randrange = rogue.random.randrange
@@ -730,7 +813,7 @@ class RogueBaselineTest(unittest.TestCase):
         set_open_floor(game)
         game.p.ac = 0
         game.p.hp = 99
-        monster = rogue.Monster(game.p.x + 1, game.p.y, "I", "ice monster", 10, 0, 100, 5, "freeze")
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
 
         game.m_attack(monster)
 
@@ -743,7 +826,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.ac = 0
         game.p.hp = 99
         game.p.st = 10
-        monster = rogue.Monster(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 0, 100, 5, "poison")
+        monster = monster_at(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 20, 100, "1x6", 5, "poison")
 
         game.save_vs_poison = lambda: False
         game.m_attack(monster)
@@ -757,7 +840,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=505)
         set_open_floor(game)
         game.p.x, game.p.y = 5, 5
-        monster = rogue.Monster(9, 5, "K", "kestrel", 10, 0, 100, 5, "fly")
+        monster = monster_at(9, 5, "K", "kestrel", 10, 1, 100, "1x4", 5, "fly")
         monster.running = True
         game.mons = [monster]
 
@@ -773,7 +856,7 @@ class RogueBaselineTest(unittest.TestCase):
         scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
         scroll.x, scroll.y = 6, 5
         game.gitems = [scroll]
-        monster = rogue.Monster(7, 5, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5)
         monster.running = True
         game.mons = [monster]
 
@@ -785,7 +868,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=506)
         set_open_floor(game)
         game.p.x, game.p.y = 5, 5
-        monster = rogue.Monster(7, 5, "H", "hobgoblin", 10, 0, 100, 5, "")
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5)
         monster.running = True
         monster.held = 2
         game.mons = [monster]

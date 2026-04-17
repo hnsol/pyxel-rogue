@@ -19,6 +19,8 @@ Gamepad:                        Keyboard:
 import pyxel
 import random
 import os
+import time
+from dataclasses import dataclass
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -62,14 +64,15 @@ DEAD_ZONE_X = 8                  # camera edge zone; leaves ~50% center still
 DEAD_ZONE_Y = 5
 
 # Main view + right HUD
-ZV_X, ZV_Y = 4, 4                # top-left pixel of full dungeon view
+ZV_X, ZV_Y = 4, 1                # top-left pixel of full dungeon view
 HUD_X = ZV_X + ZV_PX_W + 10
 HUD_Y = ZV_Y
 HUD_W = SCR_W - HUD_X - 4
 
 # Messages
-MSG_LINES = 2
-MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * TILE_H - 2
+MSG_LINES = 3
+MSG_LINE_H = 10
+MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * MSG_LINE_H - 2
 MSG_COLS = (SCR_W - MSG_X * 2) // 6
 
 INV_MAX = 26
@@ -139,7 +142,7 @@ MONSTER_JA = {
     "leprechaun":"金持ち妖精", "medusa":"メデューサ", "nymph":"ニンフ",
     "orc":"欲ばり鬼", "phantom":"幽霊", "quagga":"大つのじか",
     "rattlesnake":"がらがらへび", "snake":"へび", "troll":"巨人",
-    "ur-vile":"一角獣", "vampire":"バンパイア", "wraith":"死霊",
+    "black unicorn":"一角獣", "vampire":"バンパイア", "wraith":"死霊",
     "xeroc":"物まねの怪物", "yeti":"雪男", "zombie":"ゾンビ",
 }
 POT_COLOR_JA = {
@@ -270,6 +273,14 @@ class TextCatalog:
 def roll(s):
     n, d = s.split("d"); return sum(random.randint(1, int(d)) for _ in range(int(n)))
 
+def roll_damage_expr(expr):
+    total = 0
+    for part in expr.split("/"):
+        sep = "x" if "x" in part else "d"
+        n, d = part.split(sep)
+        total += sum(random.randint(1, int(d)) for _ in range(int(n)))
+    return total
+
 def rnd(n):
     return random.randrange(n) if n > 0 else 0
 
@@ -332,22 +343,46 @@ TRAPS = [
 RAINBOW = ["red","orange","yellow","green","blue","violet"]
 
 # ===========================================================
-#  Bestiary  (Rogue 5.4.4)
+#  Bestiary  (Rogue 5.4.4 extern.c:monsters[])
 # ===========================================================
+@dataclass(frozen=True)
+class MonsterSpec:
+    sym: str
+    name: str
+    level: int
+    armor: int
+    damage: str
+    exp: int
+    min_depth: int
+    flags: str = ""
+
 BESTIARY = [
-    ("A","aquator",30,7,2,20,9,"rust"),("B","bat",3,1,0,1,1,"erratic,fly"),
-    ("C","centaur",17,6,2,15,7,""),("D","dragon",80,14,5,100,21,""),
-    ("E","emu",5,2,0,2,1,""),("F","venus flytrap",30,8,3,25,12,"hold"),
-    ("G","griffin",52,10,3,40,17,"fly"),("H","hobgoblin",8,3,1,5,1,""),
-    ("I","ice monster",10,4,2,8,5,"freeze"),("J","jabberwock",60,12,4,60,20,""),
-    ("K","kestrel",4,2,0,2,1,"fly"),("L","leprechaun",10,2,0,10,6,"steal_gold"),
-    ("M","medusa",40,9,3,35,18,"confuse"),("N","nymph",20,3,0,15,9,"steal_item"),
-    ("O","orc",12,5,3,10,5,""),("P","phantom",30,8,3,25,15,"invis"),
-    ("Q","quagga",16,5,2,12,8,""),("R","rattlesnake",10,4,1,8,4,"poison"),
-    ("S","snake",6,2,1,3,2,""),("T","troll",30,8,3,25,13,"regen"),
-    ("U","ur-vile",40,10,4,40,18,""),("V","vampire",35,9,3,30,16,"drain"),
-    ("W","wraith",25,7,2,20,14,"drain_level"),("X","xeroc",20,6,2,15,11,"mimic"),
-    ("Y","yeti",22,6,2,18,10,""),("Z","zombie",15,5,2,10,7,""),
+    MonsterSpec("A","aquator",5,2,"0x0/0x0",20,9,"rust"),
+    MonsterSpec("B","bat",1,3,"1x2",1,1,"erratic,fly"),
+    MonsterSpec("C","centaur",4,4,"1x2/1x5/1x5",17,7,""),
+    MonsterSpec("D","dragon",10,-1,"1x8/1x8/3x10",5000,21,""),
+    MonsterSpec("E","emu",1,7,"1x2",2,1,""),
+    MonsterSpec("F","venus flytrap",8,3,"0x0",80,12,"hold"),
+    MonsterSpec("G","griffin",13,2,"4x3/3x5",2000,17,"fly,regen"),
+    MonsterSpec("H","hobgoblin",1,5,"1x8",3,1,""),
+    MonsterSpec("I","ice monster",1,9,"0x0",5,5,"freeze"),
+    MonsterSpec("J","jabberwock",15,6,"2x12/2x4",3000,20,""),
+    MonsterSpec("K","kestrel",1,7,"1x4",1,1,"fly"),
+    MonsterSpec("L","leprechaun",3,8,"1x1",10,6,"steal_gold"),
+    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,"confuse"),
+    MonsterSpec("N","nymph",3,9,"0x0",37,9,"steal_item"),
+    MonsterSpec("O","orc",1,6,"1x8",5,5,""),
+    MonsterSpec("P","phantom",8,3,"4x4",120,15,"invis"),
+    MonsterSpec("Q","quagga",3,3,"1x5/1x5",15,8,""),
+    MonsterSpec("R","rattlesnake",2,3,"1x6",9,4,"poison"),
+    MonsterSpec("S","snake",1,5,"1x3",2,2,""),
+    MonsterSpec("T","troll",6,4,"1x8/1x8/2x6",120,13,"regen"),
+    MonsterSpec("U","black unicorn",7,-2,"1x9/1x9/2x9",190,18,""),
+    MonsterSpec("V","vampire",8,1,"1x10",350,16,"drain,regen"),
+    MonsterSpec("W","wraith",5,4,"1x6",55,14,"drain_level"),
+    MonsterSpec("X","xeroc",7,7,"4x4",100,11,"mimic"),
+    MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,""),
+    MonsterSpec("Z","zombie",2,8,"1x8",6,7,""),
 ]
 MCOL = {"A":12,"B":1,"C":11,"D":8,"E":3,"F":3,"G":10,"H":5,"I":12,"J":8,
         "K":6,"L":11,"M":2,"N":14,"O":4,"P":13,"Q":4,"R":8,"S":11,"T":3,
@@ -414,15 +449,19 @@ class Item:
         return (s.hit_plus,s.dam_plus) if s.cat==CAT_WPN else (s.ench,0)
 
 class Monster:
-    def __init__(s,x,y,sym,name,hp,atk,df,exp,fl):
+    def __init__(s,x,y,sym,name,hp,level,armor,damage_expr,exp,fl):
         s.x,s.y,s.sym,s.name=x,y,sym,name
-        s.hp=s.max_hp=hp; s.atk=atk; s.df=df; s.exp=exp
+        s.hp=s.max_hp=hp
+        s.level=level; s.armor=armor; s.damage_expr=damage_expr; s.exp=exp
         s.flags=set(fl.split(",")) if fl else set()
         s.held=s.scared=s.confused=0
         s.running=False; s.dest=DEST_PLAYER; s.turn=True
         s.mean=True; s.target=False; s.found=False; s.vf_hit=0
     @property
     def alive(s): return s.hp>0
+
+def monster_hp(spec):
+    return max(1, roll_damage_expr(f"{spec.level}x8"))
 
 class Player:
     EXP_T=[0,10,20,40,80,160,320,640,1300,2600,5200,10000,20000,
@@ -761,6 +800,7 @@ class Game:
         self.dir_pending = None
         self.throw_anim = None
         self.death_cause = ""
+        self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
         self.descend()
         self.msg("Welcome to the Dungeons of Doom!")
 
@@ -793,16 +833,18 @@ class Game:
 
     def _spawn_mons(self):
         d=self.p.depth; n=random.randint(3,4+d)
-        cands=[b for b in BESTIARY if b[6]<=d]
-        if not cands: cands=[b for b in BESTIARY if b[6]<=3]
+        cands=[b for b in BESTIARY if b.min_depth<=d]
+        if not cands: cands=[b for b in BESTIARY if b.min_depth<=3]
         for _ in range(n):
             rm=random.choice(self.rooms); e=random.choice(cands)
             for _ in range(30):
                 mx,my=rm.inner()
                 if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
                    and not(mx==self.p.x and my==self.p.y):
-                    sym,nm,hp,at,df,exp,_,fl=e
-                    self.mons.append(Monster(mx,my,sym,nm,hp+random.randint(0,d//3),at,df,exp,fl))
+                    self.mons.append(Monster(
+                        mx, my, e.sym, e.name, monster_hp(e),
+                        e.level, e.armor, e.damage, e.exp, e.flags
+                    ))
                     break
 
     def _spawn_items(self):
@@ -1011,11 +1053,11 @@ class Game:
         if not m.running:
             hplus += 4
         hplus += self.p.str_hit_plus()
-        if not self.swing_hits(self.p.level, m.df, hplus):
+        if not self.swing_hits(self.p.level, m.armor, hplus):
             return False, 0
         total = 0
         for part in damage_expr.split("/"):
-            total += roll(part)
+            total += roll_damage_expr(part)
         total = max(0, total + dplus + self.p.str_dam_plus())
         return True, total
 
@@ -1084,10 +1126,11 @@ class Game:
 
     def m_attack(self,m):
         mn=TextCatalog.monster(self.lang,m.name)
-        th=random.randint(1,20)
-        if th>=self.p.ac or th==20:
-            dmg=max(1,m.atk+random.randint(0,2))
-            self.p.hp-=dmg; self.msg("The {monster} hits! ({dmg})",monster=mn,dmg=dmg)
+        if self.swing_hits(m.level, self.p.ac, 0):
+            dmg=roll_damage_expr(m.damage_expr)
+            if dmg:
+                self.p.hp-=dmg
+            self.msg("The {monster} hits! ({dmg})",monster=mn,dmg=dmg)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                 self.rust_armor()
@@ -1310,10 +1353,13 @@ class Game:
             for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):
                 nx,ny=p.x+dx,p.y+dy
                 if self.walkable(nx,ny) and not self.mon_at(nx,ny):
-                    cs=[b for b in BESTIARY if b[6]<=p.depth]
+                    cs=[b for b in BESTIARY if b.min_depth<=p.depth]
                     if cs:
-                        e=random.choice(cs); sym,nm2,hp,at,df,exp,_,fl=e
-                        self.mons.append(Monster(nx,ny,sym,nm2,hp,at,df,exp,fl))
+                        e=random.choice(cs)
+                        self.mons.append(Monster(
+                            nx, ny, e.sym, e.name, monster_hp(e),
+                            e.level, e.armor, e.damage, e.exp, e.flags
+                        ))
                     break
             self.msg("A monster appears!")
         elif nm=="magic mapping":
@@ -2177,7 +2223,7 @@ class Game:
             if len(rows)>=MSG_LINES: break
         rows=list(reversed(rows))
         for i,(m,c) in enumerate(rows):
-            self.txt(MSG_X,MSG_Y+i*TILE_H,m,c)
+            self.txt(MSG_X,MSG_Y+i*MSG_LINE_H,m,c)
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
@@ -2278,17 +2324,50 @@ class Game:
             self.txt(bx+8,y,ln,c); y+=11
 
     def draw_dead(self):
-        bx,by=105,42; bw=270; bh=190
+        if not self.options.get("tombstone", True):
+            bx,by=105,42; bw=270; bh=190
+            self._box(bx,by,bw,bh,"=== R.I.P. ===")
+            p=self.p; x=bx+18; y=by+24
+            self.txt(x,y,"Here lies a brave rogue.",7); y+=22
+            self.txt(x,y,f"Cause: {self.death_cause or 'died'}",8); y+=18
+            self.txt(x,y,f"Depth: {p.depth}",7); y+=14
+            self.txt(x,y,f"Level: {p.level}",7); y+=14
+            self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
+            next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
+            self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
+            self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
+            self.txt(x,y,"A / Start  New game",10); y+=14
+            self.txt(x,y,"B          Stay here",5)
+            return
+        bx,by=88,30; bw=320; bh=232
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
         p=self.p; x=bx+18; y=by+24
-        self.txt(x,y,"Here lies a brave rogue.",7); y+=22
-        self.txt(x,y,f"Cause: {self.death_cause or 'died'}",8); y+=18
+        killer=(self.death_cause or "died").replace("killed by ","")
+        name=self.options.get("name","rogue")
+        year=time.localtime().tm_year
+        rip=[
+            "        __________",
+            "       /          \\",
+            "      /    REST    \\",
+            "     /      IN      \\",
+            "    /     PEACE      \\",
+            "    |                |",
+            f"    | {name[:14].center(14)} |",
+            f"    | {str(p.gold) + ' Au':^14} |",
+            "    |  killed by a  |",
+            f"    | {killer[:14].center(14)} |",
+            f"    | {str(year):^14} |",
+            "   *|   *  *  *    |*",
+            "____)/\\_//(\\/(/\\)/\\//\\|_)____",
+        ]
+        for ln in rip:
+            self.txt(x,y,ln,7); y+=11
+        y+=4
         self.txt(x,y,f"Depth: {p.depth}",7); y+=14
         self.txt(x,y,f"Level: {p.level}",7); y+=14
-        self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
         next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
         self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
+        self.txt(x,y,f"Turn:  {self.turn}",5); y+=18
         self.txt(x,y,"A / Start  New game",10); y+=14
         self.txt(x,y,"B          Stay here",5)
 
