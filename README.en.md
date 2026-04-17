@@ -91,6 +91,7 @@ Implemented overview:
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, identification, inventory, and curses
 - Search, traps, hidden doors, hidden passages, and trap inspection
+- Amulet of Yendor and depth-1 return victory while carrying it
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
 - Gamepad-oriented A/B/Start/Select + D-pad controls
@@ -102,8 +103,6 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 
 - Rings
 - Wands/staves
-- Amulet of Yendor
-- Returning with the Amulet to win
 - More Rogue 5.4.4 expectation tests
 - Full message catalog coverage
 - Responsive layout and font selection

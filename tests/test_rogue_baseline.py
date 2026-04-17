@@ -232,6 +232,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(stairs), 1)
         self.assertIn(stairs[0], seen)
 
+    def test_rogue_544_amulet_spawns_on_depth_26(self):
+        game = new_game(seed=260)
+        game.p.depth = 25
+
+        game.descend()
+
+        amulets = [item for item in game.gitems if item.cat == rogue.CAT_AMULET]
+        self.assertEqual(game.p.depth, 26)
+        self.assertEqual(len(amulets), 1)
+        self.assertEqual(amulets[0].data["name"], "Amulet of Yendor")
+
+    def test_amulet_pickup_allows_depth_1_stair_victory(self):
+        game = new_game(seed=261)
+        set_open_floor(game)
+        amulet = rogue.Item(rogue.CAT_AMULET, 0)
+        amulet.x, amulet.y = game.p.x, game.p.y
+        game.gitems = [amulet]
+
+        game.do_pickup()
+
+        self.assertTrue(game.p.has_amulet)
+        self.assertIn(amulet, game.p.inv)
+
+        game.p.depth = 1
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.do_action()
+
+        self.assertEqual(game.st, rogue.ST_WIN)
+        self.assertIn("You escaped with the Amulet of Yendor!", game.msgs)
+
     def test_ident_table_names_in_both_languages(self):
         random.seed(3)
         ident = rogue.IdentTable()

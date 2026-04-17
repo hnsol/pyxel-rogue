@@ -55,8 +55,8 @@
     teleport, dart, rust, mysterious
 - [x] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
 - [x] **隠しドア・隠し通路**
-- [ ] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
-- [ ] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
+- [x] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
+- [x] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
 - [x] Rogue 5.4.4 `pick_up()` 準拠の拾得基礎（自動拾得、金直接加算、満杯文言、scare monster 再拾得消滅）
 - [x] `scroll of scare monster` の床上効果（床に置いた巻物でモンスターが踏み込まない挙動）
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）

@@ -82,6 +82,7 @@ MORETIME = 150
 STOMACHSIZE = 2000
 STARVETIME = 850
 MAX_TRAPS = 10
+AMULET_LEVEL = 26
 BEARTIME = 3
 SLEEPTIME = 5
 BORE_LEVEL = 50
@@ -93,15 +94,15 @@ DEST_GOLD = "gold"
 # ===========================================================
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
 ST_DEAD = 4; ST_STATUS = 5; ST_HELP = 6
-ST_AUX = 7
+ST_AUX = 7; ST_WIN = 8
 
 # ===========================================================
 #  Item categories
 # ===========================================================
 CAT_POT = "pot"; CAT_SCR = "scr"; CAT_FOOD = "food"
-CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_GOLD = "gold"
-ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_GOLD:"*"}
-ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_GOLD:10}
+CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_GOLD = "gold"; CAT_AMULET = "amulet"
+ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_GOLD:"*",CAT_AMULET:","}
+ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_GOLD:10,CAT_AMULET:10}
 
 # ===========================================================
 #  Text catalog
@@ -213,6 +214,9 @@ class TextCatalog:
             "{gold} gold pieces":"{gold}個の金塊",
             "You see a {item} here.":"{item}の上にいる。",
             "You pick up the {item}.":"{item}を手に入れた。",
+            "You feel a wrenching sensation in your gut.":"腹の底がねじれるような感じがした。",
+            "Your way is magically blocked.":"魔法の力で道がふさがれている。",
+            "You escaped with the Amulet of Yendor!":"イェンダーの魔除けを持って脱出した！",
         },
     }
     MENU = {
@@ -265,6 +269,7 @@ class TextCatalog:
         if cat == CAT_FOOD: return FOOD_JA.get(name, name)
         if cat == CAT_WPN: return WEAPON_JA.get(name, name)
         if cat == CAT_ARM: return ARMOR_JA.get(name, name)
+        if cat == CAT_AMULET: return "イェンダーの魔除け"
         return name
 
 # ===========================================================
@@ -440,6 +445,7 @@ class Item:
         if s.cat==CAT_FOOD: return FOODS[s.kind]
         if s.cat==CAT_WPN: return WEAPONS[s.kind]
         if s.cat==CAT_ARM: return ARMORS[s.kind]
+        if s.cat==CAT_AMULET: return {"name":"Amulet of Yendor"}
         return {}
     @property
     def stackable(s): return s.cat==CAT_WPN and s.data.get("stack",False)
@@ -475,6 +481,7 @@ class Player:
         s.held_by=None
         s.quiet=0
         s.facing=(0,1)
+        s.has_amulet=False
     @property
     def alive(s): return s.hp>0
     @property
@@ -573,6 +580,9 @@ class IdentTable:
         if it.cat==CAT_ARM:
             e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
             return f"{'+' if e>=0 else ''}{e} {nm}"
+        if it.cat==CAT_AMULET:
+            nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
+            return f"the {nm}" if lang==LANG_EN else nm
         return "something" if lang==LANG_EN else "何者か"
 
 # ===========================================================
@@ -822,7 +832,7 @@ class Game:
         px,py = self.rooms[0].inner()
         self.p.x,self.p.y = px,py
         sr=self.rooms[-1]; sx,sy=sr.inner(); self.tm[sy][sx]=T_STAIR
-        self._spawn_mons(); self._spawn_items()
+        self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
         self._hide_secret_features(); self._spawn_traps()
         self._center_cam(); self.update_fov()
 
@@ -863,6 +873,28 @@ class Game:
                 ix,iy=rm.inner()
                 if self.tm[iy][ix]==T_FLOOR and not self.gi_at(ix,iy):
                     it=make_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
+
+    def _spawn_amulet(self):
+        # Rogue 5.4.4 new_level.c: level >= AMULETLEVEL && !amulet.
+        if self.p.depth < AMULET_LEVEL or self.p.has_amulet:
+            return
+        if any(item.cat==CAT_AMULET for item in self.p.inv + self.gitems):
+            return
+        cands=[
+            (x,y)
+            for y,row in enumerate(self.tm)
+            for x,tile in enumerate(row)
+            if tile==T_FLOOR
+            and (x,y)!=(self.p.x,self.p.y)
+            and not self.gi_at(x,y)
+            and not self.mon_at(x,y)
+        ]
+        if not cands:
+            return
+        x,y=random.choice(cands)
+        amulet=Item(CAT_AMULET,0)
+        amulet.x,amulet.y=x,y
+        self.gitems.append(amulet)
 
     def _secret_chance(self, denom):
         # Rogue 5.4.4 passages.c: rnd(10)+1 < level, then a per-feature rnd().
@@ -1629,12 +1661,28 @@ class Game:
     def do_pickup(self):
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR:
-            self.msg(f"You descend to depth {p.depth+1}..."); self.descend()
-            self.msg(f"Dungeon depth {p.depth}."); self.end_turn(); return
+            self.use_stairs(); return
         if self.pickup_at(px,py):
             self.end_turn()
         else:
             self.msg("Nothing here.")
+
+    def use_stairs(self):
+        p=self.p
+        if p.has_amulet:
+            if p.depth <= 1:
+                self.msg("You escaped with the Amulet of Yendor!")
+                self.st=ST_WIN
+                return
+            p.depth-=2
+            self.descend()
+            self.msg("You feel a wrenching sensation in your gut.")
+            self.end_turn()
+            return
+        self.msg(f"You descend to depth {p.depth+1}...")
+        self.descend()
+        self.msg(f"Dungeon depth {p.depth}.")
+        self.end_turn()
 
     def pickup_at(self,x,y):
         p=self.p
@@ -1651,6 +1699,8 @@ class Game:
             return True
         if p.add_item(gi):
             gi.picked_up=True
+            if gi.cat==CAT_AMULET:
+                p.has_amulet=True
             self.gitems.remove(gi); self.msg("You pick up the {item}.",item=self.ident.name(gi))
             return True
         self.msg("pack too full")
@@ -2011,6 +2061,9 @@ class Game:
         if self.st==ST_DEAD:
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
+        if self.st==ST_WIN:
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
+            return
         if self.st==ST_PLAY:   self.upd_play()
         elif self.st==ST_MENU: self.upd_menu()
         elif self.st==ST_ITEM: self.upd_item()
@@ -2163,6 +2216,7 @@ class Game:
         elif self.st==ST_STATUS: self.draw_status()
         elif self.st==ST_HELP: self.draw_help()
         elif self.st==ST_DEAD: self.draw_dead()
+        elif self.st==ST_WIN: self.draw_win()
 
     def draw_title(self):
         self.txt(HUD_X, 3, "PYXEL ROGUE", 10)
@@ -2407,6 +2461,18 @@ class Game:
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=18
         self.txt(x,y,"A / Start  New game",10); y+=14
         self.txt(x,y,"B          Stay here",5)
+
+    def draw_win(self):
+        bx,by=82,50; bw=334; bh=176
+        self._box(bx,by,bw,bh,"=== Victory ===")
+        p=self.p; x=bx+18; y=by+26
+        self.txt(x,y,"You escaped from the Dungeons of Doom",10); y+=16
+        self.txt(x,y,"with the Amulet of Yendor.",10); y+=24
+        self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
+        self.txt(x,y,f"Level: {p.level}",7); y+=14
+        self.txt(x,y,f"Exp:   {p.exp}",7); y+=14
+        self.txt(x,y,f"Turn:  {self.turn}",5); y+=28
+        self.txt(x,y,"A / Start  New game",10)
 
 # ===========================================================
 if __name__=="__main__":

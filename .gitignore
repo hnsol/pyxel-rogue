@@ -1,5 +1,25 @@
 .DS_Store
+
+# Python caches
 __pycache__/
-.pytest_cache/
-.venv/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Pyxel/editor artifacts
+*.pyxapp
+*.pyxres.bak
+
+# Local logs and scratch output
+*.log
+tmp/

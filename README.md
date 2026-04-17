@@ -91,6 +91,7 @@ PYXEL_ROGUE_LANG=ja python3 -m unittest
 - 26種モンスター、戦闘、空腹、HP自然回復
 - ポーション、巻物、食料、武器、防具、識別、インベントリ、呪い
 - search、罠、隠しドア、隠し通路、Trap Inspect
+- Amulet of Yendor、Amulet 所持での1階帰還勝利
 - 自動拾得ON/OFF、投擲アニメーション
 - 墓石つき死亡画面
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
@@ -102,8 +103,6 @@ PYXEL_ROGUE_LANG=ja python3 -m unittest
 
 - 指輪
 - 杖
-- Amulet of Yendor
-- Amulet 所持での帰還勝利
 - Rogue 5.4.4 期待値テスト拡充
 - 全メッセージ辞書化
 - 可変レイアウト、フォント選択
