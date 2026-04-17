@@ -144,6 +144,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(armor.data["name"], "leather armor")
         self.assertEqual(armor.ench, 1)
 
+    def test_v5_item_names_plural_food_and_armor_protection(self):
+        game = new_game(seed=8)
+        food = rogue.Item(rogue.CAT_FOOD, 0, qty=2)
+        self.assertEqual(game.item_name(food), "2 food rations")
+
+        armor = rogue.Item(rogue.CAT_ARM, 1, ench=1)
+        self.assertEqual(game.item_name(armor), "+1 ring mail [protection 4]")
+
+        game.p.arm = armor
+        self.assertEqual(game.item_name(armor), "+1 ring mail [protection 4] (being worn)")
+        self.assertEqual(game.equip_name(armor), "+1 ring mail [protection 4]")
+
     def test_rogue_544_monster_table_audit_guards_named_fields(self):
         specs = {m.sym: m for m in rogue.BESTIARY}
         self.assertEqual(
@@ -206,6 +218,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         game = new_game(seed=7)
         self.assertEqual(game.item_name(game.p.wpn), "+1,+1 mace (weapon in hand)")
+
+    def test_melee_combat_messages_omit_damage_numbers_for_v5_style(self):
+        game = new_game(seed=9)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=100, exp=0)
+        game.mons = [monster]
+
+        game.p_attack(monster)
+
+        self.assertTrue(any("you hit the hobgoblin" in m.lower() for m in game.msgs))
+        self.assertFalse(any("(" in m and "dmg" not in m.lower() for m in game.msgs))
+
+        game.msgs = []
+        monster.armor = -100
+        game.p_attack(monster)
+        self.assertTrue(any("you miss the hobgoblin" in m.lower() for m in game.msgs))
 
     def test_dungeon_stair_is_reachable(self):
         random.seed(11)
@@ -370,7 +398,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.do_action()
 
         self.assertEqual(game.turn, 1)
-        self.assertIn(item, game.p.inv)
+        self.assertNotIn(item, game.gitems)
+        self.assertTrue(any(i.cat == rogue.CAT_FOOD and i.kind == 0 and i.qty == 2 for i in game.p.inv))
 
         game = new_game(seed=311)
         set_open_floor(game)
@@ -395,7 +424,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.auto_pickup)
 
         game.try_move(dx, dy)
-        self.assertIn(item, game.p.inv)
+        self.assertTrue(any(i.cat == rogue.CAT_FOOD and i.kind == 0 and i.qty == 2 for i in game.p.inv))
         self.assertNotIn(item, game.gitems)
         self.assertTrue(item.picked_up)
 
@@ -413,7 +442,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(item, game.p.inv)
         self.assertIn(item, game.gitems)
         game.do_pickup()
-        self.assertIn(item, game.p.inv)
+        self.assertTrue(any(i.cat == rogue.CAT_FOOD and i.kind == 0 and i.qty == 2 for i in game.p.inv))
         self.assertNotIn(item, game.gitems)
 
     def test_pickup_pack_full_and_scare_monster_dust(self):
@@ -452,17 +481,52 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item.sym, calls)
         self.assertNotIn("Z", calls)
 
-    def test_status_and_hud_show_exp_denominator_and_armor_label(self):
+    def test_status_and_hud_show_v5_exp_and_trimmed_mode_labels(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
         game.draw_stat()
         game.draw_status()
-        self.assertTrue(any("Exp 0/10" in c for c in calls))
-        self.assertTrue(any("Exp:   0/10" in c for c in calls))
+        self.assertTrue(any("Lv 1 Exp 0" in c for c in calls))
+        self.assertTrue(any("Exp:   0" in c for c in calls))
+        self.assertFalse(any("Exp 0/10" in c for c in calls))
+        self.assertFalse(any("Exp:   0/10" in c for c in calls))
         self.assertTrue(any("Arm " in c or c.startswith("Armor:") for c in calls))
-        self.assertTrue(any("Pickup ON" in c for c in calls))
-        self.assertTrue(any("Lang EN" in c for c in calls))
+        self.assertFalse(any("Food normal" in c for c in calls))
+        self.assertFalse(any("Diag OFF" in c for c in calls))
+        self.assertFalse(any("Pickup ON" in c for c in calls))
+        self.assertFalse(any("Lang EN" in c for c in calls))
+
+        game.diag_assist = True
+        game.auto_pickup = False
+        calls.clear()
+        game.draw_stat()
+        self.assertTrue(any("Diag ON" in c for c in calls))
+        self.assertTrue(any("Pickup OFF" in c for c in calls))
+
+    def test_hud_equipment_omits_inventory_worn_annotations(self):
+        game = new_game(seed=36)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_stat()
+
+        equip_lines = [c for c in calls if c.startswith("W ") or c.startswith("A ")]
+        self.assertTrue(equip_lines)
+        self.assertFalse(any("(weapon in hand)" in c for c in equip_lines))
+        self.assertFalse(any("(being worn)" in c for c in equip_lines))
+        self.assertFalse(any("[" in c for c in equip_lines))
+
+    def test_status_inventory_lists_all_pack_slots(self):
+        game = new_game(seed=37)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_status()
+
+        self.assertTrue(any(c.startswith("a)") for c in calls))
+        self.assertTrue(any(c.startswith("z)") for c in calls))
 
     def test_message_log_uses_three_rows_with_latest_highlighted(self):
         game = new_game(seed=35)
@@ -491,14 +555,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any("hobgoblin" in c for c in calls))
         self.assertTrue(any("123 Au" in c for c in calls))
 
-    def test_direction_pending_merges_cardinal_inputs_into_one_diagonal(self):
+    def test_pressed_cardinal_moves_immediately_and_pressed_second_axis_makes_diagonal(self):
         game = new_game(seed=36)
         rogue.pyxel.set_input(
             held={rogue.pyxel.KEY_LEFT},
             pressed={rogue.pyxel.KEY_LEFT},
         )
-        self.assertIsNone(game.dir_press())
-        self.assertEqual(game.dir_pending, (-1, 0))
+        self.assertEqual(game.dir_press(), (-1, 0))
+        self.assertIsNone(game.dir_pending)
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.KEY_LEFT, rogue.pyxel.KEY_UP},
@@ -963,8 +1027,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(searched, [])
 
         rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_B},
-            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_A},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
         )
         game.update()
         self.assertEqual(searched, [False])
@@ -981,11 +1045,23 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(searched[-1], True)
 
-    def test_select_a_prompts_throw_direction_before_item_selection(self):
+    def test_select_a_searches_and_select_b_prompts_throw_direction_before_item_selection(self):
         game = new_game(seed=48)
+        set_open_floor(game)
+        searched = []
+        game.do_search = lambda front_only=False: searched.append(front_only)
+
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_A},
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+        )
+        game.update()
+        self.assertEqual(searched, [False])
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_B},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
         )
         game.update()
         self.assertEqual(game.st, rogue.ST_DIR)
@@ -1001,11 +1077,49 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.throw_dir, (1, 0))
         self.assertEqual(game.fitems, game.p.inv)
 
+    def test_cardinal_move_does_not_linger_into_second_step(self):
+        game = new_game(seed=49)
+        set_open_floor(game)
+        start = (game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 1, start[1]))
+
+        rogue.pyxel.set_input()
+        game.update()
+
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 1, start[1]))
+
+    def test_diag_assist_move_does_not_linger_into_second_step(self):
+        game = new_game(seed=50)
+        set_open_floor(game)
+        game.diag_assist = True
+        start = (game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(
+            held={
+                rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT,
+                rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+            },
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 1, start[1] + 1))
+
+        rogue.pyxel.set_input()
+        game.update()
+
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 1, start[1] + 1))
+
     def test_quick_throw_cancel_returns_to_play_after_direction_first_flow(self):
         game = new_game(seed=48)
         rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_A},
-            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_B},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
         )
         game.update()
 

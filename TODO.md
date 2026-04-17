@@ -53,7 +53,7 @@
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
-- [x] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
+- [x] **search コマンド** — Select+A / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
 - [x] **隠しドア・隠し通路**
 - [x] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
 - [x] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
@@ -88,7 +88,7 @@
 - [x] ゲームパッド XYLR / ショルダー依存の撤去（キーボード操作は正式対応として維持）
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
 - [x] Select(Back) 補助メニューから Map を削除し、Status / Help / Search に整理
-- [x] Select+A quick throw / Select+B search を追加
+- [x] Select+A search / Select+B quick throw を追加
 - [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / 補助メニュー Trap / Shift+6）
 - [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理

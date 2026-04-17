@@ -54,6 +54,13 @@ python3 -m unittest
 PYXEL_ROGUE_LANG=ja python3 -m unittest
 ```
 
+For Rogue 5.4.4 fidelity work, keep the original C source locally as a reference. This directory is ignored by git and is not included in this repository.
+
+```bash
+mkdir -p vendor
+git clone https://github.com/Davidslv/rogue.git vendor/rogue544
+```
+
 ## Controls
 
 Gamepad:
@@ -65,8 +72,8 @@ Gamepad:
 - B hold + D-pad: Dash
 - A+B: Wait a turn
 - Select: Assist menu
-- Select+A: Quick throw (choose direction, then item)
-- Select+B: Search around all 8 neighboring tiles
+- Select+A: Search around all 8 neighboring tiles
+- Select+B: Quick throw (choose direction, then item)
 - Select+D-pad: Inspect a discovered trap
 
 Keyboard:
@@ -78,6 +85,8 @@ Keyboard:
 - Esc: Cancel
 - .: Wait a turn
 - Tab: Assist menu
+- Tab+Z: Search around all 8 neighboring tiles
+- Tab+C: Quick throw
 - S: Search
 - I: Status
 - ?: Help

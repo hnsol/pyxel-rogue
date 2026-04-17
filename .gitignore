@@ -23,3 +23,6 @@ env/
 # Local logs and scratch output
 *.log
 tmp/
+
+# Local Rogue 5.4.4 reference source
+vendor/rogue544/

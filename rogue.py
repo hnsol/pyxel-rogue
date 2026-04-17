@@ -10,8 +10,8 @@ Gamepad:                        Keyboard:
   B tap        Menu/Cancel       Esc            Cancel
   A + B        Wait a turn       . (period)     Wait
   Back         Assist menu       Tab            Assist menu
-  Back + A     Quick throw       Tab + Z        Quick throw
-  Back + B     Search            S              Search
+  Back + A     Search            S              Search
+  Back + B     Quick throw       Tab + C        Quick throw
                                 I              Status
                                 ?              Help
 """
@@ -199,10 +199,10 @@ class TextCatalog:
             "You died... [A/Start] to restart.":"あなたは死んだ... [A/Start] で再開。",
             "You defeated the {monster}. ({exp} exp)":"{monster}を倒した。 ({exp} exp)",
             "Welcome to level {level}!":"レベル{level}へようこそ。",
-            "You hit the {monster} ({dmg}).":"{monster}への攻撃は命中した。 ({dmg})",
-            "You miss the {monster}.":"{monster}への攻撃はそれた。",
-            "The {monster} hits! ({dmg})":"{monster}の攻撃は命中した。 ({dmg})",
-            "The {monster} misses.":"{monster}の攻撃はそれた。",
+            "you hit the {monster}":"{monster}への攻撃は命中した。",
+            "you miss the {monster}":"{monster}への攻撃はそれた。",
+            "the {monster} hit you":"{monster}の攻撃は命中した。",
+            "the {monster} misses":"{monster}の攻撃はそれた。",
             "{monster}'s gaze has confused you":"{monster}の凝視で混乱した。",
             "your purse feels lighter":"財布が軽くなった気がする。",
             "You feel weaker!":"力が弱くなった！",
@@ -448,7 +448,8 @@ class Item:
         if s.cat==CAT_AMULET: return {"name":"Amulet of Yendor"}
         return {}
     @property
-    def stackable(s): return s.cat==CAT_WPN and s.data.get("stack",False)
+    def stackable(s):
+        return s.cat==CAT_FOOD or (s.cat==CAT_WPN and s.data.get("stack",False))
     @property
     def sym(s): return ISYM.get(s.cat,"?")
     def plus_key(s):
@@ -568,7 +569,12 @@ class IdentTable:
                 nm=TextCatalog.item_kind(lang, CAT_SCR, SCROLLS[it.kind]["name"])
                 return f"scroll of {nm}" if lang==LANG_EN else f"{nm}巻き物"
             return f"scroll [{s.snam[it.kind]}]" if lang==LANG_EN else f"巻き物 [{s.snam[it.kind]}]"
-        if it.cat==CAT_FOOD: return TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
+        if it.cat==CAT_FOOD:
+            nm=TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
+            if it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
+                nm = f"{nm}s"
+            prefix = f"{it.qty} " if it.qty>1 else ""
+            return f"{prefix}{nm}"
         if it.cat==CAT_WPN:
             nm=TextCatalog.item_kind(lang, CAT_WPN, it.data["name"])
             if it.stackable and it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
@@ -579,7 +585,8 @@ class IdentTable:
             return f"{prefix}{hp},{dp} {nm}"
         if it.cat==CAT_ARM:
             e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
-            return f"{'+' if e>=0 else ''}{e} {nm}"
+            protection = 10 - (it.data["ac"] - e)
+            return f"{'+' if e>=0 else ''}{e} {nm} [protection {protection}]"
         if it.cat==CAT_AMULET:
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
             return f"the {nm}" if lang==LANG_EN else nm
@@ -778,11 +785,21 @@ class Game:
     def txt(self, x, y, s, c):
         pyxel.text(x, y, str(s), c, self.font)
 
-    def item_name(self,it):
+    def item_name(self,it, describe=True):
         name=self.ident.name(it)
-        if it is self.p.wpn: return f"{name} (weapon in hand)"
-        if it is self.p.arm: return f"{name} (being worn)"
+        if describe and it is self.p.wpn: return f"{name} (weapon in hand)"
+        if describe and it is self.p.arm: return f"{name} (being worn)"
         return name
+
+    def equip_name(self,it):
+        return self.item_name(it, describe=False)
+
+    def hud_equip_name(self,it):
+        if it.cat == CAT_ARM:
+            e=it.ench
+            nm=TextCatalog.item_kind(self.lang, CAT_ARM, it.data["name"])
+            return f"{'+' if e>=0 else ''}{e} {nm}"
+        return self.equip_name(it)
 
     # ---------- Init ----------
     def new_game(self):
@@ -810,6 +827,9 @@ class Game:
         self.auto_pickup = True
         self.dir_pending = None
         self.throw_anim = None
+        self.last_hp_seen = None
+        self.hp_damage_from = None
+        self.hp_damage_timer = 0
         self.death_cause = ""
         self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
         self.descend()
@@ -1112,8 +1132,8 @@ class Game:
             if not m.alive:
                 self.msg("You defeated the {monster}. ({exp} exp)",monster=mn,exp=m.exp)
                 self.award_monster_kill(m,mn)
-            else: self.msg("You hit the {monster} ({dmg}).",monster=mn,dmg=dmg)
-        else: self.msg("You miss the {monster}.",monster=mn)
+            else: self.msg("you hit the {monster}",monster=mn)
+        else: self.msg("you miss the {monster}",monster=mn)
 
     def monster_has_magic_item_to_steal(self):
         for it in self.p.inv:
@@ -1163,7 +1183,7 @@ class Game:
             dmg=roll_damage_expr(m.damage_expr)
             if dmg:
                 self.p.hp-=dmg
-            self.msg("The {monster} hits! ({dmg})",monster=mn,dmg=dmg)
+            self.msg("the {monster} hit you",monster=mn)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                 self.rust_armor()
@@ -1199,7 +1219,7 @@ class Game:
                 if t:
                     self.p.rm_item(t); self.msg(f"She stole your {self.ident.name(t)}!")
                     self.remove_monster(m); return
-        else: self.msg("The {monster} misses.",monster=mn)
+        else: self.msg("the {monster} misses",monster=mn)
 
     def m_turn(self,m):
         if not m.alive: return
@@ -1942,15 +1962,11 @@ class Game:
         if self.diag_assist:
             self.dir_pending=None
             return None
-        if self.dir_pending:
-            d=self.dir_pending
-            self.dir_pending=None
-            return d
         # Cardinal
-        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):    self.dir_pending=(0,-1); return None
-        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):  self.dir_pending=(0,1); return None
-        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):  self.dir_pending=(-1,0); return None
-        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): self.dir_pending=(1,0); return None
+        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):    return (0,-1)
+        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):  return (0,1)
+        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):  return (-1,0)
+        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): return (1,0)
         return None
 
     def dir_prompt_press(self):
@@ -2023,8 +2039,8 @@ class Game:
             self.back_used=True; self.b_used=True
         return hit
     def btn_select_b(self):
-        hit = (self.back_held() and self.kp(pyxel.GAMEPAD1_BUTTON_B)) or (
-            self.kp_back() and self.kh(pyxel.GAMEPAD1_BUTTON_B)
+        hit = (self.back_held() and self.kp(pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)) or (
+            self.kp_back() and self.kh(pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)
         )
         if hit:
             self.back_used=True; self.b_used=True
@@ -2097,11 +2113,11 @@ class Game:
             self.dir_pending=None
             return
         if self.btn_select_a():
-            self.start_item_action("Throw")
+            self.do_search()
             self.dir_pending=None
             return
         if self.btn_select_b():
-            self.do_search()
+            self.start_item_action("Throw")
             self.dir_pending=None
             return
         if self.btn_status(): self.st=ST_STATUS; return
@@ -2219,7 +2235,7 @@ class Game:
         elif self.st==ST_WIN: self.draw_win()
 
     def draw_title(self):
-        self.txt(HUD_X, 3, "PYXEL ROGUE", 10)
+        self.txt(HUD_X, 3, "Rogue V5", 10)
 
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
@@ -2271,22 +2287,32 @@ class Game:
         self.txt(sx,sy,f"HP {p.hp}/{p.max_hp}",hc); sy+=11
         bw=HUD_W-10; pyxel.rect(sx,sy,bw,4,1)
         if p.max_hp>0:
-            f=max(0,int(bw*p.hp/p.max_hp))
-            pyxel.rect(sx,sy,f,4,8 if p.hp<=p.max_hp//3 else 11)
+            if self.last_hp_seen is not None and p.hp < self.last_hp_seen:
+                self.hp_damage_from = min(self.last_hp_seen, p.max_hp)
+                self.hp_damage_timer = 18
+            cur_w=max(0,int(bw*p.hp/p.max_hp))
+            if self.hp_damage_timer>0 and self.hp_damage_from is not None:
+                old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
+                pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,9 if p.hp>p.max_hp//3 else 8)
+                self.hp_damage_timer-=1
+            pyxel.rect(sx,sy,cur_w,4,8 if p.hp<=p.max_hp//3 else 11)
+            self.last_hp_seen = p.hp
         sy+=12
-        next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}/{next_exp}",7); sy+=12
+        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}",7); sy+=12
         self.txt(sx,sy,f"Str {p.st}/{p.max_st}",7)
         self.txt(sx+72,sy,f"Arm {p.ac}",7); sy+=12
         self.txt(sx,sy,f"Gold {p.gold}",10); sy+=12
         state = p.state if p.state else "normal"
-        self.txt(sx,sy,f"Food {state}",13 if p.state!="normal" else 7); sy+=12
-        self.txt(sx,sy,f"Diag {'ON' if self.diag_assist else 'OFF'}",11 if self.diag_assist else 5); sy+=12
-        self.txt(sx,sy,f"Pickup {'ON' if self.auto_pickup else 'OFF'}",11 if self.auto_pickup else 5); sy+=12
-        self.txt(sx,sy,f"Lang {self.lang.upper()}",7); sy+=18
+        if state != "normal":
+            self.txt(sx,sy,f"Food {state}",13); sy+=12
+        if self.diag_assist:
+            self.txt(sx,sy,"Diag ON",11); sy+=12
+        if not self.auto_pickup:
+            self.txt(sx,sy,"Pickup OFF",13); sy+=12
+        sy+=6
         self.txt(sx,sy,"-- Equip --",10); sy+=12
-        wn=self.item_name(p.wpn) if p.wpn else "bare hands"
-        an=self.item_name(p.arm) if p.arm else "no armor"
+        wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
+        an=self.hud_equip_name(p.arm) if p.arm else "no armor"
         self.txt(sx,sy,f"W {wn[:22]}",7); sy+=12
         self.txt(sx,sy,f"A {an[:22]}",7); sy+=18
         self.txt(sx,sy,"-- Effect --",10); sy+=12
@@ -2363,23 +2389,25 @@ class Game:
         self.txt(x,y,f"Level: {p.level}",7); y+=13
         self.txt(x,y,f"HP:    {p.hp}/{p.max_hp}",7); y+=13
         self.txt(x,y,f"Str:   {p.st}/{p.max_st}",7); y+=13
-        next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
         self.txt(x,y,f"Armor: {p.ac}",7); y+=13
-        self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=13
+        self.txt(x,y,f"Exp:   {p.exp}",7); y+=13
         self.txt(x,y,f"Pickup:{' ON' if self.auto_pickup else ' OFF'}",5); y+=13
         self.txt(x,y,f"Gold:  {p.gold}",10); y+=13
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=13
         self.txt(x,y,f"Food:  {p.food}",7)
         y=by+18; x=bx+178
         self.txt(x,y,"-- Equipment --",10); y+=13
-        wn=self.item_name(p.wpn) if p.wpn else "bare hands"
-        an=self.item_name(p.arm) if p.arm else "no armor"
+        wn=self.equip_name(p.wpn) if p.wpn else "bare hands"
+        an=self.equip_name(p.arm) if p.arm else "no armor"
         self.txt(x,y,f"Weapon: {wn[:22]}",7); y+=13
         self.txt(x,y,f"Armor:  {an[:22]}",7); y+=18
         self.txt(x,y,"-- Inventory --",10); y+=13
-        for i,it in enumerate(p.inv[:12]):
+        inv_x0, inv_y0 = x, y
+        for i,it in enumerate(p.inv):
+            col = i // 13
+            row = i % 13
             lt=chr(ord('a')+i); ln=self.item_name(it)
-            self.txt(x,y,f"{lt}) {ln[:24]}",7); y+=12
+            self.txt(inv_x0+col*118,inv_y0+row*12,f"{lt}) {ln[:16]}",7)
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
@@ -2396,8 +2424,8 @@ class Game:
             "A / Z / Enter  Pickup / Stairs",
             "A on empty     Search front",
             "A+B / .        Wait one turn",
-            "Back+A         Quick throw",
-            "Back+B / S     Search around",
+            "Back+A / S     Search around",
+            "Back+B         Quick throw",
             "Pickup option   Select menu toggle",
             "B tap / C      Open menu",
             "",

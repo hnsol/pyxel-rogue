@@ -54,6 +54,13 @@ python3 -m unittest
 PYXEL_ROGUE_LANG=ja python3 -m unittest
 ```
 
+Rogue 5.4.4 準拠の実装確認を行う場合は、原作 C ソースをローカル参照用に置けます。このディレクトリは `.gitignore` で除外され、リポジトリには含めません。
+
+```bash
+mkdir -p vendor
+git clone https://github.com/Davidslv/rogue.git vendor/rogue544
+```
+
 ## 操作
 
 ゲームパッド:
@@ -65,8 +72,8 @@ PYXEL_ROGUE_LANG=ja python3 -m unittest
 - B長押し + D-pad: ダッシュ
 - A+B: 足踏み
 - Select: 補助メニュー
-- Select+A: quick throw（方向を選んでからアイテム選択）
-- Select+B: 周囲8マスsearch
+- Select+A: 周囲8マスsearch
+- Select+B: quick throw（方向を選んでからアイテム選択）
 - Select+D-pad: 発見済み罠の種類確認
 
 キーボード:
@@ -78,6 +85,8 @@ PYXEL_ROGUE_LANG=ja python3 -m unittest
 - Esc: キャンセル
 - .: 足踏み
 - Tab: 補助メニュー
+- Tab+Z: 周囲8マスsearch
+- Tab+C: quick throw
 - S: search
 - I: Status
 - ?: Help
