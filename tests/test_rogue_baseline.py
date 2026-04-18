@@ -198,14 +198,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(hits(attacker_level=1, defender_armor=5, hit_plus=1), 7)
 
     def test_rogue_544_damage_expr_parser_handles_monster_attacks(self):
-        old_randint = rogue.random.randint
+        old_randrange = rogue.RNG.randrange
         try:
-            rogue.random.randint = lambda a, b: b
+            rogue.RNG.randrange = lambda n: n - 1
             self.assertEqual(rogue.roll_damage_expr("1x8"), 8)
             self.assertEqual(rogue.roll_damage_expr("1x2/1x5/1x5"), 12)
             self.assertEqual(rogue.roll_damage_expr("0x0"), 0)
         finally:
-            rogue.random.randint = old_randint
+            rogue.RNG.randrange = old_randrange
 
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
@@ -774,12 +774,12 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=38)
         game.p.wpn = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=1)
         monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=100, exp=0)
-        old_randint = rogue.random.randint
+        old_randrange = rogue.RNG.randrange
         try:
-            rogue.random.randint = lambda a, b: b
+            rogue.RNG.randrange = lambda n: n - 1
             game.p_attack(monster)
         finally:
-            rogue.random.randint = old_randint
+            rogue.RNG.randrange = old_randrange
         self.assertEqual(monster.hp, 10)
 
     def test_enchant_weapon_increments_one_weapon_plus(self):
@@ -803,12 +803,12 @@ class RogueBaselineTest(unittest.TestCase):
         potion = rogue.Item(rogue.CAT_POT, extra_healing)
         game.p.inv.append(potion)
         game.p.hp = game.p.max_hp - 5
-        old_randint = rogue.random.randint
+        old_randrange = rogue.RNG.randrange
         try:
-            rogue.random.randint = lambda a, b: 1
+            rogue.RNG.randrange = lambda n: 0
             game.use_pot(potion)
         finally:
-            rogue.random.randint = old_randint
+            rogue.RNG.randrange = old_randrange
 
         self.assertEqual(game.p.hp, game.p.max_hp - 4)
         self.assertIn("You feel much better. (+1)", game.msgs)
@@ -838,12 +838,12 @@ class RogueBaselineTest(unittest.TestCase):
         arrow = rogue.Item(rogue.CAT_WPN, 3, hit_plus=1, dam_plus=4)
         game.p.wpn = bow
         monster = monster_at(game.p.x + 1, game.p.y, hp=30, armor=100, exp=0)
-        old_randint = rogue.random.randint
+        old_randrange = rogue.RNG.randrange
         try:
-            rogue.random.randint = lambda a, b: b
+            rogue.RNG.randrange = lambda n: n - 1
             hit, dmg = game.roll_player_attack(monster, arrow, thrown=True)
         finally:
-            rogue.random.randint = old_randint
+            rogue.RNG.randrange = old_randrange
         self.assertTrue(hit)
         self.assertEqual(dmg, 14)
 

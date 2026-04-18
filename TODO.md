@@ -154,7 +154,7 @@
 
 - [x] `tests/test_rogue_baseline.py` で Pyxel mock による import / 初期化 / ダンジョン到達性 / 初期装備 / 翻訳層 baseline を確認
 - [x] `python3 -m unittest` でテストを実行可能にする
-- [ ] RNG helper を導入し、Rogue 5.4.4 準拠・seed 再現性・Pyxel MCP の `random.randint` 警告の扱いを整理する
+- [x] RNG helper を導入し、Rogue 5.4.4 準拠・seed 再現性・Pyxel MCP の `random.randint` 警告の扱いを整理する
 - [ ] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
 - [ ] Rogue 5.4.4 メッセージ全文監査（今回の拾得・ステータス周辺以外）
 - [ ] Select(Back) 補助メニューから開くメッセージ履歴ビュー

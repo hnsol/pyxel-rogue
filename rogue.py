@@ -21,6 +21,9 @@ import random
 import os
 import time
 from dataclasses import dataclass
+from rogue_rng import RogueRng
+
+RNG = RogueRng(random)
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -279,18 +282,18 @@ class TextCatalog:
 #  Dice
 # ===========================================================
 def roll(s):
-    n, d = s.split("d"); return sum(random.randint(1, int(d)) for _ in range(int(n)))
+    n, d = s.split("d"); return RNG.roll(int(n), int(d))
 
 def roll_damage_expr(expr):
     total = 0
     for part in expr.split("/"):
         sep = "x" if "x" in part else "d"
         n, d = part.split(sep)
-        total += sum(random.randint(1, int(d)) for _ in range(int(n)))
+        total += RNG.roll(int(n), int(d))
     return total
 
 def rnd(n):
-    return random.randrange(n) if n > 0 else 0
+    return RNG.rnd(n)
 
 # ===========================================================
 #  Item data  (Rogue 5.4.4)
@@ -434,7 +437,7 @@ class Room:
     @property
     def usable(s): return not s.is_gone
     def inner(s):
-        return random.randint(s.x+1,s.x+s.w-2),random.randint(s.y+1,s.y+s.h-2)
+        return RNG.randint(s.x+1,s.x+s.w-2),RNG.randint(s.y+1,s.y+s.h-2)
 
 class Item:
     _nid=0
@@ -507,7 +510,7 @@ class Player:
     def lvlup(s):
         if s.level>=len(s.EXP_T): return False
         if s.exp>=s.EXP_T[s.level]:
-            s.level+=1; g=random.randint(3,8); s.max_hp+=g; s.hp+=g; return True
+            s.level+=1; g=RNG.randint(3,8); s.max_hp+=g; s.hp+=g; return True
         return False
     def hunger(s):
         prev=s.state
@@ -515,8 +518,8 @@ class Player:
         if s.food<=0:
             if s.food < -STARVETIME:
                 s.hp=0; s.state="faint"; return "You starve to death."
-            if random.randrange(5)==0:
-                s.no_command=max(s.no_command,random.randint(4,11))
+            if RNG.randrange(5)==0:
+                s.no_command=max(s.no_command,RNG.randint(4,11))
                 s.state="faint"; return "You faint from lack of food."
             s.state="faint"; return None
         if s.food<MORETIME:
@@ -535,7 +538,7 @@ class Player:
             if s.quiet+(s.level<<1)>20:
                 s.hp+=1
         elif s.quiet>=3:
-            s.hp+=random.randint(1,max(1,s.level-7))
+            s.hp+=RNG.randint(1,max(1,s.level-7))
         if s.hp!=old:
             s.hp=min(s.hp,s.max_hp); s.quiet=0
     def recalc_ac(s):
@@ -560,11 +563,11 @@ class Player:
 class IdentTable:
     def __init__(s, lang=LANG_EN):
         s.lang = lang
-        s.pcol=random.sample(POT_COLORS,len(POTIONS))
-        syls=list(SCR_SYLS); random.shuffle(syls)
+        s.pcol=RNG.sample(POT_COLORS,len(POTIONS))
+        syls=list(SCR_SYLS); RNG.shuffle(syls)
         s.snam=[]
         for i in range(len(SCROLLS)):
-            n=random.randint(2,3); st=(i*3)%len(syls)
+            n=RNG.randint(2,3); st=(i*3)%len(syls)
             s.snam.append(" ".join(syls[(st+j)%len(syls)] for j in range(n)))
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
     def set_lang(s, lang):
@@ -732,7 +735,7 @@ class DGen:
         ]
         if not cells:
             return
-        start=random.choice(cells)
+        start=RNG.choice(cells)
         t[start[1]][start[0]]=T_CORR
         seen={start}; stack=[start]
         while stack:
@@ -745,7 +748,7 @@ class DGen:
             if not nxt:
                 stack.pop()
                 continue
-            nx,ny,dx,dy=random.choice(nxt)
+            nx,ny,dx,dy=RNG.choice(nxt)
             t[y+dy//2][x+dx//2]=T_CORR
             t[ny][nx]=T_CORR
             seen.add((nx,ny)); stack.append((nx,ny))
@@ -802,7 +805,7 @@ class DGen:
             target_y = r.y if side=="U" else r.y+r.h-1
             cands=[(x,y) for x in range(r.x+1,r.x+r.w-1) for y in ys if t[y][x]==T_CORR]
             cands.sort(key=lambda p: abs(p[1]-target_y))
-        p=random.choice(cands[:max(1,min(4,len(cands)))]) if cands else DGen._passage_side_point(r,side)
+        p=RNG.choice(cands[:max(1,min(4,len(cands)))]) if cands else DGen._passage_side_point(r,side)
         DGen._corr(t,p)
         return p
     @staticmethod
@@ -813,7 +816,7 @@ class DGen:
         else:
             y = r.y if side=="U" else r.y+r.h-1
             cands=[(x,y) for x in range(r.x+1,r.x+r.w-1)]
-        random.shuffle(cands)
+        RNG.shuffle(cands)
         for p in cands:
             if DGen._door_ok(t,p): return p
         return cands[0]
@@ -850,8 +853,8 @@ class DGen:
     def _turn_coord(a,b):
         lo,hi=min(a,b),max(a,b)
         if hi-lo <= 2:
-            return random.randint(lo,hi) if a!=b else a
-        return random.randint(lo+1,hi-1)
+            return RNG.randint(lo,hi) if a!=b else a
+        return RNG.randint(lo+1,hi-1)
     @staticmethod
     def _hl(t,x1,x2,y):
         if not(0<=y<MAP_H): return
@@ -888,30 +891,30 @@ class DGen:
 #  Item factory
 # ===========================================================
 def wchoice(tbl):
-    tot=sum(e["prob"] for e in tbl); r=random.randint(1,tot); a=0
+    tot=sum(e["prob"] for e in tbl); r=RNG.randint(1,tot); a=0
     for i,e in enumerate(tbl):
         a+=e["prob"]
         if r<=a: return i
     return 0
 
 def make_item(depth):
-    c=random.random()
+    c=RNG.random()
     if c<.27: return Item(CAT_POT,wchoice(POTIONS))
     if c<.54: return Item(CAT_SCR,wchoice(SCROLLS))
-    if c<.64: return Item(CAT_FOOD,random.randint(0,len(FOODS)-1))
+    if c<.64: return Item(CAT_FOOD,RNG.randint(0,len(FOODS)-1))
     if c<.82:
-        k=random.randint(0,len(WEAPONS)-1)
-        r=random.randrange(100)
+        k=RNG.randint(0,len(WEAPONS)-1)
+        r=RNG.randrange(100)
         hit_plus=0
         cursed=False
         if r<10:
-            hit_plus-=random.randrange(3)+1; cursed=True
+            hit_plus-=RNG.randrange(3)+1; cursed=True
         elif r<15:
-            hit_plus+=random.randrange(3)+1
-        q=random.randint(8,15) if WEAPONS[k].get("stack") else 1
+            hit_plus+=RNG.randrange(3)+1
+        q=RNG.randint(8,15) if WEAPONS[k].get("stack") else 1
         return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q)
-    k=random.randint(0,len(ARMORS)-1)
-    e=random.randint(-1,2) if depth>3 else random.randint(0,1)
+    k=RNG.randint(0,len(ARMORS)-1)
+    e=RNG.randint(-1,2) if depth>3 else RNG.randint(0,1)
     return Item(CAT_ARM,k,ench=e,cursed=e<0)
 
 def start_inv():
@@ -1002,9 +1005,9 @@ class Game:
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
-        px,py = self.random_room_tile(random.choice(usable_rooms), WALKABLE)
+        px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
-        sr=random.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
+        sr=RNG.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
         self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
         self._hide_secret_features(); self._spawn_traps()
         self._center_cam(); self.update_fov()
@@ -1023,7 +1026,7 @@ class Game:
     def random_room_tile(self, room, tiles):
         cands=self.room_tiles(room, tiles)
         if cands:
-            return random.choice(cands)
+            return RNG.choice(cands)
         return room.inner()
 
     def _center_cam(self):
@@ -1033,12 +1036,12 @@ class Game:
         self.cam_y = max(0, min(self.p.y - ZV_ROWS//2, max_y))
 
     def _spawn_mons(self):
-        d=self.p.depth; n=random.randint(3,4+d)
+        d=self.p.depth; n=RNG.randint(3,4+d)
         cands=[b for b in BESTIARY if b.min_depth<=d]
         if not cands: cands=[b for b in BESTIARY if b.min_depth<=3]
         rooms=self.usable_rooms()
         for _ in range(n):
-            rm=random.choice(rooms); e=random.choice(cands)
+            rm=RNG.choice(rooms); e=RNG.choice(cands)
             for _ in range(30):
                 mx,my=self.random_room_tile(rm, WALKABLE)
                 if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
@@ -1052,15 +1055,15 @@ class Game:
     def _spawn_items(self):
         d=self.p.depth
         rooms=self.usable_rooms()
-        for _ in range(random.randint(1,3)):
-            rm=random.choice(rooms)
+        for _ in range(RNG.randint(1,3)):
+            rm=RNG.choice(rooms)
             for _ in range(20):
                 ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
-                    g=Item(CAT_GOLD,0); g.qty=random.randint(1,10)*d; g.x,g.y=ix,iy
+                    g=Item(CAT_GOLD,0); g.qty=RNG.randint(1,10)*d; g.x,g.y=ix,iy
                     self.gitems.append(g); break
-        for _ in range(random.randint(2,4+d//3)):
-            rm=random.choice(rooms)
+        for _ in range(RNG.randint(2,4+d//3)):
+            rm=RNG.choice(rooms)
             for _ in range(20):
                 ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
@@ -1083,7 +1086,7 @@ class Game:
         ]
         if not cands:
             return
-        x,y=random.choice(cands)
+        x,y=RNG.choice(cands)
         amulet=Item(CAT_AMULET,0)
         amulet.x,amulet.y=x,y
         self.gitems.append(amulet)
@@ -1122,7 +1125,7 @@ class Game:
             and not self.gi_at(x,y)
             and not self.mon_at(x,y)
         ]
-        random.shuffle(cands)
+        RNG.shuffle(cands)
         for x,y in cands[:n]:
             self.traps[(x,y)]=rnd(len(TRAPS))
 
@@ -1253,7 +1256,7 @@ class Game:
     # ---------- Combat ----------
     def swing_hits(self, at_lvl, op_arm, wplus):
         need = (20 - at_lvl) - op_arm
-        return random.randrange(20) + wplus >= need
+        return RNG.randrange(20) + wplus >= need
 
     def player_weapon_profile(self, weap=None, thrown=False):
         hplus = dplus = 0
@@ -1335,7 +1338,7 @@ class Game:
         if m.sym=="M" and m.running and not self.p.blind and not m.found:
             m.found=True
             if not self.save_vs_magic():
-                self.p.confused=max(self.p.confused,random.randint(15,25))
+                self.p.confused=max(self.p.confused,RNG.randint(15,25))
                 mn=TextCatalog.monster(self.lang,m.name)
                 self.msg("{monster}'s gaze has confused you",monster=mn)
         if "steal_gold" in m.flags and not m.running:
@@ -1360,7 +1363,7 @@ class Game:
             if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                 self.rust_armor()
             if "steal_gold" in m.flags and self.p.gold>0:
-                s=min(self.p.gold,random.randint(10,50)+random.randint(10,50))
+                s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
                 self.p.gold-=s; self.msg("your purse feels lighter")
                 self.remove_monster(m); return
             if "poison" in m.flags and not self.save_vs_poison() and self.p.st>3:
@@ -1375,7 +1378,7 @@ class Game:
                 self.p.max_hp=max(1,self.p.max_hp-loss)
                 self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("you suddenly feel weaker")
             if "confuse" in m.flags and not self.save_vs_magic():
-                self.p.confused=random.randint(10,20); self.msg("You feel confused!")
+                self.p.confused=RNG.randint(10,20); self.msg("You feel confused!")
             if "freeze" in m.flags:
                 self.p.no_command+=rnd(2)+2
                 if self.p.no_command>BORE_LEVEL:
@@ -1448,7 +1451,7 @@ class Game:
 
     def random_monster_move(self,m):
         dirs=list(DIR8.values())+[(0,0)]
-        random.shuffle(dirs)
+        RNG.shuffle(dirs)
         for dx,dy in dirs:
             nx,ny=m.x+dx,m.y+dy
             if dx==dy==0:
@@ -1472,13 +1475,13 @@ class Game:
             dx=-1 if m.x<px else 1 if m.x>px else 0
             dy=-1 if m.y<py else 1 if m.y>py else 0
             if dx and dy:
-                if random.random()<.5: dx=0
+                if RNG.random()<.5: dx=0
                 else: dy=0
             nx,ny=m.x+dx,m.y+dy
             if self.walkable(nx,ny) and not self.mon_at(nx,ny) and not(nx==px and ny==py):
                 m.x,m.y=nx,ny
             return
-        if "regen" in m.flags and m.hp<m.max_hp and random.random()<.3: m.hp+=1
+        if "regen" in m.flags and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
         if (m.confused>0 and rnd(5)!=0) or (m.sym=="P" and rnd(5)==0) or (m.sym=="B" and rnd(2)==0):
             nx,ny=self.random_monster_move(m)
             if (nx,ny)==(px,py):
@@ -1517,12 +1520,12 @@ class Game:
             if p.hp>p.max_hp: p.max_hp=p.hp
             self.msg(f"You feel much better. (+{h})")
         elif nm=="poison":
-            l=random.randint(1,3); p.st=max(1,p.st-l); self.msg(f"You feel sick. (Str -{l})")
+            l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg(f"You feel sick. (Str -{l})")
         elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("Str +1!")
         elif nm=="restore strength": p.st=p.max_st; self.msg("You feel warm all over.")
-        elif nm=="confusion": p.confused=random.randint(15,25); self.msg("You feel confused.")
-        elif nm=="blindness": p.blind=random.randint(50,100); self.msg("Darkness falls.")
-        elif nm=="haste self": p.haste=random.randint(10,20); self.msg("You speed up!")
+        elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("You feel confused.")
+        elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("Darkness falls.")
+        elif nm=="haste self": p.haste=RNG.randint(10,20); self.msg("You speed up!")
         elif nm=="see invisible": self.msg("You can see invisible monsters.")
         elif nm=="raise level":
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
@@ -1542,7 +1545,7 @@ class Game:
             unid=[i for i in p.inv if (i.cat==CAT_POT and not self.ident.pk[i.kind])
                   or (i.cat==CAT_SCR and not self.ident.sk[i.kind])]
             if unid:
-                t=random.choice(unid)
+                t=RNG.choice(unid)
                 if t.cat==CAT_POT: self.ident.pk[t.kind]=True
                 else: self.ident.sk[t.kind]=True
                 self.msg(f"It is a {self.ident.name(t)}.")
@@ -1550,7 +1553,7 @@ class Game:
         elif nm=="enchant weapon":
             if p.wpn:
                 p.wpn.cursed=False
-                if random.randrange(2)==0: p.wpn.hit_plus+=1
+                if RNG.randrange(2)==0: p.wpn.hit_plus+=1
                 else: p.wpn.dam_plus+=1
                 p.wpn.ench=p.wpn.hit_plus
                 self.msg(f"Your {p.wpn.data['name']} glows blue!")
@@ -1568,12 +1571,12 @@ class Game:
             self.aggravate_monsters(); self.msg("You hear a humming noise.")
         elif nm=="scare monster":
             for mo in self.mons:
-                if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=random.randint(10,20)
+                if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=RNG.randint(10,20)
             self.msg("Maniacal laughter echoes.")
         elif nm=="sleep":
-            p.no_command=max(p.no_command,random.randint(4,8)); self.msg("You fall asleep.")
+            p.no_command=max(p.no_command,RNG.randint(4,8)); self.msg("You fall asleep.")
         elif nm=="teleportation":
-            r=random.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
+            r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
             self.msg("You are teleported!")
         elif nm=="create monster":
             for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):
@@ -1581,7 +1584,7 @@ class Game:
                 if self.walkable(nx,ny) and not self.mon_at(nx,ny):
                     cs=[b for b in BESTIARY if b.min_depth<=p.depth]
                     if cs:
-                        e=random.choice(cs)
+                        e=RNG.choice(cs)
                         self.mons.append(Monster(
                             nx, ny, e.sym, e.name, monster_hp(e),
                             e.level, e.armor, e.damage, e.exp, e.flags
@@ -1595,13 +1598,13 @@ class Game:
             self.msg("A map appears in your mind!")
         elif nm=="hold monster":
             for mo in self.mons:
-                if abs(mo.x-p.x)+abs(mo.y-p.y)<=4: mo.held=random.randint(10,20)
+                if abs(mo.x-p.x)+abs(mo.y-p.y)<=4: mo.held=RNG.randint(10,20)
             self.msg("Nearby monsters freeze!")
         elif nm=="blank paper": self.msg("This scroll is blank.")
         p.rm_item(it)
 
     def eat(self,it):
-        self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+random.randrange(400))
+        self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+RNG.randrange(400))
         self.p.state="normal"
         self.msg(f"You eat the {it.data['name']}. Yum!"); self.p.rm_item(it)
 
@@ -1641,7 +1644,7 @@ class Game:
                 if not self.walkable(xx,yy) or self.tm[yy][xx]==T_DOOR: continue
                 if self.mon_at(xx,yy) or self.gi_at(xx,yy): continue
                 cnt+=1
-                if random.randrange(cnt)==0:
+                if RNG.randrange(cnt)==0:
                     choice=(xx,yy)
         return choice
 
@@ -1697,7 +1700,7 @@ class Game:
             self.end_turn()
             return True
         if p.confused>0:
-            dx,dy = random.choice([-1,0,1]), random.choice([-1,0,1])
+            dx,dy = RNG.choice([-1,0,1]), RNG.choice([-1,0,1])
         if dx or dy:
             p.facing=(dx,dy)
         nx, ny = p.x+dx, p.y+dy
@@ -1743,7 +1746,7 @@ class Game:
         self.end_turn()
 
     def trap_hits(self, bonus=0):
-        th=random.randint(1,20)+bonus
+        th=RNG.randint(1,20)+bonus
         return th>=self.p.ac or th-bonus==20
 
     def save_vs_poison(self):
@@ -1764,7 +1767,7 @@ class Game:
             if tile in WALKABLE and tile!=T_TRAP and not self.mon_at(x,y)
         ]
         if cands:
-            self.p.x,self.p.y=random.choice(cands)
+            self.p.x,self.p.y=RNG.choice(cands)
             self.update_fov(); self._center_cam()
 
     def trigger_trap(self,x,y):
@@ -1818,7 +1821,7 @@ class Game:
             self.msg("your armor weakens")
 
     def mysterious_trap_msg(self):
-        color=random.choice(RAINBOW)
+        color=RNG.choice(RAINBOW)
         msgs=[
             ("you are suddenly in a parallel dimension",{}),
             ("the light in here suddenly seems {color}",{"color":color}),
@@ -1832,7 +1835,7 @@ class Game:
             ("time now seems to be going slower",{}),
             ("your pack turns {color}!",{"color":color}),
         ]
-        key,kw=random.choice(msgs)
+        key,kw=RNG.choice(msgs)
         self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
