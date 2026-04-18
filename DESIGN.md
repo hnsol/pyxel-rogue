@@ -109,7 +109,17 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 武器は Rogue 5.4.4 の `weapons.c:init_dam`, `fight.c:roll_em`, `things.c:inv_name/new_thing`, `scrolls.c:S_ENCH` を基準にする。武器は命中補正 `hit_plus` とダメージ補正 `dam_plus` を別々に持ち、表示も `+1,+1 mace (weapon in hand)` のように2値で出す。近接・投擲とも Strength の命中/ダメージ補正を通し、arrow + bow のような launcher 補正も原作に合わせて合算する。
 
-防具は当面既存の `ench` 表現を維持する。ring of dexterity / increase damage は未実装だが、後で `fight.c:roll_em` 相当に加算できるよう、武器計算は小さな helper に分けている。
+防具は当面既存の `ench` 表現を維持する。ring of dexterity / increase damage は `fight.c:roll_em` 相当に合わせ、装備中武器での近接攻撃に限って加算する。
+
+## 指輪メカニクス
+
+指輪は Rogue 5.4.4 の `rogue.h:R_*`, `extern.c:ring_info[]`, `init.c:stones[]/init_stones()`, `things.c:new_thing()/inv_name()/dropcheck()`, `rings.c:ring_on()/ring_off()/ring_eat()/ring_num()`, `fight.c:roll_em()`, `daemons.c:doctor()/stomach()`, `scrolls.c:S_REMOVE` を基準にする。`rogue_rings.py` を Pyxel 非依存の最初の指輪ロジック境界とし、14種テーブル、ランダム石名、補正付き指輪生成、左右スロット、装備/解除、呪い、食料消費をここへ寄せる。
+
+初回実装では、ゲーム状態に直結する protection / add strength / dexterity / increase damage / slow digestion / regeneration を接続した。protection はプレイヤーAC、防具と同じ低いほど強い値へ反映し、dexterity / increase damage は装備中武器での近接攻撃にだけ加算する。slow digestion と searching などの確率型食料消費は `rings.c:ring_eat()` の負値テーブルに合わせ、slow digestion は消費を減らす。regeneration は `daemons.c:doctor()` と同じく自然回復判定後に追加回復し、回復した場合は quiet をリセットする。
+
+UI差分として、原作の `gethand()` による左右手プロンプトは、携帯機向けメニュー操作では最初の空きスロットへ装備し、解除時は装備中アイテムを選ぶ方式にしている。左右どちらに装備されているかはインベントリ表示の `(on left hand)` / `(on right hand)` で確認できる。今後、左右指定が攻略上必要になる場面が出た場合は、ゲーム状態の差分を出さずに方向入力で手を選ぶUIへ拡張する。
+
+残作業は searching の search 確率連携、see invisible と Phantom 表示、aggravate monster の装備時起床、teleportation のターン経過テレポート、stealth とモンスター起床、maintain armor と錆び/弱体化防止、sustain strength と毒/Strength低下防止、adornment の識別周辺挙動である。これらは各機能の原作関数を確認し、Rogue 5.4.4 期待値テストを先に置いてから接続する。
 
 ## フォント
 

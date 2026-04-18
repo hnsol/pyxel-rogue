@@ -22,6 +22,7 @@ import os
 import time
 from dataclasses import dataclass
 from rogue_rng import RogueRng
+import rogue_rings
 
 RNG = RogueRng(random)
 
@@ -106,9 +107,10 @@ ST_AUX = 7; ST_WIN = 8
 #  Item categories
 # ===========================================================
 CAT_POT = "pot"; CAT_SCR = "scr"; CAT_FOOD = "food"
-CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_GOLD = "gold"; CAT_AMULET = "amulet"
-ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_GOLD:"*",CAT_AMULET:","}
-ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_GOLD:10,CAT_AMULET:10}
+CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_RING = "ring"
+CAT_GOLD = "gold"; CAT_AMULET = "amulet"
+ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_RING:"=",CAT_GOLD:"*",CAT_AMULET:","}
+ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_RING:14,CAT_GOLD:10,CAT_AMULET:10}
 
 # ===========================================================
 #  Text catalog
@@ -140,6 +142,13 @@ ARMOR_JA = {
     "studded leather":"鋲打ち革のよろい", "scale mail":"うろこのよろい",
     "chain mail":"鎖かたびら", "splint mail":"延金のよろい",
     "banded mail":"帯金のよろい", "plate mail":"鋼鉄のよろい",
+}
+RING_JA = {
+    "protection":"守り", "add strength":"強さが増す", "sustain strength":"強さを保つ",
+    "searching":"探索", "see invisible":"見えないものが見える", "adornment":"飾り",
+    "aggravate monster":"怪物を怒らせる", "dexterity":"器用さ",
+    "increase damage":"ダメージ増加", "regeneration":"回復", "slow digestion":"腹持ち",
+    "teleportation":"テレポート", "stealth":"忍び足", "maintain armor":"よろいを保つ",
 }
 MONSTER_JA = {
     "aquator":"水ごけの怪物", "bat":"大こうもり", "centaur":"ケンタウロス",
@@ -223,18 +232,23 @@ class TextCatalog:
             "You feel a wrenching sensation in your gut.":"腹の底がねじれるような感じがした。",
             "Your way is magically blocked.":"魔法の力で道がふさがれている。",
             "You escaped with the Amulet of Yendor!":"イェンダーの魔除けを持って脱出した！",
+            "You are now wearing {item}.":"{item}を身につけた。",
+            "You already have a ring on each hand.":"両手に指輪をしている。",
+            "You aren't wearing any rings.":"指輪をしていない。",
+            "You remove the {item}.":"{item}をはずした。",
+            "You can't. It appears to be cursed.":"はずせない。のろわれているようだ。",
         },
     }
     MENU = {
         LANG_EN: {
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
-            "Wear":"Wear", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
+            "Wear":"Wear", "Put on":"Put on", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
             "Inventory":"Inventory", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
             "Trap":"Trap", "Language":"Language",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
-            "Wear":"身につける", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
+            "Wear":"よろいを着る", "Put on":"指輪をはめる", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
             "Inventory":"持ちもの", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
             "Trap":"罠", "Language":"言語",
         },
@@ -275,6 +289,7 @@ class TextCatalog:
         if cat == CAT_FOOD: return FOOD_JA.get(name, name)
         if cat == CAT_WPN: return WEAPON_JA.get(name, name)
         if cat == CAT_ARM: return ARMOR_JA.get(name, name)
+        if cat == CAT_RING: return RING_JA.get(name, name)
         if cat == CAT_AMULET: return "イェンダーの魔除け"
         return name
 
@@ -344,6 +359,7 @@ ARMORS = [
     {"name":"chain mail","ac":5},{"name":"splint mail","ac":4},
     {"name":"banded mail","ac":4},{"name":"plate mail","ac":3},
 ]
+RINGS = [{"name":r.name,"prob":r.prob,"worth":r.worth} for r in rogue_rings.RINGS]
 
 TRAPS = [
     {"name":"trap door"}, {"name":"arrow trap"},
@@ -412,7 +428,7 @@ BACK_TAP_FRAMES = 8
 # ===========================================================
 MENU_ACTIONS = [
     ("Quaff",   CAT_POT),("Read",   CAT_SCR),("Eat",    CAT_FOOD),
-    ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Take off",None),
+    ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Put on", CAT_RING),("Take off",None),
     ("Throw",   None),   ("Drop",   None),
 ]
 AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"]
@@ -461,6 +477,7 @@ class Item:
         if s.cat==CAT_FOOD: return FOODS[s.kind]
         if s.cat==CAT_WPN: return WEAPONS[s.kind]
         if s.cat==CAT_ARM: return ARMORS[s.kind]
+        if s.cat==CAT_RING: return RINGS[s.kind]
         if s.cat==CAT_AMULET: return {"name":"Amulet of Yendor"}
         return {}
     @property
@@ -493,6 +510,7 @@ class Player:
         s.x=s.y=0; s.hp=s.max_hp=16; s.st=s.max_st=16
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
+        s.ring_l=None; s.ring_r=None
         s.confused=s.blind=s.haste=0
         s.no_command=s.no_move=0
         s.held_by=None
@@ -514,14 +532,18 @@ class Player:
         return False
     def hunger(s):
         prev=s.state
-        s.food-=1
         if s.food<=0:
             if s.food < -STARVETIME:
                 s.hp=0; s.state="faint"; return "You starve to death."
+            s.food-=1
             if RNG.randrange(5)==0:
                 s.no_command=max(s.no_command,RNG.randint(4,11))
                 s.state="faint"; return "You faint from lack of food."
             s.state="faint"; return None
+        s.food-=1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG)
+        if s.food<=0:
+            s.state="faint"
+            return None
         if s.food<MORETIME:
             s.state="weak"
             return "You are weak." if prev!="weak" else None
@@ -539,10 +561,12 @@ class Player:
                 s.hp+=1
         elif s.quiet>=3:
             s.hp+=RNG.randint(1,max(1,s.level-7))
+        s.hp+=rogue_rings.regeneration_count(s)
         if s.hp!=old:
             s.hp=min(s.hp,s.max_hp); s.quiet=0
     def recalc_ac(s):
         s.ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else 10
+        s.ac -= rogue_rings.protection_bonus(s)
     def str_hit_plus(s):
         return STR_PLUS[max(0,min(s.st,len(STR_PLUS)-1))]
     def str_dam_plus(s):
@@ -559,6 +583,12 @@ class Player:
         if it in s.inv: s.inv.remove(it)
         if s.wpn is it: s.wpn=None
         if s.arm is it: s.arm=None; s.recalc_ac()
+        if s.ring_l is it or s.ring_r is it:
+            was_cursed = it.cursed
+            it.cursed = False
+            rogue_rings.remove_ring(s,it)
+            it.cursed = was_cursed
+            s.recalc_ac()
 
 class IdentTable:
     def __init__(s, lang=LANG_EN):
@@ -570,6 +600,8 @@ class IdentTable:
             n=RNG.randint(2,3); st=(i*3)%len(syls)
             s.snam.append(" ".join(syls[(st+j)%len(syls)] for j in range(n)))
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
+        s.rstones=rogue_rings.init_stones(RNG)
+        s.rk=[False]*len(RINGS)
     def set_lang(s, lang):
         s.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
     def name(s,it,lang=None):
@@ -603,6 +635,14 @@ class IdentTable:
             e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
             protection = 10 - (it.data["ac"] - e)
             return f"{'+' if e>=0 else ''}{e} {nm} [protection {protection}]"
+        if it.cat==CAT_RING:
+            spec=RINGS[it.kind]
+            if s.rk[it.kind]:
+                nm=TextCatalog.item_kind(lang, CAT_RING, spec["name"])
+                num=rogue_rings.ring_num(it)
+                return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}の指輪{num}"
+            stone=s.rstones[it.kind]
+            return f"{stone} ring" if lang==LANG_EN else f"{stone}の指輪"
         if it.cat==CAT_AMULET:
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
             return f"the {nm}" if lang==LANG_EN else nm
@@ -899,10 +939,10 @@ def wchoice(tbl):
 
 def make_item(depth):
     c=RNG.random()
-    if c<.27: return Item(CAT_POT,wchoice(POTIONS))
-    if c<.54: return Item(CAT_SCR,wchoice(SCROLLS))
-    if c<.64: return Item(CAT_FOOD,RNG.randint(0,len(FOODS)-1))
-    if c<.82:
+    if c<.26: return Item(CAT_POT,wchoice(POTIONS))
+    if c<.62: return Item(CAT_SCR,wchoice(SCROLLS))
+    if c<.78: return Item(CAT_FOOD,RNG.randint(0,len(FOODS)-1))
+    if c<.85:
         k=RNG.randint(0,len(WEAPONS)-1)
         r=RNG.randrange(100)
         hit_plus=0
@@ -913,6 +953,13 @@ def make_item(depth):
             hit_plus+=RNG.randrange(3)+1
         q=RNG.randint(8,15) if WEAPONS[k].get("stack") else 1
         return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q)
+    if c<.92:
+        k=RNG.randint(0,len(ARMORS)-1)
+        e=RNG.randint(-1,2) if depth>3 else RNG.randint(0,1)
+        return Item(CAT_ARM,k,ench=e,cursed=e<0)
+    if c<.96:
+        ring=rogue_rings.make_ring(RNG, CAT_RING)
+        return Item(CAT_RING,ring.kind,ench=ring.ench,cursed=ring.cursed)
     k=RNG.randint(0,len(ARMORS)-1)
     e=RNG.randint(-1,2) if depth>3 else RNG.randint(0,1)
     return Item(CAT_ARM,k,ench=e,cursed=e<0)
@@ -944,6 +991,8 @@ class Game:
         name=self.ident.name(it)
         if describe and it is self.p.wpn: return f"{name} (weapon in hand)"
         if describe and it is self.p.arm: return f"{name} (being worn)"
+        if describe and it is self.p.ring_l: return f"{name} (on left hand)"
+        if describe and it is self.p.ring_r: return f"{name} (on right hand)"
         return name
 
     def equip_name(self,it):
@@ -1265,6 +1314,8 @@ class Game:
             data = weap.data
             hplus += weap.hit_plus
             dplus += weap.dam_plus
+            hplus += rogue_rings.weapon_hit_bonus(self.p, weap, thrown)
+            dplus += rogue_rings.weapon_damage_bonus(self.p, weap, thrown)
             damage = data["damage"]
             if thrown:
                 launcher = data.get("launcher")
@@ -1312,9 +1363,9 @@ class Game:
 
     def monster_has_magic_item_to_steal(self):
         for it in self.p.inv:
-            if it is self.p.wpn or it is self.p.arm:
+            if it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r:
                 continue
-            if it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM):
+            if it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM, CAT_RING):
                 return it
         return None
 
@@ -1563,7 +1614,7 @@ class Game:
             else: self.msg("You feel a sense of loss.")
         elif nm=="remove curse":
             changed=False
-            for i in (p.wpn,p.arm):
+            for i in (p.wpn,p.arm,p.ring_l,p.ring_r):
                 if i and i.cursed:
                     i.cursed=False; changed=True
             self.msg("Your equipment feels lighter." if changed else "Somebody watches over you.")
@@ -1617,6 +1668,17 @@ class Game:
             if self.p.arm.cursed: self.msg("Cursed armor won't come off!"); return
         self.p.arm=it; self.p.recalc_ac(); self.msg(f"You put on the {self.ident.name(it)}.")
 
+    def put_on_ring(self,it):
+        if self.p.ring_l is not None and self.p.ring_r is not None:
+            self.msg("You already have a ring on each hand.")
+            return
+        if rogue_rings.put_on_ring(self.p,it):
+            self.p.recalc_ac()
+            if it.kind in (rogue_rings.R_PROTECT, rogue_rings.R_ADDSTR,
+                           rogue_rings.R_ADDHIT, rogue_rings.R_ADDDAM):
+                self.ident.rk[it.kind]=True
+            self.msg("You are now wearing {item}.",item=self.ident.name(it))
+
     def takeoff(self,it):
         if it is self.p.arm:
             if it.cursed: self.msg("It's cursed!"); return
@@ -1624,10 +1686,15 @@ class Game:
         elif it is self.p.wpn:
             if it.cursed: self.msg("It's cursed!"); return
             self.p.wpn=None
-        self.msg(f"You remove the {self.ident.name(it)}.")
+        elif it is self.p.ring_l or it is self.p.ring_r:
+            if not rogue_rings.remove_ring(self.p,it):
+                self.msg("You can't. It appears to be cursed.")
+                return
+            self.p.recalc_ac()
+        self.msg("You remove the {item}.",item=self.ident.name(it))
 
     def drop(self,it):
-        if (it is self.p.wpn or it is self.p.arm) and it.cursed:
+        if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
             self.msg("It's cursed!"); return
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
         self.gitems.append(it); self.msg(f"You drop the {self.ident.name(it)}.")
@@ -2029,7 +2096,7 @@ class Game:
         self.action_origin = self.st
         self.cact = aname; p = self.p
         if aname=="Take off":
-            self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm]
+            self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm or i is p.ring_l or i is p.ring_r]
         elif aname in("Throw","Drop"):
             self.fitems=list(p.inv)
         elif cat:
@@ -2060,6 +2127,7 @@ class Game:
         elif a=="Eat":   self.eat(it)
         elif a=="Wield": self.wield(it)
         elif a=="Wear":  self.wear(it)
+        elif a=="Put on": self.put_on_ring(it)
         elif a=="Take off": self.takeoff(it)
         elif a=="Drop":  self.drop(it)
         self.close_menu(); self.end_turn()

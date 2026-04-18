@@ -6,6 +6,21 @@ import types
 import unittest
 
 
+class SequenceRng:
+    def __init__(self, values=None):
+        self.values = list(values or [])
+        self.calls = []
+
+    def rnd(self, n):
+        self.calls.append(n)
+        if not self.values:
+            return 0
+        return self.values.pop(0)
+
+    def shuffle(self, seq):
+        pass
+
+
 def install_pyxel_mock():
     pyxel = types.ModuleType("pyxel")
     pyxel._held = set()
@@ -106,6 +121,152 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def test_rogue_544_ring_table_and_stones_audit(self):
+        # Rogue 5.4.4 extern.c:ring_info[], init.c:stones[] / init_stones().
+        import rogue_rings
+
+        self.assertEqual(rogue.CAT_RING, "ring")
+        self.assertEqual([r.name for r in rogue_rings.RINGS], [
+            "protection", "add strength", "sustain strength", "searching",
+            "see invisible", "adornment", "aggravate monster", "dexterity",
+            "increase damage", "regeneration", "slow digestion", "teleportation",
+            "stealth", "maintain armor",
+        ])
+        self.assertEqual([r.prob for r in rogue_rings.RINGS], [9, 9, 5, 10, 10, 1, 10, 8, 8, 4, 9, 5, 7, 5])
+        self.assertEqual(rogue_rings.STONES[:4], ["agate", "alexandrite", "amethyst", "carnelian"])
+        self.assertEqual(rogue_rings.STONES[-2:], ["taaffeite", "zircon"])
+
+        ident = rogue.IdentTable()
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2)
+        self.assertEqual(ident.name(ring), f"{ident.rstones[rogue_rings.R_PROTECT]} ring")
+        ident.rk[rogue_rings.R_PROTECT] = True
+        self.assertEqual(ident.name(ring), "ring of protection [+2]")
+
+    def test_rogue_544_ring_generation_bonuses_and_curses(self):
+        # Rogue 5.4.4 things.c:new_thing() ring case.
+        import rogue_rings
+
+        old_pick = rogue_rings.pick_ring_kind
+        try:
+            rogue_rings.pick_ring_kind = lambda rng: rogue_rings.R_PROTECT
+            ring = rogue_rings.make_ring(SequenceRng([0]))
+            self.assertEqual(ring.ench, -1)
+            self.assertTrue(ring.cursed)
+
+            ring = rogue_rings.make_ring(SequenceRng([2]))
+            self.assertEqual(ring.ench, 2)
+            self.assertFalse(ring.cursed)
+
+            rogue_rings.pick_ring_kind = lambda rng: rogue_rings.R_TELEPORT
+            ring = rogue_rings.make_ring(SequenceRng())
+            self.assertTrue(ring.cursed)
+        finally:
+            rogue_rings.pick_ring_kind = old_pick
+
+    def test_rogue_544_ring_slots_effects_and_cursed_remove(self):
+        # Rogue 5.4.4 rings.c:ring_on/ring_off and things.c:dropcheck().
+        import rogue_rings
+
+        player = rogue.Player()
+        add_str = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR, ench=2)
+        prot = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=1)
+        player.arm = rogue.Item(rogue.CAT_ARM, 0, ench=1)
+        player.recalc_ac()
+
+        self.assertTrue(rogue_rings.put_on_ring(player, add_str, rogue_rings.LEFT))
+        self.assertEqual(player.st, 18)
+        self.assertEqual(player.max_st, 18)
+        self.assertTrue(rogue_rings.put_on_ring(player, prot, rogue_rings.RIGHT))
+        player.recalc_ac()
+        self.assertEqual(player.ac, 6)
+
+        add_str.cursed = True
+        self.assertFalse(rogue_rings.remove_ring(player, add_str))
+        self.assertIs(player.ring_l, add_str)
+        add_str.cursed = False
+        self.assertTrue(rogue_rings.remove_ring(player, add_str))
+        self.assertEqual(player.st, 16)
+        self.assertEqual(player.max_st, 16)
+        self.assertIsNone(player.ring_l)
+
+    def test_rogue_544_remove_curse_uncurses_equipped_rings(self):
+        # Rogue 5.4.4 scrolls.c:S_REMOVE uncurses cur_ring[LEFT/RIGHT].
+        import rogue_rings
+
+        game = new_game(seed=10)
+        scroll = rogue.Item(rogue.CAT_SCR, next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse"))
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_TELEPORT, cursed=True)
+        game.p.inv.extend([scroll, ring])
+        game.put_on_ring(ring)
+
+        game.use_scr(scroll)
+
+        self.assertFalse(ring.cursed)
+
+    def test_rogue_544_ring_food_consumption(self):
+        # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
+        import rogue_rings
+
+        regen = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        digest = rogue.Item(rogue.CAT_RING, rogue_rings.R_DIGEST)
+        search = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEARCH)
+        self.assertEqual(rogue_rings.ring_eat(regen, SequenceRng()), 2)
+        self.assertEqual(rogue_rings.ring_eat(digest, SequenceRng([0])), -1)
+        self.assertEqual(rogue_rings.ring_eat(digest, SequenceRng([1])), 0)
+        self.assertEqual(rogue_rings.ring_eat(search, SequenceRng([0])), 1)
+        self.assertEqual(rogue_rings.ring_eat(search, SequenceRng([1])), 0)
+
+        player = rogue.Player()
+        player.ring_l = regen
+        player.ring_r = digest
+        player.food = 100
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            player.hunger()
+            self.assertEqual(player.food, 98)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        player.food = 0
+        player.hp = 10
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            player.hunger()
+            self.assertEqual(player.food, -1)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+    def test_rogue_544_ring_damage_hit_and_regeneration_effects(self):
+        import rogue_rings
+
+        game = new_game(seed=9)
+        set_open_floor(game)
+        dex = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDHIT, ench=2)
+        dam = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDDAM, ench=3)
+        game.p.ring_l = dex
+        game.p.ring_r = dam
+
+        damage, hplus, dplus = game.player_weapon_profile(game.p.wpn, thrown=False)
+        self.assertEqual((damage, hplus, dplus), ("2d4", 3, 4))
+
+        game.p.wpn = next(it for it in game.p.inv if it.cat == rogue.CAT_WPN and it.kind == 2)
+        thrown = rogue.Item(rogue.CAT_WPN, 3, hit_plus=0, dam_plus=0)
+        damage, hplus, dplus = game.player_weapon_profile(thrown, thrown=True)
+        self.assertEqual((damage, hplus, dplus), ("2d3", 1, 0))
+
+        game.p.hp = 1
+        game.p.max_hp = 10
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.RNG.randint = lambda a, b: a
+            game.p.heal_tick()
+            self.assertEqual(game.p.hp, 2)
+        finally:
+            rogue.RNG.randint = old_randint
+
     def test_full_map_layout_baseline(self):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
@@ -819,7 +980,7 @@ class RogueBaselineTest(unittest.TestCase):
         old_randrange = rogue.random.randrange
         seq = iter([9, 2])
         try:
-            rogue.random.random = lambda: 0.70
+            rogue.random.random = lambda: 0.80
             rogue.random.randint = lambda a, b: a
             rogue.random.randrange = lambda n: next(seq)
             item = rogue.make_item(depth=10)
