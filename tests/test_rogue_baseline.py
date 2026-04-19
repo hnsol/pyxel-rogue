@@ -121,6 +121,69 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def test_rogue_544_stick_table_materials_and_names_audit(self):
+        # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
+        import rogue_sticks
+
+        self.assertEqual(rogue.CAT_STICK, "stick")
+        self.assertEqual([s.name for s in rogue_sticks.STICKS], [
+            "light", "invisibility", "lightning", "fire", "cold", "polymorph",
+            "magic missile", "haste monster", "slow monster", "drain life",
+            "nothing", "teleport away", "teleport to", "cancellation",
+        ])
+        self.assertEqual([s.prob for s in rogue_sticks.STICKS], [12, 6, 3, 3, 3, 15, 10, 10, 11, 9, 1, 6, 6, 5])
+        self.assertEqual(rogue_sticks.METALS[:4], ["aluminum", "beryllium", "bone", "brass"])
+        self.assertEqual(rogue_sticks.WOODS[:4], ["avocado wood", "balsa", "bamboo", "banyan"])
+
+        ident = rogue.IdentTable()
+        ident.wtypes[rogue_sticks.WS_LIGHT] = "wand"
+        ident.wmades[rogue_sticks.WS_LIGHT] = "copper"
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=12)
+        self.assertEqual(ident.name(stick), "copper wand")
+        ident.wk[rogue_sticks.WS_LIGHT] = True
+        self.assertEqual(ident.name(stick), "wand of light [12 charges](copper)")
+
+    def test_rogue_544_stick_generation_charges_and_fix_stick(self):
+        # Rogue 5.4.4 things.c:new_thing() stick case and sticks.c:fix_stick().
+        import rogue_sticks
+
+        old_pick = rogue_sticks.pick_stick_kind
+        try:
+            rogue_sticks.pick_stick_kind = lambda rng: rogue_sticks.WS_LIGHT
+            stick = rogue_sticks.make_stick(SequenceRng([4]))
+            self.assertEqual(stick.kind, rogue_sticks.WS_LIGHT)
+            self.assertEqual(stick.charges, 14)
+
+            rogue_sticks.pick_stick_kind = lambda rng: rogue_sticks.WS_FIRE
+            stick = rogue_sticks.make_stick(SequenceRng([2]))
+            self.assertEqual(stick.charges, 5)
+        finally:
+            rogue_sticks.pick_stick_kind = old_pick
+
+        self.assertEqual(rogue_sticks.stick_damage("staff"), ("2x3", "1x1"))
+        self.assertEqual(rogue_sticks.stick_damage("wand"), ("1x1", "1x1"))
+
+    def test_rogue_544_zap_light_consumes_charge_identifies_and_lights_room(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_LIGHT marks known, lights the room, then decrements charges.
+        import rogue_sticks
+
+        game = new_game(seed=201)
+        dark = rogue.Room(5, 5, 8, 6, flags={rogue.ROOM_DARK})
+        game.rooms = [dark]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(game.tm, dark)
+        game.p.x, game.p.y = 7, 7
+        game.update_fov()
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=1)
+        game.p.inv.append(stick)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_LIGHT])
+        self.assertNotIn(rogue.ROOM_DARK, dark.flags)
+        self.assertIn("the room is lit", game.msgs)
+
     def test_rogue_544_ring_table_and_stones_audit(self):
         # Rogue 5.4.4 extern.c:ring_info[], init.c:stones[] / init_stones().
         import rogue_rings

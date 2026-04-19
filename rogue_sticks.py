@@ -1,0 +1,127 @@
+from dataclasses import dataclass
+
+WS_LIGHT = 0
+WS_INVIS = 1
+WS_ELECT = 2
+WS_FIRE = 3
+WS_COLD = 4
+WS_POLYMORPH = 5
+WS_MISSILE = 6
+WS_HASTE_M = 7
+WS_SLOW_M = 8
+WS_DRAIN = 9
+WS_NOP = 10
+WS_TELAWAY = 11
+WS_TELTO = 12
+WS_CANCEL = 13
+
+
+@dataclass(frozen=True)
+class StickSpec:
+    name: str
+    prob: int
+    worth: int
+
+
+@dataclass
+class StickItem:
+    cat: str
+    kind: int
+    charges: int = 0
+
+
+# Rogue 5.4.4 extern.c:ws_info[] order matches rogue.h WS_* constants.
+STICKS = [
+    StickSpec("light", 12, 250),
+    StickSpec("invisibility", 6, 5),
+    StickSpec("lightning", 3, 330),
+    StickSpec("fire", 3, 330),
+    StickSpec("cold", 3, 330),
+    StickSpec("polymorph", 15, 310),
+    StickSpec("magic missile", 10, 170),
+    StickSpec("haste monster", 10, 5),
+    StickSpec("slow monster", 11, 350),
+    StickSpec("drain life", 9, 300),
+    StickSpec("nothing", 1, 5),
+    StickSpec("teleport away", 6, 340),
+    StickSpec("teleport to", 6, 50),
+    StickSpec("cancellation", 5, 280),
+]
+
+# Rogue 5.4.4 init.c:metal[] / wood[].
+METALS = [
+    "aluminum", "beryllium", "bone", "brass", "bronze", "copper",
+    "electrum", "gold", "iron", "lead", "magnesium", "mercury",
+    "nickel", "pewter", "platinum", "steel", "silver", "silicon",
+    "tin", "titanium", "tungsten", "zinc",
+]
+
+WOODS = [
+    "avocado wood", "balsa", "bamboo", "banyan", "birch", "cedar",
+    "cherry", "cinnibar", "cypress", "dogwood", "driftwood", "ebony",
+    "elm", "eucalyptus", "fall", "hemlock", "holly", "ironwood",
+    "kukui wood", "mahogany", "manzanita", "maple", "oaken",
+    "persimmon wood", "pecan", "pine", "poplar", "redwood", "rosewood",
+    "spruce", "teak", "walnut", "zebrawood",
+]
+
+
+def pick_stick_kind(rng):
+    """Rogue 5.4.4 things.c:pick_one(ws_info, MAXSTICKS)."""
+    roll = rng.rnd(100)
+    acc = 0
+    for i, spec in enumerate(STICKS):
+        acc += spec.prob
+        if roll < acc:
+            return i
+    return 0
+
+
+def initial_charges(kind, rng):
+    """Rogue 5.4.4 sticks.c:fix_stick() charge branch."""
+    if kind == WS_LIGHT:
+        return rng.rnd(10) + 10
+    return rng.rnd(5) + 3
+
+
+def make_stick(rng, cat="stick"):
+    """Create stick fields using Rogue 5.4.4 things.c:new_thing()."""
+    kind = pick_stick_kind(rng)
+    return StickItem(cat=cat, kind=kind, charges=initial_charges(kind, rng))
+
+
+def stick_damage(stick_type):
+    """Rogue 5.4.4 sticks.c:fix_stick() melee and thrown damage."""
+    if stick_type == "staff":
+        return "2x3", "1x1"
+    return "1x1", "1x1"
+
+
+def init_materials(rng):
+    """Rogue 5.4.4 init.c:init_materials()."""
+    wood_used = [False] * len(WOODS)
+    metal_used = [False] * len(METALS)
+    types = []
+    made = []
+    for _ in range(len(STICKS)):
+        while True:
+            if rng.rnd(2) == 0:
+                j = rng.rnd(len(METALS))
+                if not metal_used[j]:
+                    metal_used[j] = True
+                    types.append("wand")
+                    made.append(METALS[j])
+                    break
+            else:
+                j = rng.rnd(len(WOODS))
+                if not wood_used[j]:
+                    wood_used[j] = True
+                    types.append("staff")
+                    made.append(WOODS[j])
+                    break
+    return types, made
+
+
+def charge_str(stick):
+    charges = getattr(stick, "charges", None)
+    return "" if charges is None else f" [{charges} charges]"

@@ -91,6 +91,8 @@ Keyboard:
 - I: Inventory
 - ?: Help
 
+Use Zap from the menu to choose a wand or staff, then choose a direction.
+
 ## Current Status
 
 Implemented overview:
@@ -99,6 +101,7 @@ Implemented overview:
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses
+- Wand/staff 14-type table, random materials, charges, directional Zap entry, and light room illumination
 - Search, traps, hidden doors, hidden passages, and trap inspection
 - Amulet of Yendor and depth-1 return victory while carrying it
 - Auto-pickup toggle and throwing animation
@@ -110,7 +113,7 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 
 ## Roadmap
 
-- Wands/staves
+- Remaining wand/staff effects
 - More Rogue 5.4.4 expectation tests
 - Full message catalog coverage
 - Responsive layout and font selection

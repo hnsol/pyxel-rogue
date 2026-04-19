@@ -23,6 +23,7 @@ import time
 from dataclasses import dataclass
 from rogue_rng import RogueRng
 import rogue_rings
+import rogue_sticks
 
 RNG = RogueRng(random)
 UI_BUILD = "2604191118"
@@ -108,10 +109,10 @@ ST_AUX = 7; ST_WIN = 8
 #  Item categories
 # ===========================================================
 CAT_POT = "pot"; CAT_SCR = "scr"; CAT_FOOD = "food"
-CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_RING = "ring"
+CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_RING = "ring"; CAT_STICK = "stick"
 CAT_GOLD = "gold"; CAT_AMULET = "amulet"
-ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_RING:"=",CAT_GOLD:"*",CAT_AMULET:","}
-ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_RING:14,CAT_GOLD:10,CAT_AMULET:10}
+ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_RING:"=",CAT_STICK:"/",CAT_GOLD:"*",CAT_AMULET:","}
+ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_RING:14,CAT_STICK:11,CAT_GOLD:10,CAT_AMULET:10}
 
 # ===========================================================
 #  Text catalog
@@ -150,6 +151,14 @@ RING_JA = {
     "aggravate monster":"怪物を怒らせる", "dexterity":"器用さ",
     "increase damage":"ダメージ増加", "regeneration":"回復", "slow digestion":"腹持ち",
     "teleportation":"テレポート", "stealth":"忍び足", "maintain armor":"よろいを保つ",
+}
+STICK_JA = {
+    "light":"明かり", "invisibility":"見えなくする", "lightning":"稲妻",
+    "fire":"火炎", "cold":"冷気", "polymorph":"変化",
+    "magic missile":"魔法の矢", "haste monster":"怪物を速める",
+    "slow monster":"怪物を遅くする", "drain life":"生命を吸い取る",
+    "nothing":"何も起こらない", "teleport away":"遠くへ飛ばす",
+    "teleport to":"近くへ飛ばす", "cancellation":"魔法を打ち消す",
 }
 MONSTER_JA = {
     "aquator":"水ごけの怪物", "bat":"大こうもり", "centaur":"ケンタウロス",
@@ -239,18 +248,22 @@ class TextCatalog:
             "You aren't wearing any rings.":"指輪をしていない。",
             "You remove the {item}.":"{item}をはずした。",
             "You can't. It appears to be cursed.":"はずせない。のろわれているようだ。",
+            "you can't zap with that!":"それでは振れない！",
+            "nothing happens":"何も起こらない。",
+            "the room is lit":"部屋が明るくなった。",
+            "the corridor glows and then fades":"通路が光り、すぐに消えた。",
         },
     }
     MENU = {
         LANG_EN: {
             "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
-            "Wear":"Wear", "Put on":"Put on", "Take off":"Take off", "Throw":"Throw", "Drop":"Drop",
+            "Wear":"Wear", "Put on":"Put on", "Take off":"Take off", "Zap":"Zap", "Throw":"Throw", "Drop":"Drop",
             "Inventory":"Inventory", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
             "Trap":"Trap", "Language":"Language",
         },
         LANG_JA: {
             "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
-            "Wear":"よろいを着る", "Put on":"指輪をはめる", "Take off":"はずす", "Throw":"投げる", "Drop":"落とす",
+            "Wear":"よろいを着る", "Put on":"指輪をはめる", "Take off":"はずす", "Zap":"振る", "Throw":"投げる", "Drop":"落とす",
             "Inventory":"持ちもの", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
             "Trap":"罠", "Language":"言語",
         },
@@ -292,6 +305,7 @@ class TextCatalog:
         if cat == CAT_WPN: return WEAPON_JA.get(name, name)
         if cat == CAT_ARM: return ARMOR_JA.get(name, name)
         if cat == CAT_RING: return RING_JA.get(name, name)
+        if cat == CAT_STICK: return STICK_JA.get(name, name)
         if cat == CAT_AMULET: return "イェンダーの魔除け"
         return name
 
@@ -362,6 +376,7 @@ ARMORS = [
     {"name":"banded mail","ac":4},{"name":"plate mail","ac":3},
 ]
 RINGS = [{"name":r.name,"prob":r.prob,"worth":r.worth} for r in rogue_rings.RINGS]
+STICKS = [{"name":s.name,"prob":s.prob,"worth":s.worth} for s in rogue_sticks.STICKS]
 
 TRAPS = [
     {"name":"trap door"}, {"name":"arrow trap"},
@@ -431,7 +446,7 @@ BACK_TAP_FRAMES = 8
 MENU_ACTIONS = [
     ("Quaff",   CAT_POT),("Read",   CAT_SCR),("Eat",    CAT_FOOD),
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Put on", CAT_RING),("Take off",None),
-    ("Throw",   None),   ("Drop",   None),
+    ("Zap",     CAT_STICK),("Throw",   None),   ("Drop",   None),
 ]
 AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"]
 
@@ -459,9 +474,10 @@ class Room:
 
 class Item:
     _nid=0
-    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None):
+    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None,charges=0):
         s.uid=Item._nid; Item._nid+=1
         s.cat=cat; s.kind=kind; s.cursed=cursed; s.qty=qty
+        s.charges=charges
         if cat==CAT_WPN:
             s.hit_plus = ench if hit_plus is None else hit_plus
             s.dam_plus = 0 if dam_plus is None else dam_plus
@@ -480,6 +496,7 @@ class Item:
         if s.cat==CAT_WPN: return WEAPONS[s.kind]
         if s.cat==CAT_ARM: return ARMORS[s.kind]
         if s.cat==CAT_RING: return RINGS[s.kind]
+        if s.cat==CAT_STICK: return STICKS[s.kind]
         if s.cat==CAT_AMULET: return {"name":"Amulet of Yendor"}
         return {}
     @property
@@ -604,6 +621,8 @@ class IdentTable:
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
         s.rstones=rogue_rings.init_stones(RNG)
         s.rk=[False]*len(RINGS)
+        s.wtypes,s.wmades=rogue_sticks.init_materials(RNG)
+        s.wk=[False]*len(STICKS)
     def set_lang(s, lang):
         s.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
     def name(s,it,lang=None):
@@ -645,6 +664,15 @@ class IdentTable:
                 return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}の指輪{num}"
             stone=s.rstones[it.kind]
             return f"{stone} ring" if lang==LANG_EN else f"{stone}の指輪"
+        if it.cat==CAT_STICK:
+            spec=STICKS[it.kind]
+            typ=s.wtypes[it.kind]
+            made=s.wmades[it.kind]
+            if s.wk[it.kind]:
+                nm=TextCatalog.item_kind(lang, CAT_STICK, spec["name"])
+                charges=rogue_sticks.charge_str(it)
+                return f"{typ} of {nm}{charges}({made})" if lang==LANG_EN else f"{nm}の{typ}{charges}({made})"
+            return f"{made} {typ}"
         if it.cat==CAT_AMULET:
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
             return f"the {nm}" if lang==LANG_EN else nm
@@ -962,9 +990,8 @@ def make_item(depth):
     if c<.96:
         ring=rogue_rings.make_ring(RNG, CAT_RING)
         return Item(CAT_RING,ring.kind,ench=ring.ench,cursed=ring.cursed)
-    k=RNG.randint(0,len(ARMORS)-1)
-    e=RNG.randint(-1,2) if depth>3 else RNG.randint(0,1)
-    return Item(CAT_ARM,k,ench=e,cursed=e<0)
+    stick=rogue_sticks.make_stick(RNG, CAT_STICK)
+    return Item(CAT_STICK,stick.kind,charges=stick.charges)
 
 def start_inv():
     w=Item(CAT_WPN,0,hit_plus=1,dam_plus=1) # mace +1,+1
@@ -1020,7 +1047,7 @@ class Game:
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
-        self.throw_dir = None; self.action_origin = ST_PLAY
+        self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
         self.dash_steps = 0
@@ -1367,7 +1394,7 @@ class Game:
         for it in self.p.inv:
             if it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r:
                 continue
-            if it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM, CAT_RING):
+            if it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM, CAT_RING, CAT_STICK):
                 return it
         return None
 
@@ -1665,6 +1692,46 @@ class Game:
             self.msg("Nearby monsters freeze!")
         elif nm=="blank paper": self.msg("This scroll is blank.")
         p.rm_item(it)
+
+    def first_zap_target(self, dx, dy):
+        x,y=self.p.x,self.p.y
+        for _ in range(max(MAP_W,MAP_H)):
+            nx,ny=x+dx,y+dy
+            if not (0<=nx<MAP_W and 0<=ny<MAP_H):
+                return None
+            m=self.mon_at(nx,ny)
+            if m:
+                return m
+            if not self.walkable(nx,ny):
+                return None
+            x,y=nx,ny
+        return None
+
+    def zap_stick(self,it,dx,dy):
+        if it.cat != CAT_STICK:
+            self.msg("you can't zap with that!")
+            return False
+        if it.charges <= 0:
+            self.msg("nothing happens")
+            return True
+        kind=it.kind
+        if kind == rogue_sticks.WS_LIGHT:
+            self.ident.wk[kind]=True
+            room=self.room_at(self.p.x,self.p.y) or self.room_containing(self.p.x,self.p.y)
+            if room and room.usable and room.is_dark:
+                room.flags.discard(ROOM_DARK)
+                self.update_fov()
+                self.msg("the room is lit")
+            else:
+                self.msg("the corridor glows and then fades")
+        elif kind == rogue_sticks.WS_NOP:
+            pass
+        else:
+            target=self.first_zap_target(dx,dy)
+            if target:
+                self.runto(target)
+        it.charges-=1
+        return True
 
     def eat(self,it):
         self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+RNG.randrange(400))
@@ -2114,7 +2181,7 @@ class Game:
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
     def close_menu(self):
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
-        self.throw_dir=None; self.action_origin=ST_PLAY
+        self.throw_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
         self.b_menu_guard=False; self.dir_pending=None
 
     def menu_select(self):
@@ -2153,6 +2220,9 @@ class Game:
             else:
                 self.dact="Throw"; self.st=ST_DIR
             return
+        if a=="Zap":
+            self.zap_item=it; self.dact="Zap"; self.st=ST_DIR
+            return
         if a=="Quaff":   self.use_pot(it)
         elif a=="Read":  self.use_scr(it)
         elif a=="Eat":   self.eat(it)
@@ -2172,6 +2242,13 @@ class Game:
             self.throw_dir=(dx,dy)
             self.dact=None
             self.st=ST_ITEM
+            return
+        if self.dact=="Zap":
+            if self.zap_item:
+                self.p.facing=(dx,dy)
+                self.zap_stick(self.zap_item,dx,dy)
+                self.close_menu()
+                self.end_turn()
             return
 
     def start_trap_inspect(self):
