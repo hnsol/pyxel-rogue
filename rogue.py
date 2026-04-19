@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604200018"
+UI_BUILD = "2604200031"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2317,6 +2317,49 @@ class Game:
             return oy==dy or oy==0
         return False
 
+    def dash_look_ignore(self,dx,dy,ox,oy):
+        if dx == -1 and dy == 0:
+            return ox == 1
+        if dx == 1 and dy == 0:
+            return ox == -1
+        if dx == 0 and dy == -1:
+            return oy == 1
+        if dx == 0 and dy == 1:
+            return oy == -1
+        if dx == -1 and dy == -1:
+            return ox + oy >= 1
+        if dx == 1 and dy == -1:
+            return oy - ox >= 1
+        if dx == 1 and dy == 1:
+            return ox + oy <= -1
+        if dx == -1 and dy == 1:
+            return oy - ox <= -1
+        return False
+
+    def dash_look_stop(self,dx,dy):
+        if self.dash_steps<1 or self.p.blind>0:
+            return False
+        px,py=self.p.x,self.p.y
+        passcount=0
+        for oy in (-1,0,1):
+            for ox in (-1,0,1):
+                if ox==0 and oy==0: continue
+                if self.dash_look_ignore(dx,dy,ox,oy): continue
+                x,y=px+ox,py+oy
+                if not(0<=x<MAP_W and 0<=y<MAP_H): continue
+                if (x,y) in self.visible and (self.gi_at(x,y) or self.mon_at(x,y)):
+                    return True
+                tile=self.tm[y][x]
+                if tile==T_DOOR:
+                    if x==px or y==py:
+                        return True
+                elif tile==T_CORR:
+                    if x==px or y==py:
+                        passcount+=1
+                elif tile not in (T_FLOOR,T_HWALL,T_VWALL,T_VOID):
+                    return True
+        return passcount>1
+
     def next_dash_dir(self,dx,dy):
         if dx and dy: return None
         px,py=self.p.x,self.p.y
@@ -2334,6 +2377,7 @@ class Game:
         tile=self.tm[py][px]
         if tile in (T_DOOR,T_STAIR): return True
         if self.gi_at(px,py): return True
+        if self.dash_look_stop(dx,dy): return True
         if self.dash_door_stop(dx,dy): return True
         if tile!=T_CORR: return False
         if dx and dy: return False
@@ -2357,9 +2401,6 @@ class Game:
         dx,dy=self.dash_d
         nx,ny=self.p.x+dx,self.p.y+dy
         next_mon=self.mon_at(nx,ny)
-        for m in self.mons:
-            if m.alive and (m.x,m.y) in self.visible and m is not next_mon:
-                self.dashing=False; return
         if not self.walkable(nx,ny) and not next_mon:
             nd=self.next_dash_dir(dx,dy)
             if not nd:

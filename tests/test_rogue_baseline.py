@@ -1317,7 +1317,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604200018")
+        self.assertEqual(rogue.UI_BUILD, "2604200031")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)
@@ -1737,6 +1737,33 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertTrue(game.dashing)
         self.assertEqual(game.dash_d, (1, -1))
+
+    def test_rogue_544_dash_stops_for_item_in_look_ahead_zone(self):
+        # Rogue 5.4.4 misc.c:look() stops door_stop running on visible non-terrain ahead.
+        game = new_game(seed=46)
+        set_open_floor(game)
+        game.dash_steps = 1
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = game.p.x + 1, game.p.y - 1
+        game.gitems = [item]
+
+        self.assertTrue(game.dash_should_stop_here(1, 0))
+
+    def test_rogue_544_dash_ignores_far_visible_monster_outside_look_zone(self):
+        # Rogue 5.4.4 misc.c:look() only scans the 3x3 cells around the hero.
+        game = new_game(seed=46)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        monster = monster_at(px + 6, py)
+        game.mons = [monster]
+        game.update_fov()
+        game.dashing = True
+        game.dash_d = (1, 0)
+        game.dash_steps = 1
+
+        game.dash_step()
+
+        self.assertEqual((game.p.x, game.p.y), (px + 1, py))
 
     def test_diag_assist_does_not_block_menu_vertical_navigation(self):
         game = new_game(seed=47)
