@@ -26,7 +26,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191252"
+UI_BUILD = "2604191416"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -68,7 +68,7 @@ WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}
 # ===========================================================
 #  Screen layout  (BDF j10r: ASCII 6×~10 px)
 # ===========================================================
-SCR_W, SCR_H = 640, 320
+SCR_W, SCR_H = 576, 360
 TILE_W, TILE_H = 6, 12          # per-char cell in zoom view
 ZV_COLS, ZV_ROWS = MAP_W, PLAY_H # Rogue 5.4.4 dungeon area: 80×22
 ZV_PX_W = ZV_COLS * TILE_W      # 480
@@ -83,7 +83,7 @@ HUD_Y = ZV_Y
 HUD_W = SCR_W - HUD_X - 4
 
 # Messages
-MSG_LINES = 3
+MSG_LINES = 7
 MSG_LINE_H = 10
 MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * MSG_LINE_H - 2
 MSG_COLS = (SCR_W - MSG_X * 2) // 6
@@ -148,6 +148,30 @@ ARMOR_JA = {
     "studded leather":"鋲打ち革のよろい", "scale mail":"うろこのよろい",
     "chain mail":"鎖かたびら", "splint mail":"延金のよろい",
     "banded mail":"帯金のよろい", "plate mail":"鋼鉄のよろい",
+}
+HUD_WEAPON_SHORT = {
+    LANG_EN: {
+        "mace":"mace", "long sword":"long sw", "short bow":"bow", "arrow":"arrow",
+        "dagger":"dagger", "two-handed sword":"2H sw", "dart":"dart",
+        "shuriken":"shuriken", "spear":"spear",
+    },
+    LANG_JA: {
+        "mace":"ほこ", "long sword":"長剣", "short bow":"弓", "arrow":"矢",
+        "dagger":"短剣", "two-handed sword":"両手剣", "dart":"投げ矢",
+        "shuriken":"手裏剣", "spear":"ほこ",
+    },
+}
+HUD_ARMOR_SHORT = {
+    LANG_EN: {
+        "leather armor":"leather", "ring mail":"ring", "studded leather":"stud",
+        "scale mail":"scale", "chain mail":"chain", "splint mail":"splint",
+        "banded mail":"banded", "plate mail":"plate",
+    },
+    LANG_JA: {
+        "leather armor":"革", "ring mail":"かたびら", "studded leather":"鋲革",
+        "scale mail":"うろこ", "chain mail":"鎖", "splint mail":"延金",
+        "banded mail":"帯金", "plate mail":"鋼鉄",
+    },
 }
 RING_JA = {
     "protection":"守り", "add strength":"強さが増す", "sustain strength":"強さを保つ",
@@ -1038,9 +1062,22 @@ class Game:
         return self.item_name(it, describe=False)
 
     def hud_equip_name(self,it):
+        lang = self.lang if self.lang in (LANG_EN, LANG_JA) else LANG_EN
+        if it.cat == CAT_WPN:
+            nm=HUD_WEAPON_SHORT.get(lang, HUD_WEAPON_SHORT[LANG_EN]).get(
+                it.data["name"],
+                TextCatalog.item_kind(lang, CAT_WPN, it.data["name"]),
+            )
+            hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
+            dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
+            prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
+            return f"{prefix}{hp},{dp} {nm}"
         if it.cat == CAT_ARM:
             e=it.ench
-            nm=TextCatalog.item_kind(self.lang, CAT_ARM, it.data["name"])
+            nm=HUD_ARMOR_SHORT.get(lang, HUD_ARMOR_SHORT[LANG_EN]).get(
+                it.data["name"],
+                TextCatalog.item_kind(lang, CAT_ARM, it.data["name"]),
+            )
             return f"{'+' if e>=0 else ''}{e} {nm}"
         return self.equip_name(it)
 
@@ -2618,7 +2655,8 @@ class Game:
         elif self.st==ST_WIN: self.draw_win()
 
     def draw_title(self):
-        self.txt(HUD_X, 3, f"Rogue V5 {UI_BUILD}", 10)
+        self.txt(HUD_X, 3, "Rogue V5", 10)
+        self.txt(HUD_X, 13, UI_BUILD, 5)
 
     def should_draw_memory_tile(self, mx, my, tile):
         room = self.room_at(mx, my)
@@ -2671,9 +2709,10 @@ class Game:
                     self.txt(sx+1,sy+1,self.throw_anim["sym"],self.throw_anim["col"])
 
     def draw_stat(self):
-        sx,sy=HUD_X,HUD_Y+16; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
+        sx,sy=HUD_X,HUD_Y+28; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
         self.txt(sx,sy,f"Depth {p.depth}",7)
-        self.txt(sx+72,sy,f"Turn {self.turn}",5); sy+=14
+        sy+=11
+        self.txt(sx,sy,f"Turn {self.turn}",5); sy+=13
         self.txt(sx,sy,f"HP {p.hp}/{p.max_hp}",hc); sy+=11
         bw=HUD_W-10; pyxel.rect(sx,sy,bw,4,1)
         if p.max_hp>0:
@@ -2687,24 +2726,25 @@ class Game:
             pyxel.rect(sx,sy,cur_w,4,8 if p.hp<=p.max_hp//3 else 11)
             self.last_hp_seen = p.hp
         sy+=12
-        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}",7); sy+=12
+        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}",7); sy+=11
         self.txt(sx,sy,f"Str {p.st}/{p.max_st}",7)
-        self.txt(sx+72,sy,f"Arm {p.ac}",7); sy+=12
-        self.txt(sx,sy,f"Gold {p.gold}",10); sy+=12
+        sy+=11
+        self.txt(sx,sy,f"Arm {p.ac}",7); sy+=11
+        self.txt(sx,sy,f"Gold {p.gold}",10); sy+=11
         state = p.state if p.state else "normal"
         if state != "normal":
-            self.txt(sx,sy,f"Food {state}",13); sy+=12
+            self.txt(sx,sy,f"Food {state}",13); sy+=11
         if self.diag_assist:
-            self.txt(sx,sy,"Diag ON",11); sy+=12
+            self.txt(sx,sy,"Diag ON",11); sy+=11
         if not self.auto_pickup:
-            self.txt(sx,sy,"Pickup OFF",13); sy+=12
+            self.txt(sx,sy,"Pickup OFF",13); sy+=11
         sy+=6
-        self.txt(sx,sy,"-- Equip --",10); sy+=12
+        self.txt(sx,sy,"-- Equip --",10); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
         an=self.hud_equip_name(p.arm) if p.arm else "no armor"
-        self.txt(sx,sy,f"W {wn[:22]}",7); sy+=12
-        self.txt(sx,sy,f"A {an[:22]}",7); sy+=18
-        self.txt(sx,sy,"-- Effect --",10); sy+=12
+        self.txt(sx,sy,f"W {wn[:11]}",7); sy+=11
+        self.txt(sx,sy,f"A {an[:11]}",7); sy+=16
+        self.txt(sx,sy,"-- Effect --",10); sy+=11
         eff=[]
         if p.state=="hungry": eff.append("Hungry")
         elif p.state=="weak": eff.append("Weak")
@@ -2716,7 +2756,7 @@ class Game:
             eff.append("None")
         for e in eff[:5]:
             self.txt(sx,sy,e,13 if e!="None" else 5)
-            sy+=12
+            sy+=11
 
     def draw_msgs(self):
         rows=[]

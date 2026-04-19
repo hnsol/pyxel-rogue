@@ -97,7 +97,7 @@ Use Zap from the menu to choose a wand or staff, then choose a direction.
 
 Implemented overview:
 
-- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, temporary 640x320 layout, right-side HUD, three-line bottom log
+- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 576x360 near-16:10 layout, right-side HUD with abbreviated equipment, and seven-line bottom log
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses

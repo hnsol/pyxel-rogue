@@ -533,9 +533,11 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.rk[rogue_rings.R_NOP])
 
     def test_full_map_layout_baseline(self):
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (640, 320))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 360))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
+        self.assertEqual(rogue.HUD_W, 78)
+        self.assertEqual(rogue.MSG_LINES, 7)
         self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"])
 
         game = new_game(seed=5)
@@ -543,6 +545,31 @@ class RogueBaselineTest(unittest.TestCase):
         game.cam_y = 99
         game.update_cam()
         self.assertEqual((game.cam_x, game.cam_y), (0, rogue.PLAY_Y_MIN))
+
+    def test_hud_equipment_names_are_short_for_compact_16_10_layout(self):
+        game = new_game(seed=5)
+
+        sword = rogue.Item(rogue.CAT_WPN, 5, hit_plus=1, dam_plus=1)
+        plate = rogue.Item(rogue.CAT_ARM, 7, ench=2)
+        self.assertEqual(game.hud_equip_name(sword), "+1,+1 2H sw")
+        self.assertEqual(game.hud_equip_name(plate), "+2 plate")
+
+        game.lang = rogue.LANG_JA
+        self.assertEqual(game.hud_equip_name(sword), "+1,+1 両手剣")
+        self.assertEqual(game.hud_equip_name(plate), "+2 鋼鉄")
+
+    def test_compact_hud_draw_text_stays_inside_screen(self):
+        game = new_game(seed=5)
+        game.p.wpn = rogue.Item(rogue.CAT_WPN, 5, hit_plus=1, dam_plus=1)
+        game.p.arm = rogue.Item(rogue.CAT_ARM, 7, ench=2)
+        drawn = []
+        game.txt = lambda x, y, s, c: drawn.append((x, y, str(s)))
+
+        game.draw_title()
+        game.draw_stat()
+
+        for x, _y, text in drawn:
+            self.assertLessEqual(x + len(text) * 6, rogue.SCR_W)
 
     def test_module_loads_and_new_game_emits_welcome(self):
         game = new_game(seed=7)
@@ -1046,9 +1073,10 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_title()
 
-        self.assertIn(f"Rogue V5 {rogue.UI_BUILD}", calls)
+        self.assertIn("Rogue V5", calls)
+        self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604191252")
+        self.assertEqual(rogue.UI_BUILD, "2604191416")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)
@@ -1152,17 +1180,17 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(c.startswith("a)") for c in calls))
         self.assertTrue(any(c.startswith("z)") for c in calls))
 
-    def test_message_log_uses_three_rows_with_latest_highlighted(self):
+    def test_message_log_uses_seven_rows_with_latest_highlighted(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
-        game.msgs = ["old", "middle", "latest"]
+        game.msgs = ["hidden", "one", "two", "three", "four", "five", "six", "latest"]
 
         game.draw_msgs()
 
-        self.assertEqual(rogue.MSG_LINES, 3)
-        self.assertEqual([text for text, _ in calls], ["old", "middle", "latest"])
-        self.assertEqual([color for _, color in calls], [5, 5, 7])
+        self.assertEqual(rogue.MSG_LINES, 7)
+        self.assertEqual([text for text, _ in calls], ["one", "two", "three", "four", "five", "six", "latest"])
+        self.assertEqual([color for _, color in calls], [5, 5, 5, 5, 5, 5, 7])
 
     def test_death_screen_draws_tombstone_by_default(self):
         game = new_game(seed=35)
