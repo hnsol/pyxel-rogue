@@ -24,5 +24,8 @@ env/
 *.log
 tmp/
 
+# Local agent/tool config
+.claude/
+
 # Local Rogue 5.4.4 reference source
 vendor/rogue544/
