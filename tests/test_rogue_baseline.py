@@ -246,6 +246,87 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(rogue.ROOM_DARK, dark.flags)
         self.assertIn("the room is lit", game.msgs)
 
+    def test_rogue_544_zap_invisibility_and_cancellation_monster_flags(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_INVIS sets ISINVIS; WS_CANCEL sets ISCANC and clears ISINVIS/CANHUH.
+        import rogue_sticks
+
+        game = new_game(seed=202)
+        set_open_floor(game)
+        medusa = monster_at(game.p.x + 2, game.p.y, sym="M", name="medusa", flags="confuse")
+        game.mons = [medusa]
+
+        invis = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_INVIS, charges=1)
+        game.zap_stick(invis, 1, 0)
+
+        self.assertEqual(invis.charges, 0)
+        self.assertIn("invis", medusa.flags)
+        self.assertFalse(medusa.running)
+
+        cancel = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_CANCEL, charges=1)
+        game.zap_stick(cancel, 1, 0)
+
+        self.assertEqual(cancel.charges, 0)
+        self.assertIn("cancel", medusa.flags)
+        self.assertNotIn("invis", medusa.flags)
+        self.assertNotIn("confuse", medusa.flags)
+
+    def test_rogue_544_zap_polymorph_replaces_monster_type_with_rnd_26(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH calls new_monster(tp, rnd(26)+'A', pos).
+        import rogue_sticks
+
+        game = new_game(seed=203)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y, sym="H", name="hobgoblin")
+        game.mons = [monster]
+        old_rnd = rogue.RNG.rnd
+        try:
+            calls = []
+
+            def fake_rnd(n):
+                calls.append(n)
+                return 3
+
+            rogue.RNG.rnd = fake_rnd
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_POLYMORPH, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls[0], 26)
+        self.assertEqual(stick.charges, 0)
+        self.assertEqual((monster.sym, monster.name), ("D", "dragon"))
+        self.assertEqual((monster.x, monster.y), (game.p.x + 2, game.p.y))
+        self.assertFalse(monster.running)
+
+    def test_rogue_544_zap_teleport_away_and_teleport_to_relocate_target(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_TELAWAY uses find_floor(!hero); WS_TELTO uses hero+delta.
+        import rogue_sticks
+
+        game = new_game(seed=204)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 3, game.p.y, sym="H", name="hobgoblin")
+        game.mons = [monster]
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.choice = lambda seq: (game.p.x + 5, game.p.y + 4)
+            away = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_TELAWAY, charges=1)
+            game.zap_stick(away, 1, 0)
+        finally:
+            rogue.RNG.choice = old_choice
+
+        self.assertEqual(away.charges, 0)
+        self.assertEqual((monster.x, monster.y), (game.p.x + 5, game.p.y + 4))
+        self.assertTrue(monster.running)
+
+        monster.x, monster.y = game.p.x + 3, game.p.y
+        monster.running = False
+        to = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_TELTO, charges=1)
+        game.zap_stick(to, 1, 0)
+
+        self.assertEqual(to.charges, 0)
+        self.assertEqual((monster.x, monster.y), (game.p.x + 1, game.p.y))
+        self.assertTrue(monster.running)
+
     def test_rogue_544_ring_table_and_stones_audit(self):
         # Rogue 5.4.4 extern.c:ring_info[], init.c:stones[] / init_stones().
         import rogue_rings
@@ -1099,7 +1180,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604191416")
+        self.assertEqual(rogue.UI_BUILD, "2604191520")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

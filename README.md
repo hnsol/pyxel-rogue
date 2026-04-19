@@ -101,7 +101,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 3x3セクターのダンジョン生成、部屋、通路、ドア
 - 26種モンスター、戦闘、空腹、HP自然回復
 - ポーション、巻物、食料、武器、防具、指輪、識別、インベントリ、呪い
-- 杖の14種テーブル、ランダム素材名、チャージ、Zap方向指定入口、light の部屋照明
+- 杖の14種テーブル、ランダム素材名、チャージ、Zap方向指定入口、light と単体モンスター対象系の効果
 - search、罠、隠しドア、隠し通路、Trap Inspect
 - Amulet of Yendor、Amulet 所持での1階帰還勝利
 - 自動拾得ON/OFF、投擲アニメーション
@@ -114,7 +114,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 ## 今後の予定
 
-- 杖の残り効果
+- 杖の bolt / magic missile / 速度 / drain life 系効果
 - Rogue 5.4.4 期待値テスト拡充
 - 全メッセージ辞書化
 - 可変レイアウト、フォント選択

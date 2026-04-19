@@ -26,7 +26,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191416"
+UI_BUILD = "2604191520"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1502,41 +1502,42 @@ class Game:
                 self.p.hp-=dmg
             self.msg("the {monster} hit you",monster=mn)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
-            if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
-                self.rust_armor()
-            if "steal_gold" in m.flags and self.p.gold>0:
-                s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
-                self.p.gold-=s; self.msg("your purse feels lighter")
-                self.remove_monster(m); return
-            if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
-                    and not self.save_vs_poison() and self.p.st>3):
-                self.p.st-=1; self.msg("You feel weaker!")
-            if "drain_level" in m.flags and rnd(100)<15:
-                if self.p.level>1:
-                    self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1])
-                self.p.max_hp=max(1,self.p.max_hp-roll("1d10"))
-                self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("you suddenly feel weaker")
-            if "drain" in m.flags and rnd(100)<30:
-                loss=roll("1d3")
-                self.p.max_hp=max(1,self.p.max_hp-loss)
-                self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("you suddenly feel weaker")
-            if "confuse" in m.flags and not self.save_vs_magic():
-                self.p.confused=RNG.randint(10,20); self.msg("You feel confused!")
-            if "freeze" in m.flags:
-                self.p.no_command+=rnd(2)+2
-                if self.p.no_command>BORE_LEVEL:
-                    self.p.hp=0; self.death_cause="hypothermia"
-                self.msg("you are frozen")
-            if "hold" in m.flags:
-                m.vf_hit+=1
-                self.p.held_by=m
-                self.p.hp-=1
-                if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
-            if "steal_item" in m.flags:
-                t=self.monster_has_magic_item_to_steal()
-                if t:
-                    self.p.rm_item(t); self.msg(f"She stole your {self.ident.name(t)}!")
+            if "cancel" not in m.flags:
+                if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
+                    self.rust_armor()
+                if "steal_gold" in m.flags and self.p.gold>0:
+                    s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
+                    self.p.gold-=s; self.msg("your purse feels lighter")
                     self.remove_monster(m); return
+                if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
+                        and not self.save_vs_poison() and self.p.st>3):
+                    self.p.st-=1; self.msg("You feel weaker!")
+                if "drain_level" in m.flags and rnd(100)<15:
+                    if self.p.level>1:
+                        self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1])
+                    self.p.max_hp=max(1,self.p.max_hp-roll("1d10"))
+                    self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("you suddenly feel weaker")
+                if "drain" in m.flags and rnd(100)<30:
+                    loss=roll("1d3")
+                    self.p.max_hp=max(1,self.p.max_hp-loss)
+                    self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("you suddenly feel weaker")
+                if "confuse" in m.flags and not self.save_vs_magic():
+                    self.p.confused=RNG.randint(10,20); self.msg("You feel confused!")
+                if "freeze" in m.flags:
+                    self.p.no_command+=rnd(2)+2
+                    if self.p.no_command>BORE_LEVEL:
+                        self.p.hp=0; self.death_cause="hypothermia"
+                    self.msg("you are frozen")
+                if "hold" in m.flags:
+                    m.vf_hit+=1
+                    self.p.held_by=m
+                    self.p.hp-=1
+                    if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
+                if "steal_item" in m.flags:
+                    t=self.monster_has_magic_item_to_steal()
+                    if t:
+                        self.p.rm_item(t); self.msg(f"She stole your {self.ident.name(t)}!")
+                        self.remove_monster(m); return
         else: self.msg("the {monster} misses",monster=mn)
 
     def m_turn(self,m):
@@ -1624,7 +1625,7 @@ class Game:
             if self.walkable(nx,ny) and not self.mon_at(nx,ny) and not(nx==px and ny==py):
                 m.x,m.y=nx,ny
             return
-        if "regen" in m.flags and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
+        if "regen" in m.flags and "cancel" not in m.flags and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
         if (m.confused>0 and rnd(5)!=0) or (m.sym=="P" and rnd(5)==0) or (m.sym=="B" and rnd(2)==0):
             nx,ny=self.random_monster_move(m)
             if (nx,ny)==(px,py):
@@ -1765,6 +1766,59 @@ class Game:
             x,y=nx,ny
         return None
 
+    def monster_spec_for_sym(self, sym):
+        for spec in BESTIARY:
+            if spec.sym == sym:
+                return spec
+        return None
+
+    def set_monster_from_spec(self, m, spec):
+        # Rogue 5.4.4 monsters.c:new_monster() rebuilds monster stats from monsters[].
+        lev_add=max(0,self.p.depth-AMULET_LEVEL)
+        level=spec.level+lev_add
+        m.sym=spec.sym; m.name=spec.name
+        m.level=level; m.armor=spec.armor-lev_add
+        m.damage_expr=spec.damage; m.exp=spec.exp+lev_add*10
+        m.hp=m.max_hp=max(1,RNG.roll(level,8))
+        m.flags=set(spec.flags.split(",")) if spec.flags else set()
+        m.held=m.scared=m.confused=0
+        m.running=False; m.dest=DEST_PLAYER; m.turn=True
+        m.mean=True; m.target=False; m.found=False; m.vf_hit=0
+        if self.p.depth>29:
+            m.flags.add("haste")
+        if rogue_rings.is_wearing(self.p, rogue_rings.R_AGGR):
+            self.runto(m)
+
+    def polymorph_monster(self,m):
+        spec=self.monster_spec_for_sym(chr(RNG.rnd(26)+ord("A")))
+        if spec:
+            self.set_monster_from_spec(m,spec)
+
+    def random_monster_floor(self,avoid=None):
+        avoid=set(avoid or ())
+        cands=[
+            (x,y)
+            for y,row in enumerate(self.tm)
+            for x,tile in enumerate(row)
+            if tile in (T_FLOOR,T_CORR)
+            and (x,y) not in avoid
+            and (x,y)!=(self.p.x,self.p.y)
+            and not self.mon_at(x,y)
+        ]
+        return RNG.choice(cands) if cands else None
+
+    def relocate_monster(self,m,pos):
+        if pos and self.walkable(pos[0],pos[1]) and not self.mon_at(pos[0],pos[1]):
+            m.x,m.y=pos
+
+    def cancel_monster(self,m):
+        m.flags.add("cancel")
+        m.flags.discard("invis")
+        m.flags.discard("confuse")
+        if self.p.held_by is m:
+            self.p.held_by=None
+        m.vf_hit=0
+
     def zap_stick(self,it,dx,dy):
         if it.cat != CAT_STICK:
             self.msg("you can't zap with that!")
@@ -1787,7 +1841,22 @@ class Game:
         else:
             target=self.first_zap_target(dx,dy)
             if target:
-                self.runto(target)
+                if target.sym=="F" and self.p.held_by is target:
+                    self.p.held_by=None
+                if kind == rogue_sticks.WS_INVIS:
+                    target.flags.add("invis")
+                elif kind == rogue_sticks.WS_POLYMORPH:
+                    self.polymorph_monster(target)
+                elif kind == rogue_sticks.WS_CANCEL:
+                    self.cancel_monster(target)
+                elif kind == rogue_sticks.WS_TELAWAY:
+                    self.runto(target)
+                    self.relocate_monster(target,self.random_monster_floor({(target.x,target.y)}))
+                elif kind == rogue_sticks.WS_TELTO:
+                    self.runto(target)
+                    self.relocate_monster(target,(self.p.x+dx,self.p.y+dy))
+                else:
+                    self.runto(target)
         it.charges-=1
         return True
 

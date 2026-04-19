@@ -101,7 +101,7 @@ Implemented overview:
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses
-- Wand/staff 14-type table, random materials, charges, directional Zap entry, and light room illumination
+- Wand/staff 14-type table, random materials, charges, directional Zap entry, light, and single-target monster effects
 - Search, traps, hidden doors, hidden passages, and trap inspection
 - Amulet of Yendor and depth-1 return victory while carrying it
 - Auto-pickup toggle and throwing animation
@@ -114,7 +114,7 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 
 ## Roadmap
 
-- Remaining wand/staff effects
+- Wand/staff bolt, magic missile, speed, and drain life effects
 - More Rogue 5.4.4 expectation tests
 - Full message catalog coverage
 - Responsive layout and font selection
