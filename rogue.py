@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191700"
+UI_BUILD = "2604200018"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -485,10 +485,11 @@ class Room:
 
 class Item:
     _nid=0
-    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None,charges=0):
+    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None,charges=0,known=True):
         s.uid=Item._nid; Item._nid+=1
         s.cat=cat; s.kind=kind; s.cursed=cursed; s.qty=qty
         s.charges=charges
+        s.known=known
         if cat==CAT_WPN:
             s.hit_plus = ench if hit_plus is None else hit_plus
             s.dam_plus = 0 if dam_plus is None else dam_plus
@@ -659,12 +660,17 @@ class IdentTable:
             nm=TextCatalog.item_kind(lang, CAT_WPN, it.data["name"])
             if it.stackable and it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
                 nm = f"{nm}s"
+            if not getattr(it, "known", True):
+                prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
+                return f"{prefix}{nm}"
             hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
             dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
             prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
             return f"{prefix}{hp},{dp} {nm}"
         if it.cat==CAT_ARM:
             e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
+            if not getattr(it, "known", True):
+                return nm
             protection = 10 - (it.data["ac"] - e)
             return f"{'+' if e>=0 else ''}{e} {nm} [protection {protection}]"
         if it.cat==CAT_RING:
@@ -993,11 +999,17 @@ def make_item(depth):
         elif r<15:
             hit_plus+=RNG.randrange(3)+1
         q=RNG.randint(8,15) if WEAPONS[k].get("stack") else 1
-        return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q)
+        return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q,known=False)
     if c<.92:
         k=RNG.randint(0,len(ARMORS)-1)
-        e=RNG.randint(-1,2) if depth>3 else RNG.randint(0,1)
-        return Item(CAT_ARM,k,ench=e,cursed=e<0)
+        r=RNG.rnd(100)
+        e=0
+        cursed=False
+        if r<20:
+            e-=RNG.rnd(3)+1; cursed=True
+        elif r<28:
+            e+=RNG.rnd(3)+1
+        return Item(CAT_ARM,k,ench=e,cursed=cursed,known=False)
     if c<.96:
         ring=rogue_rings.make_ring(RNG, CAT_RING)
         return Item(CAT_RING,ring.kind,ench=ring.ench,cursed=ring.cursed)
@@ -1917,6 +1929,7 @@ class Game:
             )
             self.msg_text(msg)
             return
+        it.known=True
         self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
 
     def put_on_ring(self,it):

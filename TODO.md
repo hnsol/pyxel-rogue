@@ -75,8 +75,8 @@
 - [x] `scroll of scare monster` の床上効果（床に置いた巻物でモンスターが踏み込まない挙動）
 - [x] Rogue 5.4.4 `daemons.c:swander()` / `rollwand()` と `monsters.c:wanderer()` 準拠の wandering monster spawn
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
-- [ ] Rogue 5.4.4 `things.c:new_thing()` 準拠の呪い生成確率監査（weapon 10%、armor 20%、一部 ring 33%、aggravate/teleport 常時 cursed）
-- [ ] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
+- [x] Rogue 5.4.4 `things.c:new_thing()` 準拠の呪い生成確率監査（weapon 10%、armor 20%、一部 ring 33%、aggravate/teleport 常時 cursed）
+- [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [ ] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査
 - [ ] Rogue 5.4.4 `passages.c` 準拠の浅い階の通路グラフ・余剰エッジ数の固定 seed 監査
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
@@ -183,7 +183,7 @@
 - [ ] Xeroc（ミミック）のアイテム擬態が未実装
 - [x] wandering monster spawn が未実装
 - [x] armor 装備中に別 armor を wear できてしまう（原作は take off 必須）
-- [ ] weapon / armor / ring の呪い生成確率が Rogue 5.4.4 `things.c:new_thing()` と一致しているか未監査
+- [x] weapon / armor / ring の呪い生成確率が Rogue 5.4.4 `things.c:new_thing()` と一致しているか未監査
 - [ ] hallucination / see invisible potion が未実装
 - [ ] 投擲が斜め方向に未対応
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み

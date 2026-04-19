@@ -1317,7 +1317,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604191700")
+        self.assertEqual(rogue.UI_BUILD, "2604200018")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)
@@ -1603,6 +1603,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(item.cursed)
         self.assertEqual(item.hit_plus, -3)
         self.assertEqual(item.dam_plus, 0)
+
+    def test_rogue_544_random_armor_generation_uses_new_thing_curse_rates(self):
+        # Rogue 5.4.4 things.c:new_thing() curses armor on rnd(100) < 20.
+        old_random = rogue.random.random
+        old_randint = rogue.random.randint
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.random = lambda: 0.88
+            rogue.random.randint = lambda a, b: a
+            seq = iter([19, 2])
+            rogue.random.randrange = lambda n: next(seq)
+            item = rogue.make_item(depth=10)
+        finally:
+            rogue.random.random = old_random
+            rogue.random.randint = old_randint
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(item.cat, rogue.CAT_ARM)
+        self.assertTrue(item.cursed)
+        self.assertEqual(item.ench, -3)
+
+    def test_rogue_544_generated_armor_is_unknown_until_worn(self):
+        # Rogue 5.4.4 inv_name() hides armor enchant until ISKNOW; armor.c:wear() sets ISKNOW.
+        game = new_game(seed=8)
+        armor = rogue.Item(rogue.CAT_ARM, 1, ench=-2, cursed=True, known=False)
+        game.p.arm = None
+
+        self.assertEqual(game.item_name(armor), "ring mail")
+        game.wear(armor)
+
+        self.assertTrue(armor.known)
+        self.assertEqual(game.item_name(armor), "-2 ring mail [protection 1] (being worn)")
 
     def test_arrow_with_bow_uses_hurl_damage_and_bow_pluses(self):
         game = new_game(seed=40)
