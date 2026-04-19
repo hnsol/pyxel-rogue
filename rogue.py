@@ -2689,6 +2689,7 @@ class Game:
     def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)
     def btn_overlay_cancel(self):
         if self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C): return True
+        if self.back_tap: return True
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
         if self.b_menu_guard:
             if not b_now:
@@ -2745,6 +2746,28 @@ class Game:
             return (dx,dy)
         return None
     def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH)
+    def btn_any_key(self):
+        """Return True if any meaningful key or gamepad button was pressed this frame.
+        Used to dismiss help/info overlays."""
+        if self.kp(pyxel.KEY_SPACE, pyxel.KEY_RETURN, pyxel.KEY_ESCAPE, pyxel.KEY_TAB,
+                   pyxel.KEY_BACKSPACE, pyxel.KEY_PERIOD, pyxel.KEY_COMMA,
+                   pyxel.KEY_SLASH, pyxel.KEY_QUESTION, pyxel.KEY_MINUS,
+                   pyxel.KEY_UP, pyxel.KEY_DOWN, pyxel.KEY_LEFT, pyxel.KEY_RIGHT,
+                   pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B,
+                   pyxel.GAMEPAD1_BUTTON_START, pyxel.GAMEPAD1_BUTTON_BACK,
+                   pyxel.GAMEPAD1_BUTTON_X, pyxel.GAMEPAD1_BUTTON_Y,
+                   pyxel.GAMEPAD1_BUTTON_DPAD_UP, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                   pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
+            return True
+        for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+            k = getattr(pyxel, f"KEY_{c}", None)
+            if k is not None and pyxel.btnp(k):
+                return True
+        for i in range(10):
+            k = getattr(pyxel, f"KEY_{i}", None)
+            if k is not None and pyxel.btnp(k):
+                return True
+        return False
     def dash_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT, pyxel.GAMEPAD1_BUTTON_B)
 
@@ -2766,7 +2789,10 @@ class Game:
         elif self.st==ST_ITEM: self.upd_item()
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
-        elif self.st in(ST_INVENTORY,ST_HELP):
+        elif self.st==ST_HELP:
+            if self.btn_any_key():
+                self.st=ST_PLAY
+        elif self.st==ST_INVENTORY:
             if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_back() or self.btn_r():
                 self.st=ST_PLAY
 
@@ -3110,7 +3136,10 @@ class Game:
             "Back  / Tab    Assist menu",
             "?              This help",
             "",
-            "Press any button to close",
+            "--- Close overlays ---",
+            "Menu/Action    Esc / C / Tab / B tap",
+            "Inventory      Z / Enter / Esc / I / Tab",
+            "Help           Any key or button",
         ]
         y=by+18
         for ln in lines:
