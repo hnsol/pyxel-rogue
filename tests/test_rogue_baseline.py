@@ -838,6 +838,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.item_name(armor), "+1 ring mail [protection 4] (being worn)")
         self.assertEqual(game.equip_name(armor), "+1 ring mail [protection 4]")
 
+    def test_rogue_544_wear_rejects_new_armor_until_current_armor_is_removed(self):
+        # Rogue 5.4.4 armor.c:wear() rejects cur_armor != NULL.
+        game = new_game(seed=8)
+        current = game.p.arm
+        replacement = rogue.Item(rogue.CAT_ARM, 1)
+        game.p.inv.append(replacement)
+
+        game.wear(replacement)
+
+        self.assertIs(game.p.arm, current)
+        self.assertIn("take it off first", game.msgs[-1])
+
     def test_rogue_544_monster_table_audit_guards_named_fields(self):
         specs = {m.sym: m for m in rogue.BESTIARY}
         self.assertEqual(
@@ -1305,7 +1317,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604191600")
+        self.assertEqual(rogue.UI_BUILD, "2604191700")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191600"
+UI_BUILD = "2604191700"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -99,6 +99,7 @@ STOMACHSIZE = 2000
 STARVETIME = 850
 MAX_TRAPS = 10
 AMULET_LEVEL = 26
+WANDERTIME = 70
 BEARTIME = 3
 SLEEPTIME = 5
 BORE_LEVEL = 50
@@ -1082,6 +1083,8 @@ class Game:
         self.hp_damage_turn = None
         self.death_cause = ""
         self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
+        self.wander_timer = 0
+        self.wander_between = 0
         self.descend()
         self.msg("pyxel.welcome_to_dungeons")
 
@@ -1100,6 +1103,8 @@ class Game:
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
+        self.wander_timer=RNG.spread(WANDERTIME)
+        self.wander_between=0
         px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
         sr=RNG.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
@@ -1147,6 +1152,32 @@ class Game:
                         e.level, e.armor, e.damage, e.exp, e.flags
                     ))
                     break
+
+    def spawn_wanderer(self):
+        cands=self.wanderer_floor_candidates()
+        if not cands:
+            return False
+        x,y=RNG.choice(cands)
+        spec=RNG.choice([b for b in BESTIARY if b.min_depth<=self.p.depth] or BESTIARY)
+        monster=Monster(
+            x, y, spec.sym, spec.name, monster_hp(spec),
+            spec.level, spec.armor, spec.damage, spec.exp, spec.flags
+        )
+        self.mons.append(monster)
+        self.runto(monster)
+        return True
+
+    def wanderer_floor_candidates(self):
+        player_room=self.room_containing(self.p.x,self.p.y)
+        return [
+            (x,y)
+            for y,row in enumerate(self.tm)
+            for x,tile in enumerate(row)
+            if tile in (T_FLOOR,T_CORR)
+            and (x,y)!=(self.p.x,self.p.y)
+            and not self.mon_at(x,y)
+            and self.room_containing(x,y) is not player_room
+        ]
 
     def _spawn_items(self):
         d=self.p.depth
@@ -1880,7 +1911,12 @@ class Game:
 
     def wear(self,it):
         if self.p.arm:
-            if self.p.arm.cursed: self.msg("pyxel.cursed_armor_wont_come_off"); return
+            msg = (
+                TextCatalog.msg(self.lang, "armor.you_are_already_wearing_some")
+                + TextCatalog.msg(self.lang, "armor.you_ll_have_to_take_it_off_first")
+            )
+            self.msg_text(msg)
+            return
         self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
 
     def put_on_ring(self,it):
@@ -2219,11 +2255,23 @@ class Game:
         if self.p.haste>0: self.p.haste-=1
         self.p.heal_tick()
         self.ring_after_turn()
+        self.roll_wanderer()
         for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
             self.msg("pyxel.died_restart"); self.st=ST_DEAD
+
+    def roll_wanderer(self):
+        if self.wander_timer>0:
+            self.wander_timer-=1
+            return
+        self.wander_between+=1
+        if self.wander_between<4:
+            return
+        self.wander_between=0
+        if RNG.roll(1,6)==4 and self.spawn_wanderer():
+            self.wander_timer=RNG.spread(WANDERTIME)
 
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):

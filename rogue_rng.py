@@ -10,6 +10,9 @@ class RogueRng:
     def roll(self, number, sides):
         return sum(self.rnd(sides) + 1 for _ in range(number))
 
+    def spread(self, nm):
+        return nm - nm // 20 + self.rnd(nm // 10)
+
     def randint(self, a, b):
         return self.backend.randint(a, b)
 
