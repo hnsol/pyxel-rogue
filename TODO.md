@@ -91,7 +91,7 @@
 ## Phase 5: 移植性・UI基盤（優先度: 中）
 
 - [ ] Pyxel Web 対応確認
-  - [x] Web Launcher 用 branch 名は `/` なしにする（例: `web-...`。`codex/...` は path と誤解される場合あり）
+  - [x] Web Launcher で確認する開発branch名は `/` なしにする（`codex/...` は path と誤解される場合あり）
 - [ ] ブラウザ / SteamDeck / 中華ゲーム機向け入力整理
 - [x] 通常8方向移動の整理
 - [x] Start短押しによる斜め補助モード / 8方向移動モード（通常モード）のトグル実装
