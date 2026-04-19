@@ -20,7 +20,7 @@
 
 ![Pyxel Rogue screenshot](docs/images/pyxel-rogue-screenshot.png)
 
-48x24 ASCIIマップ、右HUD、下ログを表示したプレイ画面。
+Rogue 5.4.4 準拠の80桁ASCIIマップ、右HUD、下ログを表示したプレイ画面。
 
 ## Webで遊ぶ
 
@@ -97,7 +97,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 実装済みの概要:
 
-- 48x24 ASCIIマップ、512x320基準レイアウト、右HUD、3行下ログ
+- Rogue 5.4.4 準拠の80x24論理マップ、80x22地形表示、暫定640x320レイアウト、右HUD、3行下ログ
 - 3x3セクターのダンジョン生成、部屋、通路、ドア
 - 26種モンスター、戦闘、空腹、HP自然回復
 - ポーション、巻物、食料、武器、防具、指輪、識別、インベントリ、呪い

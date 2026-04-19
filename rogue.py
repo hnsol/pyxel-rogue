@@ -26,7 +26,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191118"
+UI_BUILD = "2604191252"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -43,7 +43,11 @@ FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 # ===========================================================
 #  Map
 # ===========================================================
-MAP_W, MAP_H = 48, 24
+NUMCOLS, NUMLINES = 80, 24
+STATLINE = NUMLINES - 1
+MAP_W, MAP_H = NUMCOLS, NUMLINES
+PLAY_Y_MIN, PLAY_Y_MAX = 1, STATLINE - 1
+PLAY_H = PLAY_Y_MAX - PLAY_Y_MIN + 1
 GRID_C, GRID_R = 3, 3
 SEC_W, SEC_H = MAP_W // GRID_C, MAP_H // GRID_R
 RM_MIN_W, RM_MAX_W = 5, 12
@@ -64,11 +68,11 @@ WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}
 # ===========================================================
 #  Screen layout  (BDF j10r: ASCII 6×~10 px)
 # ===========================================================
-SCR_W, SCR_H = 512, 320
-TILE_W, TILE_H = 7, 12          # per-char cell in zoom view
-ZV_COLS, ZV_ROWS = MAP_W, MAP_H # full 48×24 dungeon view
-ZV_PX_W = ZV_COLS * TILE_W      # 336
-ZV_PX_H = ZV_ROWS * TILE_H      # 288
+SCR_W, SCR_H = 640, 320
+TILE_W, TILE_H = 6, 12          # per-char cell in zoom view
+ZV_COLS, ZV_ROWS = MAP_W, PLAY_H # Rogue 5.4.4 dungeon area: 80×22
+ZV_PX_W = ZV_COLS * TILE_W      # 480
+ZV_PX_H = ZV_ROWS * TILE_H      # 264
 DEAD_ZONE_X = 8                  # camera edge zone; leaves ~50% center still
 DEAD_ZONE_Y = 5
 
@@ -325,6 +329,12 @@ def roll_damage_expr(expr):
 
 def rnd(n):
     return RNG.rnd(n)
+
+def in_map(x,y):
+    return 0 <= x < MAP_W and 0 <= y < MAP_H
+
+def in_play_area(x,y):
+    return 0 <= x < MAP_W and PLAY_Y_MIN <= y <= PLAY_Y_MAX
 
 # ===========================================================
 #  Item data  (Rogue 5.4.4)
@@ -788,7 +798,7 @@ class DGen:
             return
         for y in range(r.y,r.y+r.h):
             for x in range(r.x,r.x+r.w):
-                if 0<=y<MAP_H and 0<=x<MAP_W:
+                if in_play_area(x,y):
                     if y==r.y or y==r.y+r.h-1: t[y][x]=T_HWALL
                     elif x==r.x or x==r.x+r.w-1: t[y][x]=T_VWALL
                     else: t[y][x]=T_FLOOR
@@ -796,7 +806,7 @@ class DGen:
     def _maze_room(t,r):
         for y in range(r.y,r.y+r.h):
             for x in range(r.x,r.x+r.w):
-                if 0<=y<MAP_H and 0<=x<MAP_W:
+                if in_play_area(x,y):
                     t[y][x]=T_VOID
         cells=[
             (x,y)
@@ -895,17 +905,17 @@ class DGen:
         x,y=p
         for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
             nx,ny=x+dx,y+dy
-            if 0<=nx<MAP_W and 0<=ny<MAP_H and t[ny][nx]==T_DOOR:
+            if in_map(nx,ny) and t[ny][nx]==T_DOOR:
                 return False
         return True
     @staticmethod
     def _door(t,p):
         x,y=p
-        if 0<=x<MAP_W and 0<=y<MAP_H: t[y][x]=T_DOOR
+        if in_play_area(x,y): t[y][x]=T_DOOR
     @staticmethod
     def _corr(t,p):
         x,y=p
-        if 0<=x<MAP_W and 0<=y<MAP_H: t[y][x]=T_CORR
+        if in_play_area(x,y): t[y][x]=T_CORR
     @staticmethod
     def _dig_pass(t,s,e,first_horiz):
         x,y=s; ex,ey=e
@@ -927,7 +937,7 @@ class DGen:
         return RNG.randint(lo+1,hi-1)
     @staticmethod
     def _hl(t,x1,x2,y):
-        if not(0<=y<MAP_H): return
+        if not(PLAY_Y_MIN<=y<=PLAY_Y_MAX): return
         for x in range(min(x1,x2),max(x1,x2)+1):
             if not(0<=x<MAP_W): continue
             v=t[y][x]
@@ -936,7 +946,7 @@ class DGen:
     def _vl(t,y1,y2,x):
         if not(0<=x<MAP_W): return
         for y in range(min(y1,y2),max(y1,y2)+1):
-            if not(0<=y<MAP_H): continue
+            if not(PLAY_Y_MIN<=y<=PLAY_Y_MAX): continue
             v=t[y][x]
             if v==T_VOID or v==T_CORR: t[y][x]=T_CORR
     @staticmethod
@@ -1109,9 +1119,10 @@ class Game:
 
     def _center_cam(self):
         max_x = max(0, MAP_W - ZV_COLS)
-        max_y = max(0, MAP_H - ZV_ROWS)
+        min_y = PLAY_Y_MIN
+        max_y = max(min_y, PLAY_Y_MAX - ZV_ROWS + 1)
         self.cam_x = max(0, min(self.p.x - ZV_COLS//2, max_x))
-        self.cam_y = max(0, min(self.p.y - ZV_ROWS//2, max_y))
+        self.cam_y = max(min_y, min(self.p.y - ZV_ROWS//2, max_y))
 
     def _spawn_mons(self):
         d=self.p.depth; n=RNG.randint(3,4+d)
@@ -1240,14 +1251,14 @@ class Game:
         self.explored.add((x,y))
         return True
     def walkable(self,x,y):
-        return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in WALKABLE
+        return in_play_area(x,y) and self.tm[y][x] in WALKABLE
     def diag_ok(self,sx,sy,ex,ey):
-        if not (0<=ex<MAP_W and 0<=ey<MAP_H):
+        if not in_play_area(ex,ey):
             return False
         if sx==ex or sy==ey:
             return True
         return (
-            0<=sx<MAP_W and 0<=sy<MAP_H
+            in_play_area(sx,sy)
             and self.tm[ey][ex] in WALKABLE
             and self.tm[ey][sx] in WALKABLE
             and self.tm[sy][ex] in WALKABLE
@@ -1295,11 +1306,12 @@ class Game:
     # ---------- Camera ----------
     def update_cam(self):
         max_x = max(0, MAP_W - ZV_COLS)
-        max_y = max(0, MAP_H - ZV_ROWS)
+        min_y = PLAY_Y_MIN
+        max_y = max(min_y, PLAY_Y_MAX - ZV_ROWS + 1)
         if max_x == 0:
             self.cam_x = 0
-        if max_y == 0:
-            self.cam_y = 0
+        if max_y == min_y:
+            self.cam_y = min_y
         rx = self.p.x - self.cam_x
         ry = self.p.y - self.cam_y
         if max_x and rx < DEAD_ZONE_X:
@@ -1307,7 +1319,7 @@ class Game:
         elif max_x and rx >= ZV_COLS - DEAD_ZONE_X:
             self.cam_x = min(max_x, self.p.x - ZV_COLS + DEAD_ZONE_X + 1)
         if max_y and ry < DEAD_ZONE_Y:
-            self.cam_y = max(0, self.p.y - DEAD_ZONE_Y)
+            self.cam_y = max(min_y, self.p.y - DEAD_ZONE_Y)
         elif max_y and ry >= ZV_ROWS - DEAD_ZONE_Y:
             self.cam_y = min(max_y, self.p.y - ZV_ROWS + DEAD_ZONE_Y + 1)
 

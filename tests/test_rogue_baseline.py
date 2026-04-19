@@ -87,8 +87,11 @@ def new_game(seed=1, lang=rogue.LANG_EN):
 
 
 def set_open_floor(game):
-    game.tm = [[rogue.T_FLOOR for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
-    game.rooms = [rogue.Room(1, 1, rogue.MAP_W - 2, rogue.MAP_H - 2)]
+    game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+    for y in range(rogue.PLAY_Y_MIN, rogue.PLAY_Y_MAX + 1):
+        for x in range(rogue.MAP_W):
+            game.tm[y][x] = rogue.T_FLOOR
+    game.rooms = [rogue.Room(0, rogue.PLAY_Y_MIN, rogue.MAP_W, rogue.PLAY_H)]
     game.mons = []
     game.gitems = []
     game.traps = {}
@@ -121,6 +124,65 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def assert_in_rogue_544_play_area(self, x, y):
+        # Rogue 5.4.4 move.c: do_move() permits x=0..NUMCOLS-1 and y=1..NUMLINES-2.
+        self.assertGreaterEqual(x, 0)
+        self.assertLess(x, rogue.MAP_W)
+        self.assertGreaterEqual(y, rogue.PLAY_Y_MIN)
+        self.assertLessEqual(y, rogue.PLAY_Y_MAX)
+
+    def test_rogue_544_screen_and_play_area_constants(self):
+        # Rogue 5.4.4 rogue.h: NUMLINES=24, NUMCOLS=80, STATLINE=NUMLINES-1.
+        # move.c: do_move() rejects y <= 0 and y >= NUMLINES - 1.
+        self.assertEqual(rogue.MAP_W, 80)
+        self.assertEqual(rogue.MAP_H, 24)
+        self.assertEqual(rogue.STATLINE, 23)
+        self.assertEqual((rogue.PLAY_Y_MIN, rogue.PLAY_Y_MAX), (1, 22))
+        self.assertEqual(rogue.PLAY_H, 22)
+
+    def test_rogue_544_room_sectors_use_numcols_and_numlines_thirds(self):
+        # Rogue 5.4.4 rooms.c: bsze.x = NUMCOLS / 3; bsze.y = NUMLINES / 3.
+        self.assertEqual((rogue.GRID_C, rogue.GRID_R), (3, 3))
+        self.assertEqual((rogue.SEC_W, rogue.SEC_H), (80 // 3, 24 // 3))
+
+        random.seed(2)
+        _tm, rooms = rogue.DGen.gen(depth=1)
+        sectors = [(room.cx // rogue.SEC_W, room.cy // rogue.SEC_H) for room in rooms]
+        self.assertEqual(
+            sectors,
+            [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (0, 2), (1, 2), (2, 2)],
+        )
+
+    def test_rogue_544_generated_terrain_stays_in_play_area(self):
+        terrain = {rogue.T_FLOOR, rogue.T_HWALL, rogue.T_VWALL, rogue.T_DOOR, rogue.T_CORR, rogue.T_STAIR, rogue.T_TRAP}
+        for seed in range(30):
+            random.seed(seed)
+            tm, _rooms = rogue.DGen.gen(depth=20)
+            for y, row in enumerate(tm):
+                for x, tile in enumerate(row):
+                    if tile in terrain:
+                        self.assert_in_rogue_544_play_area(x, y)
+
+    def test_rogue_544_level_entities_do_not_spawn_on_message_or_status_lines(self):
+        for seed in range(30):
+            game = new_game(seed=seed)
+            self.assert_in_rogue_544_play_area(game.p.x, game.p.y)
+            stairs = [
+                (x, y)
+                for y, row in enumerate(game.tm)
+                for x, tile in enumerate(row)
+                if tile == rogue.T_STAIR
+            ]
+            self.assertEqual(len(stairs), 1)
+            for x, y in stairs:
+                self.assert_in_rogue_544_play_area(x, y)
+            for item in game.gitems:
+                self.assert_in_rogue_544_play_area(item.x, item.y)
+            for monster in game.mons:
+                self.assert_in_rogue_544_play_area(monster.x, monster.y)
+            for x, y in game.traps:
+                self.assert_in_rogue_544_play_area(x, y)
+
     def test_rogue_544_stick_table_materials_and_names_audit(self):
         # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
         import rogue_sticks
@@ -471,16 +533,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.rk[rogue_rings.R_NOP])
 
     def test_full_map_layout_baseline(self):
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
-        self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))
-        self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (336, 288))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (640, 320))
+        self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
+        self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
         self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"])
 
         game = new_game(seed=5)
         game.cam_x = 99
         game.cam_y = 99
         game.update_cam()
-        self.assertEqual((game.cam_x, game.cam_y), (0, 0))
+        self.assertEqual((game.cam_x, game.cam_y), (0, rogue.PLAY_Y_MIN))
 
     def test_module_loads_and_new_game_emits_welcome(self):
         game = new_game(seed=7)
@@ -986,6 +1048,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn(f"Rogue V5 {rogue.UI_BUILD}", calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
+        self.assertEqual(rogue.UI_BUILD, "2604191252")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

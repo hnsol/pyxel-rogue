@@ -20,7 +20,7 @@ For detailed design notes, see [DESIGN.md](DESIGN.md). For the task list and cur
 
 ![Pyxel Rogue screenshot](docs/images/pyxel-rogue-screenshot.png)
 
-Gameplay view with the 48x24 ASCII map, right-side HUD, and bottom log.
+Gameplay view with the Rogue 5.4.4-style 80-column ASCII map, right-side HUD, and bottom log.
 
 ## Play on the Web
 
@@ -97,7 +97,7 @@ Use Zap from the menu to choose a wand or staff, then choose a direction.
 
 Implemented overview:
 
-- 48x24 ASCII map, 512x320 base layout, right-side HUD, three-line bottom log
+- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, temporary 640x320 layout, right-side HUD, three-line bottom log
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses
