@@ -161,9 +161,13 @@ font = pyxel.Font(os.path.join(os.path.dirname(pyxel.__file__),
 - `mesg_J`: 日本語メッセージ・用語
 - `mesg_E`: 英語メッセージとの対応確認
 
+Rogue2.Official の `mesg_E` / `mesg_J` / `COPYING` は `vendor/rogue2_official_messages/` に UTF-8 参照データとして保持する。このデータは文言・用語・メッセージ分離形式の確認専用であり、Pyxel Rogue の実行時メッセージ辞書として直接読み込まない。取り込み元、commit、ライセンス条件は同ディレクトリの `README.md` と `COPYING` を参照する。
+
 現行実装では `TextCatalog` と `LANG_EN` / `LANG_JA` を導入し、`PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べる入口を用意した。Phase 1 として、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名などの表示だけが現在言語に従う。
 
 まだ全メッセージ辞書化は完了していない。歓迎文、空腹、探索、戦闘、拾得、メニュー項目、アイテム名・モンスター名の代表範囲から段階的に `TextCatalog` 経由へ移行している。HUD、Inventory、Help、Death などの直書き英語は後続タスクで辞書化する。
+
+HUD の短縮名は表示制約が強いため、通常のアイテム名とは別に `TextCatalog.hud_item_kind()` を入口にする。実データは段階的に分離するが、呼び出し側は通常名、HUD短縮名、メッセージ、メニュー文言を混ぜず、用途別の catalog API を通す。
 
 メッセージ分離は段階的に進める。Phase 4 以降で追加する新規ログ・UI文言は直書きせず `TextCatalog` 経由にし、既存文言は関連機能を触るタイミングで移行する。先に巨大な翻訳リファクタを行うより、指輪、杖、罠、Amulet、勝利、search結果など新規要素の文言を増やす時点で辞書化することを優先する。
 

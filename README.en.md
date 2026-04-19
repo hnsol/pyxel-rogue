@@ -108,6 +108,7 @@ Implemented overview:
 - Tombstone death screen
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - English/Japanese text switching foundation and logic test foundation
+- Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
 See [TODO.md](TODO.md) for the detailed implementation status.
 

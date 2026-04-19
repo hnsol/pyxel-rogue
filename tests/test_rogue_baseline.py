@@ -551,6 +551,10 @@ class RogueBaselineTest(unittest.TestCase):
 
         sword = rogue.Item(rogue.CAT_WPN, 5, hit_plus=1, dam_plus=1)
         plate = rogue.Item(rogue.CAT_ARM, 7, ench=2)
+        self.assertEqual(rogue.TextCatalog.hud_item_kind(rogue.LANG_EN, rogue.CAT_WPN, "two-handed sword"), "2H sw")
+        self.assertEqual(rogue.TextCatalog.hud_item_kind(rogue.LANG_JA, rogue.CAT_WPN, "two-handed sword"), "両手剣")
+        self.assertEqual(rogue.TextCatalog.hud_item_kind(rogue.LANG_EN, rogue.CAT_ARM, "plate mail"), "plate")
+        self.assertEqual(rogue.TextCatalog.hud_item_kind(rogue.LANG_JA, rogue.CAT_ARM, "plate mail"), "鋼鉄")
         self.assertEqual(game.hud_equip_name(sword), "+1,+1 2H sw")
         self.assertEqual(game.hud_equip_name(plate), "+2 plate")
 
@@ -570,6 +574,25 @@ class RogueBaselineTest(unittest.TestCase):
 
         for x, _y, text in drawn:
             self.assertLessEqual(x + len(text) * 6, rogue.SCR_W)
+
+    def test_rogue2_official_message_reference_data_is_checked_in(self):
+        ref_dir = os.path.join(ROOT, "vendor", "rogue2_official_messages")
+        expected = ["COPYING", "README.md", "mesg_E", "mesg_J"]
+        for name in expected:
+            self.assertTrue(os.path.exists(os.path.join(ref_dir, name)), name)
+
+        with open(os.path.join(ref_dir, "README.md"), encoding="utf-8") as f:
+            readme = f.read()
+        self.assertIn("https://github.com/suzukiiichiro/Rogue2.Official", readme)
+        self.assertIn("334315ea068e7ae8605ff9be5d6e04b0658cd330", readme)
+        self.assertIn("reference only", readme)
+
+        with open(os.path.join(ref_dir, "COPYING"), encoding="utf-8") as f:
+            self.assertIn("使用許諾書", f.read())
+        with open(os.path.join(ref_dir, "mesg_E"), encoding="utf-8") as f:
+            self.assertIn('"Message English version"', f.read())
+        with open(os.path.join(ref_dir, "mesg_J"), encoding="utf-8") as f:
+            self.assertIn('"Message Japanese version', f.read())
 
     def test_module_loads_and_new_game_emits_welcome(self):
         game = new_game(seed=7)

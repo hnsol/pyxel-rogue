@@ -120,6 +120,8 @@
 - [x] カメラ追従開始位置の調整
 - [ ] 複数 BDF フォント選択 + レイアウト自動再計算
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
+- [x] Rogue2.Official `mesg_J` / `mesg_E` / `COPYING` を参考データとして `vendor/rogue2_official_messages/` に保持
+- [x] HUD短縮名を `TextCatalog.hud_item_kind()` 経由にする
 - [ ] 日本語/英語切替（全メッセージ辞書化、umplus_j10r は CJK 対応済み）
 - [ ] HUD / Inventory / Help / Death の文言辞書化
 - [ ] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする

@@ -324,6 +324,21 @@ class TextCatalog:
         return MONSTER_JA.get(name, name) if lang == LANG_JA else name
 
     @staticmethod
+    def hud_item_kind(lang, cat, name):
+        lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
+        if cat == CAT_WPN:
+            return HUD_WEAPON_SHORT.get(lang, HUD_WEAPON_SHORT[LANG_EN]).get(
+                name,
+                TextCatalog.item_kind(lang, cat, name),
+            )
+        if cat == CAT_ARM:
+            return HUD_ARMOR_SHORT.get(lang, HUD_ARMOR_SHORT[LANG_EN]).get(
+                name,
+                TextCatalog.item_kind(lang, cat, name),
+            )
+        return TextCatalog.item_kind(lang, cat, name)
+
+    @staticmethod
     def item_kind(lang, cat, name):
         if lang != LANG_JA:
             return name
@@ -1064,20 +1079,14 @@ class Game:
     def hud_equip_name(self,it):
         lang = self.lang if self.lang in (LANG_EN, LANG_JA) else LANG_EN
         if it.cat == CAT_WPN:
-            nm=HUD_WEAPON_SHORT.get(lang, HUD_WEAPON_SHORT[LANG_EN]).get(
-                it.data["name"],
-                TextCatalog.item_kind(lang, CAT_WPN, it.data["name"]),
-            )
+            nm=TextCatalog.hud_item_kind(lang, CAT_WPN, it.data["name"])
             hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
             dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
             prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
             return f"{prefix}{hp},{dp} {nm}"
         if it.cat == CAT_ARM:
             e=it.ench
-            nm=HUD_ARMOR_SHORT.get(lang, HUD_ARMOR_SHORT[LANG_EN]).get(
-                it.data["name"],
-                TextCatalog.item_kind(lang, CAT_ARM, it.data["name"]),
-            )
+            nm=TextCatalog.hud_item_kind(lang, CAT_ARM, it.data["name"])
             return f"{'+' if e>=0 else ''}{e} {nm}"
         return self.equip_name(it)
 
