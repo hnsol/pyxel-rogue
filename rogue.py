@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604200031"
+UI_BUILD = "2604200039"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -245,10 +245,14 @@ class TextCatalog:
             return cls._catalogs
         base = os.path.join(os.path.dirname(__file__), "assets", "messages")
         catalogs = {}
-        for lang in (LANG_EN, LANG_JA):
-            path = os.path.join(base, f"{lang}.json")
-            with open(path, encoding="utf-8") as f:
-                catalogs[lang] = json.load(f)
+        try:
+            for lang in (LANG_EN, LANG_JA):
+                path = os.path.join(base, f"{lang}.json")
+                with open(path, encoding="utf-8") as f:
+                    catalogs[lang] = json.load(f)
+        except OSError:
+            from rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
+            catalogs = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
         cls._catalogs = catalogs
         return cls._catalogs
 

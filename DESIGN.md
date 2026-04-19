@@ -189,7 +189,7 @@ font = pyxel.Font(os.path.join(os.path.dirname(pyxel.__file__),
 
 Rogue2.Official の `mesg_E` / `mesg_J` / `COPYING` は `vendor/rogue2_official_messages/` に UTF-8 参照データとして保持する。このデータは文言・用語・メッセージ分離形式の確認専用であり、Pyxel Rogue の実行時には直接読み込まない。取り込み元、commit、ライセンス条件は同ディレクトリの `README.md` と `COPYING` を参照する。
 
-現行実装では `assets/messages/en.json` / `ja.json` / `manifest.json` を実行時メッセージ辞書とし、`TextCatalog` が起動時に一度だけ読み込む。英語カタログは Rogue 5.4.4 C ソースの `msg()` / `addmsg()` 文字列と、Pyxel版固有の UI/ログ文言を持つ。日本語カタログは Rogue2.Official の `mesg_J` に寄せ、対応がない文言は `manual` として補完している。欠損キーは日本語から英語へフォールバックし、英語にもない場合は `[missing:key]` を返して stderr に一度だけ警告する。
+現行実装では `assets/messages/en.json` / `ja.json` / `manifest.json` を実行時メッセージ辞書とし、`TextCatalog` が起動時に一度だけ読み込む。英語カタログは Rogue 5.4.4 C ソースの `msg()` / `addmsg()` 文字列と、Pyxel版固有の UI/ログ文言を持つ。日本語カタログは Rogue2.Official の `mesg_J` に寄せ、対応がない文言は `manual` として補完している。Pyxel Web launcher が JSON 資産を同梱しない場合は、同内容を Python module 化した `rogue_message_catalogs.py` へフォールバックする。欠損キーは日本語から英語へフォールバックし、英語にもない場合は `[missing:key]` を返して stderr に一度だけ警告する。
 
 `PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べ、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名などの表示だけが現在言語に従う。
 

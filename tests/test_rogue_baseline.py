@@ -800,6 +800,20 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             ja_catalog["command.no_monster_there"] = original
 
+    def test_text_catalog_falls_back_when_json_assets_are_missing(self):
+        original_file = rogue.__file__
+        original_catalogs = rogue.TextCatalog._catalogs
+        try:
+            rogue.__file__ = os.path.join("/tmp", "missing_pyxel_web", "rogue.py")
+            rogue.TextCatalog._catalogs = None
+            self.assertEqual(
+                rogue.TextCatalog.msg(rogue.LANG_EN, "pyxel.welcome_to_dungeons"),
+                "Welcome to the Dungeons of Doom!",
+            )
+        finally:
+            rogue.__file__ = original_file
+            rogue.TextCatalog._catalogs = original_catalogs
+
     def test_module_loads_and_new_game_emits_welcome(self):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)
@@ -1317,7 +1331,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604200031")
+        self.assertEqual(rogue.UI_BUILD, "2604200039")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)
