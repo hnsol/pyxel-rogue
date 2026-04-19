@@ -87,6 +87,22 @@
 - [x] 最小 baseline ロジックテスト整備
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
+- [ ] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）
+  - 現行 Pyxel 版は 12 種のみ。原作の identify 系は対象別に 5 種（potion/scroll/weapon/armor/ring-or-stick）に分かれる点も含めて、出現確率テーブルと識別挙動を Rogue 5.4.4 に合わせる。
+  - [ ] `S_CONFUSE` monster confusion（次攻撃時にモンスター混乱、`your hands begin to glow red`）
+  - [ ] `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の識別分化（現行の単一 identify から分離）
+  - [ ] `S_FDET` food detection（階フロアの食料位置一時表示）
+  - [ ] `S_PROTECT` protect armor（防具の呪い・錆び防止）と現行 enchant armor (= `S_ARMOR`) の区別
+- [ ] **ポーション 14種化**（`rogue.h:P_* / MAXPOTIONS=14`、`potions.c:quaff()`）
+  - 現行 Pyxel 版は 12 種のみ。
+  - [ ] `P_LSD` hallucination の効果実装（視覚混乱、search `probinc`、invisible monster 表示への反映）
+  - [ ] `P_LEVIT` levitation（`ISLEVIT` 相当、罠・階段無効化、床上アイテム拾得不可、`daemons.c:land()` で復帰）
+- [ ] **treasure room（俗称モンスターハウス）**（`new_level.c:138, 180-231` の `treas_room()`）
+  - 1/20 の階で発生。`MINTREAS=2` / `MAXTREAS=10` のアイテムと、次階層相当のモンスター群を `ISMEAN` 付きで配置。部屋内モンスターには `give_pack()` も呼ぶ。
+- [ ] **モンスター持ち物 `m_carry`**（`monsters.c:217-222 give_pack()`、`extern.c:monsters[]` の `m_carry`）
+  - `rnd(100) < m_carry` でモンスターに `new_thing()` を持たせ、倒した時にドロップさせる。
+- [ ] **daemon / fuse 期間管理インフラ**（`daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()`）
+  - `doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` などを個別タイマーではなく統一インフラで扱い、`potion of haste self` 等の残ターン管理を Rogue 5.4.4 準拠にする。
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）
 
@@ -167,6 +183,8 @@
 - [ ] ハイスコア保存（JSON）
 - [ ] スコア履歴画面
 - [ ] リプレイ（操作ログ保存・再生）
+- [ ] **Wizard モード**（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 等）— 忠実度監査・バグ再現の検証用途。Pyxel版での入力割当は実装時に検討。
+- [ ] **ゲーム中セーブ (`S` コマンド)**（`save.c:save_game()/restore()`）— リプレイとは別枠。Pyxel Web での永続化方式（localStorage 等）は実装時に検討。
 
 ## 既知のバグ・方針変更対象
 
@@ -192,6 +210,9 @@
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携
+- [ ] 巻物が原作 18 種のうち 12 種のみ実装（identify 分化 / monster confusion / food detection / protect armor が欠落。詳細は Phase 4 タスク参照）
+- [ ] ポーションが原作 14 種のうち 12 種のみ実装（hallucination / levitation が欠落）
+- [ ] treasure room（モンスターハウス）と `give_pack` が未実装。現行は階ごとに単体モンスター散在のみ
 
 ## テスト・基盤タスク
 

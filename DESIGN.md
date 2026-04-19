@@ -241,6 +241,22 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 スコア履歴保存は死亡画面とは分ける。JSONによるハイスコア保存と履歴画面は Phase 7 の仕上げタスクとして扱う。
 
+## Phase 4 残課題：原作との種類数・部屋タイプ差分
+
+現行 Pyxel 版は、Rogue 5.4.4 の以下の主要メカニクスを未実装または別設計のまま残している。いずれも「Pyxel版をクリアしたら Rogue 5.4.4 をクリアしたと言える」状態の成立に必要であり、忠実度修正の対象とする。実装時は各原作関数の期待値テストを先に追加してから接続する。
+
+巻物は `rogue.h:S_CONFUSE..S_PROTECT` / `MAXSCROLLS=18` / `scrolls.c:read_scroll()` / `extern.c:scr_info[]` を基準にする。現行 12 種に対し、原作は 18 種で、特に `identify` が対象別に `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の 5 種へ分離している点は確率テーブル全体に影響する。Pyxel 版で単一 identify を残す差分を選ぶ場合は、原作との差・理由・影響を本文書へ記録したうえで決定する。`S_CONFUSE` は `fight.c:attack()` の `CANHUH` 付与、`S_FDET` は `scrolls.c:S_FDET` の全食料一時表示、`S_PROTECT` は `scrolls.c:S_PROTECT` の防具呪い・錆び防止として接続する。
+
+ポーションは `rogue.h:P_CONFUSE..P_LEVIT` / `MAXPOTIONS=14` / `potions.c:quaff()` / `extern.c:pot_info[]` を基準にする。現行 12 種に対し、原作は 14 種で、未実装は `P_LSD`（hallucination）と `P_LEVIT`（levitation）。`P_LSD` は視覚混乱に加え `command.c` / `chase.c` の `ISHALU` 表示差し替え、search の `probinc` 増加、invisible monster の誤表示まで接続する。`P_LEVIT` は `ISLEVIT` 相当として罠・階段の発動条件と床上アイテム拾得を抑止し、`daemons.c:land()` 相当で解除する。
+
+treasure room（俗称モンスターハウス）は `new_level.c:138, 180-231` の `treas_room()` を基準にする。`put_things()` で 1/20 の階に発生し、`MINTREAS=2` / `MAXTREAS=10` 個のアイテムを埋めたうえで、次階層相当のモンスターを `ISMEAN` 付きで多数配置する。部屋内モンスターは `give_pack()` で持ち物も持つ。設計書および Pyxel 実装のいずれにも記述がないため、部屋タイプとしての生成、視界公開、AI（全員 `ISMEAN` で起きている扱い）を新規に設計する必要がある。
+
+`give_pack` は `monsters.c:217-222` を基準にする。`rnd(100) < monsters[type].m_carry` のとき `new_thing()` を `t_pack` にぶら下げ、倒した時にドロップする。現行の `rogue_monsters.py` には `m_carry` テーブルが無いため、`extern.c:monsters[]` からの値反映とドロップ処理を追加する。
+
+daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()` を基準にする。現行は個別 `int` カウンタで近似しているが、`doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` を統一インフラで扱うことで、`potion of haste self` の重ね掛け、`ring of regeneration` の同時発動、wandering monster の `WANDERTIME=spread(70)` などを Rogue 5.4.4 と同じターン消費で再現できる。
+
+Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
+
 ## アイテム識別
 
 ゲーム開始時にポーション12色・巻物音節名をシャッフル。使用で判明。IdentTable クラスで管理。
