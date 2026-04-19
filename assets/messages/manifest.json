@@ -609,6 +609,14 @@
     "ja_status": "manual",
     "origin": "addmsg()"
   },
+  "fight.defeated_target": {
+    "source": "fight.c:669",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "killed()"
+  },
   "fight.doesnt_hit": {
     "source": "fight.c:40",
     "params": [],
@@ -661,6 +669,134 @@
     "ja_status": "matched",
     "origin": "m_names[]",
     "ja_source": "mesg_J:213"
+  },
+  "fight.monster_hit": {
+    "source": "fight.c:23",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.monster_hit_excellent": {
+    "source": "fight.c:22",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.monster_hit_injured": {
+    "source": "fight.c:28",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.monster_hit_swing": {
+    "source": "fight.c:29",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.monster_miss": {
+    "source": "fight.c:37",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.monster_miss_barely": {
+    "source": "fight.c:39",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.monster_miss_doesnt_hit": {
+    "source": "fight.c:40",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.monster_miss_swing": {
+    "source": "fight.c:38",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.player_hit": {
+    "source": "fight.c:23",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.player_hit_excellent": {
+    "source": "fight.c:22",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.player_hit_injured": {
+    "source": "fight.c:24",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.player_hit_swing": {
+    "source": "fight.c:25",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "hit()"
+  },
+  "fight.player_miss": {
+    "source": "fight.c:33",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.player_miss_barely": {
+    "source": "fight.c:35",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.player_miss_dont_hit": {
+    "source": "fight.c:36",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
+  },
+  "fight.player_miss_swing": {
+    "source": "fight.c:34",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "miss()"
   },
   "fight.scored_an_excellent_hit_on": {
     "source": "fight.c:22",
@@ -746,6 +882,24 @@
     "origin": "addmsg()",
     "ja_source": "mesg_J:18"
   },
+  "fight.thrown_weapon_hits": {
+    "source": "fight.c:510",
+    "params": [
+      "item",
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "thunk()"
+  },
+  "fight.thrown_weapon_misses": {
+    "source": "fight.c:585",
+    "params": [
+      "item",
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "bounce()"
+  },
   "fight.wait_that_s_a_xeroc": {
     "source": "fight.c:97",
     "params": [],
@@ -771,17 +925,41 @@
     "ja_status": "manual",
     "origin": "addmsg()"
   },
+  "fight.you_have_defeated_target": {
+    "source": "fight.c:675",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "killed()"
+  },
   "fight.you_hit": {
     "source": "fight.c:511",
     "params": [],
     "ja_status": "manual",
     "origin": "addmsg()"
   },
+  "fight.you_hit_target": {
+    "source": "fight.c:511",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "thunk()"
+  },
   "fight.you_missed": {
     "source": "fight.c:586",
     "params": [],
     "ja_status": "manual",
     "origin": "addmsg()"
+  },
+  "fight.you_missed_target": {
+    "source": "fight.c:586",
+    "params": [
+      "target"
+    ],
+    "ja_status": "manual",
+    "origin": "bounce()"
   },
   "fight.you_suddenly_feel_weaker": {
     "source": "fight.c:263",
@@ -2808,8 +2986,8 @@
     "origin": "msg()"
   },
   "__summary__": {
-    "en_key_count": 402,
-    "ja_key_count": 402,
+    "en_key_count": 424,
+    "ja_key_count": 424,
     "ja_missing_count": 0,
     "ja_missing_keys": [],
     "placeholder_vocabulary": [

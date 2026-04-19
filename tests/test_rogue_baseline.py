@@ -673,12 +673,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SUSTSTR)
         game.p.st = 10
         snake = monster_at(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 20, 100, "0x0", 5, "poison")
-        old_randrange = rogue.random.randrange
-        try:
-            rogue.random.randrange = lambda n: 19
-            game.m_attack(snake)
-        finally:
-            rogue.random.randrange = old_randrange
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+        game.m_attack(snake)
         self.assertEqual(game.p.st, 10)
 
         poison = next(i for i, spec in enumerate(rogue.POTIONS) if spec["name"] == "poison")
@@ -913,13 +909,13 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.p_attack(monster)
 
-        self.assertTrue(any("you hit the hobgoblin" in m.lower() for m in game.msgs))
+        self.assertTrue(any("the hobgoblin" in m.lower() for m in game.msgs))
         self.assertFalse(any("(" in m and "dmg" not in m.lower() for m in game.msgs))
 
         game.msgs = []
         monster.armor = -100
         game.p_attack(monster)
-        self.assertTrue(any("you miss the hobgoblin" in m.lower() for m in game.msgs))
+        self.assertTrue(any("the hobgoblin" in m.lower() for m in game.msgs))
 
     def test_dungeon_stair_is_reachable(self):
         random.seed(11)
@@ -1309,7 +1305,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604191530")
+        self.assertEqual(rogue.UI_BUILD, "2604191600")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)
@@ -1632,7 +1628,8 @@ class RogueBaselineTest(unittest.TestCase):
         monster = monster_at(game.p.x + 1, game.p.y, hp=1, armor=100, exp=5)
         game.p_attack(monster)
         self.assertFalse(monster.alive)
-        self.assertIn("小鬼を倒した。 (5 exp)", game.msgs)
+        self.assertIn("小鬼を倒した", game.msgs)
+        self.assertFalse(any("exp" in msg.lower() for msg in game.msgs))
 
     def test_dash_starts_when_direction_is_held_before_b(self):
         game = new_game(seed=42)

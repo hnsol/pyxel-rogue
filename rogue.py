@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191530"
+UI_BUILD = "2604191600"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -104,6 +104,31 @@ SLEEPTIME = 5
 BORE_LEVEL = 50
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
+
+PLAYER_HIT_MESSAGE_KEYS = (
+    "fight.player_hit_excellent",
+    "fight.player_hit",
+    "fight.player_hit_injured",
+    "fight.player_hit_swing",
+)
+PLAYER_MISS_MESSAGE_KEYS = (
+    "fight.player_miss",
+    "fight.player_miss_swing",
+    "fight.player_miss_barely",
+    "fight.player_miss_dont_hit",
+)
+MONSTER_HIT_MESSAGE_KEYS = (
+    "fight.monster_hit_excellent",
+    "fight.monster_hit",
+    "fight.monster_hit_injured",
+    "fight.monster_hit_swing",
+)
+MONSTER_MISS_MESSAGE_KEYS = (
+    "fight.monster_miss",
+    "fight.monster_miss_swing",
+    "fight.monster_miss_barely",
+    "fight.monster_miss_doesnt_hit",
+)
 
 # ===========================================================
 #  UI states
@@ -1284,6 +1309,45 @@ class Game:
         return a is not None and a==b
     def msg(self,t,**kw):
         self.msgs.append(TextCatalog.msg(self.lang,t,**kw)); self.msgs=self.msgs[-100:]
+    def msg_text(self,t):
+        self.msgs.append(t); self.msgs=self.msgs[-100:]
+
+    def combat_monster_name(self,m,upper=False):
+        name=TextCatalog.monster(self.lang,m.name)
+        if self.lang==LANG_EN:
+            name=f"the {name}"
+            if upper:
+                name=name[:1].upper()+name[1:]
+        return name
+
+    def combat_message(self,keys,**kw):
+        return TextCatalog.msg(self.lang,keys[RNG.rnd(len(keys))],**kw)
+
+    # Rogue 5.4.4 fight.c:hit()/miss() message families.
+    def player_hit_message(self,target):
+        return self.combat_message(PLAYER_HIT_MESSAGE_KEYS,target=target)
+
+    def player_miss_message(self,target):
+        return self.combat_message(PLAYER_MISS_MESSAGE_KEYS,target=target)
+
+    def monster_hit_message(self,subject):
+        return self.combat_message(MONSTER_HIT_MESSAGE_KEYS,subject=subject)
+
+    def monster_miss_message(self,subject):
+        return self.combat_message(MONSTER_MISS_MESSAGE_KEYS,subject=subject)
+
+    def defeated_message(self,target):
+        return TextCatalog.msg(self.lang,"fight.defeated_target",target=target)
+
+    def thrown_hit_message(self,it,item,target):
+        if it.cat==CAT_WPN:
+            return TextCatalog.msg(self.lang,"fight.thrown_weapon_hits",item=item,target=target)
+        return TextCatalog.msg(self.lang,"fight.you_hit_target",target=target)
+
+    def thrown_miss_message(self,it,item,target):
+        if it.cat==CAT_WPN:
+            return TextCatalog.msg(self.lang,"fight.thrown_weapon_misses",item=item,target=target)
+        return TextCatalog.msg(self.lang,"fight.you_missed_target",target=target)
 
     # ---------- Camera ----------
     def update_cam(self):
@@ -1374,15 +1438,15 @@ class Game:
 
     def p_attack(self, m):
         self.runto(m)
-        mn=TextCatalog.monster(self.lang,m.name)
+        mn=self.combat_monster_name(m)
         hit,dmg=self.roll_player_attack(m,self.p.wpn,False)
         if hit:
             m.hp-=dmg
+            self.msg_text(self.player_hit_message(mn))
             if not m.alive:
-                self.msg("pyxel.defeated_monster_exp", monster=mn, exp=m.exp)
+                self.msg_text(self.defeated_message(mn))
                 self.award_monster_kill(m,mn)
-            else: self.msg("pyxel.you_hit_monster", monster=mn)
-        else: self.msg("pyxel.you_miss_monster", monster=mn)
+        else: self.msg_text(self.player_miss_message(mn))
 
     def monster_has_magic_item_to_steal(self):
         for it in self.p.inv:
@@ -1433,12 +1497,12 @@ class Game:
         return rnd(20) < 7 + self.p.level//2
 
     def m_attack(self,m):
-        mn=TextCatalog.monster(self.lang,m.name)
+        mn=self.combat_monster_name(m,upper=True)
         if self.swing_hits(m.level, self.p.ac, 0):
             dmg=roll_damage_expr(m.damage_expr)
             if dmg:
                 self.p.hp-=dmg
-            self.msg("pyxel.monster_hit_you", monster=mn)
+            self.msg_text(self.monster_hit_message(mn))
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if not rogue_monsters.is_cancelled(m):
                 if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
@@ -1476,7 +1540,7 @@ class Game:
                     if t:
                         self.p.rm_item(t); self.msg("pyxel.she_stole_item", item=self.ident.name(t))
                         self.remove_monster(m); return
-        else: self.msg("pyxel.monster_misses", monster=mn)
+        else: self.msg_text(self.monster_miss_message(mn))
 
     def m_turn(self,m):
         if not m.alive: return
@@ -1892,13 +1956,14 @@ class Game:
                 self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
                 self.runto(m)
                 hit,dmg=self.roll_player_attack(m,thrown,True)
-                mn=TextCatalog.monster(self.lang,m.name)
+                mn=self.combat_monster_name(m)
+                item=self.ident.name(thrown)
                 if hit:
-                    m.hp-=dmg; self.msg("pyxel.thrown_item_hits_monster_damage", item=self.ident.name(thrown), monster=mn, damage=dmg)
+                    m.hp-=dmg; self.msg_text(self.thrown_hit_message(thrown,item,mn))
                     if not m.alive:
-                        self.msg("pyxel.monster_is_defeated", monster=mn); self.award_monster_kill(m,mn)
+                        self.msg_text(self.defeated_message(mn)); self.award_monster_kill(m,mn)
                 else:
-                    self.msg("pyxel.thrown_item_misses_monster", item=self.ident.name(thrown), monster=mn)
+                    self.msg_text(self.thrown_miss_message(thrown,item,mn))
                     self.drop_thrown(thrown,tx,ty)
                 return
             if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR: break
