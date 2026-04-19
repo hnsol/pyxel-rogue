@@ -117,9 +117,11 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 初回実装では、ゲーム状態に直結する protection / add strength / dexterity / increase damage / slow digestion / regeneration を接続した。protection はプレイヤーAC、防具と同じ低いほど強い値へ反映し、dexterity / increase damage は装備中武器での近接攻撃にだけ加算する。slow digestion と searching などの確率型食料消費は `rings.c:ring_eat()` の負値テーブルに合わせ、slow digestion は消費を減らす。regeneration は `daemons.c:doctor()` と同じく自然回復判定後に追加回復し、回復した場合は quiet をリセットする。
 
+残りの指輪効果は、Rogue 5.4.4 の `command.c`, `rings.c`, `monsters.c`, `move.c`, `fight.c`, `potions.c` を確認して接続した。searching はターン後処理で手ごとに `search()` 相当を呼び、ターンを追加消費せず失敗時メッセージも出さない。teleportation は同じターン後処理で手ごとに `rnd(50)==0` のときテレポートする。see invisible は invisible monster の表示条件へ反映し、aggravate monster は装備時と装備中の monster creation で追跡を開始させる。stealth は `wake_monster()` 相当の mean monster 起床判定を抑制する。sustain strength は Rattlesnake / dart trap / potion of poison の Strength 低下を防ぎ、maintain armor は Aquator / rust trap などの `rust_armor()` 相当で錆びを防ぐ。adornment は装備時効果を持たず、装備しただけでは識別済みにしない。
+
 UI差分として、原作の `gethand()` による左右手プロンプトは、携帯機向けメニュー操作では最初の空きスロットへ装備し、解除時は装備中アイテムを選ぶ方式にしている。左右どちらに装備されているかはインベントリ表示の `(on left hand)` / `(on right hand)` で確認できる。今後、左右指定が攻略上必要になる場面が出た場合は、ゲーム状態の差分を出さずに方向入力で手を選ぶUIへ拡張する。
 
-残作業は searching の search 確率連携、see invisible と Phantom 表示、aggravate monster の装備時起床、teleportation のターン経過テレポート、stealth とモンスター起床、maintain armor と錆び/弱体化防止、sustain strength と毒/Strength低下防止、adornment の識別周辺挙動である。これらは各機能の原作関数を確認し、Rogue 5.4.4 期待値テストを先に置いてから接続する。
+残差分として、see invisible potion の一時的な CANSEE、hallucination 中の invisible 表示、`turn_see()` 相当の全モンスター表示、Xeroc 擬態や wand cancellation との相互作用は、それぞれの機能実装時に改めて原作関数を確認して接続する。
 
 ## フォント
 

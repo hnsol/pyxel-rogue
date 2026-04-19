@@ -104,6 +104,17 @@ def is_ring(item, kind):
     return item is not None and getattr(item, "kind", None) == kind
 
 
+def is_wearing(player, kind):
+    return is_ring(player.ring_l, kind) or is_ring(player.ring_r, kind)
+
+
+def wearing_hands(player, kind):
+    if is_ring(player.ring_l, kind):
+        yield LEFT
+    if is_ring(player.ring_r, kind):
+        yield RIGHT
+
+
 def ring_num(item):
     kind = getattr(item, "kind", None)
     if kind not in _BONUS_RINGS:

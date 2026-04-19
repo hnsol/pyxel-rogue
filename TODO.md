@@ -41,7 +41,7 @@
 4. Amulet of Yendor / 帰還勝利
 5. remove curse, sleep, scare monster, Xeroc, 盗み後ワープ, 迷路部屋などの忠実度バグ
 
-- [ ] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
+- [x] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
     see invisible, adornment, aggravate monster, dexterity,
     increase damage, regeneration, slow digestion, teleportation,
@@ -49,8 +49,8 @@
   - [x] `rogue_rings.py` に Pyxel 非依存の Rogue 5.4.4 指輪テーブル、石名シャッフル、生成時の補正/呪い、装備/解除、食料消費を分離
   - [x] インベントリ表示、左右2スロット装備、呪いによる remove 制限、`remove curse` の装備中指輪解除
   - [x] protection / add strength / dexterity / increase damage / slow digestion / regeneration の数値効果を接続
-  - [ ] searching / see invisible / aggravate monster / teleportation / stealth / maintain armor の効果接続
-  - [ ] sustain strength / adornment の完全な識別・周辺挙動監査
+  - [x] searching / see invisible / aggravate monster / teleportation / stealth / maintain armor の効果接続
+  - [x] sustain strength / adornment の識別・周辺挙動監査
 - [ ] **杖（Wand/Staff）14種** — チャージ制、方向指定 zap、ランダム素材名で識別
   - light, invisibility, lightning, fire, cold, polymorph,
     missile, haste monster, slow monster, drain life,

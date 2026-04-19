@@ -267,6 +267,146 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.randint = old_randint
 
+    def test_rogue_544_ring_searching_auto_searches_after_turn_without_extra_turn(self):
+        # Rogue 5.4.4 command.c: after a turn, each R_SEARCH ring calls search().
+        import rogue_rings
+
+        game = new_game(seed=204)
+        set_open_floor(game)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEARCH)
+        px, py = game.p.x, game.p.y
+        game.hidden_tiles[(px + 1, py)] = rogue.T_DOOR
+        game.tm[py][px + 1] = rogue.T_VWALL
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.end_turn()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.tm[py][px + 1], rogue.T_DOOR)
+        self.assertIn("You found something!", game.msgs)
+
+    def test_rogue_544_ring_teleportation_rolls_after_turn(self):
+        # Rogue 5.4.4 command.c: R_TELEPORT teleports on rnd(50) == 0 after a turn.
+        import rogue_rings
+
+        game = new_game(seed=205)
+        set_open_floor(game)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_TELEPORT)
+        old_pos = (game.p.x, game.p.y)
+        old_randrange = rogue.random.randrange
+        old_choice = rogue.random.choice
+        try:
+            rogue.random.randrange = lambda n: 0
+            rogue.random.choice = lambda seq: seq[0]
+            game.end_turn()
+        finally:
+            rogue.random.randrange = old_randrange
+            rogue.random.choice = old_choice
+
+        self.assertEqual(game.turn, 1)
+        self.assertNotEqual((game.p.x, game.p.y), old_pos)
+
+    def test_rogue_544_ring_see_invisible_reveals_phantom_in_view(self):
+        # Rogue 5.4.4 rings.c:ring_on() calls invis_on(); display honors CANSEE.
+        import rogue_rings
+
+        game = new_game(seed=206)
+        set_open_floor(game)
+        phantom = monster_at(game.p.x + 1, game.p.y, "P", "phantom", flags="invis")
+        game.mons = [phantom]
+        game.visible.add((phantom.x, phantom.y))
+
+        self.assertFalse(game.can_see_monster(phantom))
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEEINVIS)
+        self.assertTrue(game.can_see_monster(phantom))
+
+    def test_rogue_544_ring_aggravate_and_stealth_affect_monster_running(self):
+        # Rogue 5.4.4 rings.c:ring_on() aggravates; monsters.c:wake_monster checks R_STEALTH.
+        import rogue_rings
+
+        game = new_game(seed=207)
+        set_open_floor(game)
+        first = monster_at(game.p.x + 1, game.p.y)
+        second = monster_at(game.p.x + 2, game.p.y)
+        game.mons = [first, second]
+
+        game.put_on_ring(rogue.Item(rogue.CAT_RING, rogue_rings.R_AGGR))
+        self.assertTrue(first.running)
+        self.assertTrue(second.running)
+        self.assertFalse(game.ident.rk[rogue_rings.R_AGGR])
+
+        game = new_game(seed=208)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y)
+        game.mons = [monster]
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_STEALTH)
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 1
+            game.wake_monster(monster)
+        finally:
+            rogue.random.randrange = old_randrange
+        self.assertFalse(monster.running)
+
+    def test_rogue_544_ring_sustain_strength_blocks_poison_strength_loss(self):
+        # Rogue 5.4.4 fight.c/move.c/potions.c check R_SUSTSTR before chg_str(-1).
+        import rogue_rings
+
+        game = new_game(seed=209)
+        set_open_floor(game)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SUSTSTR)
+        game.p.st = 10
+        snake = monster_at(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 20, 100, "0x0", 5, "poison")
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 19
+            game.m_attack(snake)
+        finally:
+            rogue.random.randrange = old_randrange
+        self.assertEqual(game.p.st, 10)
+
+        poison = next(i for i, spec in enumerate(rogue.POTIONS) if spec["name"] == "poison")
+        potion = rogue.Item(rogue.CAT_POT, poison)
+        game.p.inv.append(potion)
+        game.use_pot(potion)
+        self.assertEqual(game.p.st, 10)
+        self.assertIn("you feel momentarily sick", game.msgs)
+
+        dart_x, dart_y = game.p.x, game.p.y
+        game.traps[(dart_x, dart_y)] = 5
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 19
+            game.trigger_trap(dart_x, dart_y)
+        finally:
+            rogue.random.randrange = old_randrange
+        self.assertEqual(game.p.st, 10)
+
+    def test_rogue_544_ring_maintain_armor_blocks_rust_and_adornment_stays_unidentified(self):
+        # Rogue 5.4.4 move.c:rust_armor() checks R_SUSTARM; R_NOP has no wear-time effect.
+        import rogue_rings
+
+        game = new_game(seed=210)
+        armor = rogue.Item(rogue.CAT_ARM, 1, ench=0)
+        game.p.arm = armor
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SUSTARM)
+        game.p.recalc_ac()
+
+        game.rust_armor()
+
+        self.assertEqual(armor.ench, 0)
+        self.assertIn("the rust vanishes instantly", game.msgs)
+
+        game = new_game(seed=211)
+        adornment = rogue.Item(rogue.CAT_RING, rogue_rings.R_NOP)
+        game.p.inv.append(adornment)
+        game.put_on_ring(adornment)
+
+        self.assertFalse(game.ident.rk[rogue_rings.R_NOP])
+
     def test_full_map_layout_baseline(self):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.MAP_H))

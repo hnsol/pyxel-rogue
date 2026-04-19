@@ -98,7 +98,7 @@ Implemented overview:
 - 48x24 ASCII map, 512x320 base layout, right-side HUD, three-line bottom log
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
-- Potions, scrolls, food, weapons, armor, basic ring support, identification, inventory, and curses
+- Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses
 - Search, traps, hidden doors, hidden passages, and trap inspection
 - Amulet of Yendor and depth-1 return victory while carrying it
 - Auto-pickup toggle and throwing animation
@@ -110,7 +110,6 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 
 ## Roadmap
 
-- Remaining ring effects (searching / see invisible / aggravate monster / teleportation / stealth / maintain armor, etc.)
 - Wands/staves
 - More Rogue 5.4.4 expectation tests
 - Full message catalog coverage

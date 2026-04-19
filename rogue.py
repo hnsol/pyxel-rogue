@@ -221,6 +221,7 @@ class TextCatalog:
             "{monster}'s gaze has confused you":"{monster}の凝視で混乱した。",
             "your purse feels lighter":"財布が軽くなった気がする。",
             "You feel weaker!":"力が弱くなった！",
+            "you feel momentarily sick":"一瞬、気分が悪くなった。",
             "you suddenly feel weaker":"突然、弱くなった気がする。",
             "You feel confused!":"混乱してきた！",
             "you are frozen":"凍りついた。",
@@ -1384,7 +1385,8 @@ class Game:
     def wake_monster(self,m):
         if not m.alive:
             return
-        if not m.running and m.mean and m.held<=0 and rnd(3)!=0:
+        if (not m.running and m.mean and m.held<=0 and rnd(3)!=0
+                and not rogue_rings.is_wearing(self.p, rogue_rings.R_STEALTH)):
             self.runto(m)
         if m.sym=="M" and m.running and not self.p.blind and not m.found:
             m.found=True
@@ -1399,6 +1401,9 @@ class Game:
         for mo in self.mons:
             if (mo.x,mo.y) in self.visible:
                 self.wake_monster(mo)
+
+    def can_see_monster(self, m):
+        return "invis" not in m.flags or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS)
 
     def save_vs_magic(self):
         return rnd(20) < 7 + self.p.level//2
@@ -1417,7 +1422,8 @@ class Game:
                 s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
                 self.p.gold-=s; self.msg("your purse feels lighter")
                 self.remove_monster(m); return
-            if "poison" in m.flags and not self.save_vs_poison() and self.p.st>3:
+            if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
+                    and not self.save_vs_poison() and self.p.st>3):
                 self.p.st-=1; self.msg("You feel weaker!")
             if "drain_level" in m.flags and rnd(100)<15:
                 if self.p.level>1:
@@ -1571,7 +1577,10 @@ class Game:
             if p.hp>p.max_hp: p.max_hp=p.hp
             self.msg(f"You feel much better. (+{h})")
         elif nm=="poison":
-            l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg(f"You feel sick. (Str -{l})")
+            if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
+                self.msg("you feel momentarily sick")
+            else:
+                l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg(f"You feel sick. (Str -{l})")
         elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("Str +1!")
         elif nm=="restore strength": p.st=p.max_st; self.msg("You feel warm all over.")
         elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("You feel confused.")
@@ -1640,6 +1649,8 @@ class Game:
                             nx, ny, e.sym, e.name, monster_hp(e),
                             e.level, e.armor, e.damage, e.exp, e.flags
                         ))
+                        if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
+                            self.runto(self.mons[-1])
                     break
             self.msg("A monster appears!")
         elif nm=="magic mapping":
@@ -1674,6 +1685,8 @@ class Game:
             return
         if rogue_rings.put_on_ring(self.p,it):
             self.p.recalc_ac()
+            if it.kind == rogue_rings.R_AGGR:
+                self.aggravate_monsters()
             if it.kind in (rogue_rings.R_PROTECT, rogue_rings.R_ADDSTR,
                            rogue_rings.R_ADDHIT, rogue_rings.R_ADDDAM):
                 self.ident.rk[it.kind]=True
@@ -1792,7 +1805,7 @@ class Game:
             self.update_cam(); self.end_turn(); return True
         return False
 
-    def do_search(self, front_only=False):
+    def do_search(self, front_only=False, spend_turn=True, quiet_fail=False):
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
@@ -1807,10 +1820,14 @@ class Game:
                     found = self.reveal_hidden_at(nx,ny) or found
                 elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rnd(2+probinc)==0:
                     found = self.reveal_trap_at(nx,ny) or found
-        self.msg("You find nothing." if not found else "You found something!")
+        if found:
+            self.msg("You found something!")
+        elif not quiet_fail:
+            self.msg("You find nothing.")
         if found:
             self.update_fov()
-        self.end_turn()
+        if spend_turn:
+            self.end_turn()
 
     def trap_hits(self, bonus=0):
         th=RNG.randint(1,20)+bonus
@@ -1865,7 +1882,8 @@ class Game:
         elif name=="dart trap":
             if self.trap_hits(self.p.level+1):
                 self.p.hp-=roll("1d4")
-                if self.p.st>3 and not self.save_vs_poison():
+                if (self.p.st>3 and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
+                        and not self.save_vs_poison()):
                     self.p.st-=1
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="a poisoned dart killed you"
@@ -1881,6 +1899,9 @@ class Game:
     def rust_armor(self):
         arm=self.p.arm
         if not arm or arm.data["name"]=="leather armor":
+            return
+        if rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM):
+            self.msg("the rust vanishes instantly")
             return
         if arm.ench>-3:
             arm.ench-=1
@@ -1970,6 +1991,14 @@ class Game:
 
     def do_wait(self): self.end_turn()
 
+    def ring_after_turn(self):
+        for hand in (rogue_rings.LEFT, rogue_rings.RIGHT):
+            ring = rogue_rings.equipped_ring(self.p, hand)
+            if rogue_rings.is_ring(ring, rogue_rings.R_SEARCH):
+                self.do_search(spend_turn=False, quiet_fail=True)
+            elif rogue_rings.is_ring(ring, rogue_rings.R_TELEPORT) and rnd(50)==0:
+                self.teleport_player()
+
     def end_turn(self):
         self.turn+=1; m=self.p.hunger()
         if m:
@@ -1984,6 +2013,7 @@ class Game:
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
         self.p.heal_tick()
+        self.ring_after_turn()
         for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
@@ -2503,7 +2533,7 @@ class Game:
                     if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,7))
                     # Monster
                     mo=self.mon_at(mx,my)
-                    if mo and "invis" not in mo.flags:
+                    if mo and self.can_see_monster(mo):
                         self.txt(sx+1,sy+1,mo.sym,MCOL.get(mo.sym,7))
                     # Player
                     if mx==px and my==py:
