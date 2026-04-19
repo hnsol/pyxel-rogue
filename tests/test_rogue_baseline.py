@@ -395,6 +395,82 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("haste", monster.flags)
         self.assertTrue(monster.turn)
 
+    def test_rogue_544_zap_magic_missile_identifies_and_damages_unsaved_target(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE sets known, save_throw(VS_MAGIC), then hit_monster with 1x4 +1.
+        import rogue_sticks
+
+        game = new_game(seed=207)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=10)
+        game.mons = [monster]
+        game.monster_save_throw = lambda which, m: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 4
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_MISSILE, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_MISSILE])
+        self.assertEqual(monster.hp, 4)
+        self.assertTrue(monster.running)
+
+    def test_rogue_544_zap_magic_missile_saved_target_takes_no_damage(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE vanishes if save_throw(VS_MAGIC) succeeds.
+        import rogue_sticks
+
+        game = new_game(seed=208)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=10)
+        game.mons = [monster]
+        game.monster_save_throw = lambda which, m: True
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_MISSILE, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_MISSILE])
+        self.assertEqual(monster.hp, 10)
+        self.assertFalse(monster.running)
+        self.assertIn("the missle vanishes with a puff of smoke", game.msgs)
+
+    def test_rogue_544_zap_drain_halves_player_hp_and_spreads_damage(self):
+        # Rogue 5.4.4 sticks.c:drain() halves current HP, then divides that HP among monsters in the room.
+        import rogue_sticks
+
+        game = new_game(seed=209)
+        set_open_floor(game)
+        game.p.hp = 16
+        monster_a = monster_at(game.p.x + 2, game.p.y, hp=10)
+        monster_b = monster_at(game.p.x + 3, game.p.y, hp=10)
+        game.mons = [monster_a, monster_b]
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertEqual(game.p.hp, 8)
+        self.assertEqual(monster_a.hp, 6)
+        self.assertEqual(monster_b.hp, 6)
+        self.assertTrue(monster_a.running)
+        self.assertTrue(monster_b.running)
+
+    def test_rogue_544_zap_drain_too_weak_does_not_consume_charge(self):
+        # Rogue 5.4.4 sticks.c:do_zap() returns before charge decrement when HP is below 2.
+        import rogue_sticks
+
+        game = new_game(seed=210)
+        set_open_floor(game)
+        game.p.hp = 1
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 1)
+        self.assertIn("you are too weak to use it", game.msgs)
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)
@@ -1339,7 +1415,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604200111")
+        self.assertEqual(rogue.UI_BUILD, "2604200157")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604200111"
+UI_BUILD = "2604200157"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -103,6 +103,7 @@ WANDERTIME = 70
 BEARTIME = 3
 SLEEPTIME = 5
 BORE_LEVEL = 50
+VS_MAGIC = 3
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
 
@@ -1556,6 +1557,10 @@ class Game:
     def save_vs_magic(self):
         return rnd(20) < 7 + self.p.level//2
 
+    def monster_save_throw(self, which, m):
+        # Rogue 5.4.4 monsters.c:save_throw().
+        return RNG.roll(1,20) >= 14 + which - m.level//2
+
     def m_attack(self,m):
         mn=self.combat_monster_name(m,upper=True)
         if self.swing_hits(m.level, self.p.ac, 0):
@@ -1882,6 +1887,39 @@ class Game:
             self.p.held_by=None
         m.vf_hit=0
 
+    def drain_targets(self):
+        proom=self.room_for_ai(self.p.x,self.p.y,actor=True)
+        if proom=="corridor":
+            return [m for m in self.mons if m.alive and abs(m.x-self.p.x)<=1 and abs(m.y-self.p.y)<=1]
+        return [m for m in self.mons if m.alive and self.same_ai_room(self.room_for_ai(m.x,m.y,actor=True),proom)]
+
+    def drain_life(self):
+        if self.p.hp < 2:
+            self.msg("sticks.you_are_too_weak_to_use_it")
+            return False
+        targets=self.drain_targets()
+        if not targets:
+            self.msg("sticks.you_have_a_tingling_feeling")
+            return True
+        self.p.hp//=2
+        dmg=self.p.hp//len(targets)
+        for m in list(targets):
+            m.hp-=dmg
+            if m.alive:
+                self.runto(m)
+            else:
+                self.award_monster_kill(m)
+        return True
+
+    def hit_monster_with_magic_missile(self,m):
+        self.runto(m)
+        dmg=max(0,RNG.roll(1,4)+1+self.p.str_dam_plus())
+        m.hp-=dmg
+        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_MISSILE), "magic missile", self.combat_monster_name(m)))
+        if not m.alive:
+            self.msg_text(self.defeated_message(self.combat_monster_name(m)))
+            self.award_monster_kill(m)
+
     def zap_stick(self,it,dx,dy):
         if it.cat != CAT_STICK:
             self.msg("sticks.you_cant_zap_with_that")
@@ -1901,6 +1939,16 @@ class Game:
                 self.msg("sticks.the_corridor_glows_and_then_fades")
         elif kind == rogue_sticks.WS_NOP:
             pass
+        elif kind == rogue_sticks.WS_DRAIN:
+            if not self.drain_life():
+                return True
+        elif kind == rogue_sticks.WS_MISSILE:
+            self.ident.wk[kind]=True
+            target=self.first_zap_target(dx,dy)
+            if target and not self.monster_save_throw(VS_MAGIC,target):
+                self.hit_monster_with_magic_missile(target)
+            else:
+                self.msg("sticks.the_missle_vanishes_with_a_puff_of_smoke")
         else:
             target=self.first_zap_target(dx,dy)
             if target:

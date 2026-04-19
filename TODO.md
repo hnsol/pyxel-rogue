@@ -63,7 +63,7 @@
   - [x] invisibility / polymorph / teleport away / teleport to / cancellation の単体モンスター効果接続
   - [ ] lightning / fire / cold の bolt 反射・命中・ダメージ接続
   - [x] haste monster / slow monster の `ISHASTE` / `ISSLOW` 相当フラグと行動頻度への接続
-  - [ ] magic missile / drain life / nothing の効果監査と接続
+  - [x] magic missile / drain life / nothing の効果監査と接続
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
