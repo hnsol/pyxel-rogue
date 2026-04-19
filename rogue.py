@@ -17,8 +17,10 @@ Gamepad:                        Keyboard:
 """
 
 import pyxel
+import json
 import random
 import os
+import sys
 import time
 from dataclasses import dataclass
 from rogue_rng import RogueRng
@@ -208,117 +210,50 @@ POT_COLOR_JA = {
 }
 
 class TextCatalog:
-    MSG = {
-        LANG_EN: {},
-        LANG_JA: {
-            "Welcome to the Dungeons of Doom!":"やあ、ローグ。 運命の洞窟へようこそ...",
-            "You feel hungry.":"空腹になってきた。",
-            "You are weak.":"空腹のせいで力がなくなってきた。",
-            "You faint from lack of food.":"空腹で、目がくらくらする。",
-            "You starve to death.":"空腹で、もう死にそうだ。",
-            "You find nothing.":"何も見つからなかった。",
-            "You found something!":"何かを見つけた！",
-            "no trap there":"そこには罠はない。",
-            "You have found {trap}.":"{trap}を見つけている。",
-            "you fell into a trap!":"落とし穴に落ちた！",
-            "you are caught in a bear trap":"くくり罠にかかった。",
-            "a strange white mist envelops you and you fall asleep":"白い霧に包まれ、眠ってしまった。",
-            "oh no! An arrow shot you":"矢に撃たれた！",
-            "an arrow shoots past you":"矢がかすめて飛んでいった。",
-            "a small dart just hit you in the shoulder":"小さな毒矢が肩に刺さった。",
-            "a small dart whizzes by your ear and vanishes":"小さな毒矢が耳元をかすめて消えた。",
-            "a gush of water hits you on the head":"水しぶきが頭に降りかかった。",
-            "the rust vanishes instantly":"さびはすぐに消えた。",
-            "your armor weakens":"よろいが弱くなった。",
-            "you are suddenly in a parallel dimension":"突然、別の次元に迷い込んだ。",
-            "the light in here suddenly seems {color}":"あたりの光が突然{color}に見えた。",
-            "you feel a sting in the side of your neck":"首筋にちくりと痛みを感じた。",
-            "multi-colored lines swirl around you, then fade":"色とりどりの線が渦巻き、やがて消えた。",
-            "a {color} light flashes in your eyes":"{color}の光が目の前で閃いた。",
-            "a spike shoots past your ear!":"トゲが耳元を飛び抜けた！",
-            "{color} sparks dance across your armor":"{color}の火花がよろいの上で踊った。",
-            "you suddenly feel very thirsty":"突然、とても喉が渇いた。",
-            "you feel time speed up suddenly":"時間が急に速くなったように感じた。",
-            "time now seems to be going slower":"時間がゆっくり流れているように感じる。",
-            "your pack turns {color}!":"荷物が{color}に変わった！",
-            "Nothing here.":"ここには、何もない。",
-            "pack too full":"もうこれ以上、物は持てない。",
-            "the scroll turns to dust as you pick it up":"巻き物は拾うと灰になった。",
-            "Pickup ON.":"自動拾い ON。",
-            "Pickup OFF.":"自動拾い OFF。",
-            "Language: English.":"Language: English.",
-            "Language: Japanese.":"言語: 日本語。",
-            "Diagonal assist ON.":"斜め補助モード ON。",
-            "Diagonal assist OFF.":"斜め補助モード OFF。",
-            "You died... [A/Start] to restart.":"あなたは死んだ... [A/Start] で再開。",
-            "You defeated the {monster}. ({exp} exp)":"{monster}を倒した。 ({exp} exp)",
-            "Welcome to level {level}!":"レベル{level}へようこそ。",
-            "you hit the {monster}":"{monster}への攻撃は命中した。",
-            "you miss the {monster}":"{monster}への攻撃はそれた。",
-            "the {monster} hit you":"{monster}の攻撃は命中した。",
-            "the {monster} misses":"{monster}の攻撃はそれた。",
-            "{monster}'s gaze has confused you":"{monster}の凝視で混乱した。",
-            "your purse feels lighter":"財布が軽くなった気がする。",
-            "You feel weaker!":"力が弱くなった！",
-            "you feel momentarily sick":"一瞬、気分が悪くなった。",
-            "you suddenly feel weaker":"突然、弱くなった気がする。",
-            "You feel confused!":"混乱してきた！",
-            "you are frozen":"凍りついた。",
-            "you are being held":"押さえつけられている。",
-            "you are still stuck in the bear trap":"まだくくり罠に捕まっている。",
-            "{gold} gold pieces":"{gold}個の金塊",
-            "You see a {item} here.":"{item}の上にいる。",
-            "You pick up the {item}.":"{item}を手に入れた。",
-            "You feel a wrenching sensation in your gut.":"腹の底がねじれるような感じがした。",
-            "Your way is magically blocked.":"魔法の力で道がふさがれている。",
-            "You escaped with the Amulet of Yendor!":"イェンダーの魔除けを持って脱出した！",
-            "You are now wearing {item}.":"{item}を身につけた。",
-            "You already have a ring on each hand.":"両手に指輪をしている。",
-            "You aren't wearing any rings.":"指輪をしていない。",
-            "You remove the {item}.":"{item}をはずした。",
-            "You can't. It appears to be cursed.":"はずせない。のろわれているようだ。",
-            "you can't zap with that!":"それでは振れない！",
-            "nothing happens":"何も起こらない。",
-            "the room is lit":"部屋が明るくなった。",
-            "the corridor glows and then fades":"通路が光り、すぐに消えた。",
-        },
-    }
-    MENU = {
-        LANG_EN: {
-            "Quaff":"Quaff", "Read":"Read", "Eat":"Eat", "Wield":"Wield",
-            "Wear":"Wear", "Put on":"Put on", "Take off":"Take off", "Zap":"Zap", "Throw":"Throw", "Drop":"Drop",
-            "Inventory":"Inventory", "Help":"Help", "Search":"Search", "Pickup":"Pickup",
-            "Trap":"Trap", "Language":"Language",
-        },
-        LANG_JA: {
-            "Quaff":"飲む", "Read":"読む", "Eat":"食べる", "Wield":"武器にする",
-            "Wear":"よろいを着る", "Put on":"指輪をはめる", "Take off":"はずす", "Zap":"振る", "Throw":"投げる", "Drop":"落とす",
-            "Inventory":"持ちもの", "Help":"ヘルプ", "Search":"探す", "Pickup":"自動拾い",
-            "Trap":"罠", "Language":"言語",
-        },
-    }
-    TRAP = {
-        LANG_EN: {},
-        LANG_JA: {
-            "trap door":"落とし穴", "arrow trap":"矢の罠",
-            "sleeping gas trap":"眠りガスの罠", "bear trap":"くくり罠",
-            "teleport trap":"テレポートの罠", "dart trap":"毒矢の罠",
-            "rust trap":"さびの罠", "mysterious trap":"不思議な罠",
-        },
-    }
+    _catalogs = None
+    _missing_warned = set()
+
+    @classmethod
+    def _load_catalogs(cls):
+        if cls._catalogs is not None:
+            return cls._catalogs
+        base = os.path.join(os.path.dirname(__file__), "assets", "messages")
+        catalogs = {}
+        for lang in (LANG_EN, LANG_JA):
+            path = os.path.join(base, f"{lang}.json")
+            with open(path, encoding="utf-8") as f:
+                catalogs[lang] = json.load(f)
+        cls._catalogs = catalogs
+        return cls._catalogs
+
+    @classmethod
+    def _warn_missing(cls, key):
+        if key in cls._missing_warned:
+            return
+        cls._missing_warned.add(key)
+        print(f"[TextCatalog] missing message key: {key}", file=sys.stderr)
 
     @staticmethod
     def msg(lang, key, **kw):
-        s = TextCatalog.MSG.get(lang, {}).get(key, key)
+        catalogs = TextCatalog._load_catalogs()
+        lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
+        s = catalogs.get(lang, {}).get(key)
+        if s is None and lang != LANG_EN:
+            s = catalogs.get(LANG_EN, {}).get(key)
+        if s is None:
+            TextCatalog._warn_missing(key)
+            s = f"[missing:{key}]"
         return s.format(**kw) if kw else s
 
     @staticmethod
     def menu(lang, key):
-        return TextCatalog.MENU.get(lang, {}).get(key, key)
+        msg_key = "menu." + key.lower().replace(" ", "_")
+        return TextCatalog.msg(lang, msg_key)
 
     @staticmethod
     def trap(lang, key):
-        return TextCatalog.TRAP.get(lang, {}).get(key, key)
+        msg_key = "trap." + key.lower().replace(" ", "_")
+        return TextCatalog.msg(lang, msg_key)
 
     @staticmethod
     def monster(lang, name):
@@ -603,11 +538,11 @@ class Player:
         prev=s.state
         if s.food<=0:
             if s.food < -STARVETIME:
-                s.hp=0; s.state="faint"; return "You starve to death."
+                s.hp=0; s.state="faint"; return "pyxel.starve_to_death"
             s.food-=1
             if RNG.randrange(5)==0:
                 s.no_command=max(s.no_command,RNG.randint(4,11))
-                s.state="faint"; return "You faint from lack of food."
+                s.state="faint"; return "pyxel.faint_from_lack_of_food"
             s.state="faint"; return None
         s.food-=1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG)
         if s.food<=0:
@@ -615,10 +550,10 @@ class Player:
             return None
         if s.food<MORETIME:
             s.state="weak"
-            return "You are weak." if prev!="weak" else None
+            return "pyxel.are_weak" if prev!="weak" else None
         if s.food<2*MORETIME:
             s.state="hungry"
-            return "You feel hungry." if prev!="hungry" else None
+            return "pyxel.feel_hungry" if prev!="hungry" else None
         s.state="normal"
         return None
     def heal_tick(s):
@@ -1123,7 +1058,7 @@ class Game:
         self.death_cause = ""
         self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
         self.descend()
-        self.msg("Welcome to the Dungeons of Doom!")
+        self.msg("pyxel.welcome_to_dungeons")
 
     def set_lang(self, lang):
         self.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
@@ -1132,7 +1067,7 @@ class Game:
 
     def toggle_lang(self):
         self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN)
-        self.msg("Language: Japanese." if self.lang == LANG_JA else "Language: English.")
+        self.msg("pyxel.language_japanese" if self.lang == LANG_JA else "pyxel.language_english")
 
     def descend(self):
         self.p.depth += 1
@@ -1434,7 +1369,7 @@ class Game:
         if self.p.held_by is m:
             self.p.held_by=None
         if self.p.lvlup():
-            self.msg("Welcome to level {level}!",level=self.p.level)
+            self.msg("pyxel.welcome_to_level", level=self.p.level)
         return mn
 
     def p_attack(self, m):
@@ -1444,10 +1379,10 @@ class Game:
         if hit:
             m.hp-=dmg
             if not m.alive:
-                self.msg("You defeated the {monster}. ({exp} exp)",monster=mn,exp=m.exp)
+                self.msg("pyxel.defeated_monster_exp", monster=mn, exp=m.exp)
                 self.award_monster_kill(m,mn)
-            else: self.msg("you hit the {monster}",monster=mn)
-        else: self.msg("you miss the {monster}",monster=mn)
+            else: self.msg("pyxel.you_hit_monster", monster=mn)
+        else: self.msg("pyxel.you_miss_monster", monster=mn)
 
     def monster_has_magic_item_to_steal(self):
         for it in self.p.inv:
@@ -1481,7 +1416,7 @@ class Game:
             if not self.save_vs_magic():
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))
                 mn=TextCatalog.monster(self.lang,m.name)
-                self.msg("{monster}'s gaze has confused you",monster=mn)
+                self.msg("pyxel.monster_gaze_confused", monster=mn)
         if "steal_gold" in m.flags and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
 
@@ -1503,34 +1438,34 @@ class Game:
             dmg=roll_damage_expr(m.damage_expr)
             if dmg:
                 self.p.hp-=dmg
-            self.msg("the {monster} hit you",monster=mn)
+            self.msg("pyxel.monster_hit_you", monster=mn)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if not rogue_monsters.is_cancelled(m):
                 if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                     self.rust_armor()
                 if "steal_gold" in m.flags and self.p.gold>0:
                     s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
-                    self.p.gold-=s; self.msg("your purse feels lighter")
+                    self.p.gold-=s; self.msg("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return
                 if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
                         and not self.save_vs_poison() and self.p.st>3):
-                    self.p.st-=1; self.msg("You feel weaker!")
+                    self.p.st-=1; self.msg("pyxel.feel_weaker")
                 if "drain_level" in m.flags and rnd(100)<15:
                     if self.p.level>1:
                         self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1])
                     self.p.max_hp=max(1,self.p.max_hp-roll("1d10"))
-                    self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("you suddenly feel weaker")
+                    self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("fight.you_suddenly_feel_weaker")
                 if "drain" in m.flags and rnd(100)<30:
                     loss=roll("1d3")
                     self.p.max_hp=max(1,self.p.max_hp-loss)
-                    self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("you suddenly feel weaker")
+                    self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("fight.you_suddenly_feel_weaker")
                 if "confuse" in m.flags and not self.save_vs_magic():
-                    self.p.confused=RNG.randint(10,20); self.msg("You feel confused!")
+                    self.p.confused=RNG.randint(10,20); self.msg("pyxel.feel_confused_bang")
                 if "freeze" in m.flags:
                     self.p.no_command+=rnd(2)+2
                     if self.p.no_command>BORE_LEVEL:
                         self.p.hp=0; self.death_cause="hypothermia"
-                    self.msg("you are frozen")
+                    self.msg("fight.you_are_frozen")
                 if "hold" in m.flags:
                     m.vf_hit+=1
                     self.p.held_by=m
@@ -1539,9 +1474,9 @@ class Game:
                 if "steal_item" in m.flags:
                     t=self.monster_has_magic_item_to_steal()
                     if t:
-                        self.p.rm_item(t); self.msg(f"She stole your {self.ident.name(t)}!")
+                        self.p.rm_item(t); self.msg("pyxel.she_stole_item", item=self.ident.name(t))
                         self.remove_monster(m); return
-        else: self.msg("the {monster} misses",monster=mn)
+        else: self.msg("pyxel.monster_misses", monster=mn)
 
     def m_turn(self,m):
         if not m.alive: return
@@ -1662,32 +1597,32 @@ class Game:
     def use_pot(self,it):
         p=self.p; nm=POTIONS[it.kind]["name"]; self.ident.pk[it.kind]=True
         if nm=="healing":
-            h=max(1,roll("1d4")*p.level); p.hp=min(p.hp+h,p.max_hp); self.msg(f"You feel better. (+{h})")
+            h=max(1,roll("1d4")*p.level); p.hp=min(p.hp+h,p.max_hp); self.msg("pyxel.feel_better_amount", count=h)
         elif nm=="extra healing":
             h=max(1,roll("1d8")*p.level); p.hp=min(p.hp+h,p.max_hp+2)
             if p.hp>p.max_hp: p.max_hp=p.hp
-            self.msg(f"You feel much better. (+{h})")
+            self.msg("pyxel.feel_much_better_amount", count=h)
         elif nm=="poison":
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
-                self.msg("you feel momentarily sick")
+                self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg(f"You feel sick. (Str -{l})")
-        elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("Str +1!")
-        elif nm=="restore strength": p.st=p.max_st; self.msg("You feel warm all over.")
-        elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("You feel confused.")
-        elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("Darkness falls.")
-        elif nm=="haste self": p.haste=RNG.randint(10,20); self.msg("You speed up!")
-        elif nm=="see invisible": self.msg("You can see invisible monsters.")
+                l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("pyxel.feel_sick_strength_loss", count=l)
+        elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
+        elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
+        elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("pyxel.feel_confused")
+        elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("pyxel.darkness_falls")
+        elif nm=="haste self": p.haste=RNG.randint(10,20); self.msg("pyxel.speed_up")
+        elif nm=="see invisible": self.msg("pyxel.can_see_invisible_monsters")
         elif nm=="raise level":
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
-            self.msg(f"You rise to level {p.level}!")
+            self.msg("pyxel.rise_to_level", level=p.level)
         elif nm=="detect monster":
             for mo in self.mons: self.visible.add((mo.x,mo.y)); self.explored.add((mo.x,mo.y))
-            self.msg("You sense monsters.")
+            self.msg("pyxel.sense_monsters")
         elif nm=="magic detection":
             for i in self.gitems:
                 if i.cat in(CAT_POT,CAT_SCR): self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
-            self.msg("You sense magic.")
+            self.msg("pyxel.sense_magic")
         p.rm_item(it)
 
     def use_scr(self,it):
@@ -1699,36 +1634,36 @@ class Game:
                 t=RNG.choice(unid)
                 if t.cat==CAT_POT: self.ident.pk[t.kind]=True
                 else: self.ident.sk[t.kind]=True
-                self.msg(f"It is a {self.ident.name(t)}.")
-            else: self.msg("You feel vaguely uneasy.")
+                self.msg("pyxel.it_is_item", item=self.ident.name(t))
+            else: self.msg("pyxel.feel_vaguely_uneasy")
         elif nm=="enchant weapon":
             if p.wpn:
                 p.wpn.cursed=False
                 if RNG.randrange(2)==0: p.wpn.hit_plus+=1
                 else: p.wpn.dam_plus+=1
                 p.wpn.ench=p.wpn.hit_plus
-                self.msg(f"Your {p.wpn.data['name']} glows blue!")
-            else: self.msg("You feel a sense of loss.")
+                self.msg("pyxel.item_glows_blue", item=p.wpn.data["name"])
+            else: self.msg("pyxel.feel_sense_of_loss")
         elif nm=="enchant armor":
-            if p.arm: p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg(f"Your armor glows!")
-            else: self.msg("You feel a sense of loss.")
+            if p.arm: p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg("pyxel.armor_glows")
+            else: self.msg("pyxel.feel_sense_of_loss")
         elif nm=="remove curse":
             changed=False
             for i in (p.wpn,p.arm,p.ring_l,p.ring_r):
                 if i and i.cursed:
                     i.cursed=False; changed=True
-            self.msg("Your equipment feels lighter." if changed else "Somebody watches over you.")
+            self.msg("pyxel.equipment_feels_lighter" if changed else "pyxel.somebody_watches_over_you")
         elif nm=="aggravate monsters":
-            self.aggravate_monsters(); self.msg("You hear a humming noise.")
+            self.aggravate_monsters(); self.msg("pyxel.hear_humming_noise")
         elif nm=="scare monster":
             for mo in self.mons:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=RNG.randint(10,20)
-            self.msg("Maniacal laughter echoes.")
+            self.msg("pyxel.maniacal_laughter_echoes")
         elif nm=="sleep":
-            p.no_command=max(p.no_command,RNG.randint(4,8)); self.msg("You fall asleep.")
+            p.no_command=max(p.no_command,RNG.randint(4,8)); self.msg("pyxel.fall_asleep")
         elif nm=="teleportation":
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
-            self.msg("You are teleported!")
+            self.msg("pyxel.teleported")
         elif nm=="create monster":
             for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):
                 nx,ny=p.x+dx,p.y+dy
@@ -1743,17 +1678,17 @@ class Game:
                         if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
                             self.runto(self.mons[-1])
                     break
-            self.msg("A monster appears!")
+            self.msg("pyxel.monster_appears")
         elif nm=="magic mapping":
             for y in range(MAP_H):
                 for x in range(MAP_W):
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
-            self.msg("A map appears in your mind!")
+            self.msg("pyxel.map_appears_in_mind")
         elif nm=="hold monster":
             for mo in self.mons:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=4: mo.held=RNG.randint(10,20)
-            self.msg("Nearby monsters freeze!")
-        elif nm=="blank paper": self.msg("This scroll is blank.")
+            self.msg("pyxel.nearby_monsters_freeze")
+        elif nm=="blank paper": self.msg("pyxel.scroll_is_blank")
         p.rm_item(it)
 
     def first_zap_target(self, dx, dy):
@@ -1825,10 +1760,10 @@ class Game:
 
     def zap_stick(self,it,dx,dy):
         if it.cat != CAT_STICK:
-            self.msg("you can't zap with that!")
+            self.msg("sticks.you_cant_zap_with_that")
             return False
         if it.charges <= 0:
-            self.msg("nothing happens")
+            self.msg("sticks.nothing_happens")
             return True
         kind=it.kind
         if kind == rogue_sticks.WS_LIGHT:
@@ -1837,9 +1772,9 @@ class Game:
             if room and room.usable and room.is_dark:
                 room.flags.discard(ROOM_DARK)
                 self.update_fov()
-                self.msg("the room is lit")
+                self.msg("sticks.the_room_is_lit")
             else:
-                self.msg("the corridor glows and then fades")
+                self.msg("sticks.the_corridor_glows_and_then_fades")
         elif kind == rogue_sticks.WS_NOP:
             pass
         else:
@@ -1873,20 +1808,20 @@ class Game:
     def eat(self,it):
         self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+RNG.randrange(400))
         self.p.state="normal"
-        self.msg(f"You eat the {it.data['name']}. Yum!"); self.p.rm_item(it)
+        self.msg("pyxel.eat_item_yum", item=it.data["name"]); self.p.rm_item(it)
 
     def wield(self,it):
-        if self.p.wpn and self.p.wpn.cursed: self.msg("You can't let go!"); return
-        self.p.wpn=it; self.msg(f"You wield the {self.ident.name(it)}.")
+        if self.p.wpn and self.p.wpn.cursed: self.msg("pyxel.cant_let_go"); return
+        self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
 
     def wear(self,it):
         if self.p.arm:
-            if self.p.arm.cursed: self.msg("Cursed armor won't come off!"); return
-        self.p.arm=it; self.p.recalc_ac(); self.msg(f"You put on the {self.ident.name(it)}.")
+            if self.p.arm.cursed: self.msg("pyxel.cursed_armor_wont_come_off"); return
+        self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
 
     def put_on_ring(self,it):
         if self.p.ring_l is not None and self.p.ring_r is not None:
-            self.msg("You already have a ring on each hand.")
+            self.msg("pyxel.already_ring_each_hand")
             return
         if rogue_rings.put_on_ring(self.p,it):
             self.p.recalc_ac()
@@ -1895,27 +1830,27 @@ class Game:
             if it.kind in (rogue_rings.R_PROTECT, rogue_rings.R_ADDSTR,
                            rogue_rings.R_ADDHIT, rogue_rings.R_ADDDAM):
                 self.ident.rk[it.kind]=True
-            self.msg("You are now wearing {item}.",item=self.ident.name(it))
+            self.msg("pyxel.now_wearing_item", item=self.ident.name(it))
 
     def takeoff(self,it):
         if it is self.p.arm:
-            if it.cursed: self.msg("It's cursed!"); return
+            if it.cursed: self.msg("pyxel.its_cursed"); return
             self.p.arm=None; self.p.recalc_ac()
         elif it is self.p.wpn:
-            if it.cursed: self.msg("It's cursed!"); return
+            if it.cursed: self.msg("pyxel.its_cursed"); return
             self.p.wpn=None
         elif it is self.p.ring_l or it is self.p.ring_r:
             if not rogue_rings.remove_ring(self.p,it):
-                self.msg("You can't. It appears to be cursed.")
+                self.msg("pyxel.cant_appears_cursed")
                 return
             self.p.recalc_ac()
-        self.msg("You remove the {item}.",item=self.ident.name(it))
+        self.msg("pyxel.remove_item", item=self.ident.name(it))
 
     def drop(self,it):
         if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
-            self.msg("It's cursed!"); return
+            self.msg("pyxel.its_cursed"); return
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
-        self.gitems.append(it); self.msg(f"You drop the {self.ident.name(it)}.")
+        self.gitems.append(it); self.msg("pyxel.drop_item", item=self.ident.name(it))
 
     def is_scare_monster(self,it):
         return it.cat==CAT_SCR and SCROLLS[it.kind]["name"]=="scare monster"
@@ -1937,13 +1872,13 @@ class Game:
         pos=self.fall_position(x,y) if around else None
         pos=pos or ((x,y) if self.walkable(x,y) and not self.gi_at(x,y) else None)
         if not pos:
-            if it.cat==CAT_WPN: self.msg(f"The {it.data['name']} vanishes as it hits the ground.")
+            if it.cat==CAT_WPN: self.msg("pyxel.item_vanishes_as_hits_ground", item=it.data["name"])
             return
         it.x,it.y=pos; self.gitems.append(it)
 
     def throw(self,it,dx,dy):
         p=self.p
-        if it is p.wpn and it.cursed: self.msg("Can't let go!"); return
+        if it is p.wpn and it.cursed: self.msg("pyxel.cant_let_go_short"); return
         if it.stackable and it.qty>1:
             thrown=Item(it.cat,it.kind,cursed=it.cursed,qty=1,hit_plus=it.hit_plus,dam_plus=it.dam_plus); it.qty-=1
         else: p.rm_item(it); thrown=it
@@ -1959,11 +1894,11 @@ class Game:
                 hit,dmg=self.roll_player_attack(m,thrown,True)
                 mn=TextCatalog.monster(self.lang,m.name)
                 if hit:
-                    m.hp-=dmg; self.msg(f"The {self.ident.name(thrown)} hits the {mn}. ({dmg})")
+                    m.hp-=dmg; self.msg("pyxel.thrown_item_hits_monster_damage", item=self.ident.name(thrown), monster=mn, damage=dmg)
                     if not m.alive:
-                        self.msg(f"The {mn} is defeated!"); self.award_monster_kill(m,mn)
+                        self.msg("pyxel.monster_is_defeated", monster=mn); self.award_monster_kill(m,mn)
                 else:
-                    self.msg(f"The {self.ident.name(thrown)} misses the {mn}.")
+                    self.msg("pyxel.thrown_item_misses_monster", item=self.ident.name(thrown), monster=mn)
                     self.drop_thrown(thrown,tx,ty)
                 return
             if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR: break
@@ -1977,11 +1912,11 @@ class Game:
         if p.held_by and not p.held_by.alive:
             p.held_by=None
         if p.held_by and (p.x+dx,p.y+dy)!=(p.held_by.x,p.held_by.y):
-            self.msg("you are being held")
+            self.msg("move.you_are_being_held")
             return False
         if p.no_move>0:
             p.no_move-=1
-            self.msg("you are still stuck in the bear trap")
+            self.msg("move.you_are_still_stuck_in_the_bear_trap")
             self.end_turn()
             return True
         if p.confused>0:
@@ -2005,7 +1940,7 @@ class Game:
             if gi and self.auto_pickup and not trapped:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
-                self.msg("You see a {item} here.",item=self.ident.name(gi))
+                self.msg("pyxel.see_item_here", item=self.ident.name(gi))
             self.update_fov(); self.wake_visible_monsters()
             self.update_cam(); self.end_turn(); return True
         return False
@@ -2026,9 +1961,9 @@ class Game:
                 elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rnd(2+probinc)==0:
                     found = self.reveal_trap_at(nx,ny) or found
         if found:
-            self.msg("You found something!")
+            self.msg("pyxel.found_something")
         elif not quiet_fail:
-            self.msg("You find nothing.")
+            self.msg("pyxel.find_nothing")
         if found:
             self.update_fov()
         if spend_turn:
@@ -2065,23 +2000,23 @@ class Game:
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
         self.dashing=False
         if name=="trap door":
-            self.msg("you fell into a trap!")
+            self.msg("move.you_fell_into_a_trap")
             self.descend()
         elif name=="bear trap":
             self.p.no_move=max(self.p.no_move,BEARTIME)
-            self.msg("you are caught in a bear trap")
+            self.msg("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
             self.p.no_command=max(self.p.no_command,SLEEPTIME)
-            self.msg("a strange white mist envelops you and you fall asleep")
+            self.msg("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):
                 self.p.hp-=roll("1d6")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="an arrow killed you"
-                self.msg("oh no! An arrow shot you")
+                self.msg("move.oh_no_an_arrow_shot_you")
             else:
                 self.drop_arrow_at_player()
-                self.msg("an arrow shoots past you")
+                self.msg("move.an_arrow_shoots_past_you")
         elif name=="teleport trap":
             self.teleport_player()
         elif name=="dart trap":
@@ -2092,11 +2027,11 @@ class Game:
                     self.p.st-=1
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="a poisoned dart killed you"
-                self.msg("a small dart just hit you in the shoulder")
+                self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
-                self.msg("a small dart whizzes by your ear and vanishes")
+                self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")
         elif name=="rust trap":
-            self.msg("a gush of water hits you on the head")
+            self.msg("move.a_gush_of_water_hits_you_on_the_head")
             self.rust_armor()
         elif name=="mysterious trap":
             self.mysterious_trap_msg()
@@ -2106,27 +2041,27 @@ class Game:
         if not arm or arm.data["name"]=="leather armor":
             return
         if rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM):
-            self.msg("the rust vanishes instantly")
+            self.msg("move.the_rust_vanishes_instantly")
             return
         if arm.ench>-3:
             arm.ench-=1
             self.p.recalc_ac()
-            self.msg("your armor weakens")
+            self.msg("move.your_armor_weakens")
 
     def mysterious_trap_msg(self):
         color=RNG.choice(RAINBOW)
         msgs=[
-            ("you are suddenly in a parallel dimension",{}),
-            ("the light in here suddenly seems {color}",{"color":color}),
-            ("you feel a sting in the side of your neck",{}),
-            ("multi-colored lines swirl around you, then fade",{}),
-            ("a {color} light flashes in your eyes",{"color":color}),
-            ("a spike shoots past your ear!",{}),
-            ("{color} sparks dance across your armor",{"color":color}),
-            ("you suddenly feel very thirsty",{}),
-            ("you feel time speed up suddenly",{}),
-            ("time now seems to be going slower",{}),
-            ("your pack turns {color}!",{"color":color}),
+            ("move.you_are_suddenly_in_a_parallel_dimension",{}),
+            ("move.the_light_in_here_suddenly_seems_color",{"color":color}),
+            ("move.you_feel_a_sting_in_the_side_of_your_neck",{}),
+            ("move.multi_colored_lines_swirl_around_you_then_fade",{}),
+            ("move.a_color_light_flashes_in_your_eyes",{"color":color}),
+            ("move.a_spike_shoots_past_your_ear",{}),
+            ("pyxel.color_sparks_dance_armor",{"color":color}),
+            ("move.you_suddenly_feel_very_thirsty",{}),
+            ("move.you_feel_time_speed_up_suddenly",{}),
+            ("move.time_now_seems_to_be_going_slower",{}),
+            ("pyxel.pack_turns_color",{"color":color}),
         ]
         key,kw=RNG.choice(msgs)
         self.msg(key,**kw)
@@ -2135,15 +2070,15 @@ class Game:
         x,y=self.p.x+dx,self.p.y+dy
         trap=self.visible_trap_at(x,y)
         if trap is None:
-            self.msg("no trap there")
+            self.msg("command.no_trap_there")
         else:
-            self.msg("You have found {trap}.",trap=self.trap_name(trap))
+            self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
 
     def do_action(self):
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR or self.gi_at(px,py):
             self.do_pickup(); return
-        self.msg("You swing at empty air.")
+        self.msg("pyxel.swing_empty_air")
         self.do_search(front_only=True)
 
     def do_pickup(self):
@@ -2153,23 +2088,23 @@ class Game:
         if self.pickup_at(px,py):
             self.end_turn()
         else:
-            self.msg("Nothing here.")
+            self.msg("pyxel.nothing_here")
 
     def use_stairs(self):
         p=self.p
         if p.has_amulet:
             if p.depth <= 1:
-                self.msg("You escaped with the Amulet of Yendor!")
+                self.msg("pyxel.escaped_with_amulet")
                 self.st=ST_WIN
                 return
             p.depth-=2
             self.descend()
-            self.msg("You feel a wrenching sensation in your gut.")
+            self.msg("pyxel.wrenching_sensation_gut")
             self.end_turn()
             return
-        self.msg(f"You descend to depth {p.depth+1}...")
+        self.msg("pyxel.descend_to_depth", depth=p.depth + 1)
         self.descend()
-        self.msg(f"Dungeon depth {p.depth}.")
+        self.msg("pyxel.dungeon_depth", depth=p.depth)
         self.end_turn()
 
     def pickup_at(self,x,y):
@@ -2178,20 +2113,20 @@ class Game:
         if not gi:
             return False
         if gi.cat==CAT_GOLD:
-            p.gold+=gi.qty; self.gitems.remove(gi); self.msg("{gold} gold pieces",gold=gi.qty)
+            p.gold+=gi.qty; self.gitems.remove(gi); self.msg("pyxel.gold_pieces", gold=gi.qty)
             return True
         if self.is_scare_monster(gi) and gi.picked_up:
             self.gitems.remove(gi)
             self.ident.sk[gi.kind]=True
-            self.msg("the scroll turns to dust as you pick it up")
+            self.msg("pack.the_scroll_turns_to_dust_as_you_pick_it_up")
             return True
         if p.add_item(gi):
             gi.picked_up=True
             if gi.cat==CAT_AMULET:
                 p.has_amulet=True
-            self.gitems.remove(gi); self.msg("You pick up the {item}.",item=self.ident.name(gi))
+            self.gitems.remove(gi); self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
             return True
-        self.msg("pack too full")
+        self.msg("pyxel.pack_too_full")
         return True
 
     def do_wait(self): self.end_turn()
@@ -2211,7 +2146,7 @@ class Game:
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
         if not self.p.alive:
-            self.msg("You died... [A/Start] to restart."); self.st=ST_DEAD
+            self.msg("pyxel.died_restart"); self.st=ST_DEAD
             return
         if self.p.no_command>0: self.p.no_command-=1
         if self.p.confused>0: self.p.confused-=1
@@ -2223,7 +2158,7 @@ class Game:
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
-            self.msg("You died... [A/Start] to restart."); self.st=ST_DEAD
+            self.msg("pyxel.died_restart"); self.st=ST_DEAD
 
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):
@@ -2339,7 +2274,7 @@ class Game:
         else:
             self.fitems=list(p.inv)
         if not self.fitems:
-            self.msg(f"Nothing to {aname.lower()}."); self.close_menu(); return
+            self.msg("pyxel.nothing_to_action", action=aname.lower()); self.close_menu(); return
         self.icur=0
         if aname=="Throw":
             self.throw_dir=None; self.dact="Throw"; self.st=ST_DIR
@@ -2599,7 +2534,7 @@ class Game:
 
     def upd_play(self):
         if self.p.no_command>0:
-            self.msg("You are unable to move.")
+            self.msg("pyxel.unable_to_move")
             self.end_turn()
             return
 
@@ -2654,7 +2589,7 @@ class Game:
         if self.btn_start_tap():
             self.dir_pending=None
             self.diag_assist = not self.diag_assist
-            self.msg(f"Diagonal assist {'ON' if self.diag_assist else 'OFF'}.")
+            self.msg("pyxel.diagonal_assist_on" if self.diag_assist else "pyxel.diagonal_assist_off")
             return
         if self.btn_a(): self.do_action(); return
         if self.btn_menu(): self.open_menu(); return
@@ -2716,7 +2651,7 @@ class Game:
             self.start_trap_inspect()
         elif act=="Pickup":
             self.auto_pickup = not self.auto_pickup
-            self.msg("Pickup ON." if self.auto_pickup else "Pickup OFF.")
+            self.msg("pyxel.pickup_on" if self.auto_pickup else "pyxel.pickup_off")
             self.st=ST_PLAY
         elif act=="Language":
             self.toggle_lang()

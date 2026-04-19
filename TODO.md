@@ -19,6 +19,7 @@
 - ✅ 探索済み視界外セルで床上アイテムを表示し、モンスターは非表示にする
 - ✅ 投げたアイテムの非ブロッキング飛翔アニメーション
 - ✅ ゲーム中の日英切り替え入口（Select補助メニューの Language）
+- ✅ Rogue 5.4.4 / Pyxel 固有ログの JSON メッセージカタログ化（`assets/messages/*.json`）
 - ✅ Rogue 5.4.4 `chase.c` / `monsters.c` / `fight.c` 寄りのモンスターAI基礎（running、起床、扉接近、R/I特殊攻撃、飛行追加移動）
 
 注意: 現行実装は Start+D-pad / X / R / Back を含むが、操作方針は A/B/Start/Select + D-pad 中心に再設計予定。
@@ -124,9 +125,9 @@
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
 - [x] Rogue2.Official `mesg_J` / `mesg_E` / `COPYING` を参考データとして `vendor/rogue2_official_messages/` に保持
 - [x] HUD短縮名を `TextCatalog.hud_item_kind()` 経由にする
-- [ ] 日本語/英語切替（全メッセージ辞書化、umplus_j10r は CJK 対応済み）
+- [x] 日本語/英語切替（ゲームログ / 補助メニュー / 罠名を JSON カタログ化、umplus_j10r は CJK 対応済み）
 - [ ] HUD / Inventory / Help / Death の文言辞書化
-- [ ] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする
+- [x] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする
 - [ ] BGM 導入方式検討
   - `8bit-bgm-generator` 調査
   - `pyxel-hadegame` の `pyxelhg/bgm/bgm_generator.py` 確認
@@ -176,8 +177,8 @@
 - [x] `tests/test_rogue_baseline.py` で Pyxel mock による import / 初期化 / ダンジョン到達性 / 初期装備 / 翻訳層 baseline を確認
 - [x] `python3 -m unittest` でテストを実行可能にする
 - [x] RNG helper を導入し、Rogue 5.4.4 準拠・seed 再現性・Pyxel MCP の `random.randint` 警告の扱いを整理する
-- [ ] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
-- [ ] Rogue 5.4.4 メッセージ全文監査（今回の拾得・ステータス周辺以外）
+- [x] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
+- [x] Rogue 5.4.4 メッセージ全文監査（`vendor/rogue544` の `msg()` / `addmsg()` 抽出と catalog 化）
 - [ ] Select(Back) 補助メニューから開くメッセージ履歴ビュー
 - [ ] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
 - [ ] 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加

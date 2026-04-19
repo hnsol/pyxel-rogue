@@ -13,7 +13,7 @@ work.
 
 ## Key Rules
 
-Keys use this shape:
+Rogue 5.4.4 source keys use this shape:
 
 ```text
 <source_file_basename>.<snake_case_summary>
@@ -30,6 +30,12 @@ pack.you_now_have_item_item2
 When two messages in the same source normalize to the same summary, a numeric
 suffix is appended.
 
+Pyxel Rogue-specific runtime messages use these namespaces:
+
+- `pyxel.*`: current Pyxel-side logs and portable UI messages.
+- `menu.*`: menu labels used through `TextCatalog.menu()`.
+- `trap.*`: trap names used through `TextCatalog.trap()`.
+
 ## Placeholder Vocabulary
 
 The extraction keeps C `printf` placeholders out of runtime message values and
@@ -38,9 +44,10 @@ uses Python `str.format` style placeholders instead.
 Current placeholders:
 
 ```text
-armor, color, color2, command, command2, command3, command4, count, count2,
-exp_level, file, gold, hp, hp_width, item, item2, level, max_hp, max_hp_width,
-max_strength, strength, subject, target, value, value2, version, x, y
+action, armor, color, color2, command, command2, command3, command4, count,
+count2, damage, depth, exp, exp_level, file, gold, hp, hp_width, item, item2,
+level, max_hp, max_hp_width, max_strength, monster, strength, subject, target,
+trap, value, value2, version, x, y
 ```
 
 Prefer the existing names when adding keys. Add a new placeholder only when the

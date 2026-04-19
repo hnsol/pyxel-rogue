@@ -107,7 +107,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 自動拾得ON/OFF、投擲アニメーション
 - 墓石つき死亡画面
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
-- 日英切替基盤、ロジックテスト基盤
+- JSONメッセージカタログによる日英切替基盤、ロジックテスト基盤
 - Rogue2.Official の `mesg_E` / `mesg_J` を参考データとして同梱
 
 実装状況の詳細は [TODO.md](TODO.md) を参照してください。
@@ -116,7 +116,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 - 杖の bolt / magic missile / drain life 系効果
 - Rogue 5.4.4 期待値テスト拡充
-- 全メッセージ辞書化
+- HUD / Inventory / Help / Death の文言辞書化
 - 可変レイアウト、フォント選択
 - BGM
 - ハイスコア

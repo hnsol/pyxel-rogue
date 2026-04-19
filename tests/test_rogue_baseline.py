@@ -782,6 +782,28 @@ class RogueBaselineTest(unittest.TestCase):
         with open(os.path.join(ref_dir, "mesg_J"), encoding="utf-8") as f:
             self.assertIn('"Message Japanese version', f.read())
 
+    def test_text_catalog_loads_external_message_json(self):
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_EN, "command.no_monster_there"),
+            "no monster there",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_JA, "command.no_monster_there"),
+            "その方向には怪物がいない。",
+        )
+
+    def test_text_catalog_falls_back_to_english_for_missing_ja_key(self):
+        catalogs = rogue.TextCatalog._load_catalogs()
+        ja_catalog = catalogs[rogue.LANG_JA]
+        original = ja_catalog.pop("command.no_monster_there")
+        try:
+            self.assertEqual(
+                rogue.TextCatalog.msg(rogue.LANG_JA, "command.no_monster_there"),
+                "no monster there",
+            )
+        finally:
+            ja_catalog["command.no_monster_there"] = original
+
     def test_module_loads_and_new_game_emits_welcome(self):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)

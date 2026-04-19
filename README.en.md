@@ -107,7 +107,7 @@ Implemented overview:
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
 - Gamepad-oriented A/B/Start/Select + D-pad controls
-- English/Japanese text switching foundation and logic test foundation
+- JSON message catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
 See [TODO.md](TODO.md) for the detailed implementation status.
@@ -116,7 +116,7 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 
 - Wand/staff bolt, magic missile, and drain life effects
 - More Rogue 5.4.4 expectation tests
-- Full message catalog coverage
+- HUD / Inventory / Help / Death text catalog coverage
 - Responsive layout and font selection
 - BGM
 - High scores

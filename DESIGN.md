@@ -165,15 +165,17 @@ font = pyxel.Font(os.path.join(os.path.dirname(pyxel.__file__),
 - `mesg_J`: 日本語メッセージ・用語
 - `mesg_E`: 英語メッセージとの対応確認
 
-Rogue2.Official の `mesg_E` / `mesg_J` / `COPYING` は `vendor/rogue2_official_messages/` に UTF-8 参照データとして保持する。このデータは文言・用語・メッセージ分離形式の確認専用であり、Pyxel Rogue の実行時メッセージ辞書として直接読み込まない。取り込み元、commit、ライセンス条件は同ディレクトリの `README.md` と `COPYING` を参照する。
+Rogue2.Official の `mesg_E` / `mesg_J` / `COPYING` は `vendor/rogue2_official_messages/` に UTF-8 参照データとして保持する。このデータは文言・用語・メッセージ分離形式の確認専用であり、Pyxel Rogue の実行時には直接読み込まない。取り込み元、commit、ライセンス条件は同ディレクトリの `README.md` と `COPYING` を参照する。
 
-現行実装では `TextCatalog` と `LANG_EN` / `LANG_JA` を導入し、`PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べる入口を用意した。Phase 1 として、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名などの表示だけが現在言語に従う。
+現行実装では `assets/messages/en.json` / `ja.json` / `manifest.json` を実行時メッセージ辞書とし、`TextCatalog` が起動時に一度だけ読み込む。英語カタログは Rogue 5.4.4 C ソースの `msg()` / `addmsg()` 文字列と、Pyxel版固有の UI/ログ文言を持つ。日本語カタログは Rogue2.Official の `mesg_J` に寄せ、対応がない文言は `manual` として補完している。欠損キーは日本語から英語へフォールバックし、英語にもない場合は `[missing:key]` を返して stderr に一度だけ警告する。
 
-まだ全メッセージ辞書化は完了していない。歓迎文、空腹、探索、戦闘、拾得、メニュー項目、アイテム名・モンスター名の代表範囲から段階的に `TextCatalog` 経由へ移行している。HUD、Inventory、Help、Death などの直書き英語は後続タスクで辞書化する。
+`PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べ、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名などの表示だけが現在言語に従う。
+
+ゲームログ、補助メニュー、罠名表示は JSON 駆動の `TextCatalog` へ移行した。HUD の一部、Inventory、Help、Death などの固定表示文言は後続タスクで用途別 API に寄せる。
 
 HUD の短縮名は表示制約が強いため、通常のアイテム名とは別に `TextCatalog.hud_item_kind()` を入口にする。実データは段階的に分離するが、呼び出し側は通常名、HUD短縮名、メッセージ、メニュー文言を混ぜず、用途別の catalog API を通す。
 
-メッセージ分離は段階的に進める。Phase 4 以降で追加する新規ログ・UI文言は直書きせず `TextCatalog` 経由にし、既存文言は関連機能を触るタイミングで移行する。先に巨大な翻訳リファクタを行うより、指輪、杖、罠、Amulet、勝利、search結果など新規要素の文言を増やす時点で辞書化することを優先する。
+メッセージ分離は段階的に進める。Phase 4 以降で追加する新規ログ・UI文言は直書きせず `TextCatalog` 経由にし、既存文言は関連機能を触るタイミングで移行する。新規キーを追加するときは `assets/messages/README.md` の key / placeholder 規約に従い、`manifest.json` の source と `ja_status` から追えるようにする。
 
 翻訳層はゲーム状態を変えない表示レイヤーとして扱う。同じ seed と同じ操作なら、英語 / 日本語の違いでプレイヤー位置、所持品、ターン、HP、モンスター配置などのゲーム状態が変わってはいけない。
 
