@@ -65,15 +65,17 @@ wizard, and branch-specific behavior.
 
 ## Japanese Matching
 
-`ja.json` intentionally contains only keys matched from
-`vendor/rogue2_official_messages/mesg_E` and `mesg_J`. Missing Japanese keys are
-listed under `__summary__.ja_missing_keys` in `manifest.json` and should fall
-back to English until a translation is added.
+`ja.json` contains keys matched from
+`vendor/rogue2_official_messages/mesg_E` and `mesg_J`, plus hand-completed
+entries where Rogue 5.4.4 has no direct Rogue2.Official line. Missing Japanese
+keys are listed under `__summary__.ja_missing_keys` in `manifest.json` and
+should fall back to English until a translation is added.
 
 `ja_status` values:
 
 - `matched`: the Japanese line matched and placeholder counts align.
-- `manual`: the Japanese line was matched, but placeholder shape differs.
+- `manual`: the Japanese text was completed by hand, typically for message
+  fragments, wizard/debug strings, or Rogue 5.4.4-only wording.
 - `missing`: no confident Rogue2.Official match was found.
 
 ## Adding Messages

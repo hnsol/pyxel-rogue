@@ -2,13 +2,14 @@
   "armor.not_wearing_armor": {
     "source": "armor.c:63",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:95"
   },
   "armor.was": {
     "source": "armor.c:72",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "armor.wearing_item": {
@@ -16,8 +17,9 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:100"
   },
   "armor.wearing_item_item2": {
     "source": "armor.c:75",
@@ -25,7 +27,7 @@
       "item",
       "item2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "armor.you_are_already_wearing_some": {
@@ -38,14 +40,15 @@
   "armor.you_are_now": {
     "source": "armor.c:46",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "armor.you_arent_wearing_any_armor": {
     "source": "armor.c:65",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:95"
   },
   "armor.you_cant_wear_that": {
     "source": "armor.c:38",
@@ -57,13 +60,13 @@
   "armor.you_ll_have_to_take_it_off_first": {
     "source": "armor.c:31",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "armor.you_used_to_be": {
     "source": "armor.c:74",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "chase.couldnt_find_monster_in_runto_at_x_y": {
@@ -72,7 +75,7 @@
       "x",
       "y"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "chase.in_some_bizarre_place_x_y": {
@@ -81,19 +84,19 @@
       "x",
       "y"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.a_secret_door": {
     "source": "command.c:501",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.blank": {
     "source": "command.c:82",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "command.c:598",
@@ -112,13 +115,13 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.character_you_want_help_for_for_all": {
     "source": "command.c:543",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.food_left_count": {
@@ -126,13 +129,13 @@
     "params": [
       "count"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.i_see": {
     "source": "command.c:229",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.i_see_no_way_down": {
@@ -154,7 +157,7 @@
     "params": [
       "command"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.inpack_count": {
@@ -162,7 +165,7 @@
     "params": [
       "count"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.item_value": {
@@ -171,14 +174,15 @@
       "item",
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.no_monster_there": {
     "source": "command.c:230",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:25"
   },
   "command.no_trap_there": {
     "source": "command.c:309",
@@ -190,7 +194,7 @@
   "command.not_wizard_any_more": {
     "source": "command.c:324",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.nothing_here": {
@@ -203,25 +207,25 @@
   "command.sorry": {
     "source": "command.c:336",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.that_has_already_been_identified": {
     "source": "command.c:765",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.there_is": {
     "source": "command.c:173",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.to_pick_up": {
     "source": "command.c:176",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.unknown_character_command": {
@@ -229,7 +233,7 @@
     "params": [
       "command"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.value": {
@@ -237,7 +241,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()",
     "additional_sources": [
       "command.c:817"
@@ -248,7 +252,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.value_value2": {
@@ -257,7 +261,7 @@
       "value",
       "value2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.value_value2_2": {
@@ -266,7 +270,7 @@
       "value",
       "value2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.version_version_mctesq_was_here": {
@@ -274,26 +278,27 @@
     "params": [
       "version"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.was": {
     "source": "command.c:771",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.what_do_you_want_identified": {
     "source": "command.c:635",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.what_do_you_want_to_call_it": {
     "source": "command.c:777",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:111"
   },
   "command.x_y": {
     "source": "command.c:371",
@@ -301,13 +306,13 @@
       "x",
       "y"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.you_are": {
     "source": "command.c:814",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.you_are_suddenly_as_smart_as_ken_arnold_in_dungeon_level": {
@@ -315,7 +320,7 @@
     "params": [
       "level"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.you_are_value": {
@@ -323,7 +328,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.you_can_move_again": {
@@ -336,14 +341,16 @@
   "command.you_cant_call_that_anything": {
     "source": "command.c:756",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:110"
   },
   "command.you_cant_you_re_floating_off_the_ground": {
     "source": "command.c:711",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:48"
   },
   "command.you_feel_a_wrenching_sensation_in_your_gut": {
     "source": "command.c:693",
@@ -355,19 +362,19 @@
   "command.you_found": {
     "source": "command.c:513",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.you_have_found": {
     "source": "command.c:307",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "command.you_havent_typed_a_command_yet": {
     "source": "command.c:249",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "command.your_way_is_magically_blocked": {
@@ -380,7 +387,7 @@
   "daemons.bummer_you_ve_hit_the_ground": {
     "source": "daemons.c:293",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "daemons.everything_looks_so_boring_now": {
@@ -393,31 +400,32 @@
   "daemons.far_out_everything_is_all_cosmic_again": {
     "source": "daemons.c:118",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "daemons.getting_hungry": {
     "source": "daemons.c:175",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:72"
   },
   "daemons.getting_the_munchies": {
     "source": "daemons.c:175",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "daemons.the_munchies_are_interfering_with_your_motor_capabilites": {
     "source": "daemons.c:168",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "daemons.the_munchies_overpower_your_motor_capabilities": {
     "source": "daemons.c:156",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "daemons.the_veil_of_darkness_lifts": {
@@ -430,20 +438,22 @@
   "daemons.you_are_getting_the_munchies": {
     "source": "daemons.c:177",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "daemons.you_are_starting_to_feel_weak": {
     "source": "daemons.c:168",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:74"
   },
   "daemons.you_are_starting_to_get_hungry": {
     "source": "daemons.c:177",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:72"
   },
   "daemons.you_faint": {
     "source": "daemons.c:158",
@@ -457,13 +467,13 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "daemons.you_feel_too_weak_from_lack_of_food": {
     "source": "daemons.c:156",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "daemons.you_feel_yourself_slowing_down": {
@@ -483,19 +493,20 @@
   "daemons.you_freak_out": {
     "source": "daemons.c:158",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "extern.a_beartrap": {
     "source": "extern.c:81",
     "params": [],
-    "ja_status": "missing",
-    "origin": "tr_name[]"
+    "ja_status": "matched",
+    "origin": "tr_name[]",
+    "ja_source": "mesg_J:218"
   },
   "extern.a_mysterious_trap": {
     "source": "extern.c:85",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "tr_name[]"
   },
   "extern.a_poison_dart_trap": {
@@ -529,49 +540,50 @@
   "extern.a_trapdoor": {
     "source": "extern.c:78",
     "params": [],
-    "ja_status": "missing",
-    "origin": "tr_name[]"
+    "ja_status": "matched",
+    "origin": "tr_name[]",
+    "ja_source": "mesg_J:216"
   },
   "extern.an_arrow_trap": {
     "source": "extern.c:79",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "tr_name[]"
   },
   "fight.a_bite_has_weakened_you": {
     "source": "fight.c:222",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.a_bite_momentarily_weakens_you": {
     "source": "fight.c:227",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.barely_miss": {
     "source": "fight.c:35",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.barely_misses": {
     "source": "fight.c:39",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.bite_has_no_effect": {
     "source": "fight.c:229",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.blank": {
     "source": "fight.c:170",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()",
     "additional_sources": [
       "fight.c:323"
@@ -582,49 +594,49 @@
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "fight.defeated": {
     "source": "fight.c:669",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "fight.defeated_2": {
     "source": "fight.c:676",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "fight.doesnt_hit": {
     "source": "fight.c:40",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.dont_hit": {
     "source": "fight.c:36",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.has_injured": {
     "source": "fight.c:28",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "h_names[]"
   },
   "fight.have_injured": {
     "source": "fight.c:24",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "h_names[]"
   },
   "fight.heavy_that_s_a_nasty_critter": {
     "source": "fight.c:97",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.hit": {
@@ -640,7 +652,7 @@
   "fight.miss": {
     "source": "fight.c:33",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.misses": {
@@ -653,7 +665,7 @@
   "fight.scored_an_excellent_hit_on": {
     "source": "fight.c:22",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "h_names[]",
     "additional_sources": [
       "fight.c:26"
@@ -664,15 +676,16 @@
     "params": [
       "target"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:205"
   },
   "fight.subject": {
     "source": "fight.c:512",
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "fight.subject_2": {
@@ -680,7 +693,7 @@
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "fight.subject_appears_confused": {
@@ -688,31 +701,31 @@
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.swing_and_hit": {
     "source": "fight.c:25",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "h_names[]"
   },
   "fight.swing_and_miss": {
     "source": "fight.c:34",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.swings_and_hits": {
     "source": "fight.c:29",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "h_names[]"
   },
   "fight.swings_and_misses": {
     "source": "fight.c:38",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "m_names[]"
   },
   "fight.the_subject_hits": {
@@ -720,21 +733,23 @@
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
-    "origin": "addmsg()"
+    "ja_status": "matched",
+    "origin": "addmsg()",
+    "ja_source": "mesg_J:19"
   },
   "fight.the_subject_misses": {
     "source": "fight.c:584",
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
-    "origin": "addmsg()"
+    "ja_status": "matched",
+    "origin": "addmsg()",
+    "ja_source": "mesg_J:18"
   },
   "fight.wait_that_s_a_xeroc": {
     "source": "fight.c:97",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.you_are_frozen": {
@@ -747,43 +762,40 @@
   "fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker": {
     "source": "fight.c:220",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.you_have": {
     "source": "fight.c:675",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "fight.you_hit": {
     "source": "fight.c:511",
     "params": [],
-    "ja_status": "missing",
-    "origin": "addmsg()",
-    "ja_source": "mesg_J:23",
-    "ja_candidate_status": "placeholder_mismatch"
+    "ja_status": "manual",
+    "origin": "addmsg()"
   },
   "fight.you_missed": {
     "source": "fight.c:586",
     "params": [],
-    "ja_status": "missing",
-    "origin": "addmsg()",
-    "ja_source": "mesg_J:22",
-    "ja_candidate_status": "placeholder_mismatch"
+    "ja_status": "manual",
+    "origin": "addmsg()"
   },
   "fight.you_suddenly_feel_weaker": {
     "source": "fight.c:263",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:208"
   },
   "fight.your_hands_stop_glowing_color": {
     "source": "fight.c:119",
     "params": [
       "color"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "fight.your_purse_feels_lighter": {
@@ -796,7 +808,7 @@
   "io.blank": {
     "source": "io.c:184",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "state_name[]"
   },
   "io.faint": {
@@ -827,7 +839,7 @@
       "armor",
       "exp_level"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "io.weak": {
@@ -842,13 +854,13 @@
     "params": [
       "count"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "main.really_quit": {
     "source": "main.c:302",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "misc.call_it": {
@@ -870,25 +882,27 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:267"
   },
   "misc.that_s_already": {
     "source": "misc.c:450",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "misc.that_s_inedible": {
     "source": "misc.c:293",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:264"
   },
   "misc.ugh_you_would_get_ill_if_you_ate_that": {
     "source": "misc.c:291",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "misc.value_that_tasted_good": {
@@ -896,7 +910,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "misc.value_this_food_tastes_awful": {
@@ -904,7 +918,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "misc.welcome_to_level_level": {
@@ -912,43 +926,46 @@
     "params": [
       "level"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:53"
   },
   "misc.what_do_you_want_to_call_it": {
     "source": "misc.c:558",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:111"
   },
   "misc.which_direction": {
     "source": "misc.c:478",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:55"
   },
   "misc.you_faint_from_exhaustion": {
     "source": "misc.c:390",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "monsters.blank": {
     "source": "monsters.c:193",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "monsters.cant_find_monster_in_wake_monster": {
     "source": "monsters.c:159",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "monsters.s_gaze_has_confused_you": {
     "source": "monsters.c:194",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "monsters.started_a_wandering_subject": {
@@ -956,7 +973,7 @@
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "monsters.subject": {
@@ -964,7 +981,7 @@
     "params": [
       "subject"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "move.a_color_light_flashes_in_your_eyes": {
@@ -972,7 +989,7 @@
     "params": [
       "color"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.a_gush_of_water_hits_you_on_the_head": {
@@ -985,7 +1002,7 @@
   "move.a_poisoned_dart_killed_you": {
     "source": "move.c:341",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.a_small_dart_just_hit_you_in_the_shoulder": {
@@ -998,13 +1015,13 @@
   "move.a_small_dart_whizzes_by_your_ear_and_vanishes": {
     "source": "move.c:335",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.a_spike_shoots_past_your_ear": {
     "source": "move.c:294",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.a_strange_white_mist_envelops_you_and_you_fall_asleep": {
@@ -1017,25 +1034,25 @@
   "move.an_arrow_killed_you": {
     "source": "move.c:311",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.an_arrow_shoots_past_you": {
     "source": "move.c:324",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.multi_colored_lines_swirl_around_you_then_fade": {
     "source": "move.c:292",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.oh_no_an_arrow_shot_you": {
     "source": "move.c:315",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.the_light_in_here_suddenly_seems_color": {
@@ -1043,7 +1060,7 @@
     "params": [
       "color"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.the_rust_vanishes_instantly": {
@@ -1056,7 +1073,7 @@
   "move.time_now_seems_to_be_going_slower": {
     "source": "move.c:298",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.value_sparks_dance_across_your_armor": {
@@ -1064,7 +1081,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.you_are_being_held": {
@@ -1091,45 +1108,46 @@
   "move.you_are_suddenly_in_a_parallel_dimension": {
     "source": "move.c:289",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.you_feel_a_sting_in_the_side_of_your_neck": {
     "source": "move.c:291",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.you_feel_time_speed_up_suddenly": {
     "source": "move.c:297",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.you_fell_into_a_trap": {
     "source": "move.c:282",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:217"
   },
   "move.you_pack_turns_value": {
     "source": "move.c:299",
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.you_suddenly_feel_very_thirsty": {
     "source": "move.c:296",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.your_armor_appears_to_be_weaker_now_oh_my": {
     "source": "move.c:421",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "move.your_armor_weakens": {
@@ -1144,13 +1162,13 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.blank": {
     "source": "pack.c:270",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "pack.c:367",
@@ -1162,31 +1180,32 @@
     "params": [
       "count"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:28"
   },
   "pack.empty_handed": {
     "source": "pack.c:278",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.for_list": {
     "source": "pack.c:406",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.in_your_pack": {
     "source": "pack.c:174",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "pack.item": {
     "source": "pack.c:363",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.item_is_not_a_valid_item": {
@@ -1194,7 +1213,7 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.item_item2": {
@@ -1203,7 +1222,7 @@
       "item",
       "item2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.item_item2_2": {
@@ -1212,7 +1231,7 @@
       "item",
       "item2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.item_not_in_pack": {
@@ -1220,7 +1239,7 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.moved_onto_item": {
@@ -1228,14 +1247,16 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:70"
   },
   "pack.no_room": {
     "source": "pack.c:172",
     "params": [],
-    "ja_status": "missing",
-    "origin": "addmsg()"
+    "ja_status": "matched",
+    "origin": "addmsg()",
+    "ja_source": "mesg_J:87"
   },
   "pack.nothing_appropriate": {
     "source": "pack.c:278",
@@ -1254,25 +1275,25 @@
   "pack.there_s": {
     "source": "pack.c:171",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "pack.what": {
     "source": "pack.c:405",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "pack.which_item_do_you_wish_to_inventory": {
     "source": "pack.c:363",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "pack.which_object_do_you_want_to": {
     "source": "pack.c:402",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "pack.you": {
@@ -1285,46 +1306,49 @@
   "pack.you_are_empty_handed": {
     "source": "pack.c:281",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:26"
   },
   "pack.you_arent_carrying_anything": {
     "source": "pack.c:358",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "matched",
     "origin": "msg()",
     "additional_sources": [
       "pack.c:391"
-    ]
+    ],
+    "ja_source": "mesg_J:26"
   },
   "pack.you_dont_have_anything_appropriate": {
     "source": "pack.c:281",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:93"
   },
   "pack.you_found": {
     "source": "pack.c:459",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "pack.you_now_have": {
     "source": "pack.c:155",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "pack.you_ran_out": {
     "source": "pack.c:396",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "passages.warning_connectivity_problem_on_this_level": {
     "source": "passages.c:265",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "potions.a_cloak_of_darkness_falls_around_you": {
@@ -1337,13 +1361,14 @@
   "potions.hey_this_tastes_great_it_make_you_feel_warm_all_over": {
     "source": "potions.c:204",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:235"
   },
   "potions.oh_bummer_everything_is_dark_help": {
     "source": "potions.c:46",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "p_actions[]"
   },
   "potions.oh_wow_everything_seems_so_cosmic": {
@@ -1366,8 +1391,9 @@
   "potions.that_s_undrinkable": {
     "source": "potions.c:76",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:233"
   },
   "potions.wait_what_s_going_on_here_huh_what_who": {
     "source": "potions.c:29",
@@ -1386,7 +1412,7 @@
   "potions.what_an_odd_tasting_potion": {
     "source": "potions.c:211",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "potions.you_begin_to_feel_better": {
@@ -1406,7 +1432,7 @@
   "potions.you_feel_momentarily_sick": {
     "source": "potions.c:95",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "potions.you_feel_stronger_now_what_bulging_muscles": {
@@ -1435,13 +1461,11 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "potions.c:155"
-    ],
-    "ja_source": "mesg_J:230",
-    "ja_candidate_status": "placeholder_mismatch"
+    ]
   },
   "potions.you_start_to_float_in_the_air": {
     "source": "potions.c:50",
@@ -1453,19 +1477,19 @@
   "potions.you_suddenly_feel_much_more_skillful": {
     "source": "potions.c:175",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "potions.yuk_why_would_you_want_to_drink_that": {
     "source": "potions.c:74",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.it_would_be_difficult_to_wrap_that_around_a_finger": {
     "source": "rings.c:36",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.item_item2": {
@@ -1474,49 +1498,52 @@
       "item",
       "item2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.l_or_r": {
     "source": "rings.c:148",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.left_hand_or_right_hand": {
     "source": "rings.c:139",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:158"
   },
   "rings.left_or_right_ring": {
     "source": "rings.c:137",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.no_rings": {
     "source": "rings.c:102",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.not_a_ring": {
     "source": "rings.c:38",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:163"
   },
   "rings.not_wearing_such_a_ring": {
     "source": "rings.c:118",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:159"
   },
   "rings.please_type_l_or_r": {
     "source": "rings.c:150",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.was_wearing_item_item2": {
@@ -1525,37 +1552,39 @@
       "item",
       "item2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.wearing_two": {
     "source": "rings.c:62",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "rings.you_already_have_a_ring_on_each_hand": {
     "source": "rings.c:60",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:160"
   },
   "rings.you_are_now_wearing": {
     "source": "rings.c:84",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "rings.you_arent_wearing_any_rings": {
     "source": "rings.c:104",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:167"
   },
   "save.blank": {
     "source": "save.c:55",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "save.c:80"
@@ -1564,13 +1593,13 @@
   "save.file_exists_do_you_wish_to_overwrite_it": {
     "source": "save.c:92",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "save.file_name": {
     "source": "save.c:75",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "save.file_name_file": {
@@ -1578,7 +1607,7 @@
     "params": [
       "file"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "save.c:263"
@@ -1587,13 +1616,13 @@
   "save.please_answer_y_or_n": {
     "source": "save.c:61",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "save.please_answer_y_or_n_2": {
     "source": "save.c:101",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "save.save_file_file": {
@@ -1601,49 +1630,50 @@
     "params": [
       "file"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.freeze": {
     "source": "scrolls.c:95",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "scrolls.nothing_to_read": {
     "source": "scrolls.c:43",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.oh_now_this_scroll_has_a_map_on_it": {
     "source": "scrolls.c:166",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:259"
   },
   "scrolls.s": {
     "source": "scrolls.c:97",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "scrolls.s_around_you": {
     "source": "scrolls.c:94",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "scrolls.the_monster": {
     "source": "scrolls.c:92",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "scrolls.there_is_nothing_on_it_to_read": {
     "source": "scrolls.c:41",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.this_scroll_is_an_item_scroll": {
@@ -1651,13 +1681,13 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.what_a_puzzling_scroll": {
     "source": "scrolls.c:305",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.you_fall_asleep": {
@@ -1681,8 +1711,9 @@
   "scrolls.you_feel_as_if_somebody_is_watching_over_you": {
     "source": "scrolls.c:285",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:257"
   },
   "scrolls.you_feel_in_touch_with_the_universal_onenes": {
     "source": "scrolls.c:285",
@@ -1726,10 +1757,8 @@
     "params": [
       "color"
     ],
-    "ja_status": "missing",
-    "origin": "msg()",
-    "ja_source": "mesg_J:255",
-    "ja_candidate_status": "placeholder_mismatch"
+    "ja_status": "manual",
+    "origin": "msg()"
   },
   "scrolls.your_color_glows_color2_for_a_moment": {
     "source": "scrolls.c:271",
@@ -1737,7 +1766,7 @@
       "color",
       "color2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.your_hands_begin_to_glow_color": {
@@ -1745,13 +1774,13 @@
     "params": [
       "color"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "scrolls.your_nose_tingles": {
     "source": "scrolls.c:249",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.by_a_shimmering_color_light": {
@@ -1759,13 +1788,13 @@
     "params": [
       "color"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "sticks.missle_vanishes": {
     "source": "sticks.c:189",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.nothing_happens": {
@@ -1778,31 +1807,31 @@
   "sticks.off_the_dragon": {
     "source": "sticks.c:369",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "sticks.the_corridor_glows_and_then_fades": {
     "source": "sticks.c:77",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.the_flame_bounces": {
     "source": "sticks.c:367",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "sticks.the_missle_vanishes_with_a_puff_of_smoke": {
     "source": "sticks.c:191",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.the_room_is_lit": {
     "source": "sticks.c:85",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "sticks.the_value_bounces": {
@@ -1810,7 +1839,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.the_value_hits": {
@@ -1818,7 +1847,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.the_value_whizzes_by_you": {
@@ -1826,7 +1855,7 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.the_value_whizzes_past_value2": {
@@ -1835,7 +1864,7 @@
       "value",
       "value2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.value_misses": {
@@ -1843,13 +1872,13 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.what_a_bizarre_schtick": {
     "source": "sticks.c:237",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.you_are_hit_by_the_value": {
@@ -1857,13 +1886,13 @@
     "params": [
       "value"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.you_are_too_weak_to_use_it": {
     "source": "sticks.c:98",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "sticks.you_cant_zap_with_that": {
@@ -1876,7 +1905,7 @@
   "sticks.you_have_a_tingling_feeling": {
     "source": "sticks.c:275",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.bad_pick_one_count_from_count2_items": {
@@ -1885,13 +1914,13 @@
       "count",
       "count2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.blank": {
     "source": "things.c:360",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "things.c:501"
@@ -1900,7 +1929,7 @@
   "things.blank_2": {
     "source": "things.c:668",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.dropped_item": {
@@ -1908,13 +1937,14 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:92"
   },
   "things.for": {
     "source": "things.c:351",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()",
     "additional_sources": [
       "things.c:664"
@@ -1923,7 +1953,7 @@
   "things.for_all": {
     "source": "things.c:355",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.item_count": {
@@ -1932,19 +1962,19 @@
       "item",
       "count"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.not_a_type": {
     "source": "things.c:371",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.of_object_do_you_want_a_list": {
     "source": "things.c:354",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()",
     "additional_sources": [
       "things.c:667"
@@ -1958,14 +1988,15 @@
       "command3",
       "command4"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "things.there_is_something_there_already": {
     "source": "things.c:151",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:88"
   },
   "things.what_type": {
     "source": "things.c:352",
@@ -1999,25 +2030,26 @@
       "item",
       "item2"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "weapons.you_are_now": {
     "source": "weapons.c:256",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "addmsg()"
   },
   "weapons.you_cant_wield_armor": {
     "source": "weapons.c:247",
     "params": [],
-    "ja_status": "missing",
-    "origin": "msg()"
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:103"
   },
   "wizard.blessing_n": {
     "source": "wizard.c:144",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()",
     "additional_sources": [
       "wizard.c:173"
@@ -2026,13 +2058,13 @@
   "wizard.how_much": {
     "source": "wizard.c:187",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "wizard.type_of_item": {
     "source": "wizard.c:134",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "wizard.which_command_do_you_want_0_f": {
@@ -2040,19 +2072,19 @@
     "params": [
       "command"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "wizard.wizard_s_password": {
     "source": "wizard.c:244",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "wizard.you_dont_have_anything_in_your_pack_to_identify": {
     "source": "wizard.c:32",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "wizard.you_must_identify_a_item": {
@@ -2060,255 +2092,20 @@
     "params": [
       "item"
     ],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "wizard.you_must_identify_something": {
     "source": "wizard.c:44",
     "params": [],
-    "ja_status": "missing",
+    "ja_status": "manual",
     "origin": "msg()"
   },
   "__summary__": {
     "en_key_count": 296,
-    "ja_key_count": 62,
-    "ja_missing_count": 234,
-    "ja_missing_keys": [
-      "armor.not_wearing_armor",
-      "armor.was",
-      "armor.wearing_item",
-      "armor.wearing_item_item2",
-      "armor.you_are_now",
-      "armor.you_arent_wearing_any_armor",
-      "armor.you_ll_have_to_take_it_off_first",
-      "armor.you_used_to_be",
-      "chase.couldnt_find_monster_in_runto_at_x_y",
-      "chase.in_some_bizarre_place_x_y",
-      "command.a_secret_door",
-      "command.blank",
-      "command.called_value",
-      "command.character_you_want_help_for_for_all",
-      "command.food_left_count",
-      "command.i_see",
-      "command.illegal_command_command",
-      "command.inpack_count",
-      "command.item_value",
-      "command.no_monster_there",
-      "command.not_wizard_any_more",
-      "command.sorry",
-      "command.that_has_already_been_identified",
-      "command.there_is",
-      "command.to_pick_up",
-      "command.unknown_character_command",
-      "command.value",
-      "command.value_nothing",
-      "command.value_value2",
-      "command.value_value2_2",
-      "command.version_version_mctesq_was_here",
-      "command.was",
-      "command.what_do_you_want_identified",
-      "command.what_do_you_want_to_call_it",
-      "command.x_y",
-      "command.you_are",
-      "command.you_are_suddenly_as_smart_as_ken_arnold_in_dungeon_level",
-      "command.you_are_value",
-      "command.you_cant_call_that_anything",
-      "command.you_cant_you_re_floating_off_the_ground",
-      "command.you_found",
-      "command.you_have_found",
-      "command.you_havent_typed_a_command_yet",
-      "daemons.bummer_you_ve_hit_the_ground",
-      "daemons.far_out_everything_is_all_cosmic_again",
-      "daemons.getting_hungry",
-      "daemons.getting_the_munchies",
-      "daemons.the_munchies_are_interfering_with_your_motor_capabilites",
-      "daemons.the_munchies_overpower_your_motor_capabilities",
-      "daemons.you_are_getting_the_munchies",
-      "daemons.you_are_starting_to_feel_weak",
-      "daemons.you_are_starting_to_get_hungry",
-      "daemons.you_feel_less_value_now",
-      "daemons.you_feel_too_weak_from_lack_of_food",
-      "daemons.you_freak_out",
-      "extern.a_beartrap",
-      "extern.a_mysterious_trap",
-      "extern.a_trapdoor",
-      "extern.an_arrow_trap",
-      "fight.a_bite_has_weakened_you",
-      "fight.a_bite_momentarily_weakens_you",
-      "fight.barely_miss",
-      "fight.barely_misses",
-      "fight.bite_has_no_effect",
-      "fight.blank",
-      "fight.by_the_subject",
-      "fight.defeated",
-      "fight.defeated_2",
-      "fight.doesnt_hit",
-      "fight.dont_hit",
-      "fight.has_injured",
-      "fight.have_injured",
-      "fight.heavy_that_s_a_nasty_critter",
-      "fight.miss",
-      "fight.scored_an_excellent_hit_on",
-      "fight.she_stole_target",
-      "fight.subject",
-      "fight.subject_2",
-      "fight.subject_appears_confused",
-      "fight.swing_and_hit",
-      "fight.swing_and_miss",
-      "fight.swings_and_hits",
-      "fight.swings_and_misses",
-      "fight.the_subject_hits",
-      "fight.the_subject_misses",
-      "fight.wait_that_s_a_xeroc",
-      "fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker",
-      "fight.you_have",
-      "fight.you_hit",
-      "fight.you_missed",
-      "fight.you_suddenly_feel_weaker",
-      "fight.your_hands_stop_glowing_color",
-      "io.blank",
-      "io.level_level_gold_gold_hp_hp_width_hp_str_max_hp_width_max_hp_arm_strengt",
-      "list.ran_out_of_memory_after_count_items",
-      "main.really_quit",
-      "misc.my_that_was_a_yummy_value",
-      "misc.that_s_already",
-      "misc.that_s_inedible",
-      "misc.ugh_you_would_get_ill_if_you_ate_that",
-      "misc.value_that_tasted_good",
-      "misc.value_this_food_tastes_awful",
-      "misc.welcome_to_level_level",
-      "misc.what_do_you_want_to_call_it",
-      "misc.which_direction",
-      "misc.you_faint_from_exhaustion",
-      "monsters.blank",
-      "monsters.cant_find_monster_in_wake_monster",
-      "monsters.s_gaze_has_confused_you",
-      "monsters.started_a_wandering_subject",
-      "monsters.subject",
-      "move.a_color_light_flashes_in_your_eyes",
-      "move.a_poisoned_dart_killed_you",
-      "move.a_small_dart_whizzes_by_your_ear_and_vanishes",
-      "move.a_spike_shoots_past_your_ear",
-      "move.an_arrow_killed_you",
-      "move.an_arrow_shoots_past_you",
-      "move.multi_colored_lines_swirl_around_you_then_fade",
-      "move.oh_no_an_arrow_shot_you",
-      "move.the_light_in_here_suddenly_seems_color",
-      "move.time_now_seems_to_be_going_slower",
-      "move.value_sparks_dance_across_your_armor",
-      "move.you_are_suddenly_in_a_parallel_dimension",
-      "move.you_feel_a_sting_in_the_side_of_your_neck",
-      "move.you_feel_time_speed_up_suddenly",
-      "move.you_fell_into_a_trap",
-      "move.you_pack_turns_value",
-      "move.you_suddenly_feel_very_thirsty",
-      "move.your_armor_appears_to_be_weaker_now_oh_my",
-      "pack.a_item",
-      "pack.blank",
-      "pack.count_gold_pieces",
-      "pack.empty_handed",
-      "pack.for_list",
-      "pack.in_your_pack",
-      "pack.item",
-      "pack.item_is_not_a_valid_item",
-      "pack.item_item2",
-      "pack.item_item2_2",
-      "pack.item_not_in_pack",
-      "pack.moved_onto_item",
-      "pack.no_room",
-      "pack.there_s",
-      "pack.what",
-      "pack.which_item_do_you_wish_to_inventory",
-      "pack.which_object_do_you_want_to",
-      "pack.you_are_empty_handed",
-      "pack.you_arent_carrying_anything",
-      "pack.you_dont_have_anything_appropriate",
-      "pack.you_found",
-      "pack.you_now_have",
-      "pack.you_ran_out",
-      "passages.warning_connectivity_problem_on_this_level",
-      "potions.hey_this_tastes_great_it_make_you_feel_warm_all_over",
-      "potions.oh_bummer_everything_is_dark_help",
-      "potions.that_s_undrinkable",
-      "potions.what_an_odd_tasting_potion",
-      "potions.you_feel_momentarily_sick",
-      "potions.you_have_a_item_feeling_for_a_moment_then_it_passes",
-      "potions.you_suddenly_feel_much_more_skillful",
-      "potions.yuk_why_would_you_want_to_drink_that",
-      "rings.it_would_be_difficult_to_wrap_that_around_a_finger",
-      "rings.item_item2",
-      "rings.l_or_r",
-      "rings.left_hand_or_right_hand",
-      "rings.left_or_right_ring",
-      "rings.no_rings",
-      "rings.not_a_ring",
-      "rings.not_wearing_such_a_ring",
-      "rings.please_type_l_or_r",
-      "rings.was_wearing_item_item2",
-      "rings.wearing_two",
-      "rings.you_already_have_a_ring_on_each_hand",
-      "rings.you_are_now_wearing",
-      "rings.you_arent_wearing_any_rings",
-      "save.blank",
-      "save.file_exists_do_you_wish_to_overwrite_it",
-      "save.file_name",
-      "save.file_name_file",
-      "save.please_answer_y_or_n",
-      "save.please_answer_y_or_n_2",
-      "save.save_file_file",
-      "scrolls.freeze",
-      "scrolls.nothing_to_read",
-      "scrolls.oh_now_this_scroll_has_a_map_on_it",
-      "scrolls.s",
-      "scrolls.s_around_you",
-      "scrolls.the_monster",
-      "scrolls.there_is_nothing_on_it_to_read",
-      "scrolls.this_scroll_is_an_item_scroll",
-      "scrolls.what_a_puzzling_scroll",
-      "scrolls.you_feel_as_if_somebody_is_watching_over_you",
-      "scrolls.your_armor_is_covered_by_a_shimmering_color_shield",
-      "scrolls.your_color_glows_color2_for_a_moment",
-      "scrolls.your_hands_begin_to_glow_color",
-      "scrolls.your_nose_tingles",
-      "sticks.by_a_shimmering_color_light",
-      "sticks.missle_vanishes",
-      "sticks.off_the_dragon",
-      "sticks.the_corridor_glows_and_then_fades",
-      "sticks.the_flame_bounces",
-      "sticks.the_missle_vanishes_with_a_puff_of_smoke",
-      "sticks.the_room_is_lit",
-      "sticks.the_value_bounces",
-      "sticks.the_value_hits",
-      "sticks.the_value_whizzes_by_you",
-      "sticks.the_value_whizzes_past_value2",
-      "sticks.value_misses",
-      "sticks.what_a_bizarre_schtick",
-      "sticks.you_are_hit_by_the_value",
-      "sticks.you_are_too_weak_to_use_it",
-      "sticks.you_have_a_tingling_feeling",
-      "things.bad_pick_one_count_from_count2_items",
-      "things.blank",
-      "things.blank_2",
-      "things.dropped_item",
-      "things.for",
-      "things.for_all",
-      "things.item_count",
-      "things.not_a_type",
-      "things.of_object_do_you_want_a_list",
-      "things.please_type_one_of_command_command2_command3_command4_escape_to_quit",
-      "things.there_is_something_there_already",
-      "weapons.wielding_item_item2",
-      "weapons.you_are_now",
-      "weapons.you_cant_wield_armor",
-      "wizard.blessing_n",
-      "wizard.how_much",
-      "wizard.type_of_item",
-      "wizard.which_command_do_you_want_0_f",
-      "wizard.wizard_s_password",
-      "wizard.you_dont_have_anything_in_your_pack_to_identify",
-      "wizard.you_must_identify_a_item",
-      "wizard.you_must_identify_something"
-    ],
+    "ja_key_count": 296,
+    "ja_missing_count": 0,
+    "ja_missing_keys": [],
     "placeholder_vocabulary": [
       "armor",
       "color",
