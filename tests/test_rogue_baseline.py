@@ -327,6 +327,113 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.x, monster.y), (game.p.x + 1, game.p.y))
         self.assertTrue(monster.running)
 
+    def test_rogue_544_monster_haste_and_slow_control_move_monst_frequency(self):
+        # Rogue 5.4.4 chase.c:move_monst() checks ISSLOW/t_turn, then ISHASTE, then flips t_turn.
+        game = new_game(seed=205)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 4, game.p.y)
+        monster.running = True
+        calls = []
+        old_do_chase = game.do_chase
+        try:
+            game.do_chase = lambda m: calls.append((m.x, m.y)) or 0
+
+            monster.flags.add("haste")
+            game.m_turn(monster)
+            self.assertEqual(len(calls), 2)
+            self.assertFalse(monster.turn)
+
+            calls.clear()
+            monster.flags.discard("haste")
+            monster.flags.add("slow")
+            monster.turn = True
+            game.m_turn(monster)
+            game.m_turn(monster)
+            game.m_turn(monster)
+        finally:
+            game.do_chase = old_do_chase
+
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(monster.turn)
+
+    def test_rogue_544_zap_haste_and_slow_monster_toggle_speed_flags(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_HASTE_M/WS_SLOW_M toggle ISHASTE/ISSLOW and runto().
+        import rogue_sticks
+
+        game = new_game(seed=205)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y)
+        monster.flags.add("slow")
+        game.mons = [monster]
+
+        haste = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_HASTE_M, charges=1)
+        game.zap_stick(haste, 1, 0)
+
+        self.assertEqual(haste.charges, 0)
+        self.assertNotIn("slow", monster.flags)
+        self.assertNotIn("haste", monster.flags)
+        self.assertTrue(monster.running)
+
+        haste = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_HASTE_M, charges=1)
+        game.zap_stick(haste, 1, 0)
+
+        self.assertIn("haste", monster.flags)
+        self.assertNotIn("slow", monster.flags)
+
+        slow = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_SLOW_M, charges=1)
+        game.zap_stick(slow, 1, 0)
+
+        self.assertEqual(slow.charges, 0)
+        self.assertNotIn("haste", monster.flags)
+        self.assertNotIn("slow", monster.flags)
+        self.assertTrue(monster.turn)
+
+        slow = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_SLOW_M, charges=1)
+        game.zap_stick(slow, 1, 0)
+
+        self.assertIn("slow", monster.flags)
+        self.assertNotIn("haste", monster.flags)
+        self.assertTrue(monster.turn)
+
+    def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
+        game = new_game(seed=206)
+        set_open_floor(game)
+        medusa = monster_at(game.p.x + 1, game.p.y, "M", "medusa", flags="confuse")
+        medusa.running = True
+        medusa.flags.add("cancel")
+        game.mons = [medusa]
+        old_save = game.save_vs_magic
+        try:
+            game.save_vs_magic = lambda: False
+            game.wake_monster(medusa)
+        finally:
+            game.save_vs_magic = old_save
+
+        self.assertEqual(game.p.confused, 0)
+        self.assertFalse(medusa.found)
+
+    def test_rogue_544_cancelled_monsters_do_not_use_special_attack_or_regen(self):
+        # Rogue 5.4.4 fight.c:attack() special switch is gated by !ISCANC; regen uses the same cancelled state.
+        game = new_game(seed=207)
+        set_open_floor(game)
+        ice = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze,cancel")
+        game.m_attack(ice)
+        self.assertEqual(game.p.no_command, 0)
+
+        troll = monster_at(game.p.x + 4, game.p.y, "T", "troll", hp=10, level=6, armor=4, damage="1x8", exp=120, flags="regen,cancel")
+        troll.max_hp = 20
+        troll.running = True
+        old_random = rogue.RNG.random
+        try:
+            rogue.RNG.random = lambda: 0
+            game.do_chase = lambda m: 0
+            game.m_turn(troll)
+        finally:
+            rogue.RNG.random = old_random
+
+        self.assertEqual(troll.hp, 10)
+
     def test_rogue_544_ring_table_and_stones_audit(self):
         # Rogue 5.4.4 extern.c:ring_info[], init.c:stones[] / init_stones().
         import rogue_rings
@@ -1180,7 +1287,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604191520")
+        self.assertEqual(rogue.UI_BUILD, "2604191530")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

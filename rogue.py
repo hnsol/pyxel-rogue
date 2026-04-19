@@ -22,11 +22,12 @@ import os
 import time
 from dataclasses import dataclass
 from rogue_rng import RogueRng
+import rogue_monsters
 import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604191520"
+UI_BUILD = "2604191530"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -462,10 +463,10 @@ BESTIARY = [
     MonsterSpec("J","jabberwock",15,6,"2x12/2x4",3000,20,""),
     MonsterSpec("K","kestrel",1,7,"1x4",1,1,"fly"),
     MonsterSpec("L","leprechaun",3,8,"1x1",10,6,"steal_gold"),
-    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,"confuse"),
+    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,rogue_monsters.FLAG_CAN_CONFUSE),
     MonsterSpec("N","nymph",3,9,"0x0",37,9,"steal_item"),
     MonsterSpec("O","orc",1,6,"1x8",5,5,""),
-    MonsterSpec("P","phantom",8,3,"4x4",120,15,"invis"),
+    MonsterSpec("P","phantom",8,3,"4x4",120,15,rogue_monsters.FLAG_INVISIBLE),
     MonsterSpec("Q","quagga",3,3,"1x5/1x5",15,8,""),
     MonsterSpec("R","rattlesnake",2,3,"1x6",9,4,"poison"),
     MonsterSpec("S","snake",1,5,"1x3",2,2,""),
@@ -1474,7 +1475,8 @@ class Game:
         if (not m.running and m.mean and m.held<=0 and rnd(3)!=0
                 and not rogue_rings.is_wearing(self.p, rogue_rings.R_STEALTH)):
             self.runto(m)
-        if m.sym=="M" and m.running and not self.p.blind and not m.found:
+        if (m.sym=="M" and m.running and not self.p.blind and not m.found
+                and not rogue_monsters.is_cancelled(m)):
             m.found=True
             if not self.save_vs_magic():
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))
@@ -1489,7 +1491,8 @@ class Game:
                 self.wake_monster(mo)
 
     def can_see_monster(self, m):
-        return "invis" not in m.flags or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS)
+        return (rogue_monsters.FLAG_INVISIBLE not in m.flags
+                or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS))
 
     def save_vs_magic(self):
         return rnd(20) < 7 + self.p.level//2
@@ -1502,7 +1505,7 @@ class Game:
                 self.p.hp-=dmg
             self.msg("the {monster} hit you",monster=mn)
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
-            if "cancel" not in m.flags:
+            if not rogue_monsters.is_cancelled(m):
                 if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
                     self.rust_armor()
                 if "steal_gold" in m.flags and self.p.gold>0:
@@ -1549,9 +1552,10 @@ class Game:
 
     def move_monst(self,m):
         if m.held>0: m.held-=1; return
-        if self.do_chase(m)==-1:
-            return
-        m.turn=not m.turn
+        for _ in range(rogue_monsters.chase_steps_for_turn(m)):
+            if self.do_chase(m)==-1:
+                return
+        rogue_monsters.finish_chase_turn(m)
 
     def do_chase(self,m):
         dest=self.find_dest(m)
@@ -1625,7 +1629,7 @@ class Game:
             if self.walkable(nx,ny) and not self.mon_at(nx,ny) and not(nx==px and ny==py):
                 m.x,m.y=nx,ny
             return
-        if "regen" in m.flags and "cancel" not in m.flags and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
+        if "regen" in m.flags and not rogue_monsters.is_cancelled(m) and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
         if (m.confused>0 and rnd(5)!=0) or (m.sym=="P" and rnd(5)==0) or (m.sym=="B" and rnd(2)==0):
             nx,ny=self.random_monster_move(m)
             if (nx,ny)==(px,py):
@@ -1785,7 +1789,7 @@ class Game:
         m.running=False; m.dest=DEST_PLAYER; m.turn=True
         m.mean=True; m.target=False; m.found=False; m.vf_hit=0
         if self.p.depth>29:
-            m.flags.add("haste")
+            m.flags.add(rogue_monsters.FLAG_HASTE)
         if rogue_rings.is_wearing(self.p, rogue_rings.R_AGGR):
             self.runto(m)
 
@@ -1812,9 +1816,9 @@ class Game:
             m.x,m.y=pos
 
     def cancel_monster(self,m):
-        m.flags.add("cancel")
-        m.flags.discard("invis")
-        m.flags.discard("confuse")
+        m.flags.add(rogue_monsters.FLAG_CANCELLED)
+        m.flags.discard(rogue_monsters.FLAG_INVISIBLE)
+        m.flags.discard(rogue_monsters.FLAG_CAN_CONFUSE)
         if self.p.held_by is m:
             self.p.held_by=None
         m.vf_hit=0
@@ -1844,11 +1848,17 @@ class Game:
                 if target.sym=="F" and self.p.held_by is target:
                     self.p.held_by=None
                 if kind == rogue_sticks.WS_INVIS:
-                    target.flags.add("invis")
+                    target.flags.add(rogue_monsters.FLAG_INVISIBLE)
                 elif kind == rogue_sticks.WS_POLYMORPH:
                     self.polymorph_monster(target)
                 elif kind == rogue_sticks.WS_CANCEL:
                     self.cancel_monster(target)
+                elif kind == rogue_sticks.WS_HASTE_M:
+                    rogue_monsters.haste_monster(target)
+                    self.runto(target)
+                elif kind == rogue_sticks.WS_SLOW_M:
+                    rogue_monsters.slow_monster(target)
+                    self.runto(target)
                 elif kind == rogue_sticks.WS_TELAWAY:
                     self.runto(target)
                     self.relocate_monster(target,self.random_monster_floor({(target.x,target.y)}))

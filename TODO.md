@@ -60,7 +60,8 @@
   - [x] light の暗い部屋照明、識別、チャージ消費を接続
   - [x] invisibility / polymorph / teleport away / teleport to / cancellation の単体モンスター効果接続
   - [ ] lightning / fire / cold の bolt 反射・命中・ダメージ接続
-  - [ ] magic missile / haste monster / slow monster / drain life / nothing の効果監査と接続
+  - [x] haste monster / slow monster の `ISHASTE` / `ISSLOW` 相当フラグと行動頻度への接続
+  - [ ] magic missile / drain life / nothing の効果監査と接続
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
@@ -73,6 +74,7 @@
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
+- [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rattlesnake / Ice monster の Rogue 5.4.4 準拠寄せ（毒セーヴによるStr低下、命中時凍結）
 - [x] 最小 baseline ロジックテスト整備
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加
@@ -167,7 +169,7 @@
 - [ ] 投擲が斜め方向に未対応
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
-- [ ] 通路番号付き passages / Xeroc / 指輪・杖・cancellation とモンスターAIの完全連携
+- [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携
 
 ## テスト・基盤タスク
 
