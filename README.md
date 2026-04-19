@@ -82,7 +82,8 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - YUBN: 斜め移動
 - Shift+方向: ダッシュ
 - Z / Enter: 決定
-- Esc: キャンセル
+- C / Esc: メニュー / キャンセル
+- Space: 斜め補助モード切替
 - .: 足踏み
 - Tab: 補助メニュー
 - Tab+Z: 周囲8マスsearch

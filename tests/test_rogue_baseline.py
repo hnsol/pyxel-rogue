@@ -45,7 +45,7 @@ def install_pyxel_mock():
         "KEY_H", "KEY_J", "KEY_K", "KEY_L",
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
         "KEY_Z", "KEY_X", "KEY_C", "KEY_S",
-        "KEY_I", "KEY_6",
+        "KEY_I", "KEY_6", "KEY_SPACE",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_PERIOD",
         "KEY_QUESTION", "KEY_SLASH", "KEY_R",
         "KEY_SHIFT", "KEY_LSHIFT", "KEY_RSHIFT",
@@ -1339,7 +1339,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604200039")
+        self.assertEqual(rogue.UI_BUILD, "2604200111")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)
@@ -1367,6 +1367,26 @@ class RogueBaselineTest(unittest.TestCase):
             rects.clear()
             game.draw_stat()
             self.assertEqual(len(rects), 2)
+        finally:
+            rogue.pyxel.rect = old_rect
+
+    def test_hp_damage_bar_stays_orange_when_hp_is_low(self):
+        game = new_game(seed=343)
+        game.txt = lambda *args: None
+        rects = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rects.append(args)
+            game.p.max_hp = 20
+            game.p.hp = 10
+            game.draw_stat()
+            game.p.hp = 4
+            rects.clear()
+
+            game.draw_stat()
+
+            self.assertIn(9, [args[-1] for args in rects])
+            self.assertIn(8, [args[-1] for args in rects])
         finally:
             rogue.pyxel.rect = old_rect
 
@@ -1443,17 +1463,54 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(c.startswith("a)") for c in calls))
         self.assertTrue(any(c.startswith("z)") for c in calls))
 
-    def test_message_log_uses_seven_rows_with_latest_highlighted(self):
+    def test_message_log_uses_seven_rows_with_current_turn_highlighted(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
         game.msgs = ["hidden", "one", "two", "three", "four", "five", "six", "latest"]
+        game.msg_turns = [0, 0, 0, 1, 1, 1, 1, 1]
+        game.turn = 1
 
         game.draw_msgs()
 
         self.assertEqual(rogue.MSG_LINES, 7)
         self.assertEqual([text for text, _ in calls], ["one", "two", "three", "four", "five", "six", "latest"])
-        self.assertEqual([color for _, color in calls], [5, 5, 5, 5, 5, 5, 7])
+        self.assertEqual([color for _, color in calls], [5, 5, 7, 7, 7, 7, 7])
+
+    def test_message_before_end_turn_stays_highlighted_after_turn_advances(self):
+        game = new_game(seed=35)
+        set_open_floor(game)
+        game.msgs = []
+        game.msg_turns = []
+        game.turn_msg_start = 0
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.msg_text("you hit the hobgoblin")
+        game.end_turn()
+        game.draw_msgs()
+
+        self.assertEqual(calls, [("you hit the hobgoblin", 7)])
+
+    def test_keyboard_c_cancels_menu_back_to_play(self):
+        game = new_game(seed=35)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_MENU)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_keyboard_space_toggles_start_action(self):
+        game = new_game(seed=35)
+        self.assertFalse(game.diag_assist)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_SPACE}, pressed={rogue.pyxel.KEY_SPACE})
+        game.update()
+
+        self.assertTrue(game.diag_assist)
 
     def test_death_screen_draws_tombstone_by_default(self):
         game = new_game(seed=35)

@@ -4,10 +4,10 @@ Faithful Rogue 5.4.4 clone  ·  Shiren-style controls  ·  BDF font
 
 Gamepad:                        Keyboard:
   D-pad        Move (8-dir)      Arrow / HJKL   Move
-  Start tap    Diag assist       YUBN           Diagonal
+  Start tap    Diag assist       Space          Diag assist
   B + D-pad    Dash (run)        Shift+dir      Dash
   A            Action/Search     Z / Enter      Action
-  B tap        Menu/Cancel       Esc            Cancel
+  B tap        Menu/Cancel       C / Esc        Menu/Cancel
   A + B        Wait a turn       . (period)     Wait
   Back         Assist menu       Tab            Assist menu
   Back + A     Search            S              Search
@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604200039"
+UI_BUILD = "2604200111"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1076,11 +1076,12 @@ class Game:
         inv,w,a = start_inv()
         self.p.inv=inv; self.p.wpn=w; self.p.arm=a; self.p.recalc_ac()
         self.ident = IdentTable(self.lang)
-        self.msgs = []; self.explored = set(); self.visible = set()
+        self.msgs = []; self.msg_turns = []; self.explored = set(); self.visible = set()
         self.gitems = []; self.mons = []; self.turn = 0
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
+        self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
@@ -1354,10 +1355,22 @@ class Game:
         return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])
     def same_ai_room(self,a,b):
         return a is not None and a==b
+    def _append_msg(self, text):
+        if len(getattr(self, "msg_turns", [])) != len(self.msgs):
+            self.msg_turns = [self.turn] * len(self.msgs)
+        self.msgs.append(text)
+        self.msg_turns.append(self.turn)
+        if len(self.msgs) > 100:
+            drop = len(self.msgs) - 100
+            self.msgs = self.msgs[drop:]
+            self.msg_turns = self.msg_turns[drop:]
+            self.turn_msg_start = max(0, self.turn_msg_start - drop)
+
     def msg(self,t,**kw):
-        self.msgs.append(TextCatalog.msg(self.lang,t,**kw)); self.msgs=self.msgs[-100:]
+        self._append_msg(TextCatalog.msg(self.lang,t,**kw))
+
     def msg_text(self,t):
-        self.msgs.append(t); self.msgs=self.msgs[-100:]
+        self._append_msg(t)
 
     def combat_monster_name(self,m,upper=False):
         name=TextCatalog.monster(self.lang,m.name)
@@ -2258,13 +2271,18 @@ class Game:
                 self.teleport_player()
 
     def end_turn(self):
-        self.turn+=1; m=self.p.hunger()
+        msg_start = min(getattr(self, "turn_msg_start", 0), len(self.msg_turns))
+        self.turn+=1
+        for i in range(msg_start, len(self.msg_turns)):
+            self.msg_turns[i] = self.turn
+        m=self.p.hunger()
         if m:
             self.msg(m); self.dashing=False
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
         if not self.p.alive:
             self.msg("pyxel.died_restart"); self.st=ST_DEAD
+            self.turn_msg_start = len(self.msgs)
             return
         if self.p.no_command>0: self.p.no_command-=1
         if self.p.confused>0: self.p.confused-=1
@@ -2278,6 +2296,7 @@ class Game:
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
             self.msg("pyxel.died_restart"); self.st=ST_DEAD
+        self.turn_msg_start = len(self.msgs)
 
     def roll_wanderer(self):
         if self.wander_timer>0:
@@ -2618,10 +2637,10 @@ class Game:
 
     def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def held_a(self): return self.kh(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
-    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
-    def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
+    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C) or self.b_tap
+    def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)
     def btn_overlay_cancel(self):
-        if self.kp(pyxel.KEY_ESCAPE): return True
+        if self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C): return True
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
         if self.b_menu_guard:
             if not b_now:
@@ -2643,7 +2662,7 @@ class Game:
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT) \
             and self.kp(getattr(pyxel,"KEY_6",None))
     def btn_inventory(self): return self.kp(pyxel.KEY_I)
-    def btn_start_tap(self): return self.kp(pyxel.GAMEPAD1_BUTTON_START)
+    def btn_start_tap(self): return self.kp(getattr(pyxel,"KEY_SPACE",None), pyxel.GAMEPAD1_BUTTON_START)
     def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def back_held(self): return self.kh(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def btn_back(self): return self.back_tap
@@ -2916,7 +2935,7 @@ class Game:
             cur_w=max(0,int(bw*p.hp/p.max_hp))
             if self.hp_damage_turn == self.turn and self.hp_damage_from is not None:
                 old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
-                pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,9 if p.hp>p.max_hp//3 else 8)
+                pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,9)
             pyxel.rect(sx,sy,cur_w,4,8 if p.hp<=p.max_hp//3 else 11)
             self.last_hp_seen = p.hp
         sy+=12
@@ -2954,8 +2973,12 @@ class Game:
 
     def draw_msgs(self):
         rows=[]
+        msg_turns = self.msg_turns if len(getattr(self, "msg_turns", [])) == len(self.msgs) else []
+        last_index = len(self.msgs) - 1
         for mi,m in enumerate(reversed(self.msgs)):
-            c=7 if mi==0 else 5
+            src_i = last_index - mi
+            same_turn = msg_turns and msg_turns[src_i] == self.turn
+            c=7 if same_turn or (not msg_turns and mi==0) else 5
             parts=[m[i:i+MSG_COLS] for i in range(0,len(m),MSG_COLS)] or [""]
             for part in reversed(parts):
                 rows.append((part,c))

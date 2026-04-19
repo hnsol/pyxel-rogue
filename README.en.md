@@ -82,7 +82,8 @@ Keyboard:
 - YUBN: Diagonal movement
 - Shift+direction: Dash
 - Z / Enter: Confirm
-- Esc: Cancel
+- C / Esc: Menu / cancel
+- Space: Toggle diagonal assist
 - .: Wait a turn
 - Tab: Assist menu
 - Tab+Z: Search around all 8 neighboring tiles
