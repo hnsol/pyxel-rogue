@@ -250,7 +250,7 @@ class TextCatalog:
                 path = os.path.join(base, f"{lang}.json")
                 with open(path, encoding="utf-8") as f:
                     catalogs[lang] = json.load(f)
-        except OSError:
+        except Exception:
             from rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
             catalogs = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
         cls._catalogs = catalogs

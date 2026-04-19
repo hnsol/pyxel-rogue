@@ -801,9 +801,16 @@ class RogueBaselineTest(unittest.TestCase):
             ja_catalog["command.no_monster_there"] = original
 
     def test_text_catalog_falls_back_when_json_assets_are_missing(self):
+        import builtins
+
+        def pyodide_open(*args, **kwargs):
+            raise Exception("[Errno 44] No such file or directory")
+
+        original_open = builtins.open
         original_file = rogue.__file__
         original_catalogs = rogue.TextCatalog._catalogs
         try:
+            builtins.open = pyodide_open
             rogue.__file__ = os.path.join("/tmp", "missing_pyxel_web", "rogue.py")
             rogue.TextCatalog._catalogs = None
             self.assertEqual(
@@ -811,6 +818,7 @@ class RogueBaselineTest(unittest.TestCase):
                 "Welcome to the Dungeons of Doom!",
             )
         finally:
+            builtins.open = original_open
             rogue.__file__ = original_file
             rogue.TextCatalog._catalogs = original_catalogs
 
