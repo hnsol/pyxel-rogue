@@ -1436,14 +1436,12 @@ class Game:
         px,py = self.p.x,self.p.y
         room = self.room_at(px,py)
         if room and room.usable and not (room.is_dark or room.is_maze):
+            # Rogue 5.4.4 rooms.c:enter_room() lights only the room's own cells.
+            # Corridor tiles beyond doors are revealed by the 3x3 look() below.
             for ry in range(room.y, room.y+room.h):
                 for rx in range(room.x, room.x+room.w):
                     if 0<=rx<MAP_W and 0<=ry<MAP_H:
                         self.visible.add((rx,ry))
-                        if self.tm[ry][rx]==T_DOOR:
-                            for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):
-                                nx,ny=rx+dx,ry+dy
-                                if 0<=nx<MAP_W and 0<=ny<MAP_H: self.visible.add((nx,ny))
         for dy in range(-1,2):
             for dx in range(-1,2):
                 nx,ny=px+dx,py+dy

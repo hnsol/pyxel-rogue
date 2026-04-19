@@ -1146,6 +1146,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((7, 7), game.visible)
         self.assertNotIn((11, 9), game.visible)
 
+    def test_rogue544_lit_room_does_not_reveal_corridor_beyond_far_door(self):
+        # Rogue 5.4.4 rooms.c:enter_room() lights only the room's own cells.
+        # Corridor tiles beyond a door become visible only when the player is
+        # adjacent (misc.c:look() 3x3), not merely because the door exists.
+        game = new_game(seed=14)
+        room = rogue.Room(5, 5, 10, 6)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(game.tm, room)
+        door_x, door_y = room.x, room.cy
+        game.tm[door_y][door_x] = rogue.T_DOOR
+        corridor_x = door_x - 1
+        game.tm[door_y][corridor_x] = rogue.T_CORR
+        # Place the player at the far (right) side of the room, >2 tiles from
+        # the left door so the 3x3 look zone never reaches the corridor.
+        game.p.x, game.p.y = room.x + room.w - 2, room.cy
+
+        game.update_fov()
+
+        self.assertIn((door_x, door_y), game.visible)
+        self.assertNotIn((corridor_x, door_y), game.visible)
+
     def test_room_passage_does_not_turn_along_horizontal_wall_row(self):
         top = rogue.Room(18, 2, 8, 5)
         bottom = rogue.Room(18, 14, 8, 5)
