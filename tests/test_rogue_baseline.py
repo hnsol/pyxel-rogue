@@ -897,6 +897,62 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item.sym, calls)
         self.assertNotIn("Z", calls)
 
+    def test_dark_room_explored_floor_is_not_drawn_after_leaving_lamp_area(self):
+        # Rogue 5.4.4 misc.c:erase_lamp()/rooms.c:leave_room() erase dark room FLOOR.
+        game = new_game(seed=341)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        dark = rogue.Room(5, 5, 8, 6, flags={rogue.ROOM_DARK})
+        game.rooms = [dark]
+        rogue.DGen._room(game.tm, dark)
+        game.visible = set()
+        game.explored = {(7, 7)}
+        game.p.x, game.p.y = 20, 20
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_zoom()
+
+        self.assertNotIn(".", calls)
+
+    def test_hud_title_includes_build_revision_stamp(self):
+        game = new_game(seed=342)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_title()
+
+        self.assertIn(f"Rogue V5 {rogue.UI_BUILD}", calls)
+        self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
+
+    def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
+        game = new_game(seed=343)
+        game.txt = lambda *args: None
+        rects = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rects.append(args)
+            game.p.max_hp = 20
+            game.p.hp = 20
+            game.draw_stat()
+            game.p.hp = 12
+            rects.clear()
+
+            game.draw_stat()
+            first_count = len(rects)
+            rects.clear()
+            game.draw_stat()
+            second_count = len(rects)
+
+            self.assertEqual(first_count, second_count)
+            self.assertEqual(game.hp_damage_turn, game.turn)
+            self.assertEqual(game.hp_damage_from, 20)
+            game.turn += 1
+            rects.clear()
+            game.draw_stat()
+            self.assertEqual(len(rects), 2)
+        finally:
+            rogue.pyxel.rect = old_rect
+
     def test_inventory_overlay_and_hud_show_v5_exp_and_trimmed_mode_labels(self):
         game = new_game(seed=35)
         calls = []
@@ -997,22 +1053,42 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any("hobgoblin" in c for c in calls))
         self.assertTrue(any("123 Au" in c for c in calls))
 
-    def test_pressed_cardinal_moves_immediately_and_pressed_second_axis_makes_diagonal(self):
+    def test_dpad_cardinal_waits_one_frame_so_second_axis_makes_one_diagonal_turn(self):
         game = new_game(seed=36)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
         rogue.pyxel.set_input(
             held={rogue.pyxel.KEY_LEFT},
             pressed={rogue.pyxel.KEY_LEFT},
         )
-        self.assertEqual(game.dir_press(), (-1, 0))
-        self.assertIsNone(game.dir_pending)
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px, py, 0))
+        self.assertEqual(game.dir_pending, (-1, 0))
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.KEY_LEFT, rogue.pyxel.KEY_UP},
             pressed={rogue.pyxel.KEY_UP},
         )
-        self.assertEqual(game.dir_press(), (-1, -1))
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px - 1, py - 1, 1))
         self.assertIsNone(game.dir_pending)
         rogue.pyxel.set_input()
+
+    def test_dpad_cardinal_tap_moves_on_next_frame_if_no_second_axis_arrives(self):
+        game = new_game(seed=361)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_UP},
+            pressed={rogue.pyxel.KEY_UP},
+        )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px, py, 0))
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px, py - 1, 1))
+        self.assertIsNone(game.dir_pending)
 
     def test_extra_gamepad_buttons_have_no_play_shortcuts(self):
         for button in (
@@ -1528,6 +1604,10 @@ class RogueBaselineTest(unittest.TestCase):
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
         )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y), start)
+
+        rogue.pyxel.set_input()
         game.update()
         self.assertEqual((game.p.x, game.p.y), (start[0] + 1, start[1]))
 

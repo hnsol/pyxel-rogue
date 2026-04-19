@@ -25,6 +25,7 @@ from rogue_rng import RogueRng
 import rogue_rings
 
 RNG = RogueRng(random)
+UI_BUILD = "2604191118"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1034,7 +1035,7 @@ class Game:
         self.throw_anim = None
         self.last_hp_seen = None
         self.hp_damage_from = None
-        self.hp_damage_timer = 0
+        self.hp_damage_turn = None
         self.death_cause = ""
         self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
         self.descend()
@@ -2232,14 +2233,34 @@ class Game:
         if u and l and diag_pressed: self.dir_pending=None; return (-1,-1)
         if d and r and diag_pressed: self.dir_pending=None; return (1,1)
         if d and l and diag_pressed: self.dir_pending=None; return (-1,1)
+        if self.dir_pending is not None:
+            pdx,pdy = self.dir_pending
+            self.dir_pending = None
+            if pdy < 0 and u:
+                if r and not l: return (1,-1)
+                if l and not r: return (-1,-1)
+            elif pdy > 0 and d:
+                if r and not l: return (1,1)
+                if l and not r: return (-1,1)
+            elif pdx < 0 and l:
+                if u and not d: return (-1,-1)
+                if d and not u: return (-1,1)
+            elif pdx > 0 and r:
+                if u and not d: return (1,-1)
+                if d and not u: return (1,1)
+            return (pdx,pdy)
         if self.diag_assist:
             self.dir_pending=None
             return None
         # Cardinal
-        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):    return (0,-1)
-        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):  return (0,1)
-        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):  return (-1,0)
-        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): return (1,0)
+        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):
+            self.dir_pending=(0,-1); return None
+        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
+            self.dir_pending=(0,1); return None
+        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
+            self.dir_pending=(-1,0); return None
+        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
+            self.dir_pending=(1,0); return None
         return None
 
     def dir_prompt_press(self):
@@ -2508,7 +2529,13 @@ class Game:
         elif self.st==ST_WIN: self.draw_win()
 
     def draw_title(self):
-        self.txt(HUD_X, 3, "Rogue V5", 10)
+        self.txt(HUD_X, 3, f"Rogue V5 {UI_BUILD}", 10)
+
+    def should_draw_memory_tile(self, mx, my, tile):
+        room = self.room_at(mx, my)
+        if tile == T_FLOOR and room and room.is_dark:
+            return False
+        return True
 
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
@@ -2540,7 +2567,8 @@ class Game:
                         self.txt(sx+1,sy+1,"@",10)
                 elif exp:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
-                    if ch!=" ": self.txt(sx+1,sy+1,ch,1)
+                    if ch!=" " and self.should_draw_memory_tile(mx,my,tile):
+                        self.txt(sx+1,sy+1,ch,1)
                     gi=self.gi_at(mx,my)
                     if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,7))
 
@@ -2562,12 +2590,11 @@ class Game:
         if p.max_hp>0:
             if self.last_hp_seen is not None and p.hp < self.last_hp_seen:
                 self.hp_damage_from = min(self.last_hp_seen, p.max_hp)
-                self.hp_damage_timer = 18
+                self.hp_damage_turn = self.turn
             cur_w=max(0,int(bw*p.hp/p.max_hp))
-            if self.hp_damage_timer>0 and self.hp_damage_from is not None:
+            if self.hp_damage_turn == self.turn and self.hp_damage_from is not None:
                 old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
                 pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,9 if p.hp>p.max_hp//3 else 8)
-                self.hp_damage_timer-=1
             pyxel.rect(sx,sy,cur_w,4,8 if p.hp<=p.max_hp//3 else 11)
             self.last_hp_seen = p.hp
         sy+=12
