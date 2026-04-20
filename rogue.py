@@ -1043,7 +1043,7 @@ def start_inv():
 # ===========================================================
 class Game:
     def __init__(self):
-        pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30)
+        pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
         self.font = pyxel.Font(FONT_PATH)
         self.lang = DEFAULT_LANG
         self.st = ST_LOADING

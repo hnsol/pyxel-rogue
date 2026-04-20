@@ -33,7 +33,8 @@ def install_pyxel_mock():
         pyxel._pressed.clear(),
         pyxel._pressed.update(pressed),
     )
-    pyxel.init = lambda *a, **kw: None
+    pyxel.init_calls = []
+    pyxel.init = lambda *a, **kw: pyxel.init_calls.append((a, kw))
     pyxel.run = lambda *a, **kw: None
     pyxel.cls = lambda *a, **kw: None
     pyxel.text = lambda *a, **kw: None
@@ -41,12 +42,13 @@ def install_pyxel_mock():
     pyxel.rectb = lambda *a, **kw: None
     pyxel.__file__ = os.path.join(os.getcwd(), "pyxel", "__init__.py")
     for i, key in enumerate([
-        "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
+        "KEY_NONE", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
         "KEY_H", "KEY_J", "KEY_K", "KEY_L",
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
         "KEY_Z", "KEY_X", "KEY_C", "KEY_S",
         "KEY_I", "KEY_6", "KEY_SPACE",
-        "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_PERIOD",
+        "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_BACKSPACE",
+        "KEY_PERIOD", "KEY_COMMA", "KEY_MINUS",
         "KEY_QUESTION", "KEY_SLASH", "KEY_R",
         "KEY_SHIFT", "KEY_LSHIFT", "KEY_RSHIFT",
         "KEY_CTRL", "KEY_LCTRL", "KEY_RCTRL",
@@ -124,6 +126,13 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def test_pyxel_escape_is_not_the_runtime_quit_key(self):
+        rogue.pyxel.init_calls.clear()
+
+        rogue.Game()
+
+        self.assertEqual(rogue.pyxel.init_calls[-1][1].get("quit_key"), rogue.pyxel.KEY_NONE)
+
     def assert_in_rogue_544_play_area(self, x, y):
         # Rogue 5.4.4 move.c: do_move() permits x=0..NUMCOLS-1 and y=1..NUMLINES-2.
         self.assertGreaterEqual(x, 0)
@@ -1600,6 +1609,26 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
         game.update()
         self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_keyboard_escape_closes_help_and_inventory_without_blocking_later_keys(self):
+        game = new_game(seed=35)
+        game.st = rogue.ST_HELP
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_I}, pressed={rogue.pyxel.KEY_I})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_QUESTION}, pressed={rogue.pyxel.KEY_QUESTION})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_HELP)
 
     def test_keyboard_space_toggles_start_action(self):
         game = new_game(seed=35)
