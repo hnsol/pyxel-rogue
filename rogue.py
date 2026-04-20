@@ -137,7 +137,7 @@ MONSTER_MISS_MESSAGE_KEYS = (
 # ===========================================================
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
 ST_DEAD = 4; ST_INVENTORY = 5; ST_HELP = 6
-ST_AUX = 7; ST_WIN = 8
+ST_AUX = 7; ST_WIN = 8; ST_LOADING = 9
 
 # ===========================================================
 #  Item categories
@@ -247,10 +247,18 @@ class TextCatalog:
         base = os.path.join(os.path.dirname(__file__), "assets", "messages")
         catalogs = {}
         try:
-            for lang in (LANG_EN, LANG_JA):
-                path = os.path.join(base, f"{lang}.json")
-                with open(path, encoding="utf-8") as f:
-                    catalogs[lang] = json.load(f)
+            if sys.platform == "emscripten":
+                # Pyodide: open() won't find assets, fetch JSON directly from GitHub
+                import pyodide.http as _ph
+                _base = "https://raw.githubusercontent.com/hnsol/pyxel-rogue/master"
+                for lang in (LANG_EN, LANG_JA):
+                    resp = _ph.open_url(f"{_base}/assets/messages/{lang}.json")
+                    catalogs[lang] = json.load(resp)
+            else:
+                for lang in (LANG_EN, LANG_JA):
+                    path = os.path.join(base, f"{lang}.json")
+                    with open(path, encoding="utf-8") as f:
+                        catalogs[lang] = json.load(f)
         except Exception:
             from rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
             catalogs = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
@@ -1038,7 +1046,8 @@ class Game:
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30)
         self.font = pyxel.Font(FONT_PATH)
         self.lang = DEFAULT_LANG
-        self.new_game()
+        self.st = ST_LOADING
+        self._loading_phase = 0
         pyxel.run(self.update, self.draw)
 
     def txt(self, x, y, s, c):
@@ -2771,6 +2780,13 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
+        if self.st == ST_LOADING:
+            if self._loading_phase == 0:
+                self._loading_phase = 1  # let draw() show loading screen first
+            else:
+                self.new_game()
+                self.st = ST_PLAY
+            return
         self.begin_input()
         if self.throw_anim:
             self.throw_anim["tick"] += 1
@@ -2925,6 +2941,10 @@ class Game:
     # =====================================================
     def draw(self):
         pyxel.cls(0)
+        if self.st == ST_LOADING:
+            msg = "Loading..." if self.lang == LANG_EN else "ロード中..."
+            self.txt(SCR_W // 2 - 30, SCR_H // 2, msg, 10)
+            return
         self.draw_title()
         self.draw_zoom()
         self.draw_stat()
