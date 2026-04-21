@@ -36,6 +36,19 @@ LANG_JA = "ja"
 DEFAULT_LANG = os.environ.get("PYXEL_ROGUE_LANG", LANG_EN).lower()
 if DEFAULT_LANG not in (LANG_EN, LANG_JA):
     DEFAULT_LANG = LANG_EN
+DEFAULT_PALETTE = "gbc"
+
+
+@dataclass
+class Settings:
+    language: str = DEFAULT_LANG
+    auto_pickup: bool = True
+    palette: str = DEFAULT_PALETTE
+    show_run_steps: bool = True
+
+    def __post_init__(self):
+        if self.language not in (LANG_EN, LANG_JA):
+            self.language = LANG_EN
 
 # ===========================================================
 #  Font
@@ -69,6 +82,9 @@ GBC_PALETTE = [
     0x0F2F36, 0x1B4A56, 0x2A6D7A, 0x63A8B7,  # 24-27 極暗ティール〜シアン
     0x5E4B1C, 0xA06E1D, 0xD7DCCF, 0xF2F4EA,  # 28-31 暗琥珀〜近白
 ]
+PALETTES = {
+    DEFAULT_PALETTE: GBC_PALETTE,
+}
 
 # Tiles
 T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
@@ -82,6 +98,7 @@ TILE_CH = {
     T_STAIR: ("%", 29),
     T_TRAP:  ("^", 28),
 }
+MEMORY_TILE_COLOR = 5
 WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}
 
 # ===========================================================
@@ -1059,18 +1076,47 @@ def start_inv():
 # ===========================================================
 class Game:
     def __init__(self):
+        self.settings = Settings()
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
-        if hasattr(pyxel, 'colors'):
-            for i, rgb in enumerate(GBC_PALETTE):
-                if i < len(pyxel.colors):
-                    pyxel.colors[i] = rgb
-                else:
-                    pyxel.colors.append(rgb)
+        self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
-        self.lang = DEFAULT_LANG
         self.st = ST_LOADING
         self._loading_phase = 0
         pyxel.run(self.update, self.draw)
+
+    def ensure_settings(self):
+        if "settings" not in self.__dict__:
+            self.settings = Settings()
+        return self.settings
+
+    @property
+    def lang(self):
+        return self.ensure_settings().language
+
+    @lang.setter
+    def lang(self, value):
+        self.ensure_settings().language = value if value in (LANG_EN, LANG_JA) else LANG_EN
+
+    @property
+    def auto_pickup(self):
+        return self.ensure_settings().auto_pickup
+
+    @auto_pickup.setter
+    def auto_pickup(self, value):
+        self.ensure_settings().auto_pickup = bool(value)
+
+    def apply_palette(self):
+        if not hasattr(pyxel, 'colors'):
+            return
+        palette = PALETTES.get(self.ensure_settings().palette, GBC_PALETTE)
+        for i, rgb in enumerate(palette):
+            if i < len(pyxel.colors):
+                pyxel.colors[i] = rgb
+            else:
+                pyxel.colors.append(rgb)
+
+    def run_step_interval(self):
+        return DASH_INTERVAL if self.ensure_settings().show_run_steps else 1
 
     def txt(self, x, y, s, c):
         pyxel.text(x, y, str(s), c, self.font)
@@ -1102,8 +1148,7 @@ class Game:
 
     # ---------- Init ----------
     def new_game(self):
-        if not hasattr(self, "lang"):
-            self.lang = DEFAULT_LANG
+        self.ensure_settings()
         self.p = Player()
         inv,w,a = start_inv()
         self.p.inv=inv; self.p.wpn=w; self.p.arm=a; self.p.recalc_ac()
@@ -2844,7 +2889,7 @@ class Game:
                 self.dashing=False; return
             self.b_used=True
             self.dash_t+=1
-            if self.dash_t>=DASH_INTERVAL:
+            if self.dash_t>=self.run_step_interval():
                 self.dash_t=0
                 self.dash_step()
             return
@@ -2991,6 +3036,11 @@ class Game:
             return False
         return True
 
+    def memory_tile_color(self, tile):
+        if tile == T_STAIR:
+            return TILE_CH[T_STAIR][1]
+        return MEMORY_TILE_COLOR
+
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
         blind = self.p.blind > 0
@@ -3022,7 +3072,7 @@ class Game:
                 elif exp:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
                     if ch!=" " and self.should_draw_memory_tile(mx,my,tile):
-                        self.txt(sx+1,sy+1,ch,1)
+                        self.txt(sx+1,sy+1,ch,self.memory_tile_color(tile))
                     gi=self.gi_at(mx,my)
                     if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,9))
 

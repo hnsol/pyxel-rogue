@@ -1302,6 +1302,42 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.ident.lang, rogue.LANG_EN)
         self.assertIn("Language: English.", game.msgs)
 
+    def test_settings_collect_display_and_input_options_without_changing_state(self):
+        game = new_game(seed=240, lang=rogue.LANG_JA)
+
+        self.assertIsInstance(game.settings, rogue.Settings)
+        self.assertEqual(game.settings.language, rogue.LANG_JA)
+        self.assertEqual(game.lang, rogue.LANG_JA)
+        self.assertTrue(game.settings.auto_pickup)
+        self.assertTrue(game.auto_pickup)
+        self.assertEqual(game.settings.palette, "gbc")
+        self.assertTrue(game.settings.show_run_steps)
+        self.assertEqual(game.run_step_interval(), rogue.DASH_INTERVAL)
+        before = (game.turn, game.p.depth, len(game.mons), len(game.gitems))
+
+        game.auto_pickup = False
+        game.lang = rogue.LANG_EN
+        game.settings.show_run_steps = False
+
+        self.assertFalse(game.settings.auto_pickup)
+        self.assertEqual(game.settings.language, rogue.LANG_EN)
+        self.assertEqual(game.run_step_interval(), 1)
+        self.assertEqual((game.turn, game.p.depth, len(game.mons), len(game.gitems)), before)
+
+    def test_settings_palette_applies_named_palette(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(palette="gbc")
+        old_colors = getattr(rogue.pyxel, "colors", None)
+        try:
+            rogue.pyxel.colors = []
+            game.apply_palette()
+            self.assertEqual(rogue.pyxel.colors[: len(rogue.GBC_PALETTE)], rogue.GBC_PALETTE)
+        finally:
+            if old_colors is None:
+                del rogue.pyxel.colors
+            else:
+                rogue.pyxel.colors = old_colors
+
     def test_baseline_hunger_heal_and_pickup(self):
         game = new_game(seed=31)
         game.p.food = rogue.MORETIME * 2
@@ -1435,6 +1471,34 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_zoom()
 
         self.assertNotIn(".", calls)
+
+    def test_explored_stairs_remain_visible_after_leaving_room(self):
+        game = new_game(seed=342)
+        set_open_floor(game)
+        sx, sy = game.p.x, game.p.y
+        game.tm[sy][sx] = rogue.T_STAIR
+        game.visible = set()
+        game.explored = {(sx, sy)}
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_zoom()
+
+        self.assertIn(("%", 29), calls)
+
+    def test_explored_memory_uses_readable_dim_color(self):
+        game = new_game(seed=342)
+        set_open_floor(game)
+        sx, sy = game.p.x, game.p.y
+        game.visible = set()
+        game.explored = {(sx, sy)}
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_zoom()
+
+        self.assertIn((".", rogue.MEMORY_TILE_COLOR), calls)
+        self.assertNotIn((".", 1), calls)
 
     def test_hud_title_includes_build_revision_stamp(self):
         game = new_game(seed=342)
