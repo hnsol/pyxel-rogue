@@ -78,7 +78,7 @@
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠の呪い生成確率監査（weapon 10%、armor 20%、一部 ring 33%、aggravate/teleport 常時 cursed）
 - [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [x] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査
-- [ ] Rogue 5.4.4 `passages.c` 準拠の浅い階の通路グラフ・余剰エッジ数の固定 seed 監査
+- [x] Rogue 5.4.4 `passages.c` 準拠の浅い階の通路グラフ・余剰エッジ数の固定 seed 監査
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）

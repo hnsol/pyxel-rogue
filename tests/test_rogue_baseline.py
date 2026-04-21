@@ -1231,6 +1231,19 @@ class RogueBaselineTest(unittest.TestCase):
                     changed = True
         self.assertEqual(seen, set(range(rogue.GRID_C * rogue.GRID_R)))
 
+    def test_rogue544_passages_do_passages_fixed_seed_audits_tree_and_extra_edges(self):
+        # Rogue 5.4.4 passages.c:do_passages() first connects 9 rooms with
+        # 8 spanning-tree edges, then attempts rnd(5) extra adjacent edges.
+        random.seed(44)
+        audit = rogue.DGen._passage_edges(audit=True)
+
+        self.assertEqual(
+            audit["tree"],
+            [(6, 7), (6, 3), (3, 4), (3, 0), (0, 1), (4, 5), (5, 8), (5, 2)],
+        )
+        self.assertEqual(audit["extra"], [(2, 1), (8, 7)])
+        self.assertEqual(audit["edges"], audit["tree"] + audit["extra"])
+
     def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
         random.seed(0)
         _tm, rooms = rogue.DGen.gen(depth=1)

@@ -845,11 +845,11 @@ class DGen:
         DGen._ensure(tm,rooms); return tm,rooms
 
     @staticmethod
-    def _passage_edges():
+    def _passage_edges(audit=False):
         """Rogue 5.4.4 passages.c: do_passages() room graph selection."""
         ingraph=[False]*(GRID_C*GRID_R)
         isconn=[[False]*(GRID_C*GRID_R) for _ in range(GRID_C*GRID_R)]
-        edges=[]
+        tree_edges=[]; extra_edges=[]
         roomcount=1
         r1=rnd(GRID_C*GRID_R)
         ingraph[r1]=True
@@ -868,7 +868,7 @@ class DGen:
             else:
                 r2=picked
                 ingraph[r2]=True
-                edges.append((r1,r2))
+                tree_edges.append((r1,r2))
                 isconn[r1][r2]=isconn[r2][r1]=True
                 roomcount+=1
         for _ in range(rnd(5)):
@@ -881,8 +881,11 @@ class DGen:
                         picked=i
             if choices!=0:
                 r2=picked
-                edges.append((r1,r2))
+                extra_edges.append((r1,r2))
                 isconn[r1][r2]=isconn[r2][r1]=True
+        edges=tree_edges+extra_edges
+        if audit:
+            return {"tree":tree_edges,"extra":extra_edges,"edges":edges}
         return edges
     @staticmethod
     def _room(t,r):
