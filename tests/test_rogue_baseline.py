@@ -721,11 +721,63 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEEINVIS)
         self.assertTrue(game.can_see_monster(phantom))
 
+    def test_rogue_544_potion_see_invisible_reveals_phantom_for_spread_seeduration(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_SEEINVIS) sets CANSEE for misc.c:spread(SEEDURATION).
+        game = new_game(seed=207)
+        set_open_floor(game)
+        phantom = monster_at(game.p.x + 1, game.p.y, "P", "phantom", flags="invis")
+        game.mons = [phantom]
+        game.visible.add((phantom.x, phantom.y))
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 7
+            self.assertFalse(game.can_see_monster(phantom))
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(game.can_see_monster(phantom))
+        self.assertEqual(game.p.see_invisible, rogue.SEEDURATION - rogue.SEEDURATION // 20 + 7)
+        self.assertNotIn(potion, game.p.inv)
+
+    def test_rogue_544_potion_see_invisible_expires_without_ring(self):
+        # Rogue 5.4.4 daemons.c:unsee clears CANSEE after the P_SEEINVIS fuse expires.
+        game = new_game(seed=208)
+        set_open_floor(game)
+        phantom = monster_at(game.p.x + 1, game.p.y, "P", "phantom", flags="invis")
+        game.mons = [phantom]
+        game.visible.add((phantom.x, phantom.y))
+        game.p.see_invisible = 1
+
+        self.assertTrue(game.can_see_monster(phantom))
+        game.end_turn()
+
+        self.assertEqual(game.p.see_invisible, 0)
+        self.assertFalse(game.can_see_monster(phantom))
+
+    def test_rogue_544_potion_see_invisible_calls_sight_when_blind(self):
+        # Rogue 5.4.4 potions.c:P_SEEINVIS calls daemons.c:sight() after invis_on().
+        game = new_game(seed=209)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+        game.p.blind = 20
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.blind, 0)
+        self.assertIn("the veil of darkness lifts", game.msgs)
+
     def test_rogue_544_ring_aggravate_and_stealth_affect_monster_running(self):
         # Rogue 5.4.4 rings.c:ring_on() aggravates; monsters.c:wake_monster checks R_STEALTH.
         import rogue_rings
 
-        game = new_game(seed=207)
+        game = new_game(seed=210)
         set_open_floor(game)
         first = monster_at(game.p.x + 1, game.p.y)
         second = monster_at(game.p.x + 2, game.p.y)
@@ -736,7 +788,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(second.running)
         self.assertFalse(game.ident.rk[rogue_rings.R_AGGR])
 
-        game = new_game(seed=208)
+        game = new_game(seed=211)
         set_open_floor(game)
         monster = monster_at(game.p.x + 1, game.p.y)
         game.mons = [monster]
@@ -753,7 +805,7 @@ class RogueBaselineTest(unittest.TestCase):
         # Rogue 5.4.4 fight.c/move.c/potions.c check R_SUSTSTR before chg_str(-1).
         import rogue_rings
 
-        game = new_game(seed=209)
+        game = new_game(seed=212)
         set_open_floor(game)
         game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SUSTSTR)
         game.p.st = 10
@@ -1647,7 +1699,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604212329")
+        self.assertEqual(rogue.UI_BUILD, "2604212340")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

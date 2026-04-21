@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604212329"
+UI_BUILD = "2604212340"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -163,6 +163,7 @@ HUNGERTIME = 1300
 MORETIME = 150
 STOMACHSIZE = 2000
 STARVETIME = 850
+SEEDURATION = 850
 MAX_TRAPS = 10
 AMULET_LEVEL = 26
 WANDERTIME = 70
@@ -626,7 +627,7 @@ class Player:
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
         s.ring_l=None; s.ring_r=None
-        s.confused=s.blind=s.haste=0
+        s.confused=s.blind=s.haste=s.see_invisible=0
         s.no_command=s.no_move=0
         s.held_by=None
         s.quiet=0
@@ -1696,6 +1697,7 @@ class Game:
 
     def can_see_monster(self, m):
         return (rogue_monsters.FLAG_INVISIBLE not in m.flags
+                or self.p.see_invisible > 0
                 or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS))
 
     def save_vs_magic(self):
@@ -1885,7 +1887,13 @@ class Game:
         elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("pyxel.feel_confused")
         elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("pyxel.darkness_falls")
         elif nm=="haste self": p.haste=RNG.randint(10,20); self.msg("pyxel.speed_up")
-        elif nm=="see invisible": self.msg("pyxel.can_see_invisible_monsters")
+        elif nm=="see invisible":
+            p.see_invisible += RNG.spread(SEEDURATION)
+            self.msg("pyxel.can_see_invisible_monsters")
+            if p.blind > 0:
+                p.blind = 0
+                self.update_fov()
+                self.msg("daemons.the_veil_of_darkness_lifts")
         elif nm=="raise level":
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
             self.msg("pyxel.rise_to_level", level=p.level)
@@ -2481,6 +2489,7 @@ class Game:
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
+        if self.p.see_invisible>0: self.p.see_invisible-=1
         self.p.heal_tick()
         self.ring_after_turn()
         self.roll_wanderer()

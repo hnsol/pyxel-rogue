@@ -41,7 +41,7 @@
 3. 呪い生成確率と識別表示の監査（`things.c:new_thing()`, `armor.c:wear()`, `rings.c:ring_num()`, `sticks.c:charge_str()`）
 4. run停止条件の再監査（`move.c:do_run()` / `do_move()`, `misc.c:look()`）
 5. 杖 bolt 系 / magic missile / drain life / nothing（`sticks.c:do_zap()`）
-6. Xeroc 擬態、hallucination / see invisible potion、通路番号付き passages、Dragon breath / cancellation 連携
+6. Xeroc 擬態、hallucination、通路番号付き passages、Dragon breath / cancellation 連携
 
 - [x] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
@@ -217,7 +217,7 @@
 - [x] wandering monster spawn が未実装
 - [x] armor 装備中に別 armor を wear できてしまう（原作は take off 必須）
 - [x] weapon / armor / ring の呪い生成確率が Rogue 5.4.4 `things.c:new_thing()` と一致しているか未監査
-- [ ] hallucination / see invisible potion が未実装
+- [ ] hallucination potion が未実装（see invisible potion は `potions.c:P_SEEINVIS` / `daemons.c:unsee()` 相当を接続済み）
 - [ ] 投擲が斜め方向に未対応
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
