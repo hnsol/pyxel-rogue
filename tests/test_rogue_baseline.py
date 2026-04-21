@@ -1492,8 +1492,8 @@ class RogueBaselineTest(unittest.TestCase):
 
             game.draw_stat()
 
-            self.assertIn(9, [args[-1] for args in rects])
-            self.assertIn(8, [args[-1] for args in rects])
+            self.assertIn(21, [args[-1] for args in rects])
+            self.assertIn(22, [args[-1] for args in rects])
         finally:
             rogue.pyxel.rect = old_rect
 
@@ -1582,7 +1582,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue.MSG_LINES, 7)
         self.assertEqual([text for text, _ in calls], ["one", "two", "three", "four", "five", "six", "latest"])
-        self.assertEqual([color for _, color in calls], [5, 5, 7, 7, 7, 7, 7])
+        self.assertEqual([color for _, color in calls], [6, 6, 30, 30, 30, 30, 30])
 
     def test_message_before_end_turn_stays_highlighted_after_turn_advances(self):
         game = new_game(seed=35)
@@ -1597,7 +1597,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.end_turn()
         game.draw_msgs()
 
-        self.assertEqual(calls, [("you hit the hobgoblin", 7)])
+        self.assertEqual(calls, [("you hit the hobgoblin", 30)])
 
     def test_keyboard_c_cancels_menu_back_to_play(self):
         game = new_game(seed=35)

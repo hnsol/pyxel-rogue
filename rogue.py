@@ -59,12 +59,28 @@ ROOM_DARK = "dark"
 ROOM_GONE = "gone"
 ROOM_MAZE = "maze"
 
+GBC_PALETTE = [
+    0x050608, 0x10161C, 0x1A232C, 0x28323C,  # 0-3  深黒〜暗青灰
+    0x34414C, 0x42515E, 0x536574, 0x677A89,  # 4-7  中青灰〜淡青灰
+    0x8093A1, 0xA2B3BE, 0x1A2A21, 0x24382C,  # 8-11 淡青〜暗森緑
+    0x2F4B3D, 0x3E6252, 0x4B7564, 0x6A8E7E,  # 12-15 森緑〜淡緑
+    0x4A4034, 0x6A5A46, 0x90775E, 0xBCA58D,  # 16-19 暗土〜淡土
+    0x5B1D1D, 0x8A2A25, 0xC7492E, 0xD7A33D,  # 20-23 極暗赤〜琥珀黄
+    0x0F2F36, 0x1B4A56, 0x2A6D7A, 0x63A8B7,  # 24-27 極暗ティール〜シアン
+    0x5E4B1C, 0xA06E1D, 0xD7DCCF, 0xF2F4EA,  # 28-31 暗琥珀〜近白
+]
+
 # Tiles
 T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
 TILE_CH = {
-    T_VOID: (" ", 0), T_FLOOR: (".", 5), T_HWALL: ("-", 6),
-    T_VWALL: ("|", 6), T_DOOR: ("+", 9), T_CORR: ("#", 5),
-    T_STAIR: ("%", 10), T_TRAP: ("^", 8),
+    T_VOID:  (" ",  0),
+    T_FLOOR: (".", 12),
+    T_HWALL: ("-",  4),
+    T_VWALL: ("|",  3),
+    T_DOOR:  ("+", 18),
+    T_CORR:  ("#",  5),
+    T_STAIR: ("%", 29),
+    T_TRAP:  ("^", 28),
 }
 WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}
 
@@ -146,7 +162,7 @@ CAT_POT = "pot"; CAT_SCR = "scr"; CAT_FOOD = "food"
 CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_RING = "ring"; CAT_STICK = "stick"
 CAT_GOLD = "gold"; CAT_AMULET = "amulet"
 ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_RING:"=",CAT_STICK:"/",CAT_GOLD:"*",CAT_AMULET:","}
-ICOL = {CAT_POT:12,CAT_SCR:7,CAT_FOOD:4,CAT_WPN:7,CAT_ARM:7,CAT_RING:14,CAT_STICK:11,CAT_GOLD:10,CAT_AMULET:10}
+ICOL = {CAT_POT:27, CAT_SCR:9, CAT_FOOD:23, CAT_WPN:6, CAT_ARM:5, CAT_RING:14, CAT_STICK:26, CAT_GOLD:29, CAT_AMULET:29}
 
 # ===========================================================
 #  Text catalog
@@ -452,9 +468,9 @@ BESTIARY = [
     MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,""),
     MonsterSpec("Z","zombie",2,8,"1x8",6,7,""),
 ]
-MCOL = {"A":12,"B":1,"C":11,"D":8,"E":3,"F":3,"G":10,"H":5,"I":12,"J":8,
-        "K":6,"L":11,"M":2,"N":14,"O":4,"P":13,"Q":4,"R":8,"S":11,"T":3,
-        "U":2,"V":8,"W":13,"X":9,"Y":7,"Z":5}
+MCOL = {"A":14,"B":28,"C":17,"D": 2,"E": 8,"F": 5,"G":13,"H":21,"I":27,"J": 1,
+        "K":15,"L":14,"M": 1,"N":26,"O":17,"P": 6,"Q":22,"R": 6,"S": 5,"T":17,
+        "U": 1,"V": 2,"W":26,"X": 8,"Y": 6,"Z": 1}
 
 # 8-direction vectors
 DIR8 = {
@@ -1044,6 +1060,12 @@ def start_inv():
 class Game:
     def __init__(self):
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
+        if hasattr(pyxel, 'colors'):
+            for i, rgb in enumerate(GBC_PALETTE):
+                if i < len(pyxel.colors):
+                    pyxel.colors[i] = rgb
+                else:
+                    pyxel.colors.append(rgb)
         self.font = pyxel.Font(FONT_PATH)
         self.lang = DEFAULT_LANG
         self.st = ST_LOADING
@@ -2972,7 +2994,7 @@ class Game:
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
         blind = self.p.blind > 0
-        pyxel.rectb(ZV_X-1, ZV_Y-1, ZV_PX_W+2, ZV_PX_H+2, 1)
+        pyxel.rectb(ZV_X-1, ZV_Y-1, ZV_PX_W+2, ZV_PX_H+2, 3)
         px,py = self.p.x, self.p.y
 
         for vy in range(ZV_ROWS):
@@ -2989,20 +3011,20 @@ class Game:
                     if ch!=" ": self.txt(sx+1,sy+1,ch,col)
                     # Ground item
                     gi=self.gi_at(mx,my)
-                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,7))
+                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,9))
                     # Monster
                     mo=self.mon_at(mx,my)
                     if mo and self.can_see_monster(mo):
-                        self.txt(sx+1,sy+1,mo.sym,MCOL.get(mo.sym,7))
+                        self.txt(sx+1,sy+1,mo.sym,MCOL.get(mo.sym,9))
                     # Player
                     if mx==px and my==py:
-                        self.txt(sx+1,sy+1,"@",10)
+                        self.txt(sx+1,sy+1,"@",30)
                 elif exp:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
                     if ch!=" " and self.should_draw_memory_tile(mx,my,tile):
                         self.txt(sx+1,sy+1,ch,1)
                     gi=self.gi_at(mx,my)
-                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,7))
+                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,9))
 
         if self.throw_anim and self.throw_anim["path"]:
             idx=min(self.throw_anim["tick"]//self.throw_anim["delay"],len(self.throw_anim["path"])-1)
@@ -3014,10 +3036,10 @@ class Game:
                     self.txt(sx+1,sy+1,self.throw_anim["sym"],self.throw_anim["col"])
 
     def draw_stat(self):
-        sx,sy=HUD_X,HUD_Y+28; p=self.p; hc=7 if p.hp>p.max_hp//3 else 8
-        self.txt(sx,sy,f"Depth {p.depth}",7)
+        sx,sy=HUD_X,HUD_Y+28; p=self.p; hc=9 if p.hp>p.max_hp//3 else 22
+        self.txt(sx,sy,f"Depth {p.depth}",9)
         sy+=11
-        self.txt(sx,sy,f"Turn {self.turn}",5); sy+=13
+        self.txt(sx,sy,f"Turn {self.turn}",6); sy+=13
         self.txt(sx,sy,f"HP {p.hp}/{p.max_hp}",hc); sy+=11
         bw=HUD_W-10; pyxel.rect(sx,sy,bw,4,1)
         if p.max_hp>0:
@@ -3027,29 +3049,29 @@ class Game:
             cur_w=max(0,int(bw*p.hp/p.max_hp))
             if self.hp_damage_turn == self.turn and self.hp_damage_from is not None:
                 old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
-                pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,9)
-            pyxel.rect(sx,sy,cur_w,4,8 if p.hp<=p.max_hp//3 else 11)
+                pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,21)
+            pyxel.rect(sx,sy,cur_w,4,22 if p.hp<=p.max_hp//3 else 9)
             self.last_hp_seen = p.hp
         sy+=12
-        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}",7); sy+=11
-        self.txt(sx,sy,f"Str {p.st}/{p.max_st}",7)
+        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}",9); sy+=11
+        self.txt(sx,sy,f"Str {p.st}/{p.max_st}",9)
         sy+=11
-        self.txt(sx,sy,f"Arm {p.ac}",7); sy+=11
-        self.txt(sx,sy,f"Gold {p.gold}",10); sy+=11
+        self.txt(sx,sy,f"Arm {p.ac}",9); sy+=11
+        self.txt(sx,sy,f"Gold {p.gold}",29); sy+=11
         state = p.state if p.state else "normal"
         if state != "normal":
-            self.txt(sx,sy,f"Food {state}",13); sy+=11
+            self.txt(sx,sy,f"Food {state}",22); sy+=11
         if self.diag_assist:
-            self.txt(sx,sy,"Diag ON",11); sy+=11
+            self.txt(sx,sy,"Diag ON",27); sy+=11
         if not self.auto_pickup:
-            self.txt(sx,sy,"Pickup OFF",13); sy+=11
+            self.txt(sx,sy,"Pickup OFF",23); sy+=11
         sy+=6
-        self.txt(sx,sy,"-- Equip --",10); sy+=11
+        self.txt(sx,sy,"-- Equip --",27); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
         an=self.hud_equip_name(p.arm) if p.arm else "no armor"
-        self.txt(sx,sy,f"W {wn[:11]}",7); sy+=11
-        self.txt(sx,sy,f"A {an[:11]}",7); sy+=16
-        self.txt(sx,sy,"-- Effect --",10); sy+=11
+        self.txt(sx,sy,f"W {wn[:11]}",9); sy+=11
+        self.txt(sx,sy,f"A {an[:11]}",9); sy+=16
+        self.txt(sx,sy,"-- Effect --",27); sy+=11
         eff=[]
         if p.state=="hungry": eff.append("Hungry")
         elif p.state=="weak": eff.append("Weak")
@@ -3060,7 +3082,7 @@ class Game:
         if not eff:
             eff.append("None")
         for e in eff[:5]:
-            self.txt(sx,sy,e,13 if e!="None" else 5)
+            self.txt(sx,sy,e,22 if e!="None" else 6)
             sy+=11
 
     def draw_msgs(self):
@@ -3070,7 +3092,7 @@ class Game:
         for mi,m in enumerate(reversed(self.msgs)):
             src_i = last_index - mi
             same_turn = msg_turns and msg_turns[src_i] == self.turn
-            c=7 if same_turn or (not msg_turns and mi==0) else 5
+            c=30 if same_turn or (not msg_turns and mi==0) else 6
             parts=[m[i:i+MSG_COLS] for i in range(0,len(m),MSG_COLS)] or [""]
             for part in reversed(parts):
                 rows.append((part,c))
@@ -3082,14 +3104,14 @@ class Game:
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
-        pyxel.rect(x,y,w,h,0); pyxel.rectb(x,y,w,h,6)
-        if title: self.txt(x+4,y+3,title,10)
+        pyxel.rect(x,y,w,h,0); pyxel.rectb(x,y,w,h,5)
+        if title: self.txt(x+4,y+3,title,27)
 
     def draw_menu(self):
         bx,by=ZV_X+20,ZV_Y+8; bw=130; bh=len(MENU_ACTIONS)*14+18
         self._box(bx,by,bw,bh,"-- Action --")
         for i,(nm,_) in enumerate(MENU_ACTIONS):
-            ty=by+16+i*14; c=10 if i==self.mcur else 7
+            ty=by+16+i*14; c=27 if i==self.mcur else 9
             pre=">" if i==self.mcur else " "
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
@@ -3102,7 +3124,7 @@ class Game:
             idx=self.p.inv.index(it) if it in self.p.inv else 0
             lt=chr(ord('a')+idx)
             ln=self.item_name(it)
-            c=10 if ri==self.icur else 7
+            c=27 if ri==self.icur else 9
             pre=">" if ri==self.icur else " "
             self.txt(bx+4,ty,f"{pre}{lt}) {ln[:32]}",c)
 
@@ -3115,7 +3137,7 @@ class Game:
         bx,by=ZV_X+20,ZV_Y+8; bw=120; bh=len(AUX_ACTIONS)*14+18
         self._box(bx,by,bw,bh,"-- Assist --")
         for i,nm in enumerate(AUX_ACTIONS):
-            ty=by+16+i*14; c=10 if i==self.acur else 7
+            ty=by+16+i*14; c=27 if i==self.acur else 9
             pre=">" if i==self.acur else " "
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
@@ -3126,7 +3148,7 @@ class Game:
         inv_x0, inv_y0 = bx+8, by+18
         for i,it in enumerate(p.inv):
             lt=chr(ord('a')+i); ln=self.item_name(it)
-            self.txt(inv_x0,inv_y0+i*9,f"{lt}) {ln[:70]}",7)
+            self.txt(inv_x0,inv_y0+i*9,f"{lt}) {ln[:70]}",9)
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
