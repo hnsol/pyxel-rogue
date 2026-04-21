@@ -36,7 +36,16 @@ LANG_JA = "ja"
 DEFAULT_LANG = os.environ.get("PYXEL_ROGUE_LANG", LANG_EN).lower()
 if DEFAULT_LANG not in (LANG_EN, LANG_JA):
     DEFAULT_LANG = LANG_EN
-DEFAULT_PALETTE = "gbc"
+PALETTE_GBC = "gbc"
+PALETTE_GBC_HIGH_CONTRAST = "gbc_high_contrast"
+PALETTE_FLEXOKI_LIGHT = "flexoki_light"
+DEFAULT_PALETTE = PALETTE_GBC_HIGH_CONTRAST
+PALETTE_IDS = (PALETTE_GBC, PALETTE_GBC_HIGH_CONTRAST, PALETTE_FLEXOKI_LIGHT)
+PALETTE_LABELS = {
+    PALETTE_GBC: "GBC",
+    PALETTE_GBC_HIGH_CONTRAST: "GBC High Contrast",
+    PALETTE_FLEXOKI_LIGHT: "Flexoki Light",
+}
 
 
 @dataclass
@@ -49,6 +58,8 @@ class Settings:
     def __post_init__(self):
         if self.language not in (LANG_EN, LANG_JA):
             self.language = LANG_EN
+        if self.palette not in PALETTE_IDS:
+            self.palette = DEFAULT_PALETTE
 
 # ===========================================================
 #  Font
@@ -82,8 +93,30 @@ GBC_PALETTE = [
     0x0F2F36, 0x1B4A56, 0x2A6D7A, 0x63A8B7,  # 24-27 極暗ティール〜シアン
     0x5E4B1C, 0xA06E1D, 0xD7DCCF, 0xF2F4EA,  # 28-31 暗琥珀〜近白
 ]
+GBC_HIGH_CONTRAST_PALETTE = [
+    0x020304, 0x18222B, 0x26333E, 0x344552,
+    0x425663, 0x536978, 0x667D8E, 0x7D93A3,
+    0x9BB0BE, 0xC3D1D8, 0x102018, 0x1F3528,
+    0x31523E, 0x47725A, 0x5A8D72, 0x85B29A,
+    0x3E3328, 0x6B5640, 0x9A7B58, 0xD5B98D,
+    0x4C1212, 0x8D2020, 0xD94C2F, 0xF0B33F,
+    0x06252C, 0x134A58, 0x237486, 0x72C8D8,
+    0x6B4E10, 0xC98516, 0xE8EDE0, 0xFFFFFF,
+]
+FLEXOKI_LIGHT_PALETTE = [
+    0xFFFCF0, 0xCECDC3, 0xB7B5AC, 0x878580,
+    0x6F6E69, 0x575653, 0x403E3C, 0x282726,
+    0x343331, 0x100F0F, 0xE6E4D9, 0xDAD8CE,
+    0x66800B, 0x879A39, 0xA0AF54, 0xBEC97E,
+    0xE6E4D9, 0xB7B5AC, 0xBC5215, 0xDA702C,
+    0xD14D41, 0xAF3029, 0xD14D41, 0xAD8301,
+    0x24837B, 0x3AA99F, 0x205EA6, 0x4385BE,
+    0xAD8301, 0xBC5215, 0x1C1B1A, 0x100F0F,
+]
 PALETTES = {
-    DEFAULT_PALETTE: GBC_PALETTE,
+    PALETTE_GBC: GBC_PALETTE,
+    PALETTE_GBC_HIGH_CONTRAST: GBC_HIGH_CONTRAST_PALETTE,
+    PALETTE_FLEXOKI_LIGHT: FLEXOKI_LIGHT_PALETTE,
 }
 
 # Tiles
@@ -488,6 +521,9 @@ BESTIARY = [
 MCOL = {"A":14,"B":28,"C":17,"D": 2,"E": 8,"F": 5,"G":13,"H":21,"I":27,"J": 1,
         "K":15,"L":14,"M": 1,"N":26,"O":17,"P": 6,"Q":22,"R": 6,"S": 5,"T":17,
         "U": 1,"V": 2,"W":26,"X": 8,"Y": 6,"Z": 1}
+PALETTE_MONSTER_COLORS = {
+    PALETTE_FLEXOKI_LIGHT: {"K": 30},
+}
 
 # 8-direction vectors
 DIR8 = {
@@ -505,7 +541,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Put on", CAT_RING),("Take off",None),
     ("Zap",     CAT_STICK),("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"]
+AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette"]
 
 # ===========================================================
 #  Classes
@@ -1117,6 +1153,17 @@ class Game:
 
     def run_step_interval(self):
         return DASH_INTERVAL if self.ensure_settings().show_run_steps else 1
+
+    def monster_color(self, sym):
+        overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
+        return overrides.get(sym, MCOL.get(sym, 9))
+
+    def toggle_palette(self):
+        settings = self.ensure_settings()
+        i = PALETTE_IDS.index(settings.palette) if settings.palette in PALETTE_IDS else 0
+        settings.palette = PALETTE_IDS[(i + 1) % len(PALETTE_IDS)]
+        self.apply_palette()
+        self.msg("pyxel.palette_set", palette=PALETTE_LABELS[settings.palette])
 
     def txt(self, x, y, s, c):
         pyxel.text(x, y, str(s), c, self.font)
@@ -3001,6 +3048,9 @@ class Game:
         elif act=="Language":
             self.toggle_lang()
             self.st=ST_PLAY
+        elif act=="Palette":
+            self.toggle_palette()
+            self.st=ST_PLAY
         self.dir_pending=None
 
     # =====================================================
@@ -3065,7 +3115,7 @@ class Game:
                     # Monster
                     mo=self.mon_at(mx,my)
                     if mo and self.can_see_monster(mo):
-                        self.txt(sx+1,sy+1,mo.sym,MCOL.get(mo.sym,9))
+                        self.txt(sx+1,sy+1,mo.sym,self.monster_color(mo.sym))
                     # Player
                     if mx==px and my==py:
                         self.txt(sx+1,sy+1,"@",30)

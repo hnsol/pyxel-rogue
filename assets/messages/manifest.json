@@ -1071,6 +1071,12 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "menu.palette": {
+    "source": "rogue.py:AUX_ACTIONS",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "menu.pickup": {
     "source": "rogue.py:287",
     "params": [],
@@ -2135,6 +2141,14 @@
     "source": "rogue.py:2165",
     "params": [
       "color"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.palette_set": {
+    "source": "rogue.py:toggle_palette",
+    "params": [
+      "palette"
     ],
     "ja_status": "manual",
     "origin": "pyxel-rogue"

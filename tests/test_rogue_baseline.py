@@ -807,7 +807,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
         self.assertEqual(rogue.HUD_W, 78)
         self.assertEqual(rogue.MSG_LINES, 7)
-        self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -1310,7 +1310,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.lang, rogue.LANG_JA)
         self.assertTrue(game.settings.auto_pickup)
         self.assertTrue(game.auto_pickup)
-        self.assertEqual(game.settings.palette, "gbc")
+        self.assertEqual(game.settings.palette, rogue.DEFAULT_PALETTE)
         self.assertTrue(game.settings.show_run_steps)
         self.assertEqual(game.run_step_interval(), rogue.DASH_INTERVAL)
         before = (game.turn, game.p.depth, len(game.mons), len(game.gitems))
@@ -1326,13 +1326,78 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_settings_palette_applies_named_palette(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings(palette="gbc")
+        game.settings = rogue.Settings(palette="gbc_high_contrast")
         old_colors = getattr(rogue.pyxel, "colors", None)
         try:
             rogue.pyxel.colors = []
             game.apply_palette()
-            self.assertEqual(rogue.pyxel.colors[: len(rogue.GBC_PALETTE)], rogue.GBC_PALETTE)
+            self.assertEqual(
+                rogue.pyxel.colors[: len(rogue.GBC_HIGH_CONTRAST_PALETTE)],
+                rogue.GBC_HIGH_CONTRAST_PALETTE,
+            )
         finally:
+            if old_colors is None:
+                del rogue.pyxel.colors
+            else:
+                rogue.pyxel.colors = old_colors
+
+    def test_palette_options_are_three_32_color_candidates(self):
+        self.assertEqual(rogue.PALETTE_IDS, ("gbc", "gbc_high_contrast", "flexoki_light"))
+        for palette_id in rogue.PALETTE_IDS:
+            self.assertEqual(len(rogue.PALETTES[palette_id]), 32)
+        self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
+
+    def test_flexoki_light_uses_readable_monster_colors(self):
+        game = new_game(seed=242)
+        game.settings.palette = "flexoki_light"
+
+        self.assertEqual(game.monster_color("K"), 30)
+
+    def test_assist_palette_toggle_changes_display_only(self):
+        game = new_game(seed=241)
+        before = (
+            game.turn,
+            game.p.x,
+            game.p.y,
+            len(game.p.inv),
+            len(game.mons),
+            len(game.gitems),
+            tuple(game.ident.pk),
+            tuple(game.ident.sk),
+        )
+        old_colors = getattr(rogue.pyxel, "colors", None)
+        try:
+            rogue.pyxel.colors = []
+            game.st = rogue.ST_AUX
+            game.acur = rogue.AUX_ACTIONS.index("Palette")
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.GAMEPAD1_BUTTON_A},
+                pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            )
+
+            game.update()
+
+            self.assertEqual(game.settings.palette, "flexoki_light")
+            self.assertEqual(
+                rogue.pyxel.colors[: len(rogue.FLEXOKI_LIGHT_PALETTE)],
+                rogue.FLEXOKI_LIGHT_PALETTE,
+            )
+            self.assertIn("Palette: Flexoki Light.", game.msgs)
+            self.assertEqual(
+                before,
+                (
+                    game.turn,
+                    game.p.x,
+                    game.p.y,
+                    len(game.p.inv),
+                    len(game.mons),
+                    len(game.gitems),
+                    tuple(game.ident.pk),
+                    tuple(game.ident.sk),
+                ),
+            )
+        finally:
+            rogue.pyxel.set_input()
             if old_colors is None:
                 del rogue.pyxel.colors
             else:
