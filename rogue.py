@@ -227,6 +227,7 @@ POT_JA = {
     "detect monster":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
 }
 SCR_JA = {
+    "monster confusion":"怪物を混乱させる",
     "identify":"持ちものの種類がわかる", "enchant weapon":"武器に魔法をかける",
     "enchant armor":"よろいに魔法をかける", "remove curse":"のろいを解く",
     "aggravate monsters":"怪物を怒らせる", "scare monster":"怪物を近寄せない",
@@ -432,6 +433,7 @@ POT_COLORS = ["blue","red","green","grey","brown","clear",
               "pink","white","purple","yellow","plaid","amber"]
 
 SCROLLS = [
+    {"name":"monster confusion","prob":7},
     {"name":"identify","prob":21},{"name":"enchant weapon","prob":8},
     {"name":"enchant armor","prob":7},{"name":"remove curse","prob":7},
     {"name":"aggravate monsters","prob":3},{"name":"scare monster","prob":4},
@@ -632,6 +634,7 @@ class Player:
         s.held_by=None
         s.quiet=0
         s.facing=(0,1)
+        s.can_confuse_monster=False
         s.has_amulet=False
     @property
     def alive(s): return s.hp>0
@@ -1643,9 +1646,15 @@ class Game:
         if hit:
             m.hp-=dmg
             self.msg_text(self.player_hit_message(mn))
+            if self.p.can_confuse_monster:
+                self.p.can_confuse_monster=False
+                m.confused=1
+                self.msg("fight.your_hands_stop_glowing_color", color="red")
             if not m.alive:
                 self.msg_text(self.defeated_message(mn))
                 self.award_monster_kill(m,mn)
+            elif m.confused>0:
+                self.msg("fight.subject_appears_confused", subject=mn)
         else: self.msg_text(self.player_miss_message(mn))
 
     def monster_has_magic_item_to_steal(self):
@@ -1911,7 +1920,10 @@ class Game:
 
     def use_scr(self,it):
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=True
-        if nm=="identify":
+        if nm=="monster confusion":
+            p.can_confuse_monster=True
+            self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
+        elif nm=="identify":
             unid=[i for i in p.inv if (i.cat==CAT_POT and not self.ident.pk[i.kind])
                   or (i.cat==CAT_SCR and not self.ident.sk[i.kind])]
             if unid:

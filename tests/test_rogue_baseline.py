@@ -601,6 +601,44 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(ring.cursed)
 
+    def test_rogue_544_scroll_monster_confusion_sets_canhuh_until_hit(self):
+        # Rogue 5.4.4 scrolls.c:S_CONFUSE sets CANHUH; fight.c:attack()
+        # consumes it only after a hit and gives the monster ISHUH.
+        game = new_game(seed=311)
+        set_open_floor(game)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "monster confusion")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=-100, exp=0)
+        game.mons = [monster]
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.p.can_confuse_monster)
+        self.assertNotIn(scroll, game.p.inv)
+        self.assertIn("your hands begin to glow red", game.msgs)
+
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+        game.p_attack(monster)
+
+        self.assertFalse(game.p.can_confuse_monster)
+        self.assertGreater(monster.confused, 0)
+        self.assertIn("your hands stop glowing red", game.msgs)
+        self.assertIn("the hobgoblin appears confused", game.msgs)
+
+    def test_rogue_544_scroll_monster_confusion_survives_missed_attack(self):
+        # Rogue 5.4.4 fight.c:attack() clears CANHUH inside the hit branch.
+        game = new_game(seed=312)
+        set_open_floor(game)
+        game.p.can_confuse_monster = True
+        monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=100, exp=0)
+
+        game.swing_hits = lambda at_lvl, op_arm, wplus: False
+        game.p_attack(monster)
+
+        self.assertTrue(game.p.can_confuse_monster)
+        self.assertEqual(monster.confused, 0)
+
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
         import rogue_rings
@@ -2043,7 +2081,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_enchant_weapon_increments_one_weapon_plus(self):
         game = new_game(seed=39)
         weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=0, cursed=True)
-        scroll = rogue.Item(rogue.CAT_SCR, 1)
+        scroll = rogue.Item(rogue.CAT_SCR, next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant weapon"))
         game.p.wpn = weapon
         game.p.inv = [weapon, scroll]
         old_randrange = rogue.random.randrange
