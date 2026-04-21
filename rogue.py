@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604212340"
+UI_BUILD = "2604212349"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -3136,8 +3136,11 @@ class Game:
                 if not(0<=mx<MAP_W and 0<=my<MAP_H): continue
                 sx = ZV_X + vx*TILE_W
                 sy = ZV_Y + vy*TILE_H
+                if blind and (mx, my) == (px, py):
+                    self.txt(sx+1, sy+1, "@", 30)
+                    continue
                 vis = (mx,my) in self.visible and not blind
-                exp = (mx,my) in self.explored
+                exp = (mx,my) in self.explored and not blind
 
                 if vis:
                     tile=self.tm[my][mx]; ch,col=TILE_CH.get(tile,(" ",0))

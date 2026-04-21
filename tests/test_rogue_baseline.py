@@ -1689,8 +1689,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((".", rogue.MEMORY_TILE_COLOR), calls)
         self.assertNotIn((".", 1), calls)
 
+    def test_rogue_544_blind_player_still_draws_hero(self):
+        # Rogue 5.4.4 misc.c:look() skips other cells while ISBLIND, but still draws hero.
+        game = new_game(seed=343)
+        set_open_floor(game)
+        game.p.blind = 10
+        game.update_fov()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_zoom()
+
+        self.assertIn("@", calls)
+        self.assertNotIn(".", calls)
+
     def test_hud_title_includes_build_revision_stamp(self):
-        game = new_game(seed=342)
+        game = new_game(seed=344)
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
 
@@ -1699,10 +1713,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604212340")
+        self.assertEqual(rogue.UI_BUILD, "2604212349")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
-        game = new_game(seed=343)
+        game = new_game(seed=345)
         game.txt = lambda *args: None
         rects = []
         old_rect = rogue.pyxel.rect
