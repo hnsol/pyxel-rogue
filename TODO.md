@@ -41,7 +41,8 @@
 3. 呪い生成確率と識別表示の監査（`things.c:new_thing()`, `armor.c:wear()`, `rings.c:ring_num()`, `sticks.c:charge_str()`）
 4. run停止条件の再監査（`move.c:do_run()` / `do_move()`, `misc.c:look()`）
 5. 杖 bolt 系 / magic missile / drain life / nothing（`sticks.c:do_zap()`）
-6. Xeroc 擬態、hallucination、通路番号付き passages、Dragon breath / cancellation 連携
+6. 鑑定・命名・発見リスト忠実度（`wizard.c:whatis()/set_know()`, `command.c:call()`, `misc.c:call_it()`, `things.c:print_disc()`）
+7. Xeroc 擬態、hallucination、通路番号付き passages、Dragon breath / cancellation 連携
 
 - [x] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
@@ -79,6 +80,16 @@
 - [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [x] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査
 - [x] Rogue 5.4.4 `passages.c` 準拠の浅い階の通路グラフ・余剰エッジ数の固定 seed 監査
+- [ ] **鑑定・命名・発見リスト忠実度**
+  - 現行 Pyxel 版は `oi_guess` / `o_label` / `call_it()` / `call` / `D` discovered list がなく、potion / scroll が原作より早く正式鑑定される場合がある。
+  - [ ] `IdentTable` を種類単位 `oi_know` / `oi_guess` 相当と個体 `ISKNOW` 相当に分ける
+  - [ ] `things.c:inv_name()/nameit()` 準拠で、未鑑定・仮名・正式鑑定・個体詳細の表示を分ける
+  - [ ] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
+  - [ ] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll と `call_it()` 相当を分ける
+  - [ ] `wizard.c:whatis()/set_know()` 準拠の対象選択式 identify を実装する
+  - [ ] `command.c:call()` 相当の命名機能を追加する（potion/scroll/ring/stick は種類仮名、weapon/armor は個体ラベル）
+  - [ ] `things.c:print_disc()` 相当の discovered list / 思い出し機能を追加する
+  - [ ] ring の `ring_num()` と stick の `charge_str()` は種類判明だけでなく個体 `ISKNOW` 後に表示する
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
