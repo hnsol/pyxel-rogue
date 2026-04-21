@@ -234,7 +234,7 @@ SCR_JA = {
     "sleep":"眠りにおちる", "teleportation":"テレポートする",
     "create monster":"怪物を作りだす", "magic mapping":"魔法の地図の",
     "hold monster":"怪物を封じこめる", "food detection":"食料を探す",
-    "blank paper":"白紙の",
+    "protect armor":"よろいを守る", "blank paper":"白紙の",
 }
 FOOD_JA = {"food ration":"食糧", "slime-mold":"こけもも"}
 WEAPON_JA = {
@@ -441,7 +441,7 @@ SCROLLS = [
     {"name":"sleep","prob":3},{"name":"teleportation","prob":5},
     {"name":"create monster","prob":4},{"name":"magic mapping","prob":4},
     {"name":"hold monster","prob":2},{"name":"food detection","prob":2},
-    {"name":"blank paper","prob":1},
+    {"name":"protect armor","prob":2},{"name":"blank paper","prob":1},
 ]
 SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
             "aimfiz","aefg","zorch","elam","isko","temov","gnik","snef",
@@ -588,6 +588,7 @@ class Item:
             s.dam_plus = 0 if dam_plus is None else dam_plus
         s.x=s.y=0
         s.picked_up=False
+        s.protected=False
     @property
     def data(s):
         if s.cat==CAT_POT: return POTIONS[s.kind]
@@ -1921,7 +1922,7 @@ class Game:
         p.rm_item(it)
 
     def use_scr(self,it):
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm!="food detection"
+        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
@@ -1998,6 +1999,13 @@ class Game:
                 self.msg("scrolls.your_nose_tingles_and_you_smell_food")
             else:
                 self.msg("scrolls.your_nose_tingles")
+        elif nm=="protect armor":
+            if p.arm:
+                p.arm.protected=True
+                self.ident.sk[it.kind]=True
+                self.msg("scrolls.your_armor_is_covered_by_a_shimmering_color_shield", color="gold")
+            else:
+                self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="blank paper": self.msg("pyxel.scroll_is_blank")
         p.rm_item(it)
 
@@ -2401,7 +2409,7 @@ class Game:
         arm=self.p.arm
         if not arm or arm.data["name"]=="leather armor":
             return
-        if rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM):
+        if arm.protected or rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM):
             self.msg("move.the_rust_vanishes_instantly")
             return
         if arm.ench>-3:

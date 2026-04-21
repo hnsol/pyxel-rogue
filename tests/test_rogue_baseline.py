@@ -677,6 +677,41 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertIn("your nose tingles", game.msgs)
 
+    def test_rogue_544_scroll_protect_armor_marks_armor_protected_and_blocks_rust(self):
+        # Rogue 5.4.4 scrolls.c:S_PROTECT sets ISPROT; move.c:rust_armor()
+        # then prints the instant-vanish rust message and does not lower armor.
+        game = new_game(seed=315)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "protect armor")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        armor = rogue.Item(rogue.CAT_ARM, 1, ench=0)
+        game.p.arm = armor
+        game.p.inv.extend([armor, scroll])
+        game.p.recalc_ac()
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertTrue(armor.protected)
+        self.assertIn("your armor is covered by a shimmering gold shield", game.msgs)
+
+        game.rust_armor()
+
+        self.assertEqual(armor.ench, 0)
+        self.assertIn("the rust vanishes instantly", game.msgs)
+
+    def test_rogue_544_scroll_protect_armor_without_armor_does_not_identify(self):
+        # Rogue 5.4.4 scrolls.c:S_PROTECT has an armor-only effect.
+        game = new_game(seed=316)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "protect armor")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.arm = None
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertIn("you feel a strange sense of loss", game.msgs)
+
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
         import rogue_rings
