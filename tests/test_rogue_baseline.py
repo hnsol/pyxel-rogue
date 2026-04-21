@@ -1312,6 +1312,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.auto_pickup)
         self.assertEqual(game.settings.palette, rogue.DEFAULT_PALETTE)
         self.assertTrue(game.settings.show_run_steps)
+        self.assertEqual(rogue.DASH_INTERVAL, 2)
         self.assertEqual(game.run_step_interval(), rogue.DASH_INTERVAL)
         before = (game.turn, game.p.depth, len(game.mons), len(game.gitems))
 
@@ -1575,7 +1576,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604200157")
+        self.assertEqual(rogue.UI_BUILD, "2604212322")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604200157"
+UI_BUILD = "2604212322"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -158,7 +158,7 @@ MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * MSG_LINE_H - 2
 MSG_COLS = (SCR_W - MSG_X * 2) // 6
 
 INV_MAX = 26
-DASH_INTERVAL = 3                # frames between dash steps
+DASH_INTERVAL = 2                # frames between dash steps
 HUNGERTIME = 1300
 MORETIME = 150
 STOMACHSIZE = 2000
