@@ -94,9 +94,9 @@
   - [x] `S_FDET` food detection（階フロアの食料位置一時表示）
   - [x] `S_PROTECT` protect armor（防具の呪い・錆び防止）と現行 enchant armor (= `S_ARMOR`) の区別
 - [ ] **ポーション 14種化**（`rogue.h:P_* / MAXPOTIONS=14`、`potions.c:quaff()`）
-  - 現行 Pyxel 版は 12 種のみ。
+  - 現行 Pyxel 版は 13 種。残りは `P_LSD` hallucination。
   - [ ] `P_LSD` hallucination の効果実装（視覚混乱、search `probinc`、invisible monster 表示への反映）
-  - [ ] `P_LEVIT` levitation（`ISLEVIT` 相当、罠・階段無効化、床上アイテム拾得不可、`daemons.c:land()` で復帰）
+  - [x] `P_LEVIT` levitation（`ISLEVIT` 相当、罠・階段無効化、床上アイテム拾得不可、`daemons.c:land()` で復帰）
 - [ ] **treasure room（俗称モンスターハウス）**（`new_level.c:138, 180-231` の `treas_room()`）
   - 1/20 の階で発生。`MINTREAS=2` / `MAXTREAS=10` のアイテムと、次階層相当のモンスター群を `ISMEAN` 付きで配置。部屋内モンスターには `give_pack()` も呼ぶ。
 - [x] **モンスター持ち物 `m_carry`**（`monsters.c:217-222 give_pack()`、`extern.c:monsters[]` の `m_carry`）

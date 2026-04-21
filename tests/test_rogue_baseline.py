@@ -884,6 +884,65 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.blind, 0)
         self.assertIn("the veil of darkness lifts", game.msgs)
 
+    def test_rogue_544_potion_levitation_uses_spread_healtime_and_lands(self):
+        # Rogue 5.4.4 potions.c:P_LEVIT uses do_pot(ISLEVIT, land, HEALTIME).
+        game = new_game(seed=212)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "levitation")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 2
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.levitating, rogue.HEALTIME - rogue.HEALTIME // 20 + 2)
+        self.assertTrue(game.ident.pk[potion_kind])
+        self.assertIn("you start to float in the air", game.msgs)
+
+        game.p.levitating = 1
+        game.end_turn()
+
+        self.assertEqual(game.p.levitating, 0)
+        self.assertIn("you float gently to the ground", game.msgs)
+
+    def test_rogue_544_levitation_blocks_stairs_pickup_and_traps(self):
+        # Rogue 5.4.4 command.c:levit_check() blocks stairs and pickup;
+        # move.c:be_trapped() returns before trap effects while ISLEVIT.
+        game = new_game(seed=213)
+        set_open_floor(game)
+        game.p.levitating = 10
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = game.p.x, game.p.y
+        game.gitems = [item]
+
+        game.do_pickup()
+
+        self.assertIn(item, game.gitems)
+        self.assertNotIn(item, game.p.inv)
+        self.assertIn("You can't.  You're floating off the ground!", game.msgs)
+
+        game.gitems = []
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        old_depth = game.p.depth
+
+        game.do_action()
+
+        self.assertEqual(game.p.depth, old_depth)
+        self.assertIn("You can't.  You're floating off the ground!", game.msgs)
+
+        game.tm[game.p.y][game.p.x] = rogue.T_FLOOR
+        x, y = game.p.x + 1, game.p.y
+        game.traps[(x, y)] = 3
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (x, y))
+        self.assertEqual(game.tm[y][x], rogue.T_FLOOR)
+        self.assertEqual(game.p.stuck, 0)
+        self.assertNotIn("you are caught in a bear trap", game.msgs)
+
     def test_rogue_544_ring_aggravate_and_stealth_affect_monster_running(self):
         # Rogue 5.4.4 rings.c:ring_on() aggravates; monsters.c:wake_monster checks R_STEALTH.
         import rogue_rings

@@ -164,6 +164,7 @@ MORETIME = 150
 STOMACHSIZE = 2000
 STARVETIME = 850
 SEEDURATION = 850
+HEALTIME = 30
 MAX_TRAPS = 10
 AMULET_LEVEL = 26
 WANDERTIME = 70
@@ -225,6 +226,7 @@ POT_JA = {
     "blindness":"目が見えなくなる", "haste self":"素早くなる",
     "see invisible":"見えないものが見える", "raise level":"経験が増す",
     "detect monster":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
+    "levitation":"空中浮遊",
 }
 SCR_JA = {
     "monster confusion":"怪物を混乱させる",
@@ -302,7 +304,8 @@ POT_COLOR_JA = {
     "blue":"青い", "red":"赤い", "green":"緑の", "grey":"灰色の",
     "brown":"茶色の", "clear":"透明な", "pink":"ピンクの",
     "white":"白い", "purple":"紫の", "yellow":"黄色い",
-    "plaid":"水色の", "amber":"琥珀色の",
+    "plaid":"水色の", "amber":"琥珀色の", "black":"黒い",
+    "orange":"橙色の",
 }
 
 class TextCatalog:
@@ -429,9 +432,11 @@ POTIONS = [
     {"name":"blindness","prob":5},{"name":"haste self","prob":5},
     {"name":"see invisible","prob":3},{"name":"raise level","prob":2},
     {"name":"detect monster","prob":6},{"name":"magic detection","prob":6},
+    {"name":"levitation","prob":6},
 ]
 POT_COLORS = ["blue","red","green","grey","brown","clear",
-              "pink","white","purple","yellow","plaid","amber"]
+              "pink","white","purple","yellow","plaid","amber",
+              "black","orange"]
 
 SCROLLS = [
     {"name":"monster confusion","prob":7},
@@ -632,7 +637,7 @@ class Player:
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
         s.ring_l=None; s.ring_r=None
-        s.confused=s.blind=s.haste=s.see_invisible=0
+        s.confused=s.blind=s.haste=s.see_invisible=s.levitating=0
         s.no_command=s.no_move=0
         s.held_by=None
         s.quiet=0
@@ -1452,6 +1457,11 @@ class Game:
         self.tm[y][x]=T_TRAP
         self.explored.add((x,y))
         return True
+    def levit_check(self):
+        if self.p.levitating <= 0:
+            return False
+        self.msg("command.you_cant_you_re_floating_off_the_ground")
+        return True
     def walkable(self,x,y):
         return in_play_area(x,y) and self.tm[y][x] in WALKABLE
     def diag_ok(self,sx,sy,ex,ey):
@@ -1919,6 +1929,9 @@ class Game:
             for i in self.gitems:
                 if i.cat in(CAT_POT,CAT_SCR): self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
             self.msg("pyxel.sense_magic")
+        elif nm=="levitation":
+            p.levitating += RNG.spread(HEALTIME)
+            self.msg("potions.you_start_to_float_in_the_air")
         p.rm_item(it)
 
     def use_scr(self,it):
@@ -2300,7 +2313,7 @@ class Game:
         if self.walkable(nx, ny):
             p.x, p.y = nx, ny
             trapped = (nx,ny) in self.traps
-            if trapped:
+            if trapped and p.levitating <= 0:
                 self.trigger_trap(nx,ny)
                 if not self.p.alive or self.st!=ST_PLAY:
                     self.end_turn()
@@ -2461,6 +2474,8 @@ class Game:
 
     def use_stairs(self):
         p=self.p
+        if self.levit_check():
+            return
         if p.has_amulet:
             if p.depth <= 1:
                 self.msg("pyxel.escaped_with_amulet")
@@ -2480,6 +2495,8 @@ class Game:
         p=self.p
         gi=self.gi_at(x,y)
         if not gi:
+            return False
+        if self.levit_check():
             return False
         if gi.cat==CAT_GOLD:
             p.gold+=gi.qty; self.gitems.remove(gi); self.msg("pyxel.gold_pieces", gold=gi.qty)
@@ -2527,6 +2544,10 @@ class Game:
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
         if self.p.see_invisible>0: self.p.see_invisible-=1
+        if self.p.levitating>0:
+            self.p.levitating-=1
+            if self.p.levitating==0:
+                self.msg("daemons.you_float_gently_to_the_ground")
         self.p.heal_tick()
         self.ring_after_turn()
         self.roll_wanderer()
@@ -3252,6 +3273,7 @@ class Game:
         if p.confused>0: eff.append("Confused")
         if p.blind>0: eff.append("Blind")
         if p.haste>0: eff.append("Haste")
+        if p.levitating>0: eff.append("Levit")
         if not eff:
             eff.append("None")
         for e in eff[:5]:
