@@ -972,6 +972,77 @@ class RogueBaselineTest(unittest.TestCase):
             ("centaur", 4, 4, "1x2/1x5/1x5", 17),
         )
 
+    def test_rogue_544_monster_carry_table_and_give_pack_probability(self):
+        # Rogue 5.4.4 extern.c:monsters[] m_carry and monsters.c:give_pack().
+        specs = {m.sym: m for m in rogue.BESTIARY}
+        self.assertEqual(
+            [specs[sym].carry for sym in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+            [0, 0, 15, 100, 0, 0, 20, 0, 0, 70, 0, 0, 40, 100, 15, 0, 0, 0, 0, 50, 0, 20, 0, 30, 30, 0],
+        )
+
+        game = new_game(seed=301)
+        set_open_floor(game)
+        game.max_depth = game.p.depth
+        nymph = monster_at(game.p.x + 1, game.p.y, "N", "nymph", flags="steal_item")
+        carried = rogue.Item(rogue.CAT_FOOD, 0)
+        old_rnd = rogue.RNG.rnd
+        old_make_item = rogue.make_item
+        try:
+            rogue.RNG.rnd = lambda n: 99
+            rogue.make_item = lambda depth: carried
+            game.give_pack(nymph)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.make_item = old_make_item
+
+        self.assertEqual(nymph.pack, [carried])
+
+        nymph.pack = []
+        game.max_depth = game.p.depth + 1
+        old_rnd = rogue.RNG.rnd
+        old_make_item = rogue.make_item
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.make_item = lambda depth: rogue.Item(rogue.CAT_FOOD, 0)
+            game.give_pack(nymph)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.make_item = old_make_item
+
+        self.assertEqual(nymph.pack, [])
+
+    def test_rogue_544_killed_monster_drops_pack_items_at_monster_position(self):
+        # Rogue 5.4.4 fight.c:killed() calls remove_mon(..., TRUE), which falls t_pack items.
+        game = new_game(seed=302)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y)
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        monster.pack = [item]
+        game.mons = [monster]
+
+        game.award_monster_kill(monster)
+
+        self.assertNotIn(monster, game.mons)
+        self.assertEqual(monster.pack, [])
+        self.assertIn(item, game.gitems)
+        self.assertEqual((item.x, item.y), (monster.x, monster.y))
+
+    def test_rogue_544_polymorph_rebuilds_monster_and_clears_pack(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH calls monsters.c:new_monster(), which resets t_pack.
+        game = new_game(seed=303)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y)
+        monster.pack = [rogue.Item(rogue.CAT_FOOD, 0)]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3
+            game.polymorph_monster(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual((monster.sym, monster.name), ("D", "dragon"))
+        self.assertEqual(monster.pack, [])
+
     def test_rogue_544_weapon_table_audit_guards_init_dam_values(self):
         self.assertEqual(rogue.WEAPONS[0]["damage"], "2d4")
         self.assertEqual(rogue.WEAPONS[0]["hurl_damage"], "1d3")
@@ -1576,7 +1647,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604212322")
+        self.assertEqual(rogue.UI_BUILD, "2604212329")
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=343)

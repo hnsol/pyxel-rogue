@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604212322"
+UI_BUILD = "2604212329"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -489,33 +489,34 @@ class MonsterSpec:
     exp: int
     min_depth: int
     flags: str = ""
+    carry: int = 0
 
 BESTIARY = [
     MonsterSpec("A","aquator",5,2,"0x0/0x0",20,9,"rust"),
     MonsterSpec("B","bat",1,3,"1x2",1,1,"erratic,fly"),
-    MonsterSpec("C","centaur",4,4,"1x2/1x5/1x5",17,7,""),
-    MonsterSpec("D","dragon",10,-1,"1x8/1x8/3x10",5000,21,""),
+    MonsterSpec("C","centaur",4,4,"1x2/1x5/1x5",17,7,"", carry=15),
+    MonsterSpec("D","dragon",10,-1,"1x8/1x8/3x10",5000,21,"", carry=100),
     MonsterSpec("E","emu",1,7,"1x2",2,1,""),
     MonsterSpec("F","venus flytrap",8,3,"0x0",80,12,"hold"),
-    MonsterSpec("G","griffin",13,2,"4x3/3x5",2000,17,"fly,regen"),
+    MonsterSpec("G","griffin",13,2,"4x3/3x5",2000,17,"fly,regen", carry=20),
     MonsterSpec("H","hobgoblin",1,5,"1x8",3,1,""),
     MonsterSpec("I","ice monster",1,9,"0x0",5,5,"freeze"),
-    MonsterSpec("J","jabberwock",15,6,"2x12/2x4",3000,20,""),
+    MonsterSpec("J","jabberwock",15,6,"2x12/2x4",3000,20,"", carry=70),
     MonsterSpec("K","kestrel",1,7,"1x4",1,1,"fly"),
     MonsterSpec("L","leprechaun",3,8,"1x1",10,6,"steal_gold"),
-    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,rogue_monsters.FLAG_CAN_CONFUSE),
-    MonsterSpec("N","nymph",3,9,"0x0",37,9,"steal_item"),
-    MonsterSpec("O","orc",1,6,"1x8",5,5,""),
+    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,rogue_monsters.FLAG_CAN_CONFUSE, carry=40),
+    MonsterSpec("N","nymph",3,9,"0x0",37,9,"steal_item", carry=100),
+    MonsterSpec("O","orc",1,6,"1x8",5,5,"", carry=15),
     MonsterSpec("P","phantom",8,3,"4x4",120,15,rogue_monsters.FLAG_INVISIBLE),
     MonsterSpec("Q","quagga",3,3,"1x5/1x5",15,8,""),
     MonsterSpec("R","rattlesnake",2,3,"1x6",9,4,"poison"),
     MonsterSpec("S","snake",1,5,"1x3",2,2,""),
-    MonsterSpec("T","troll",6,4,"1x8/1x8/2x6",120,13,"regen"),
+    MonsterSpec("T","troll",6,4,"1x8/1x8/2x6",120,13,"regen", carry=50),
     MonsterSpec("U","black unicorn",7,-2,"1x9/1x9/2x9",190,18,""),
-    MonsterSpec("V","vampire",8,1,"1x10",350,16,"drain,regen"),
+    MonsterSpec("V","vampire",8,1,"1x10",350,16,"drain,regen", carry=20),
     MonsterSpec("W","wraith",5,4,"1x6",55,14,"drain_level"),
-    MonsterSpec("X","xeroc",7,7,"4x4",100,11,"mimic"),
-    MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,""),
+    MonsterSpec("X","xeroc",7,7,"4x4",100,11,"mimic", carry=30),
+    MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,"", carry=30),
     MonsterSpec("Z","zombie",2,8,"1x8",6,7,""),
 ]
 MCOL = {"A":14,"B":28,"C":17,"D": 2,"E": 8,"F": 5,"G":13,"H":21,"I":27,"J": 1,
@@ -610,6 +611,7 @@ class Monster:
         s.held=s.scared=s.confused=0
         s.running=False; s.dest=DEST_PLAYER; s.turn=True
         s.mean=True; s.target=False; s.found=False; s.vf_hit=0
+        s.pack=[]
     @property
     def alive(s): return s.hp>0
 
@@ -1224,6 +1226,7 @@ class Game:
         self.hp_damage_turn = None
         self.death_cause = ""
         self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
+        self.max_depth = 0
         self.wander_timer = 0
         self.wander_between = 0
         self.descend()
@@ -1240,6 +1243,7 @@ class Game:
 
     def descend(self):
         self.p.depth += 1
+        self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
         self.tm, self.rooms = DGen.gen(self.p.depth)
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
@@ -1288,10 +1292,12 @@ class Game:
                 mx,my=self.random_room_tile(rm, WALKABLE)
                 if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
                    and not(mx==self.p.x and my==self.p.y):
-                    self.mons.append(Monster(
+                    monster=Monster(
                         mx, my, e.sym, e.name, monster_hp(e),
                         e.level, e.armor, e.damage, e.exp, e.flags
-                    ))
+                    )
+                    self.give_pack(monster)
+                    self.mons.append(monster)
                     break
 
     def spawn_wanderer(self):
@@ -1307,6 +1313,13 @@ class Game:
         self.mons.append(monster)
         self.runto(monster)
         return True
+
+    def give_pack(self,m):
+        spec=self.monster_spec_for_sym(m.sym)
+        if not spec or self.p.depth < getattr(self, "max_depth", self.p.depth):
+            return
+        if RNG.rnd(100) < spec.carry:
+            m.pack.append(make_item(self.p.depth))
 
     def wanderer_floor_candidates(self):
         player_room=self.room_containing(self.p.x,self.p.y)
@@ -1616,6 +1629,7 @@ class Game:
             self.p.held_by=None
         if self.p.lvlup():
             self.msg("pyxel.welcome_to_level", level=self.p.level)
+        self.remove_monster(m, was_kill=True)
         return mn
 
     def p_attack(self, m):
@@ -1638,7 +1652,16 @@ class Game:
                 return it
         return None
 
-    def remove_monster(self,m):
+    def remove_monster(self,m,was_kill=False):
+        if was_kill:
+            for item in list(getattr(m, "pack", [])):
+                pos=(m.x,m.y) if self.walkable(m.x,m.y) and not self.gi_at(m.x,m.y) else self.fall_position(m.x,m.y)
+                if pos:
+                    item.x,item.y=pos
+                    self.gitems.append(item)
+                m.pack.remove(item)
+        else:
+            m.pack=[]
         if m in self.mons:
             self.mons.remove(m)
 
@@ -1970,6 +1993,7 @@ class Game:
         m.damage_expr=spec.damage; m.exp=spec.exp+lev_add*10
         m.hp=m.max_hp=max(1,RNG.roll(level,8))
         m.flags=set(spec.flags.split(",")) if spec.flags else set()
+        m.pack=[]
         m.held=m.scared=m.confused=0
         m.running=False; m.dest=DEST_PLAYER; m.turn=True
         m.mean=True; m.target=False; m.found=False; m.vf_hit=0
