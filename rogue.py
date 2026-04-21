@@ -233,7 +233,8 @@ SCR_JA = {
     "aggravate monsters":"怪物を怒らせる", "scare monster":"怪物を近寄せない",
     "sleep":"眠りにおちる", "teleportation":"テレポートする",
     "create monster":"怪物を作りだす", "magic mapping":"魔法の地図の",
-    "hold monster":"怪物を封じこめる", "blank paper":"白紙の",
+    "hold monster":"怪物を封じこめる", "food detection":"食料を探す",
+    "blank paper":"白紙の",
 }
 FOOD_JA = {"food ration":"食糧", "slime-mold":"こけもも"}
 WEAPON_JA = {
@@ -439,7 +440,8 @@ SCROLLS = [
     {"name":"aggravate monsters","prob":3},{"name":"scare monster","prob":4},
     {"name":"sleep","prob":3},{"name":"teleportation","prob":5},
     {"name":"create monster","prob":4},{"name":"magic mapping","prob":4},
-    {"name":"hold monster","prob":2},{"name":"blank paper","prob":1},
+    {"name":"hold monster","prob":2},{"name":"food detection","prob":2},
+    {"name":"blank paper","prob":1},
 ]
 SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
             "aimfiz","aefg","zorch","elam","isko","temov","gnik","snef",
@@ -1919,7 +1921,7 @@ class Game:
         p.rm_item(it)
 
     def use_scr(self,it):
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=True
+        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm!="food detection"
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
@@ -1984,6 +1986,18 @@ class Game:
             for mo in self.mons:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=4: mo.held=RNG.randint(10,20)
             self.msg("pyxel.nearby_monsters_freeze")
+        elif nm=="food detection":
+            found=False
+            for gi in self.gitems:
+                if gi.cat==CAT_FOOD:
+                    self.visible.add((gi.x,gi.y))
+                    self.explored.add((gi.x,gi.y))
+                    found=True
+            if found:
+                self.ident.sk[it.kind]=True
+                self.msg("scrolls.your_nose_tingles_and_you_smell_food")
+            else:
+                self.msg("scrolls.your_nose_tingles")
         elif nm=="blank paper": self.msg("pyxel.scroll_is_blank")
         p.rm_item(it)
 

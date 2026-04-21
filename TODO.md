@@ -91,7 +91,7 @@
   - 現行 Pyxel 版は 12 種のみ。原作の identify 系は対象別に 5 種（potion/scroll/weapon/armor/ring-or-stick）に分かれる点も含めて、出現確率テーブルと識別挙動を Rogue 5.4.4 に合わせる。
   - [x] `S_CONFUSE` monster confusion（次攻撃時にモンスター混乱、`your hands begin to glow red`）
   - [ ] `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の識別分化（現行の単一 identify から分離）
-  - [ ] `S_FDET` food detection（階フロアの食料位置一時表示）
+  - [x] `S_FDET` food detection（階フロアの食料位置一時表示）
   - [ ] `S_PROTECT` protect armor（防具の呪い・錆び防止）と現行 enchant armor (= `S_ARMOR`) の区別
 - [ ] **ポーション 14種化**（`rogue.h:P_* / MAXPOTIONS=14`、`potions.c:quaff()`）
   - 現行 Pyxel 版は 12 種のみ。

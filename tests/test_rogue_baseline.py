@@ -639,6 +639,44 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.p.can_confuse_monster)
         self.assertEqual(monster.confused, 0)
 
+    def test_rogue_544_scroll_food_detection_reveals_food_and_identifies_only_when_food_exists(self):
+        # Rogue 5.4.4 scrolls.c:S_FDET shows lvl_obj FOOD and sets
+        # scr_info[S_FDET].oi_know only if at least one food exists.
+        game = new_game(seed=313)
+        set_open_floor(game)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "food detection")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        food.x, food.y = game.p.x + 3, game.p.y
+        potion.x, potion.y = game.p.x + 4, game.p.y
+        game.p.inv.append(scroll)
+        game.gitems = [food, potion]
+        game.visible = set()
+        game.explored = set()
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertIn((food.x, food.y), game.visible)
+        self.assertIn((food.x, food.y), game.explored)
+        self.assertNotIn((potion.x, potion.y), game.visible)
+        self.assertIn("Your nose tingles and you smell food.", game.msgs)
+
+    def test_rogue_544_scroll_food_detection_without_food_does_not_identify(self):
+        # Rogue 5.4.4 scrolls.c:S_FDET leaves scr_info unknown when no FOOD is present.
+        game = new_game(seed=314)
+        set_open_floor(game)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "food detection")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        game.gitems = []
+
+        game.use_scr(scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertIn("your nose tingles", game.msgs)
+
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
         import rogue_rings

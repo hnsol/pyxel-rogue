@@ -2633,6 +2633,12 @@
     "ja_status": "manual",
     "origin": "msg()"
   },
+  "scrolls.your_nose_tingles_and_you_smell_food": {
+    "source": "scrolls.c:244",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "show_win()"
+  },
   "sticks.by_a_shimmering_color_light": {
     "source": "sticks.c:87",
     "params": [
