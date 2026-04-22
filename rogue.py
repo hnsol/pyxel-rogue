@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0841"
+UI_BUILD = "260423_0845"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1989,21 +1989,26 @@ class Game:
 
     # ---------- Item effects ----------
     def use_pot(self,it):
-        p=self.p; nm=POTIONS[it.kind]["name"]; self.ident.pk[it.kind]=True
+        p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
+            self.ident.pk[it.kind]=True
             h=max(1,roll("1d4")*p.level); p.hp=min(p.hp+h,p.max_hp); self.msg("pyxel.feel_better_amount", count=h)
         elif nm=="extra healing":
+            self.ident.pk[it.kind]=True
             h=max(1,roll("1d8")*p.level); p.hp=min(p.hp+h,p.max_hp+2)
             if p.hp>p.max_hp: p.max_hp=p.hp
             self.msg("pyxel.feel_much_better_amount", count=h)
         elif nm=="poison":
+            self.ident.pk[it.kind]=True
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
                 l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("pyxel.feel_sick_strength_loss", count=l)
-        elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
+        elif nm=="gain strength":
+            self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
         elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
         elif nm=="confusion":
+            self.ident.pk[it.kind]=p.hallucinating <= 0
             duration = RNG.spread(HUHDURATION)
             if p.confused > 0:
                 self.fuses.lengthen("unconfuse", duration)
@@ -2012,6 +2017,7 @@ class Game:
             p.confused += duration
             self.msg("potions.what_a_tripy_feeling" if p.hallucinating > 0 else "potions.wait_what_s_going_on_here_huh_what_who")
         elif nm=="hallucination":
+            self.ident.pk[it.kind]=True
             duration = RNG.spread(SEEDURATION)
             if p.hallucinating > 0:
                 self.fuses.lengthen("come_down", duration)
@@ -2020,6 +2026,7 @@ class Game:
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
         elif nm=="blindness":
+            self.ident.pk[it.kind]=True
             duration = RNG.spread(SEEDURATION)
             if p.blind > 0:
                 self.fuses.lengthen("sight", duration)
@@ -2028,6 +2035,7 @@ class Game:
             p.blind += duration
             self.msg("potions.oh_bummer_everything_is_dark_help" if p.hallucinating > 0 else "potions.a_cloak_of_darkness_falls_around_you")
         elif nm=="haste self":
+            self.ident.pk[it.kind]=True
             if self.add_haste(True):
                 self.msg("potions.you_feel_yourself_moving_much_faster")
         elif nm=="see invisible":
@@ -2043,6 +2051,7 @@ class Game:
                 self.update_fov()
                 self.msg("daemons.the_veil_of_darkness_lifts")
         elif nm=="raise level":
+            self.ident.pk[it.kind]=True
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
             self.msg("pyxel.rise_to_level", level=p.level)
         elif nm=="detect monster":
@@ -2054,10 +2063,16 @@ class Game:
                 p.see_monsters = HUHDURATION
             self.msg("pyxel.sense_monsters")
         elif nm=="magic detection":
+            found = False
             for i in self.gitems:
-                if i.cat in(CAT_POT,CAT_SCR): self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
+                if i.cat in(CAT_POT,CAT_SCR):
+                    found = True
+                    self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
+            if found:
+                self.ident.pk[it.kind]=True
             self.msg("pyxel.sense_magic")
         elif nm=="levitation":
+            self.ident.pk[it.kind]=True
             duration = RNG.spread(HEALTIME)
             if p.levitating > 0:
                 self.fuses.lengthen("land", duration)

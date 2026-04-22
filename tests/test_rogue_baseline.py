@@ -1011,6 +1011,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.fuses.remaining("unsee"), rogue.SEEDURATION - rogue.SEEDURATION // 20 + 7)
         self.assertNotIn(potion, game.p.inv)
 
+    def test_rogue_544_potion_knowit_flags_follow_quaff_branches(self):
+        # Rogue 5.4.4 potions.c:quaff()/do_pot(): P_SEEINVIS knowit=FALSE,
+        # P_MFIND does not set oi_know, while P_HASTE sets pot_info[].oi_know.
+        game = new_game(seed=318)
+        set_open_floor(game)
+
+        see = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
+        mfind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "detect monster")
+        haste = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "haste self")
+        see_pot = rogue.Item(rogue.CAT_POT, see)
+        mfind_pot = rogue.Item(rogue.CAT_POT, mfind)
+        haste_pot = rogue.Item(rogue.CAT_POT, haste)
+        game.p.inv.extend([see_pot, mfind_pot, haste_pot])
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.use_pot(see_pot)
+            game.use_pot(mfind_pot)
+            game.use_pot(haste_pot)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(game.ident.pk[see])
+        self.assertFalse(game.ident.pk[mfind])
+        self.assertTrue(game.ident.pk[haste])
+
     def test_rogue_544_potion_see_invisible_lengthens_unsee_fuse(self):
         # Rogue 5.4.4 potions.c:do_pot(P_SEEINVIS) calls lengthen(unsee, spread(SEEDURATION)).
         game = new_game(seed=312)
