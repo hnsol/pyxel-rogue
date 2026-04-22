@@ -28,9 +28,10 @@ import rogue_monsters
 import rogue_rings
 import rogue_sticks
 import rogue_dungeon
+import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_1502"
+UI_BUILD = "260422_1512"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1273,6 +1274,8 @@ class Game:
         self.max_depth = 0
         self.wander_timer = 0
         self.wander_between = 0
+        self.fuses = rogue_daemons.FuseList()
+        self.haste_half_turn = False
         self.descend()
         self.msg("pyxel.welcome_to_dungeons")
 
@@ -1988,7 +1991,9 @@ class Game:
             p.hallucinating += RNG.spread(SEEDURATION)
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
         elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("pyxel.darkness_falls")
-        elif nm=="haste self": p.haste=RNG.randint(10,20); self.msg("pyxel.speed_up")
+        elif nm=="haste self":
+            if self.add_haste(True):
+                self.msg("potions.you_feel_yourself_moving_much_faster")
         elif nm=="see invisible":
             p.see_invisible += RNG.spread(SEEDURATION)
             self.msg("pyxel.can_see_invisible_monsters")
@@ -2010,6 +2015,28 @@ class Game:
             p.levitating += RNG.spread(HEALTIME)
             self.msg("potions.you_start_to_float_in_the_air")
         p.rm_item(it)
+
+    def add_haste(self, potion=True):
+        # Rogue 5.4.4 misc.c:add_haste() and daemons.c:nohaste().
+        if self.p.haste > 0:
+            self.p.no_command += rnd(8)
+            self.p.haste = 0
+            self.haste_half_turn = False
+            self.fuses.extinguish("nohaste")
+            self.msg("misc.you_faint_from_exhaustion")
+            return False
+        self.p.haste = 1
+        self.haste_half_turn = False
+        if potion:
+            duration = rnd(4) + 4
+            self.p.haste = duration
+            self.fuses.fuse("nohaste", duration, rogue_daemons.AFTER)
+        return True
+
+    def nohaste(self):
+        self.p.haste = 0
+        self.haste_half_turn = False
+        self.msg("daemons.you_feel_yourself_slowing_down")
 
     def use_scr(self,it):
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
@@ -2675,6 +2702,12 @@ class Game:
 
     def end_turn(self):
         msg_start = min(getattr(self, "turn_msg_start", 0), len(self.msg_turns))
+        if self.p.haste > 0 and not self.haste_half_turn:
+            # Rogue 5.4.4 command.c:command() gives ISHASTE two player actions
+            # before do_fuses(AFTER) and monster/daemon work advance.
+            self.haste_half_turn = True
+            return
+        self.haste_half_turn = False
         self.turn+=1
         for i in range(msg_start, len(self.msg_turns)):
             self.msg_turns[i] = self.turn
@@ -2690,7 +2723,6 @@ class Game:
         if self.p.no_command>0: self.p.no_command-=1
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
-        if self.p.haste>0: self.p.haste-=1
         if self.p.see_invisible>0: self.p.see_invisible-=1
         if self.p.hallucinating>0:
             self.p.hallucinating-=1
@@ -2700,6 +2732,17 @@ class Game:
             self.p.levitating-=1
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
+        due_fuses = self.fuses.tick(rogue_daemons.AFTER)
+        if "nohaste" in due_fuses:
+            self.nohaste()
+        elif self.p.haste>0:
+            remaining = self.fuses.remaining("nohaste")
+            if remaining:
+                self.p.haste = remaining
+            else:
+                self.p.haste -= 1
+                if self.p.haste == 0:
+                    self.msg("daemons.you_feel_yourself_slowing_down")
         self.p.heal_tick()
         self.ring_after_turn()
         self.roll_wanderer()

@@ -114,6 +114,8 @@
   - `rnd(100) < m_carry` でモンスターに `new_thing()` を持たせ、倒した時にドロップさせる。
 - [ ] **daemon / fuse 期間管理インフラ**（`daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()`）
   - `doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` などを個別タイマーではなく統一インフラで扱い、`potion of haste self` 等の残ターン管理を Rogue 5.4.4 準拠にする。
+  - [x] `rogue_daemons.py` に `fuse` / `lengthen` / `extinguish` / `do_fuses(AFTER)` 相当を分離し、`potion of haste self` の `nohaste` と二重使用時の失神へ接続
+  - [ ] `confusion` / `blindness` / `hallucination` / `levitation` / `see invisible` などの残り期間効果を fuse へ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）
 

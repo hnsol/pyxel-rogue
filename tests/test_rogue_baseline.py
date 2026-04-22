@@ -985,6 +985,68 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.blind, 0)
         self.assertIn("the veil of darkness lifts", game.msgs)
 
+    def test_rogue_544_daemon_fuse_lengthen_extinguish_and_after_tick(self):
+        # Rogue 5.4.4 daemon.c:fuse()/lengthen()/extinguish()/do_fuses(AFTER).
+        import rogue_daemons
+
+        fuses = rogue_daemons.FuseList()
+        fuses.fuse("nohaste", 2, rogue_daemons.AFTER)
+        self.assertEqual(fuses.tick(rogue_daemons.BEFORE), [])
+        self.assertEqual(fuses.tick(rogue_daemons.AFTER), [])
+        fuses.lengthen("nohaste", 2)
+        self.assertEqual(fuses.remaining("nohaste"), 3)
+        self.assertEqual(fuses.tick(rogue_daemons.AFTER), [])
+        fuses.extinguish("nohaste")
+        self.assertEqual(fuses.tick(rogue_daemons.AFTER), [])
+        self.assertEqual(fuses.remaining("nohaste"), 0)
+
+    def test_rogue_544_potion_haste_self_uses_nohaste_fuse_and_half_turns(self):
+        # Rogue 5.4.4 potions.c:P_HASTE calls misc.c:add_haste(TRUE);
+        # command.c:command() gives hasted player two actions before do_fuses(AFTER).
+        game = new_game(seed=310)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "haste self")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.haste, 5)
+        self.assertEqual(game.fuses.remaining("nohaste"), 5)
+        self.assertTrue(game.ident.pk[potion_kind])
+        self.assertIn("you feel yourself moving much faster", game.msgs)
+        self.assertNotIn(potion, game.p.inv)
+
+        turn = game.turn
+        game.end_turn()
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.p.haste, 5)
+
+        game.end_turn()
+        self.assertEqual(game.turn, turn + 1)
+        self.assertEqual(game.p.haste, 4)
+
+    def test_rogue_544_second_haste_self_faints_and_extinguishes_nohaste(self):
+        # Rogue 5.4.4 misc.c:add_haste() clears ISHASTE, extinguishes nohaste, and adds rnd(8) no_command.
+        game = new_game(seed=311)
+        set_open_floor(game)
+        game.add_haste(True)
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3
+            self.assertFalse(game.add_haste(True))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.haste, 0)
+        self.assertEqual(game.fuses.remaining("nohaste"), 0)
+        self.assertEqual(game.p.no_command, 3)
+        self.assertIn("you faint from exhaustion", game.msgs)
+
     def test_rogue_544_potion_levitation_uses_spread_healtime_and_lands(self):
         # Rogue 5.4.4 potions.c:P_LEVIT uses do_pot(ISLEVIT, land, HEALTIME).
         game = new_game(seed=212)
