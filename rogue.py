@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_2145"
+UI_BUILD = "260422_2353"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1988,7 +1988,12 @@ class Game:
         elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
         elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("pyxel.feel_confused")
         elif nm=="hallucination":
-            p.hallucinating += RNG.spread(SEEDURATION)
+            duration = RNG.spread(SEEDURATION)
+            if p.hallucinating > 0:
+                self.fuses.lengthen("come_down", duration)
+            else:
+                self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
+            p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
         elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("pyxel.darkness_falls")
         elif nm=="haste self":
@@ -2042,6 +2047,10 @@ class Game:
         self.p.haste = 0
         self.haste_half_turn = False
         self.msg("daemons.you_feel_yourself_slowing_down")
+
+    def come_down(self):
+        self.p.hallucinating = 0
+        self.msg("daemons.everything_looks_so_boring_now")
 
     def use_scr(self,it):
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
@@ -2730,7 +2739,7 @@ class Game:
         if self.p.blind>0: self.p.blind-=1
         if self.p.see_invisible>0 and self.fuses.remaining("unsee")==0:
             self.p.see_invisible-=1
-        if self.p.hallucinating>0:
+        if self.p.hallucinating>0 and self.fuses.remaining("come_down")==0:
             self.p.hallucinating-=1
             if self.p.hallucinating==0:
                 self.msg("daemons.everything_looks_so_boring_now")
@@ -2741,6 +2750,8 @@ class Game:
         due_fuses = self.fuses.tick(rogue_daemons.AFTER)
         if "unsee" in due_fuses:
             self.p.see_invisible = 0
+        if "come_down" in due_fuses:
+            self.come_down()
         if "nohaste" in due_fuses:
             self.nohaste()
         elif self.p.haste>0:

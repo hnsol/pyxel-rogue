@@ -1109,14 +1109,37 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertEqual(game.p.hallucinating, rogue.SEEDURATION - rogue.SEEDURATION // 20 + 4)
+        self.assertEqual(game.fuses.remaining("come_down"), rogue.SEEDURATION - rogue.SEEDURATION // 20 + 4)
         self.assertTrue(game.ident.pk[potion_kind])
         self.assertIn("Oh, wow!  Everything seems so cosmic!", game.msgs)
 
         game.p.hallucinating = 1
+        game.fuses.fuse("come_down", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 
         self.assertEqual(game.p.hallucinating, 0)
+        self.assertEqual(game.fuses.remaining("come_down"), 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
+
+    def test_rogue_544_potion_hallucination_lengthens_come_down_fuse(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_LSD) lengthens come_down when ISHALU is already set.
+        game = new_game(seed=313)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+        first = rogue.Item(rogue.CAT_POT, potion_kind)
+        second = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.extend([first, second])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.use_pot(first)
+            game.use_pot(second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        duration = rogue.SEEDURATION - rogue.SEEDURATION // 20
+        self.assertEqual(game.p.hallucinating, duration * 2)
+        self.assertEqual(game.fuses.remaining("come_down"), duration * 2)
 
     def test_rogue_544_hallucination_increases_search_probinc_and_changes_trap_name(self):
         # Rogue 5.4.4 command.c:search() adds 3 to probinc while ISHALU.
