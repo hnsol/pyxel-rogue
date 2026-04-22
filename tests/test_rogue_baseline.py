@@ -1038,6 +1038,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.pk[mfind])
         self.assertTrue(game.ident.pk[haste])
 
+    def test_rogue_544_magic_detection_sees_monster_pack_magic(self):
+        # Rogue 5.4.4 potions.c:P_TFIND scans mlist t_pack with is_magic().
+        import rogue_rings
+
+        game = new_game(seed=320)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "magic detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        food.x, food.y = game.p.x + 2, game.p.y
+        monster = monster_at(game.p.x + 4, game.p.y)
+        monster.pack = [rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)]
+        game.p.inv.append(potion)
+        game.gitems = [food]
+        game.mons = [monster]
+        game.visible = set()
+        game.explored = set()
+
+        game.use_pot(potion)
+
+        self.assertTrue(game.ident.pk[kind])
+        self.assertIn((monster.x, monster.y), game.visible)
+        self.assertIn((monster.x, monster.y), game.explored)
+        self.assertNotIn((food.x, food.y), game.visible)
+
     def test_rogue_544_do_pot_does_not_forget_known_confusion_while_hallucinating(self):
         # Rogue 5.4.4 potions.c:do_pot() only assigns oi_know when it is not already known.
         game = new_game(seed=319)

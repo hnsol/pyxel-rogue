@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0850"
+UI_BUILD = "260423_0853"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2066,9 +2066,13 @@ class Game:
         elif nm=="magic detection":
             found = False
             for i in self.gitems:
-                if i.cat in(CAT_POT,CAT_SCR):
+                if self.is_magic_item(i):
                     found = True
                     self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
+            for mo in self.mons:
+                if any(self.is_magic_item(i) for i in mo.pack):
+                    found = True
+                    self.visible.add((mo.x,mo.y)); self.explored.add((mo.x,mo.y))
             if found:
                 self.ident.pk[it.kind]=True
             self.msg("pyxel.sense_magic")
@@ -2121,6 +2125,16 @@ class Game:
         self.p.blind = 0
         self.update_fov()
         self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")
+
+    def is_magic_item(self, it):
+        # Rogue 5.4.4 potions.c:is_magic().
+        if it.cat in (CAT_POT, CAT_SCR, CAT_RING, CAT_STICK, CAT_AMULET):
+            return True
+        if it.cat == CAT_WPN:
+            return it.hit_plus != 0 or it.dam_plus != 0
+        if it.cat == CAT_ARM:
+            return it.protected or it.ench != 0
+        return False
 
     def identify_item(self, it):
         # Rogue 5.4.4 wizard.c:set_know().
