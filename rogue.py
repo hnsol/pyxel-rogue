@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0035"
+UI_BUILD = "260423_0045"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1276,6 +1276,7 @@ class Game:
         self.auto_pickup = True
         self.dir_pending = None
         self.throw_anim = None
+        self.turn_after_throw_anim = False
         self.last_hp_seen = None
         self.hp_damage_from = None
         self.hp_damage_turn = None
@@ -2462,7 +2463,7 @@ class Game:
 
     def throw(self,it,dx,dy):
         p=self.p
-        if it is p.wpn and it.cursed: self.msg("pyxel.cant_let_go_short"); return
+        if it is p.wpn and it.cursed: self.msg("pyxel.cant_let_go_short"); return False
         if it.stackable and it.qty>1:
             thrown=Item(it.cat,it.kind,cursed=it.cursed,qty=1,hit_plus=it.hit_plus,dam_plus=it.dam_plus); it.qty-=1
         else: p.rm_item(it); thrown=it
@@ -2486,11 +2487,12 @@ class Game:
                 else:
                     self.msg_text(self.thrown_miss_message(thrown,item,mn))
                     self.drop_thrown(thrown,tx,ty)
-                return
+                return True
             if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR: break
             tx,ty=nx,ny; path.append((tx,ty))
         self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
         self.drop_thrown(thrown,tx,ty,around=False)
+        return bool(path)
 
     # ---------- Movement & turns ----------
     def try_move(self, dx, dy):
@@ -2980,7 +2982,12 @@ class Game:
             if self.throw_dir:
                 dx,dy=self.throw_dir
                 self.p.facing=(dx,dy)
-                self.throw(it,dx,dy); self.close_menu(); self.end_turn()
+                animating = self.throw(it,dx,dy)
+                self.close_menu()
+                if animating:
+                    self.turn_after_throw_anim = True
+                else:
+                    self.end_turn()
             else:
                 self.dact="Throw"; self.st=ST_DIR
             return
@@ -3263,6 +3270,10 @@ class Game:
             self.throw_anim["tick"] += 1
             if self.throw_anim["tick"] >= len(self.throw_anim["path"]) * self.throw_anim["delay"]:
                 self.throw_anim = None
+                if self.turn_after_throw_anim:
+                    self.turn_after_throw_anim = False
+                    self.end_turn()
+            return
         if self.st==ST_DEAD:
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return

@@ -2723,6 +2723,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.throw_anim["path"], [(3, 2), (4, 2), (5, 2), (6, 2)])
         self.assertEqual((game.gitems[-1].x, game.gitems[-1].y), (6, 2))
 
+    def test_rogue_544_throw_motion_finishes_before_monster_turn(self):
+        # Rogue 5.4.4 command.c:t calls weapons.c:missile()/do_motion() before after-turn monsters.
+        game = new_game(seed=371)
+        set_open_floor(game)
+        item = rogue.Item(rogue.CAT_WPN, 4)
+        game.p.inv = [item]
+        game.fitems = [item]
+        game.cact = "Throw"
+        game.throw_dir = (1, 0)
+        game.st = rogue.ST_ITEM
+        turns = []
+        game.m_turn = lambda monster: turns.append(monster)
+        game.mons = [monster_at(game.p.x, game.p.y + 3)]
+
+        game.item_confirm()
+
+        self.assertIsNotNone(game.throw_anim)
+        self.assertEqual(turns, [])
+
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
+
+        self.assertEqual(len(turns), 1)
+
     def test_melee_damage_uses_weapon_damage_plus_and_strength(self):
         game = new_game(seed=38)
         game.p.wpn = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=1)
