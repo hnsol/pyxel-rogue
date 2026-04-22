@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0836"
+UI_BUILD = "260423_0841"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -786,7 +786,7 @@ class IdentTable:
             spec=RINGS[it.kind]
             if s.rk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_RING, spec["name"])
-                num=rogue_rings.ring_num(it)
+                num=rogue_rings.ring_num(it) if getattr(it, "known", True) else ""
                 return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}の指輪{num}"
             stone=s.rstones[it.kind]
             return f"{stone} ring" if lang==LANG_EN else f"{stone}の指輪"
@@ -796,7 +796,7 @@ class IdentTable:
             made=s.wmades[it.kind]
             if s.wk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_STICK, spec["name"])
-                charges=rogue_sticks.charge_str(it)
+                charges=rogue_sticks.charge_str(it) if getattr(it, "known", True) else ""
                 return f"{typ} of {nm}{charges}({made})" if lang==LANG_EN else f"{nm}の{typ}{charges}({made})"
             return f"{made} {typ}"
         if it.cat==CAT_AMULET:
@@ -1124,9 +1124,9 @@ def make_item(depth):
         return Item(CAT_ARM,k,ench=e,cursed=cursed,known=False)
     if c<.96:
         ring=rogue_rings.make_ring(RNG, CAT_RING)
-        return Item(CAT_RING,ring.kind,ench=ring.ench,cursed=ring.cursed)
+        return Item(CAT_RING,ring.kind,ench=ring.ench,cursed=ring.cursed,known=False)
     stick=rogue_sticks.make_stick(RNG, CAT_STICK)
-    return Item(CAT_STICK,stick.kind,charges=stick.charges)
+    return Item(CAT_STICK,stick.kind,charges=stick.charges,known=False)
 
 def start_inv():
     w=Item(CAT_WPN,0,hit_plus=1,dam_plus=1) # mace +1,+1

@@ -642,6 +642,27 @@ class RogueBaselineTest(unittest.TestCase):
         ident.rk[rogue_rings.R_PROTECT] = True
         self.assertEqual(ident.name(ring), "ring of protection [+2]")
 
+    def test_rogue_544_ring_num_and_stick_charges_require_item_isknow(self):
+        # Rogue 5.4.4 things.c:nameit() calls rings.c:ring_num() and
+        # sticks.c:charge_str(), which hide details without ISKNOW.
+        import rogue_rings
+        import rogue_sticks
+
+        ident = rogue.IdentTable()
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2, known=False)
+        ident.rk[rogue_rings.R_PROTECT] = True
+        self.assertEqual(ident.name(ring), "ring of protection")
+        ring.known = True
+        self.assertEqual(ident.name(ring), "ring of protection [+2]")
+
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=12, known=False)
+        ident.wtypes[rogue_sticks.WS_LIGHT] = "wand"
+        ident.wmades[rogue_sticks.WS_LIGHT] = "copper"
+        ident.wk[rogue_sticks.WS_LIGHT] = True
+        self.assertEqual(ident.name(stick), "wand of light(copper)")
+        stick.known = True
+        self.assertEqual(ident.name(stick), "wand of light [12 charges](copper)")
+
     def test_rogue_544_ring_generation_bonuses_and_curses(self):
         # Rogue 5.4.4 things.c:new_thing() ring case.
         import rogue_rings

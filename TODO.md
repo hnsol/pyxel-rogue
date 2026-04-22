@@ -89,7 +89,7 @@
   - [ ] `wizard.c:whatis()/set_know()` 準拠の対象選択式 identify を実装する
   - [ ] `command.c:call()` 相当の命名機能を追加する（potion/scroll/ring/stick は種類仮名、weapon/armor は個体ラベル）
   - [ ] `things.c:print_disc()` 相当の discovered list / 思い出し機能を追加する
-  - [ ] ring の `ring_num()` と stick の `charge_str()` は種類判明だけでなく個体 `ISKNOW` 後に表示する
+  - [x] ring の `ring_num()` と stick の `charge_str()` は種類判明だけでなく個体 `ISKNOW` 後に表示する
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
