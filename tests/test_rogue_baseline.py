@@ -3319,6 +3319,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.throw_dir, (1, 0))
         self.assertEqual(game.fitems, game.p.inv)
 
+    def test_rogue_544_throw_direction_prompt_accepts_hjkl(self):
+        # Rogue 5.4.4 misc.c:get_dir() accepts h/j/k/l as cardinal directions.
+        game = new_game(seed=481)
+        set_open_floor(game)
+        game.start_item_action("Throw")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_H}, pressed={rogue.pyxel.KEY_H})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.throw_dir, (-1, 0))
+
     def test_cardinal_move_does_not_linger_into_second_step(self):
         game = new_game(seed=49)
         set_open_floor(game)
