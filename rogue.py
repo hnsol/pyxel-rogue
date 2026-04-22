@@ -6,13 +6,13 @@ Gamepad:                        Keyboard:
   D-pad        Move (8-dir)      Arrow / HJKL   Move
   Start tap    Diag assist       Space          Diag assist
   B + D-pad    Dash (run)        Shift+dir      Dash
-  A            Action/Search     Z / Enter      Action
-  B tap        Menu/Cancel       C / Esc        Menu/Cancel
-  A + B        Wait a turn       . (period)     Wait
+  A            Action/Search     Enter          Action
+  B tap        Menu/Cancel       Esc            Menu/Cancel
+  A + B        Wait a turn       Enter+Esc/.    Wait
   Back         Assist menu       Tab            Assist menu
-  Back + A     Search            S              Search
-  Back + B     Quick throw       Tab + C        Quick throw
-                                I              Inventory
+  Back + A     Search            Tab+Enter/s    Search
+  Back + B     Quick throw       Tab+Esc/t      Quick throw
+                                i              Inventory
                                 ?              Help
 """
 
@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_1521"
+UI_BUILD = "260422_2145"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -3007,7 +3007,8 @@ class Game:
                 self.back_tap=True
             self.back_frames=0; self.back_used=False
         self.back_prev=back_now
-        if back_now and self.kh(pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B):
+        if back_now and self.kh(pyxel.KEY_RETURN, pyxel.KEY_ESCAPE,
+                                pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B):
             self.back_used=True
         if back_now and self.dir_held_any():
             self.back_used=True
@@ -3098,12 +3099,14 @@ class Game:
         if self.kp(pyxel.KEY_DOWN, pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): return 1
         return 0
 
-    def btn_a(self): return self.kp(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
-    def held_a(self): return self.kh(pyxel.KEY_Z, pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
-    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C) or self.b_tap
-    def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)
+    def shift_held(self):
+        return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT)
+    def btn_a(self): return self.kp(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
+    def held_a(self): return self.kh(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
+    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
+    def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
     def btn_overlay_cancel(self):
-        if self.kp(pyxel.KEY_ESCAPE, pyxel.KEY_C): return True
+        if self.kp(pyxel.KEY_ESCAPE): return True
         if self.back_tap: return True
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
         if self.b_menu_guard:
@@ -3114,18 +3117,25 @@ class Game:
             self.b_used=True
             return True
         return self.b_tap
-    def btn_menu(self): return self.kp(pyxel.KEY_C) or self.b_tap
+    def btn_menu(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
     def btn_wait(self):
         return self.kp(pyxel.KEY_PERIOD) or (
             self.kh(pyxel.GAMEPAD1_BUTTON_A) and self.kh(pyxel.GAMEPAD1_BUTTON_B)
             and (self.kp(pyxel.GAMEPAD1_BUTTON_A) or self.kp(pyxel.GAMEPAD1_BUTTON_B))
             and not self.dir_held_any()
+        ) or (
+            self.kh(pyxel.KEY_RETURN) and self.kh(pyxel.KEY_ESCAPE)
+            and (self.kp(pyxel.KEY_RETURN) or self.kp(pyxel.KEY_ESCAPE))
+            and not self.dir_held_any()
         )
-    def btn_search(self): return self.kp(pyxel.KEY_S)
+    def key_lower(self, key):
+        return self.kp(key) and not self.shift_held()
+    def key_upper(self, key):
+        return self.kp(key) and self.shift_held()
+    def btn_search(self): return self.key_lower(pyxel.KEY_S)
     def btn_trap_inspect(self):
-        return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT) \
-            and self.kp(getattr(pyxel,"KEY_6",None))
-    def btn_inventory(self): return self.kp(pyxel.KEY_I)
+        return self.shift_held() and self.kp(getattr(pyxel,"KEY_6",None))
+    def btn_inventory(self): return self.key_lower(pyxel.KEY_I)
     def btn_start_tap(self): return self.kp(getattr(pyxel,"KEY_SPACE",None), pyxel.GAMEPAD1_BUTTON_START)
     def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def back_held(self): return self.kh(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
@@ -3136,8 +3146,8 @@ class Game:
             self.back_used=True; self.b_used=True
         return hit
     def btn_select_b(self):
-        hit = (self.back_held() and self.kp(pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)) or (
-            self.kp_back() and self.kh(pyxel.KEY_C, pyxel.GAMEPAD1_BUTTON_B)
+        hit = (self.back_held() and self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)) or (
+            self.kp_back() and self.kh(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
         )
         if hit:
             self.back_used=True; self.b_used=True
@@ -3185,6 +3195,17 @@ class Game:
         return False
     def dash_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT, pyxel.GAMEPAD1_BUTTON_B)
+
+    def rogue_command_action(self):
+        if self.key_lower(getattr(pyxel, "KEY_T", None)): return "Throw"
+        if self.key_lower(getattr(pyxel, "KEY_Q", None)): return "Quaff"
+        if self.key_lower(pyxel.KEY_R): return "Read"
+        if self.key_lower(getattr(pyxel, "KEY_E", None)): return "Eat"
+        if self.key_lower(getattr(pyxel, "KEY_W", None)): return "Wear"
+        if self.key_lower(pyxel.KEY_Z): return "Zap"
+        if self.key_upper(getattr(pyxel, "KEY_W", None)): return "Wield"
+        if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off"
+        return None
 
     # ---------- Update ----------
     def update(self):
@@ -3255,6 +3276,10 @@ class Game:
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
         if self.btn_trap_inspect(): self.start_trap_inspect(); return
+        aname = self.rogue_command_action()
+        if aname:
+            self.start_item_action(aname)
+            return
 
         # Dash start: B/Shift held + direction
         if self.dash_held():
@@ -3552,38 +3577,50 @@ class Game:
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
         self._box(bx,by,bw,bh,"=== Help ===")
-        lines=[
-            "--- Movement ---",
-            "D-pad/Arrows   8-direction move",
-            "YUBN           Diagonal move",
-            "Start tap      Diag assist on/off",
-            "Diag assist    Only diagonal D-pad",
-            "Shift/B + dir  Dash (auto-run)",
-            "",
-            "--- Actions ---",
-            "A / Z / Enter  Pickup / Stairs",
-            "A on empty     Search front",
-            "A+B / .        Wait one turn",
-            "Back+A / S     Search around",
-            "Back+B         Quick throw",
-            "Pickup option   Select menu toggle",
-            "B tap / C      Open menu",
-            "",
-            "--- Info ---",
-            "Back menu      Inventory / Help",
-            "I              Inventory",
-            "Back  / Tab    Assist menu",
-            "?              This help",
-            "",
-            "--- Close overlays ---",
-            "Menu/Action    Esc / C / Tab / B tap",
-            "Inventory      Z / Enter / Esc / I / Tab",
-            "Help           Any key or button",
+        gamepad=[
+            "--- Gamepad ---",
+            "D-pad       Move/Dir",
+            "Start       Diag assist",
+            "A           Action",
+            "A+B         Wait",
+            "B+dir       Dash",
+            "B           Menu/Cancel",
+            "Select      Assist menu",
+            "Select+A    Search around",
+            "Select+B    Quick throw",
+            "Select+dir  Inspect trap",
+        ]
+        keyboard=[
+            "--- Keyboard: Pad ---",
+            "Arrows/HJKL Move/Dir",
+            "YUBN        Diagonal",
+            "Space       Diag assist",
+            "Enter       Action",
+            "Enter+Esc   Wait",
+            "Shift+dir   Dash",
+            "Esc         Menu/Cancel",
+            "Tab         Assist menu",
+            "Tab+Enter   Search around",
+            "Tab+Esc     Quick throw",
+            "Tab+dir     Inspect trap",
         ]
         y=by+18
-        for ln in lines:
-            c=10 if ln.startswith("---") else 7
-            self.txt(bx+8,y,ln,c); y+=11
+        for i in range(max(len(gamepad), len(keyboard))):
+            if i < len(gamepad):
+                ln=gamepad[i]; self.txt(bx+8,y,ln,10 if ln.startswith("---") else 7)
+            if i < len(keyboard):
+                ln=keyboard[i]; self.txt(bx+250,y,ln,10 if ln.startswith("---") else 7)
+            y+=11
+        y+=8
+        self.txt(bx+8,y,"--- Keyboard commands ---",10); y+=11
+        commands=[
+            ". Wait   s Search   t Throw   ^ Trap",
+            "i Inv    ? Help",
+            "q Quaff  r Read     e Eat     z Zap",
+            "w Wear   W Wield    T Take off",
+        ]
+        for ln in commands:
+            self.txt(bx+8,y,ln,7); y+=11
 
     def draw_dead(self):
         if not self.options.get("tombstone", True):

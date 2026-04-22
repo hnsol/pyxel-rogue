@@ -130,9 +130,11 @@
 - [x] 斜め補助モード ON/OFF をステータス欄に表示
 - [x] D-pad/矢印の横→斜め入力が横移動+斜め移動に分裂する問題を1フレーム保留で抑制
 - [x] B短押しメニュー/キャンセルとB長押しダッシュの競合解消
-- [x] キーボードでも A/B/Select/Start 相当の最低限操作（Z/Enter, C/Esc, Tab, Space）を割り当てる
+- [x] キーボードでも A/B/Select/Start 相当の最低限操作（Enter, Esc, Tab, Space）を割り当てる
 - [ ] pyxapp / 中華ゲーム機向けの Pyxel 終了方法追加（セーブ / システム系インタフェースで扱う）
-- [ ] Rogue V5 直打ちキーボードショートカット拡張（`t/q/r/e/w/W/T/P/i/?/S/^` など。`z` zap は A 相当キー `Z` との衝突を整理してから決定）
+- [x] Rogue V5 直打ちキーボードショートカット基礎（`t/q/r/e/w/W/T/i/?/s/^/z`。既存メニュー項目への入口として実装し、プレイ中だけ発火）
+- [ ] Rogue V5 `c` call と `P` put on ring の直打ち入力を追加する。英字キーは原作コマンドを優先するため、Pad style では使わない。
+- [ ] Item overlay で `a-z` のアイテム letter 直接選択を追加する。プレイ中の Rogue commands とは別レイヤーとして扱い、overlay 中は文字コマンドを発火させない。
 - [x] B+D-pad run 開始をホールド方向判定にし、B と D-pad の押下順に依存しないよう修正
 - [x] メニュー中のB短押しキャンセルを Pyxel Web / SteamDeck Firefox でも直感通りにする
 - [x] Rogue 5.4.4 `do_run()` / `do_move()` / `turn_ok()` 準拠のダッシュ停止・通路角処理へ修正
@@ -144,7 +146,7 @@
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
 - [x] Select(Back) 補助メニューから Map と Status を削除し、Inventory / Help / Search に整理
 - [x] Select+A search / Select+B quick throw を追加
-- [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / 補助メニュー Trap / Shift+6）
+- [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / Tab+方向 / 補助メニュー Trap / `^` then direction）
 - [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理
 - [x] Rogue 5.4.4 `passages.c` 準拠の通常部屋通路生成へ修正

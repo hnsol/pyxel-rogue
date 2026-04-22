@@ -80,17 +80,23 @@ Keyboard:
 
 - Arrow keys / HJKL: Move
 - YUBN: Diagonal movement
-- Shift+direction: Dash
-- Z / Enter: Confirm
-- C / Esc: Menu / cancel
 - Space: Toggle diagonal assist
-- .: Wait a turn
+- Enter: Confirm / pick up / stairs / search one tile ahead
+- Enter+Esc: Wait a turn
+- Shift+direction: Dash
+- Esc: Menu / cancel
 - Tab: Assist menu
-- Tab+Z: Search around all 8 neighboring tiles
-- Tab+C: Quick throw
-- S: Search
-- I: Inventory
+- Tab+Enter: Search around all 8 neighboring tiles
+- Tab+Esc: Quick throw
+- Tab+direction: Inspect a discovered trap
+- .: Wait a turn
+- s: Search around all 8 neighboring tiles
+- t: Quick throw
+- ^: Trap Inspect (choose direction)
+- i: Inventory
 - ?: Help
+- q/r/e/z: Quaff / Read / Eat / Zap
+- w/W/T: Wear / Wield / Take off
 
 Use Zap from the menu to choose a wand or staff, then choose a direction.
 

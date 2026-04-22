@@ -47,6 +47,7 @@ def install_pyxel_mock():
         "KEY_H", "KEY_J", "KEY_K", "KEY_L",
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
         "KEY_Z", "KEY_X", "KEY_C", "KEY_S",
+        "KEY_Q", "KEY_W", "KEY_E", "KEY_T",
         "KEY_I", "KEY_6", "KEY_SPACE",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_BACKSPACE",
         "KEY_PERIOD", "KEY_COMMA", "KEY_MINUS",
@@ -2475,14 +2476,67 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [("you hit the hobgoblin", 30)])
 
-    def test_keyboard_c_cancels_menu_back_to_play(self):
+    def test_keyboard_esc_opens_and_cancels_menu_back_to_play(self):
         game = new_game(seed=35)
 
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_MENU)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_keyboard_z_and_c_are_not_pad_action_or_cancel(self):
+        game = new_game(seed=35)
+        game.start_item_action = lambda aname, cat=None: setattr(game, "shortcut", aname)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Z}, pressed={rogue.pyxel.KEY_Z})
+        game.update()
+        self.assertEqual(game.shortcut, "Zap")
+
+        game.st = rogue.ST_MENU
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
         game.update()
         self.assertEqual(game.st, rogue.ST_MENU)
 
+    def test_keyboard_overlays_use_enter_escape_not_z_c(self):
+        game = new_game(seed=35)
+        selected = []
+        game.st = rogue.ST_MENU
+        game.menu_select = lambda: selected.append("menu")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Z}, pressed={rogue.pyxel.KEY_Z})
+        game.update()
+        self.assertEqual(selected, [])
+        self.assertEqual(game.st, rogue.ST_MENU)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(selected, ["menu"])
+
+        game.st = rogue.ST_ITEM
+        confirmed = []
+        game.item_confirm = lambda: confirmed.append("item")
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Z}, pressed={rogue.pyxel.KEY_Z})
+        game.update()
+        self.assertEqual(confirmed, [])
+        self.assertEqual(game.st, rogue.ST_ITEM)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(confirmed, ["item"])
+
+        game.st = rogue.ST_MENU
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_MENU)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
         game.update()
         self.assertEqual(game.st, rogue.ST_PLAY)
 
@@ -3100,6 +3154,38 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(searched[-1], True)
 
+    def test_keyboard_pad_style_enter_esc_tab_shortcuts(self):
+        game = new_game(seed=46)
+        set_open_floor(game)
+        searched = []
+        waited = []
+        game.do_search = lambda front_only=False: searched.append(front_only)
+        game.do_wait = lambda: waited.append(True)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_RETURN, rogue.pyxel.KEY_ESCAPE},
+            pressed={rogue.pyxel.KEY_RETURN},
+        )
+        game.update()
+        self.assertEqual(waited, [True])
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_TAB, rogue.pyxel.KEY_RETURN},
+            pressed={rogue.pyxel.KEY_RETURN},
+        )
+        game.update()
+        self.assertEqual(searched, [False])
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_TAB, rogue.pyxel.KEY_ESCAPE},
+            pressed={rogue.pyxel.KEY_ESCAPE},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.cact, "Throw")
+        self.assertEqual(game.dact, "Throw")
+
     def test_select_a_searches_and_select_b_prompts_throw_direction_before_item_selection(self):
         game = new_game(seed=48)
         set_open_floor(game)
@@ -3273,6 +3359,54 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.turn, 0)
         self.assertIn("You have found teleport trap.", game.msgs)
+
+    def test_keyboard_rogue_commands_start_existing_actions_only_in_play(self):
+        cases = [
+            (rogue.pyxel.KEY_T, set(), "Throw"),
+            (rogue.pyxel.KEY_Q, set(), "Quaff"),
+            (rogue.pyxel.KEY_R, set(), "Read"),
+            (rogue.pyxel.KEY_E, set(), "Eat"),
+            (rogue.pyxel.KEY_W, set(), "Wear"),
+            (rogue.pyxel.KEY_Z, set(), "Zap"),
+            (rogue.pyxel.KEY_W, {rogue.pyxel.KEY_SHIFT}, "Wield"),
+            (rogue.pyxel.KEY_T, {rogue.pyxel.KEY_SHIFT}, "Take off"),
+        ]
+        for key, modifiers, action in cases:
+            game = new_game(seed=55)
+            calls = []
+            game.start_item_action = lambda aname, cat=None, calls=calls: calls.append(aname)
+
+            held = set(modifiers) | {key}
+            rogue.pyxel.set_input(held=held, pressed={key})
+            game.update()
+
+            self.assertEqual(calls, [action])
+
+        game = new_game(seed=55)
+        game.st = rogue.ST_MENU
+        calls = []
+        game.start_item_action = lambda aname, cat=None: calls.append(aname)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Q}, pressed={rogue.pyxel.KEY_Q})
+        game.update()
+
+        self.assertEqual(calls, [])
+
+    def test_help_text_separates_gamepad_pad_style_and_rogue_commands(self):
+        game = new_game(seed=56)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        text = "\n".join(calls)
+        self.assertIn("--- Gamepad ---", text)
+        self.assertIn("--- Keyboard: Pad ---", text)
+        self.assertIn("--- Keyboard commands ---", text)
+        self.assertIn("Enter+Esc", text)
+        self.assertIn("q Quaff", text)
+        self.assertNotIn("Z / Enter", text)
+        self.assertNotIn("Close overlays", text)
 
     def test_rogue54_rnd_and_trap_spawn_frequency_shape(self):
         self.assertEqual(rogue.rnd(0), 0)
