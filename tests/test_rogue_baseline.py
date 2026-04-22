@@ -1038,6 +1038,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.pk[mfind])
         self.assertTrue(game.ident.pk[haste])
 
+    def test_rogue_544_do_pot_does_not_forget_known_confusion_while_hallucinating(self):
+        # Rogue 5.4.4 potions.c:do_pot() only assigns oi_know when it is not already known.
+        game = new_game(seed=319)
+        set_open_floor(game)
+        confusion = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "confusion")
+        potion = rogue.Item(rogue.CAT_POT, confusion)
+        game.p.inv.append(potion)
+        game.p.hallucinating = 10
+        game.ident.pk[confusion] = True
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(game.ident.pk[confusion])
+
     def test_rogue_544_potion_see_invisible_lengthens_unsee_fuse(self):
         # Rogue 5.4.4 potions.c:do_pot(P_SEEINVIS) calls lengthen(unsee, spread(SEEDURATION)).
         game = new_game(seed=312)

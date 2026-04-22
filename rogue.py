@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0845"
+UI_BUILD = "260423_0850"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2008,7 +2008,8 @@ class Game:
             self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
         elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
         elif nm=="confusion":
-            self.ident.pk[it.kind]=p.hallucinating <= 0
+            if not self.ident.pk[it.kind]:
+                self.ident.pk[it.kind]=p.hallucinating <= 0
             duration = RNG.spread(HUHDURATION)
             if p.confused > 0:
                 self.fuses.lengthen("unconfuse", duration)
