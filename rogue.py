@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_2355"
+UI_BUILD = "260423_0035"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -177,6 +177,9 @@ BOLT_LENGTH = 6
 VS_MAGIC = 3
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
+HUHDURATION = 20
+HELP_HEADER_COL = 31
+HELP_TEXT_COL = 30
 
 PLAYER_HIT_MESSAGE_KEYS = (
     "fight.player_hit_excellent",
@@ -644,6 +647,7 @@ class Player:
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
         s.ring_l=None; s.ring_r=None
         s.confused=s.blind=s.haste=s.see_invisible=s.hallucinating=s.levitating=0
+        s.see_monsters=0
         s.no_command=s.no_move=0
         s.held_by=None
         s.quiet=0
@@ -1205,6 +1209,11 @@ class Game:
             return chr(ord("A") + rnd(26))
         return getattr(monster, "disguise", monster.sym)
 
+    def detected_monster_sym(self, monster):
+        if self.p.hallucinating > 0:
+            return chr(ord("A") + rnd(26))
+        return monster.sym
+
     def toggle_palette(self):
         settings = self.ensure_settings()
         i = PALETTE_IDS.index(settings.palette) if settings.palette in PALETTE_IDS else 0
@@ -1257,6 +1266,7 @@ class Game:
         self.cam_x = self.cam_y = 0
         self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
         self.dash_steps = 0
+        self.dash_restart_guard = False
         self.b_prev = False; self.b_frames = 0
         self.b_used = False; self.b_tap = False
         self.back_prev = False; self.back_frames = 0
@@ -1802,6 +1812,9 @@ class Game:
                 or self.p.see_invisible > 0
                 or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS))
 
+    def can_detect_monsters(self):
+        return getattr(self.p, "see_monsters", 0) > 0
+
     def save_vs_magic(self):
         return rnd(20) < 7 + self.p.level//2
 
@@ -2015,7 +2028,7 @@ class Game:
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
             self.msg("pyxel.rise_to_level", level=p.level)
         elif nm=="detect monster":
-            for mo in self.mons: self.visible.add((mo.x,mo.y)); self.explored.add((mo.x,mo.y))
+            p.see_monsters = HUHDURATION if self.mons else 0
             self.msg("pyxel.sense_monsters")
         elif nm=="magic detection":
             for i in self.gitems:
@@ -2748,6 +2761,8 @@ class Game:
         if self.p.blind>0: self.p.blind-=1
         if self.p.see_invisible>0 and self.fuses.remaining("unsee")==0:
             self.p.see_invisible-=1
+        if getattr(self.p, "see_monsters", 0)>0:
+            self.p.see_monsters-=1
         if self.p.hallucinating>0 and self.fuses.remaining("come_down")==0:
             self.p.hallucinating-=1
             if self.p.hallucinating==0:
@@ -2912,15 +2927,17 @@ class Game:
         if not self.walkable(nx,ny) and not next_mon:
             nd=self.next_dash_dir(dx,dy)
             if not nd:
-                self.dashing=False; return
+                self.dashing=False; self.dash_restart_guard=True; return
             self.dash_d=nd
             dx,dy=nd
         ox,oy=self.p.x,self.p.y
         moved=self.try_move(dx,dy)
         if not moved or (self.p.x,self.p.y)==(ox,oy) or self.st!=ST_PLAY or not self.p.alive:
-            self.dashing=False; return
+            self.dashing=False; self.dash_restart_guard=True; return
         self.dash_steps+=1
         self.dashing=not self.dash_should_stop_here(dx,dy)
+        if not self.dashing:
+            self.dash_restart_guard=True
 
     # ---------- Menu logic ----------
     def open_menu(self):
@@ -3010,6 +3027,8 @@ class Game:
         self.back_tap=False
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
         back_now=self.back_held()
+        if not self.dash_held():
+            self.dash_restart_guard=False
         if b_now:
             self.b_frames = self.b_frames+1 if self.b_prev else 1
         else:
@@ -3304,7 +3323,7 @@ class Game:
             return
 
         # Dash start: B/Shift held + direction
-        if self.dash_held():
+        if self.dash_held() and not getattr(self, "dash_restart_guard", False):
             d = self.held_dir()
             if d:
                 self.dashing=True; self.dash_d=d; self.dash_t=0
@@ -3458,8 +3477,9 @@ class Game:
                     if gi: self.txt(sx+1,sy+1,self.visible_item_sym(gi),ICOL.get(gi.cat,9))
                     # Monster
                     mo=self.mon_at(mx,my)
-                    if mo and self.can_see_monster(mo):
-                        self.txt(sx+1,sy+1,self.visible_monster_sym(mo),self.monster_color(mo.sym))
+                    if mo and (self.can_see_monster(mo) or self.can_detect_monsters()):
+                        sym = self.visible_monster_sym(mo) if self.can_see_monster(mo) else self.detected_monster_sym(mo)
+                        self.txt(sx+1,sy+1,sym,self.monster_color(mo.sym))
                     # Player
                     if mx==px and my==py:
                         self.txt(sx+1,sy+1,"@",30)
@@ -3469,6 +3489,10 @@ class Game:
                         self.txt(sx+1,sy+1,ch,self.memory_tile_color(tile))
                     gi=self.gi_at(mx,my)
                     if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,9))
+                else:
+                    mo=self.mon_at(mx,my)
+                    if mo and self.can_detect_monsters():
+                        self.txt(sx+1,sy+1,self.detected_monster_sym(mo),self.monster_color(mo.sym))
 
         if self.throw_anim and self.throw_anim["path"]:
             idx=min(self.throw_anim["tick"]//self.throw_anim["delay"],len(self.throw_anim["path"])-1)
@@ -3629,12 +3653,12 @@ class Game:
         y=by+18
         for i in range(max(len(gamepad), len(keyboard))):
             if i < len(gamepad):
-                ln=gamepad[i]; self.txt(bx+8,y,ln,10 if ln.startswith("---") else 7)
+                ln=gamepad[i]; self.txt(bx+8,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
             if i < len(keyboard):
-                ln=keyboard[i]; self.txt(bx+250,y,ln,10 if ln.startswith("---") else 7)
+                ln=keyboard[i]; self.txt(bx+250,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
             y+=11
         y+=8
-        self.txt(bx+8,y,"--- Keyboard commands ---",10); y+=11
+        self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
         commands=[
             ". Wait   s Search   t Throw   ^ Trap",
             "i Inv    ? Help",
@@ -3642,7 +3666,7 @@ class Game:
             "w Wear   W Wield    T Take off",
         ]
         for ln in commands:
-            self.txt(bx+8,y,ln,7); y+=11
+            self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11
 
     def draw_dead(self):
         if not self.options.get("tombstone", True):

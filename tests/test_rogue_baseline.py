@@ -2946,6 +2946,62 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.x, game.p.y), (px + 1, py))
 
+    def test_rogue_544_dash_stops_at_door_until_run_button_released(self):
+        # Rogue 5.4.4 misc.c:look() clears running at a door_stop DOOR.
+        game = new_game(seed=461)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room = rogue.Room(5, 5, 8, 6)
+        game.rooms = [room]
+        rogue.DGen._room(game.tm, room)
+        game.tm[7][12] = rogue.T_DOOR
+        game.tm[7][13] = rogue.T_CORR
+        game.tm[7][14] = rogue.T_CORR
+        game.mons = []
+        game.gitems = []
+        game.traps = {}
+        game.hidden_tiles = {}
+        game.p.x, game.p.y = 10, 7
+        game.update_fov()
+
+        held = {rogue.pyxel.GAMEPAD1_BUTTON_B, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT}
+        rogue.pyxel.set_input(held=held, pressed=held)
+        game.update()
+        rogue.pyxel.set_input(held=held, pressed=set())
+        game.update()
+        game.update()
+        self.assertEqual((game.p.x, game.p.y), (11, 7))
+        self.assertFalse(game.dashing)
+
+        game.update()
+        self.assertEqual((game.p.x, game.p.y), (11, 7))
+
+    def test_rogue_544_detect_monster_does_not_leave_floor_memory(self):
+        # Rogue 5.4.4 potions.c:P_MFIND uses SEEMONST/turn_see(), not map memory.
+        game = new_game(seed=462)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        old = (20, 10)
+        game.tm[old[1]][old[0]] = rogue.T_FLOOR
+        game.tm[old[1]][old[0] + 1] = rogue.T_FLOOR
+        game.rooms = []
+        game.visible = set()
+        game.explored = set()
+        game.cam_x = game.cam_y = 0
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(*old)
+        game.mons = [monster]
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "detect monster")
+
+        game.use_pot(rogue.Item(rogue.CAT_POT, kind))
+        monster.x += 1
+        game.visible = set()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(((x, y), str(s), c))
+        game.draw_zoom()
+
+        self.assertNotIn(old, game.explored)
+        self.assertNotIn(".", [s for _, s, _ in calls])
+        self.assertIn("H", [s for _, s, _ in calls])
+
     def test_diag_assist_does_not_block_menu_vertical_navigation(self):
         game = new_game(seed=47)
         game.diag_assist = True
@@ -3452,6 +3508,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("q Quaff", text)
         self.assertNotIn("Z / Enter", text)
         self.assertNotIn("Close overlays", text)
+
+    def test_help_text_uses_high_contrast_colors(self):
+        game = new_game(seed=561)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_help()
+
+        headers = [c for s, c in calls if s.startswith("---")]
+        body = [c for s, c in calls if s and not s.startswith(("===", "---"))]
+        self.assertTrue(headers)
+        self.assertTrue(body)
+        self.assertEqual(set(headers), {rogue.HELP_HEADER_COL})
+        self.assertEqual(set(body), {rogue.HELP_TEXT_COL})
 
     def test_rogue54_rnd_and_trap_spawn_frequency_shape(self):
         self.assertEqual(rogue.rnd(0), 0)
