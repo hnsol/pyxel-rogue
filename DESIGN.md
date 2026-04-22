@@ -173,7 +173,7 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 UI差分として、原作の `gethand()` による左右手プロンプトは、携帯機向けメニュー操作では最初の空きスロットへ装備し、解除時は装備中アイテムを選ぶ方式にしている。左右どちらに装備されているかはインベントリ表示の `(on left hand)` / `(on right hand)` で確認できる。今後、左右指定が攻略上必要になる場面が出た場合は、ゲーム状態の差分を出さずに方向入力で手を選ぶUIへ拡張する。
 
-see invisible potion は Rogue 5.4.4 `potions.c:P_SEEINVIS` / `do_pot()`, `misc.c:spread()`, `rogue.h:CANSEE/SEEDURATION`, `daemons.c:unsee()` に合わせ、`spread(SEEDURATION)` の間だけ invisible monster の表示条件へ反映する。`P_SEEINVIS` 末尾の `sight()` 相当により blind も解除する。hallucination 中の invisible monster は `misc.c:look()` 相当により正体ではなくランダムな A-Z として表示する。残差分として、`turn_see()` 相当の全モンスター表示は、機能実装時に改めて原作関数を確認して接続する。
+see invisible potion は Rogue 5.4.4 `potions.c:P_SEEINVIS` / `do_pot()`, `misc.c:spread()`, `rogue.h:CANSEE/SEEDURATION`, `daemons.c:unsee()` に合わせ、`spread(SEEDURATION)` の間だけ invisible monster の表示条件へ反映する。`P_SEEINVIS` 末尾の `sight()` 相当により blind も解除する。hallucination 中の invisible monster は `misc.c:look()` 相当により正体ではなくランダムな A-Z として表示する。detect monster potion は `potions.c:P_MFIND` の `SEEMONST` / `turn_see()` 相当として、現在フロアのモンスターを一時表示し、`HUHDURATION` 後の `turn_see(TRUE)` fuse で解除する。
 
 Xeroc は Rogue 5.4.4 `monsters.c:new_monster()` の `t_disguise = rnd_thing()`、`misc.c:look()` の `t_disguise` 表示、`fight.c:attack()` の近接正体露出、`sticks.c:do_zap()` の `WS_CANCEL` による `t_disguise = t_type` を基準にする。Pyxel 版では `Monster.disguise` を `t_disguise` 相当として持ち、通常表示では擬態文字を描き、hallucination 中は既存 `rnd(26)+'A'` 表示を優先する。近接攻撃で未露出の Xeroc に触れた場合は正体を表示して攻撃をそこで止める。投擲時は正体露出後に攻撃判定を続ける。
 
@@ -273,7 +273,7 @@ treasure room（俗称モンスターハウス）は `new_level.c:138, 180-231` 
 
 daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()` を基準にする。現行は個別 `int` カウンタで近似しているが、`doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` を統一インフラで扱うことで、`potion of haste self` の重ね掛け、`ring of regeneration` の同時発動、wandering monster の `WANDERTIME=spread(70)` などを Rogue 5.4.4 と同じターン消費で再現できる。
 
-初期移行として `rogue_daemons.py` に `FuseList` を追加し、`daemon.c:fuse()`, `lengthen()`, `extinguish()`, `do_fuses(AFTER)` と比較できる境界を作る。まず `potions.c:P_HASTE` / `misc.c:add_haste(TRUE)` / `daemons.c:nohaste()` を接続し、haste 中は `command.c:command()` の `ntimes++` 相当として、2回のプレイヤー行動につき1回だけ AFTER fuse、空腹、モンスター行動を進める。haste self の二重使用は `rnd(8)` の `no_command` を加え、`nohaste` fuse を消して失神メッセージを出す。`potions.c:P_CONFUSE`, `P_SEEINVIS`, `P_LSD`, `P_BLIND`, `P_LEVIT` は `do_pot()` 相当として未発動時に `fuse()`、発動中の再使用で `lengthen()` する。doctor、stomach、runners、swander、rollwand など daemon 系は、後続タスクで同じ `FuseList` へ段階移行する。
+初期移行として `rogue_daemons.py` に `FuseList` を追加し、`daemon.c:fuse()`, `lengthen()`, `extinguish()`, `do_fuses(AFTER)` と比較できる境界を作る。まず `potions.c:P_HASTE` / `misc.c:add_haste(TRUE)` / `daemons.c:nohaste()` を接続し、haste 中は `command.c:command()` の `ntimes++` 相当として、2回のプレイヤー行動につき1回だけ AFTER fuse、空腹、モンスター行動を進める。haste self の二重使用は `rnd(8)` の `no_command` を加え、`nohaste` fuse を消して失神メッセージを出す。`potions.c:P_CONFUSE`, `P_SEEINVIS`, `P_LSD`, `P_BLIND`, `P_LEVIT`, `P_MFIND` は `do_pot()` / `turn_see()` 相当として未発動時に `fuse()`、発動中の再使用で `lengthen()` する。doctor、stomach、runners、swander、rollwand など daemon 系は、後続タスクで同じ `FuseList` へ段階移行する。
 
 Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
 

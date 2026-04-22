@@ -3100,6 +3100,8 @@ class RogueBaselineTest(unittest.TestCase):
         kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "detect monster")
 
         game.use_pot(rogue.Item(rogue.CAT_POT, kind))
+        self.assertEqual(game.p.see_monsters, rogue.HUHDURATION)
+        self.assertEqual(game.fuses.remaining("turn_see"), rogue.HUHDURATION)
         monster.x += 1
         game.visible = set()
         calls = []
@@ -3109,6 +3111,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(old, game.explored)
         self.assertNotIn(".", [s for _, s, _ in calls])
         self.assertIn("H", [s for _, s, _ in calls])
+
+        game.p.see_monsters = 1
+        game.fuses.fuse("turn_see", 1, rogue.rogue_daemons.AFTER)
+        game.end_turn()
+
+        self.assertEqual(game.p.see_monsters, 0)
+        self.assertEqual(game.fuses.remaining("turn_see"), 0)
 
     def test_diag_assist_does_not_block_menu_vertical_navigation(self):
         game = new_game(seed=47)

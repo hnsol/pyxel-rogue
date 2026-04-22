@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0818"
+UI_BUILD = "260423_0823"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2043,7 +2043,12 @@ class Game:
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
             self.msg("pyxel.rise_to_level", level=p.level)
         elif nm=="detect monster":
-            p.see_monsters = HUHDURATION if self.mons else 0
+            if p.see_monsters > 0:
+                self.fuses.lengthen("turn_see", HUHDURATION)
+                p.see_monsters += HUHDURATION
+            else:
+                self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
+                p.see_monsters = HUHDURATION
             self.msg("pyxel.sense_monsters")
         elif nm=="magic detection":
             for i in self.gitems:
@@ -2788,7 +2793,7 @@ class Game:
             self.p.blind-=1
         if self.p.see_invisible>0 and self.fuses.remaining("unsee")==0:
             self.p.see_invisible-=1
-        if getattr(self.p, "see_monsters", 0)>0:
+        if getattr(self.p, "see_monsters", 0)>0 and self.fuses.remaining("turn_see")==0:
             self.p.see_monsters-=1
         if self.p.hallucinating>0 and self.fuses.remaining("come_down")==0:
             self.p.hallucinating-=1
@@ -2803,6 +2808,8 @@ class Game:
             self.unconfuse()
         if "sight" in due_fuses:
             self.sight()
+        if "turn_see" in due_fuses:
+            self.p.see_monsters = 0
         if "unsee" in due_fuses:
             self.p.see_invisible = 0
         if "come_down" in due_fuses:
