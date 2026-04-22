@@ -171,6 +171,7 @@ WANDERTIME = 70
 BEARTIME = 3
 SLEEPTIME = 5
 BORE_LEVEL = 50
+BOLT_LENGTH = 6
 VS_MAGIC = 3
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
@@ -2148,6 +2149,67 @@ class Game:
             self.msg_text(self.defeated_message(self.combat_monster_name(m)))
             self.award_monster_kill(m)
 
+    def bolt_name(self, kind):
+        if kind == rogue_sticks.WS_ELECT:
+            return "bolt"
+        if kind == rogue_sticks.WS_FIRE:
+            return "flame"
+        return "ice"
+
+    def bolt_bounces_at(self, x, y):
+        return (not in_play_area(x, y)) or self.tm[y][x] in (T_VOID, T_HWALL, T_VWALL, T_DOOR)
+
+    def hit_monster_with_bolt(self, m, name):
+        dmg=RNG.roll(6,6)
+        m.hp-=dmg
+        self.runto(m)
+        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_FIRE), name, self.combat_monster_name(m)))
+        if not m.alive:
+            self.msg_text(self.defeated_message(self.combat_monster_name(m)))
+            self.award_monster_kill(m)
+
+    def fire_bolt(self, dx, dy, name):
+        # Rogue 5.4.4 sticks.c:fire_bolt() bounces from walls/doors and uses 6x6 damage.
+        x,y=self.p.x,self.p.y
+        hit_hero=False
+        changed=False
+        steps=0
+        bounces=0
+        while steps < BOLT_LENGTH and bounces < BOLT_LENGTH * 2:
+            x+=dx; y+=dy
+            if self.bolt_bounces_at(x,y):
+                if not changed:
+                    hit_hero=not hit_hero
+                changed=False
+                dx=-dx; dy=-dy
+                bounces+=1
+                self.msg("sticks.the_value_bounces", value=name)
+                continue
+            steps+=1
+            target=self.mon_at(x,y)
+            if target and not hit_hero:
+                hit_hero=True
+                changed=not changed
+                if not self.monster_save_throw(VS_MAGIC,target):
+                    if target.sym=="D" and name=="flame":
+                        self.msg("sticks.the_flame_bounces")
+                    else:
+                        self.hit_monster_with_bolt(target,name)
+                    return True
+                self.runto(target)
+                self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
+            elif hit_hero and (x,y)==(self.p.x,self.p.y):
+                hit_hero=False
+                changed=not changed
+                if not self.save_vs_magic():
+                    self.p.hp-=RNG.roll(6,6)
+                    if self.p.hp<=0 and not self.death_cause:
+                        self.death_cause=f"killed by a {name}"
+                    self.msg("sticks.you_are_hit_by_the_value", value=name)
+                    return True
+                self.msg("sticks.the_value_whizzes_by_you", value=name)
+        return False
+
     def zap_stick(self,it,dx,dy):
         if it.cat != CAT_STICK:
             self.msg("sticks.you_cant_zap_with_that")
@@ -2177,6 +2239,9 @@ class Game:
                 self.hit_monster_with_magic_missile(target)
             else:
                 self.msg("sticks.the_missle_vanishes_with_a_puff_of_smoke")
+        elif kind in (rogue_sticks.WS_ELECT, rogue_sticks.WS_FIRE, rogue_sticks.WS_COLD):
+            self.ident.wk[kind]=True
+            self.fire_bolt(dx,dy,self.bolt_name(kind))
         else:
             target=self.first_zap_target(dx,dy)
             if target:

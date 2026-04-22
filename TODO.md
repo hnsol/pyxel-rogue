@@ -54,7 +54,7 @@
   - [x] protection / add strength / dexterity / increase damage / slow digestion / regeneration の数値効果を接続
   - [x] searching / see invisible / aggravate monster / teleportation / stealth / maintain armor の効果接続
   - [x] sustain strength / adornment の識別・周辺挙動監査
-- [ ] **杖（Wand/Staff）14種** — チャージ制、方向指定 zap、ランダム素材名で識別
+- [x] **杖（Wand/Staff）14種** — チャージ制、方向指定 zap、ランダム素材名で識別
   - light, invisibility, lightning, fire, cold, polymorph,
     missile, haste monster, slow monster, drain life,
     nothing, teleport away, teleport to, cancellation
@@ -62,7 +62,7 @@
   - [x] アイテム生成の stick 4% 枠、インベントリ名、Zap メニュー、方向指定入口、チャージ消費を接続
   - [x] light の暗い部屋照明、識別、チャージ消費を接続
   - [x] invisibility / polymorph / teleport away / teleport to / cancellation の単体モンスター効果接続
-  - [ ] lightning / fire / cold の bolt 反射・命中・ダメージ接続
+  - [x] lightning / fire / cold の bolt 反射・命中・ダメージ接続
   - [x] haste monster / slow monster の `ISHASTE` / `ISSLOW` 相当フラグと行動頻度への接続
   - [x] magic missile / drain life / nothing の効果監査と接続
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動

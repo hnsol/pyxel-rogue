@@ -480,6 +480,90 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(stick.charges, 1)
         self.assertIn("you are too weak to use it", game.msgs)
 
+    def test_rogue_544_zap_bolt_hits_unsaved_monster_for_6x6_damage(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_ELECT/WS_FIRE/WS_COLD calls fire_bolt();
+        # fire_bolt() uses a FLAME weapon with 6x6 damage and marks ws_info known.
+        import rogue_sticks
+
+        game = new_game(seed=218)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=40)
+        game.mons = [monster]
+        game.monster_save_throw = lambda which, m: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 18
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_ELECT, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_ELECT])
+        self.assertEqual(monster.hp, 22)
+        self.assertTrue(monster.running)
+
+    def test_rogue_544_zap_bolt_saved_monster_takes_no_damage(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() leaves a saved monster unharmed and reports a miss.
+        import rogue_sticks
+
+        game = new_game(seed=219)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=40)
+        game.mons = [monster]
+        game.monster_save_throw = lambda which, m: True
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_FIRE, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_FIRE])
+        self.assertEqual(monster.hp, 40)
+        self.assertTrue(monster.running)
+        self.assertTrue(any("flame whizzes past" in msg for msg in game.msgs))
+
+    def test_rogue_544_zap_bolt_bounces_from_wall_and_can_hit_hero(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() reverses direction on walls and can hit the hero.
+        import rogue_sticks
+
+        game = new_game(seed=220)
+        set_open_floor(game)
+        game.p.hp = 30
+        game.tm[game.p.y][game.p.x + 1] = rogue.T_VWALL
+        game.save_vs_magic = lambda: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 12
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_COLD, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_COLD])
+        self.assertEqual(game.p.hp, 18)
+        self.assertIn("the ice bounces", game.msgs)
+        self.assertIn("you are hit by the ice", game.msgs)
+
+    def test_rogue_544_zap_fire_bounces_off_dragon_without_damage(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() prints "the flame bounces" for Dragon and does not hit_monster().
+        import rogue_sticks
+
+        game = new_game(seed=221)
+        set_open_floor(game)
+        dragon = monster_at(game.p.x + 2, game.p.y, sym="D", name="dragon", hp=40)
+        game.mons = [dragon]
+        game.monster_save_throw = lambda which, m: False
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_FIRE, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_FIRE])
+        self.assertEqual(dragon.hp, 40)
+        self.assertFalse(dragon.running)
+        self.assertIn("the flame bounces", game.msgs)
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)
