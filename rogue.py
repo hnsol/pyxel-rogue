@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_1512"
+UI_BUILD = "260422_1521"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1995,7 +1995,12 @@ class Game:
             if self.add_haste(True):
                 self.msg("potions.you_feel_yourself_moving_much_faster")
         elif nm=="see invisible":
-            p.see_invisible += RNG.spread(SEEDURATION)
+            duration = RNG.spread(SEEDURATION)
+            if p.see_invisible > 0:
+                self.fuses.lengthen("unsee", duration)
+            else:
+                self.fuses.fuse("unsee", duration, rogue_daemons.AFTER)
+            p.see_invisible += duration
             self.msg("pyxel.can_see_invisible_monsters")
             if p.blind > 0:
                 p.blind = 0
@@ -2723,7 +2728,8 @@ class Game:
         if self.p.no_command>0: self.p.no_command-=1
         if self.p.confused>0: self.p.confused-=1
         if self.p.blind>0: self.p.blind-=1
-        if self.p.see_invisible>0: self.p.see_invisible-=1
+        if self.p.see_invisible>0 and self.fuses.remaining("unsee")==0:
+            self.p.see_invisible-=1
         if self.p.hallucinating>0:
             self.p.hallucinating-=1
             if self.p.hallucinating==0:
@@ -2733,6 +2739,8 @@ class Game:
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
         due_fuses = self.fuses.tick(rogue_daemons.AFTER)
+        if "unsee" in due_fuses:
+            self.p.see_invisible = 0
         if "nohaste" in due_fuses:
             self.nohaste()
         elif self.p.haste>0:

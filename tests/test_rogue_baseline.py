@@ -954,7 +954,28 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(game.can_see_monster(phantom))
         self.assertEqual(game.p.see_invisible, rogue.SEEDURATION - rogue.SEEDURATION // 20 + 7)
+        self.assertEqual(game.fuses.remaining("unsee"), rogue.SEEDURATION - rogue.SEEDURATION // 20 + 7)
         self.assertNotIn(potion, game.p.inv)
+
+    def test_rogue_544_potion_see_invisible_lengthens_unsee_fuse(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_SEEINVIS) calls lengthen(unsee, spread(SEEDURATION)).
+        game = new_game(seed=312)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
+        first = rogue.Item(rogue.CAT_POT, potion_kind)
+        second = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.extend([first, second])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.use_pot(first)
+            game.use_pot(second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        duration = rogue.SEEDURATION - rogue.SEEDURATION // 20
+        self.assertEqual(game.p.see_invisible, duration * 2)
+        self.assertEqual(game.fuses.remaining("unsee"), duration * 2)
 
     def test_rogue_544_potion_see_invisible_expires_without_ring(self):
         # Rogue 5.4.4 daemons.c:unsee clears CANSEE after the P_SEEINVIS fuse expires.
@@ -969,6 +990,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.end_turn()
 
         self.assertEqual(game.p.see_invisible, 0)
+        self.assertEqual(game.fuses.remaining("unsee"), 0)
         self.assertFalse(game.can_see_monster(phantom))
 
     def test_rogue_544_potion_see_invisible_calls_sight_when_blind(self):
