@@ -1,6 +1,7 @@
 import importlib
 import os
 import random
+import subprocess
 import sys
 import types
 import unittest
@@ -2084,8 +2085,31 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("Rogue V5", calls)
         self.assertIn(rogue.UI_BUILD, calls)
-        self.assertRegex(rogue.UI_BUILD, r"^\d{10}$")
-        self.assertEqual(rogue.UI_BUILD, "2604212349")
+        self.assertRegex(rogue.UI_BUILD, r"^\d{6}_\d{4}$")
+
+    def test_rogue_py_commits_update_ui_build_stamp(self):
+        # AGENTS.md / DESIGN.md: player-visible rogue.py changes must carry UI_BUILD.
+        try:
+            subprocess.check_output(
+                ["git", "rev-parse", "--verify", "HEAD^"],
+                cwd=ROOT,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            changed = subprocess.check_output(
+                ["git", "diff", "--name-only", "HEAD^..HEAD"],
+                cwd=ROOT,
+                text=True,
+            ).splitlines()
+            diff = subprocess.check_output(
+                ["git", "diff", "HEAD^..HEAD", "--", "rogue.py"],
+                cwd=ROOT,
+                text=True,
+            )
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            self.skipTest("git history unavailable")
+        if "rogue.py" in changed:
+            self.assertIn("+UI_BUILD =", diff)
 
     def test_hp_damage_bar_persists_for_current_turn_instead_of_frame_timer(self):
         game = new_game(seed=345)

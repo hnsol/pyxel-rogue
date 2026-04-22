@@ -29,7 +29,7 @@ import rogue_rings
 import rogue_sticks
 
 RNG = RogueRng(random)
-UI_BUILD = "2604221441"
+UI_BUILD = "260422_1445"
 
 LANG_EN = "en"
 LANG_JA = "ja"
