@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_2353"
+UI_BUILD = "260422_2355"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2022,7 +2022,12 @@ class Game:
                 if i.cat in(CAT_POT,CAT_SCR): self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
             self.msg("pyxel.sense_magic")
         elif nm=="levitation":
-            p.levitating += RNG.spread(HEALTIME)
+            duration = RNG.spread(HEALTIME)
+            if p.levitating > 0:
+                self.fuses.lengthen("land", duration)
+            else:
+                self.fuses.fuse("land", duration, rogue_daemons.AFTER)
+            p.levitating += duration
             self.msg("potions.you_start_to_float_in_the_air")
         p.rm_item(it)
 
@@ -2051,6 +2056,10 @@ class Game:
     def come_down(self):
         self.p.hallucinating = 0
         self.msg("daemons.everything_looks_so_boring_now")
+
+    def land(self):
+        self.p.levitating = 0
+        self.msg("daemons.you_float_gently_to_the_ground")
 
     def use_scr(self,it):
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
@@ -2743,7 +2752,7 @@ class Game:
             self.p.hallucinating-=1
             if self.p.hallucinating==0:
                 self.msg("daemons.everything_looks_so_boring_now")
-        if self.p.levitating>0:
+        if self.p.levitating>0 and self.fuses.remaining("land")==0:
             self.p.levitating-=1
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
@@ -2752,6 +2761,8 @@ class Game:
             self.p.see_invisible = 0
         if "come_down" in due_fuses:
             self.come_down()
+        if "land" in due_fuses:
+            self.land()
         if "nohaste" in due_fuses:
             self.nohaste()
         elif self.p.haste>0:

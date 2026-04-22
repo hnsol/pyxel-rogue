@@ -1085,14 +1085,36 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertEqual(game.p.levitating, rogue.HEALTIME - rogue.HEALTIME // 20 + 2)
+        self.assertEqual(game.fuses.remaining("land"), rogue.HEALTIME - rogue.HEALTIME // 20 + 2)
         self.assertTrue(game.ident.pk[potion_kind])
         self.assertIn("you start to float in the air", game.msgs)
 
         game.p.levitating = 1
+        game.fuses.fuse("land", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 
         self.assertEqual(game.p.levitating, 0)
+        self.assertEqual(game.fuses.remaining("land"), 0)
         self.assertIn("you float gently to the ground", game.msgs)
+
+    def test_rogue_544_potion_levitation_lengthens_land_fuse(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_LEVIT) calls lengthen(land, spread(HEALTIME)).
+        game = new_game(seed=314)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "levitation")
+        first = rogue.Item(rogue.CAT_POT, potion_kind)
+        second = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.extend([first, second])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.use_pot(first)
+            game.use_pot(second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        duration = rogue.HEALTIME - rogue.HEALTIME // 20
+        self.assertEqual(game.p.levitating, duration * 2)
+        self.assertEqual(game.fuses.remaining("land"), duration * 2)
 
     def test_rogue_544_potion_hallucination_uses_spread_seeduration_and_comes_down(self):
         # Rogue 5.4.4 potions.c:P_LSD uses do_pot(ISHALU, come_down, SEEDURATION).
