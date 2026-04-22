@@ -263,7 +263,7 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 現行 Pyxel 版は、Rogue 5.4.4 の以下の主要メカニクスを未実装または別設計のまま残している。いずれも「Pyxel版をクリアしたら Rogue 5.4.4 をクリアしたと言える」状態の成立に必要であり、忠実度修正の対象とする。実装時は各原作関数の期待値テストを先に追加してから接続する。
 
-巻物は `rogue.h:S_CONFUSE..S_PROTECT` / `MAXSCROLLS=18` / `scrolls.c:read_scroll()` / `extern.c:scr_info[]` を基準にする。現行 12 種に対し、原作は 18 種で、特に `identify` が対象別に `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の 5 種へ分離している点は確率テーブル全体に影響する。Pyxel 版で単一 identify を残す差分を選ぶ場合は、原作との差・理由・影響を本文書へ記録したうえで決定する。`S_CONFUSE` は `fight.c:attack()` の `CANHUH` 付与、`S_FDET` は `scrolls.c:S_FDET` の全食料一時表示、`S_PROTECT` は `scrolls.c:S_PROTECT` の防具呪い・錆び防止として接続する。
+巻物は `rogue.h:S_CONFUSE..S_PROTECT` / `MAXSCROLLS=18` / `scrolls.c:read_scroll()` / `extern.c:scr_info[]` を基準にする。Pyxel 版の `SCROLLS` は原作 18 種の順序と確率へ更新し、単一 identify は `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の 5 種へ分離した。`S_ID_*` は `scrolls.c:read_scroll()` の `id_type[]` と `wizard.c:set_know()` 相当に合わせ、対象カテゴリだけを正式鑑定する。現時点では携帯機UI向けの暫定として該当カテゴリの未鑑定品から自動選択するため、原作 `whatis(TRUE, type)` の対象選択プロンプトは後続の「鑑定・命名・発見リスト忠実度」で実装する。`S_CONFUSE` は `fight.c:attack()` の `CANHUH` 付与、`S_FDET` は `scrolls.c:S_FDET` の全食料一時表示、`S_PROTECT` は `scrolls.c:S_PROTECT` の防具呪い・錆び防止として接続する。
 
 ポーションは `rogue.h:P_CONFUSE..P_LEVIT` / `MAXPOTIONS=14` / `potions.c:quaff()` / `extern.c:pot_info[]` を基準にする。現行 Pyxel 版は原作 14 種を実装済み。`P_LSD` は `ISHALU` 相当として `potions.c:do_pot()` / `daemons.c:come_down()` に合わせ、`misc.c:rnd_thing()` / `misc.c:look()` 相当の視覚混乱、`command.c:search()` の `probinc` 増加、invisible monster のランダム表示へ接続する。`P_LEVIT` は `ISLEVIT` 相当として罠・階段の発動条件と床上アイテム拾得を抑止し、`daemons.c:land()` 相当で解除する。
 

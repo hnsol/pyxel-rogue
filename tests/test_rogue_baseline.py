@@ -814,6 +814,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertIn("you feel a strange sense of loss", game.msgs)
 
+    def test_rogue_544_scroll_table_has_five_identify_types(self):
+        # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
+        self.assertEqual(len(rogue.SCROLLS), 18)
+        self.assertEqual([s["name"] for s in rogue.SCROLLS], [
+            "monster confusion", "magic mapping", "hold monster", "sleep",
+            "enchant armor", "identify potion", "identify scroll",
+            "identify weapon", "identify armor", "identify ring, wand or staff",
+            "scare monster", "food detection", "teleportation",
+            "enchant weapon", "create monster", "remove curse",
+            "aggravate monsters", "protect armor",
+        ])
+        self.assertEqual([s["prob"] for s in rogue.SCROLLS],
+                         [7, 4, 2, 3, 7, 10, 10, 6, 7, 10, 3, 2, 5, 8, 4, 7, 3, 2])
+
+    def test_rogue_544_identify_potion_scroll_only_identifies_matching_type(self):
+        # Rogue 5.4.4 scrolls.c:S_ID_POTION calls whatis(TRUE, POTION).
+        game = new_game(seed=317)
+        pot = rogue.Item(rogue.CAT_POT, 0)
+        other_scroll = rogue.Item(rogue.CAT_SCR, 0)
+        ident_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
+        ident_scroll = rogue.Item(rogue.CAT_SCR, ident_kind)
+        game.p.inv.extend([ident_scroll, pot, other_scroll])
+        game.ident.pk[pot.kind] = False
+        game.ident.sk[other_scroll.kind] = False
+
+        game.use_scr(ident_scroll)
+
+        self.assertTrue(game.ident.sk[ident_kind])
+        self.assertTrue(game.ident.pk[pot.kind])
+        self.assertFalse(game.ident.sk[other_scroll.kind])
+        self.assertIn("this scroll is an identify potion scroll", game.msgs)
+
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
         import rogue_rings

@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0823"
+UI_BUILD = "260423_0836"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -236,14 +236,15 @@ POT_JA = {
     "hallucination":"幻覚の", "levitation":"空中浮遊",
 }
 SCR_JA = {
-    "monster confusion":"怪物を混乱させる",
-    "identify":"持ちものの種類がわかる", "enchant weapon":"武器に魔法をかける",
-    "enchant armor":"よろいに魔法をかける", "remove curse":"のろいを解く",
-    "aggravate monsters":"怪物を怒らせる", "scare monster":"怪物を近寄せない",
-    "sleep":"眠りにおちる", "teleportation":"テレポートする",
-    "create monster":"怪物を作りだす", "magic mapping":"魔法の地図の",
-    "hold monster":"怪物を封じこめる", "food detection":"食料を探す",
-    "protect armor":"よろいを守る", "blank paper":"白紙の",
+    "monster confusion":"怪物を混乱させる", "magic mapping":"魔法の地図の",
+    "hold monster":"怪物を封じこめる", "sleep":"眠りにおちる",
+    "enchant armor":"よろいに魔法をかける", "identify potion":"水薬がわかる",
+    "identify scroll":"巻き物がわかる", "identify weapon":"武器がわかる",
+    "identify armor":"よろいがわかる", "identify ring, wand or staff":"指輪や杖がわかる",
+    "scare monster":"怪物を近寄せない", "food detection":"食料を探す",
+    "teleportation":"テレポートする", "enchant weapon":"武器に魔法をかける",
+    "create monster":"怪物を作りだす", "remove curse":"のろいを解く",
+    "aggravate monsters":"怪物を怒らせる", "protect armor":"よろいを守る",
 }
 FOOD_JA = {"food ration":"食糧", "slime-mold":"こけもも"}
 WEAPON_JA = {
@@ -448,13 +449,15 @@ POT_COLORS = ["blue","red","green","grey","brown","clear",
 
 SCROLLS = [
     {"name":"monster confusion","prob":7},
-    {"name":"identify","prob":21},{"name":"enchant weapon","prob":8},
-    {"name":"enchant armor","prob":7},{"name":"remove curse","prob":7},
-    {"name":"aggravate monsters","prob":3},{"name":"scare monster","prob":4},
-    {"name":"sleep","prob":3},{"name":"teleportation","prob":5},
-    {"name":"create monster","prob":4},{"name":"magic mapping","prob":4},
-    {"name":"hold monster","prob":2},{"name":"food detection","prob":2},
-    {"name":"protect armor","prob":2},{"name":"blank paper","prob":1},
+    {"name":"magic mapping","prob":4},{"name":"hold monster","prob":2},
+    {"name":"sleep","prob":3},{"name":"enchant armor","prob":7},
+    {"name":"identify potion","prob":10},{"name":"identify scroll","prob":10},
+    {"name":"identify weapon","prob":6},{"name":"identify armor","prob":7},
+    {"name":"identify ring, wand or staff","prob":10},
+    {"name":"scare monster","prob":3},{"name":"food detection","prob":2},
+    {"name":"teleportation","prob":5},{"name":"enchant weapon","prob":8},
+    {"name":"create monster","prob":4},{"name":"remove curse","prob":7},
+    {"name":"aggravate monsters","prob":3},{"name":"protect armor","prob":2},
 ]
 SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
             "aimfiz","aefg","zorch","elam","isko","temov","gnik","snef",
@@ -2103,18 +2106,68 @@ class Game:
         self.update_fov()
         self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")
 
+    def identify_item(self, it):
+        # Rogue 5.4.4 wizard.c:set_know().
+        if it.cat == CAT_POT:
+            self.ident.pk[it.kind] = True
+            it.known = True
+            return True
+        if it.cat == CAT_SCR:
+            self.ident.sk[it.kind] = True
+            it.known = True
+            return True
+        if it.cat == CAT_WPN or it.cat == CAT_ARM:
+            it.known = True
+            return True
+        if it.cat == CAT_RING:
+            self.ident.rk[it.kind] = True
+            it.known = True
+            return True
+        if it.cat == CAT_STICK:
+            self.ident.wk[it.kind] = True
+            it.known = True
+            return True
+        return False
+
+    def needs_identify(self, it):
+        if it.cat == CAT_POT:
+            return not self.ident.pk[it.kind]
+        if it.cat == CAT_SCR:
+            return not self.ident.sk[it.kind]
+        if it.cat in (CAT_WPN, CAT_ARM):
+            return not getattr(it, "known", True)
+        if it.cat == CAT_RING:
+            return not self.ident.rk[it.kind] or not getattr(it, "known", True)
+        if it.cat == CAT_STICK:
+            return not self.ident.wk[it.kind] or not getattr(it, "known", True)
+        return False
+
+    def identify_scroll_target_cats(self, nm):
+        # Rogue 5.4.4 scrolls.c:S_ID_* id_type[].
+        if nm == "identify potion":
+            return (CAT_POT,)
+        if nm == "identify scroll":
+            return (CAT_SCR,)
+        if nm == "identify weapon":
+            return (CAT_WPN,)
+        if nm == "identify armor":
+            return (CAT_ARM,)
+        if nm == "identify ring, wand or staff":
+            return (CAT_RING, CAT_STICK)
+        return ()
+
     def use_scr(self,it):
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
-        elif nm=="identify":
-            unid=[i for i in p.inv if (i.cat==CAT_POT and not self.ident.pk[i.kind])
-                  or (i.cat==CAT_SCR and not self.ident.sk[i.kind])]
+        elif nm.startswith("identify "):
+            cats = self.identify_scroll_target_cats(nm)
+            self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
+            unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
             if unid:
                 t=RNG.choice(unid)
-                if t.cat==CAT_POT: self.ident.pk[t.kind]=True
-                else: self.ident.sk[t.kind]=True
+                self.identify_item(t)
                 self.msg("pyxel.it_is_item", item=self.ident.name(t))
             else: self.msg("pyxel.feel_vaguely_uneasy")
         elif nm=="enchant weapon":
