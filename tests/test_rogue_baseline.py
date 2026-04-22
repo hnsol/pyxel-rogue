@@ -1008,6 +1008,64 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.blind, 0)
         self.assertIn("the veil of darkness lifts", game.msgs)
 
+    def test_rogue_544_potion_confusion_uses_unconfuse_fuse(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_CONFUSE) uses fuse/lengthen(unconfuse, spread(HUHDURATION)).
+        game = new_game(seed=315)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "confusion")
+        first = rogue.Item(rogue.CAT_POT, potion_kind)
+        second = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.extend([first, second])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.use_pot(first)
+            game.use_pot(second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        duration = rogue.HUHDURATION - rogue.HUHDURATION // 20 + 1
+        self.assertEqual(game.p.confused, duration * 2)
+        self.assertEqual(game.fuses.remaining("unconfuse"), duration * 2)
+        self.assertIn("wait, what's going on here. Huh? What? Who?", game.msgs)
+
+        game.p.confused = 1
+        game.fuses.fuse("unconfuse", 1, rogue.rogue_daemons.AFTER)
+        game.end_turn()
+
+        self.assertEqual(game.p.confused, 0)
+        self.assertEqual(game.fuses.remaining("unconfuse"), 0)
+        self.assertIn("you feel less confused now", game.msgs)
+
+    def test_rogue_544_potion_blindness_uses_sight_fuse(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_BLIND) uses fuse/lengthen(sight, spread(SEEDURATION)).
+        game = new_game(seed=316)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "blindness")
+        first = rogue.Item(rogue.CAT_POT, potion_kind)
+        second = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.extend([first, second])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.use_pot(first)
+            game.use_pot(second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        duration = rogue.SEEDURATION - rogue.SEEDURATION // 20
+        self.assertEqual(game.p.blind, duration * 2)
+        self.assertEqual(game.fuses.remaining("sight"), duration * 2)
+        self.assertIn("a cloak of darkness falls around you", game.msgs)
+
+        game.p.blind = 1
+        game.fuses.fuse("sight", 1, rogue.rogue_daemons.AFTER)
+        game.end_turn()
+
+        self.assertEqual(game.p.blind, 0)
+        self.assertEqual(game.fuses.remaining("sight"), 0)
+        self.assertIn("the veil of darkness lifts", game.msgs)
+
     def test_rogue_544_daemon_fuse_lengthen_extinguish_and_after_tick(self):
         # Rogue 5.4.4 daemon.c:fuse()/lengthen()/extinguish()/do_fuses(AFTER).
         import rogue_daemons

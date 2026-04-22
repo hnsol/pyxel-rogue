@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0051"
+UI_BUILD = "260423_0818"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2000,7 +2000,14 @@ class Game:
                 l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("pyxel.feel_sick_strength_loss", count=l)
         elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
         elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
-        elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("pyxel.feel_confused")
+        elif nm=="confusion":
+            duration = RNG.spread(HUHDURATION)
+            if p.confused > 0:
+                self.fuses.lengthen("unconfuse", duration)
+            else:
+                self.fuses.fuse("unconfuse", duration, rogue_daemons.AFTER)
+            p.confused += duration
+            self.msg("potions.what_a_tripy_feeling" if p.hallucinating > 0 else "potions.wait_what_s_going_on_here_huh_what_who")
         elif nm=="hallucination":
             duration = RNG.spread(SEEDURATION)
             if p.hallucinating > 0:
@@ -2009,7 +2016,14 @@ class Game:
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
-        elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("pyxel.darkness_falls")
+        elif nm=="blindness":
+            duration = RNG.spread(SEEDURATION)
+            if p.blind > 0:
+                self.fuses.lengthen("sight", duration)
+            else:
+                self.fuses.fuse("sight", duration, rogue_daemons.AFTER)
+            p.blind += duration
+            self.msg("potions.oh_bummer_everything_is_dark_help" if p.hallucinating > 0 else "potions.a_cloak_of_darkness_falls_around_you")
         elif nm=="haste self":
             if self.add_haste(True):
                 self.msg("potions.you_feel_yourself_moving_much_faster")
@@ -2074,6 +2088,15 @@ class Game:
     def land(self):
         self.p.levitating = 0
         self.msg("daemons.you_float_gently_to_the_ground")
+
+    def unconfuse(self):
+        self.p.confused = 0
+        self.msg("daemons.you_feel_less_value_now", value="trippy" if self.p.hallucinating > 0 else "confused")
+
+    def sight(self):
+        self.p.blind = 0
+        self.update_fov()
+        self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")
 
     def use_scr(self,it):
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
@@ -2759,8 +2782,10 @@ class Game:
             self.turn_msg_start = len(self.msgs)
             return
         if self.p.no_command>0: self.p.no_command-=1
-        if self.p.confused>0: self.p.confused-=1
-        if self.p.blind>0: self.p.blind-=1
+        if self.p.confused>0 and self.fuses.remaining("unconfuse")==0:
+            self.p.confused-=1
+        if self.p.blind>0 and self.fuses.remaining("sight")==0:
+            self.p.blind-=1
         if self.p.see_invisible>0 and self.fuses.remaining("unsee")==0:
             self.p.see_invisible-=1
         if getattr(self.p, "see_monsters", 0)>0:
@@ -2774,6 +2799,10 @@ class Game:
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
         due_fuses = self.fuses.tick(rogue_daemons.AFTER)
+        if "unconfuse" in due_fuses:
+            self.unconfuse()
+        if "sight" in due_fuses:
+            self.sight()
         if "unsee" in due_fuses:
             self.p.see_invisible = 0
         if "come_down" in due_fuses:
