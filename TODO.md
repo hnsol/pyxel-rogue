@@ -42,7 +42,7 @@
 4. run停止条件の再監査（`move.c:do_run()` / `do_move()`, `misc.c:look()`）
 5. 杖 bolt 系 / magic missile / drain life / nothing（`sticks.c:do_zap()`）
 6. 鑑定・命名・発見リスト忠実度（`wizard.c:whatis()/set_know()`, `command.c:call()`, `misc.c:call_it()`, `things.c:print_disc()`）
-7. Xeroc 擬態、hallucination、通路番号付き passages、Dragon breath / cancellation 連携
+7. 通路番号付き passages、Dragon breath / cancellation 連携、Xeroc 擬態細部
 
 - [x] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
@@ -224,7 +224,7 @@
 - [x] 巻物「sleep」がターンスキップする
 - [x] 巻物「scare monster」の床上効果（再拾得消滅に加えて、床上巻物へモンスターが踏み込まない）
 - [x] レプラコーン/ニンフが盗んだ後に消える
-- [ ] Xeroc（ミミック）のアイテム擬態が未実装
+- [x] Xeroc（ミミック）のアイテム擬態基礎（`monsters.c:new_monster()` / `fight.c:attack()` / `sticks.c:WS_CANCEL` 準拠）
 - [x] wandering monster spawn が未実装
 - [x] armor 装備中に別 armor を wear できてしまう（原作は take off 必須）
 - [x] weapon / armor / ring の呪い生成確率が Rogue 5.4.4 `things.c:new_thing()` と一致しているか未監査

@@ -30,7 +30,7 @@ import rogue_sticks
 import rogue_dungeon
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_1459"
+UI_BUILD = "260422_1502"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -620,6 +620,7 @@ class Item:
 class Monster:
     def __init__(s,x,y,sym,name,hp,level,armor,damage_expr,exp,fl):
         s.x,s.y,s.sym,s.name=x,y,sym,name
+        s.disguise=sym
         s.hp=s.max_hp=hp
         s.level=level; s.armor=armor; s.damage_expr=damage_expr; s.exp=exp
         s.flags=set(fl.split(",")) if fl else set()
@@ -1179,10 +1180,14 @@ class Game:
         overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
         return overrides.get(sym, MCOL.get(sym, 9))
 
-    def hallucination_thing_sym(self):
+    def random_thing_sym(self, depth=None):
         # Rogue 5.4.4 misc.c:rnd_thing() omits Amulet before AMULETLEVEL.
-        limit = len(HALLU_THINGS) if self.p.depth >= AMULET_LEVEL else len(HALLU_THINGS) - 1
+        depth = self.p.depth if depth is None else depth
+        limit = len(HALLU_THINGS) if depth >= AMULET_LEVEL else len(HALLU_THINGS) - 1
         return HALLU_THINGS[rnd(limit)]
+
+    def hallucination_thing_sym(self):
+        return self.random_thing_sym()
 
     def visible_tile_sym(self, x, y, tile):
         if self.p.hallucinating > 0 and tile == T_STAIR:
@@ -1197,7 +1202,7 @@ class Game:
     def visible_monster_sym(self, monster):
         if self.p.hallucinating > 0:
             return chr(ord("A") + rnd(26))
-        return monster.sym
+        return getattr(monster, "disguise", monster.sym)
 
     def toggle_palette(self):
         settings = self.ensure_settings()
@@ -1331,10 +1336,7 @@ class Game:
                 mx,my=self.random_room_tile(rm, WALKABLE)
                 if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
                    and not(mx==self.p.x and my==self.p.y):
-                    monster=Monster(
-                        mx, my, e.sym, e.name, monster_hp(e),
-                        e.level, e.armor, e.damage, e.exp, e.flags
-                    )
+                    monster=self.new_monster_from_spec(mx,my,e)
                     self.give_pack(monster)
                     self.mons.append(monster)
                     break
@@ -1345,16 +1347,24 @@ class Game:
             return False
         x,y=RNG.choice(cands)
         spec=self.random_monster_spec(self.p.depth)
-        monster=Monster(
-            x, y, spec.sym, spec.name, monster_hp(spec),
-            spec.level, spec.armor, spec.damage, spec.exp, spec.flags
-        )
+        monster=self.new_monster_from_spec(x,y,spec)
         self.mons.append(monster)
         self.runto(monster)
         return True
 
     def random_monster_spec(self, depth):
         return RNG.choice([b for b in BESTIARY if b.min_depth<=depth] or BESTIARY)
+
+    def new_monster_from_spec(self,x,y,spec,depth=None):
+        monster=Monster(
+            x, y, spec.sym, spec.name, monster_hp(spec),
+            spec.level, spec.armor, spec.damage, spec.exp, spec.flags
+        )
+        self.set_monster_disguise(monster,depth=depth)
+        return monster
+
+    def set_monster_disguise(self,m,depth=None):
+        m.disguise = rogue_monsters.initial_disguise(m.sym, lambda: self.random_thing_sym(depth))
 
     def give_pack(self,m,depth=None):
         spec=self.monster_spec_for_sym(m.sym)
@@ -1413,10 +1423,7 @@ class Game:
                 if (self.tm[my][mx] in (T_FLOOR,T_CORR) and not self.gi_at(mx,my)
                         and not self.mon_at(mx,my) and (mx,my)!=(self.p.x,self.p.y)):
                     spec=self.random_monster_spec(monster_depth)
-                    monster=Monster(
-                        mx, my, spec.sym, spec.name, monster_hp(spec),
-                        spec.level, spec.armor, spec.damage, spec.exp, spec.flags
-                    )
+                    monster=self.new_monster_from_spec(mx,my,spec,depth=monster_depth)
                     monster.mean=True
                     self.give_pack(monster,depth=monster_depth)
                     self.mons.append(monster)
@@ -1711,6 +1718,8 @@ class Game:
 
     def p_attack(self, m):
         self.runto(m)
+        if self.reveal_xeroc_for_attack(m, thrown=False):
+            return
         mn=self.combat_monster_name(m)
         hit,dmg=self.roll_player_attack(m,self.p.wpn,False)
         if hit:
@@ -1726,6 +1735,14 @@ class Game:
             elif m.confused>0:
                 self.msg("fight.subject_appears_confused", subject=mn)
         else: self.msg_text(self.player_miss_message(mn))
+
+    def reveal_xeroc_for_attack(self,m,thrown=False):
+        # Rogue 5.4.4 fight.c:attack() reveals a disguised Xeroc; melee returns FALSE.
+        if not rogue_monsters.is_disguised_xeroc(m) or self.p.blind>0:
+            return False
+        rogue_monsters.reveal_disguise(m)
+        self.msg("fight.heavy_that_s_a_nasty_critter" if self.p.hallucinating>0 else "fight.wait_that_s_a_xeroc")
+        return not thrown
 
     def monster_has_magic_item_to_steal(self):
         for it in self.p.inv:
@@ -2043,10 +2060,7 @@ class Game:
                     cs=[b for b in BESTIARY if b.min_depth<=p.depth]
                     if cs:
                         e=RNG.choice(cs)
-                        self.mons.append(Monster(
-                            nx, ny, e.sym, e.name, monster_hp(e),
-                            e.level, e.armor, e.damage, e.exp, e.flags
-                        ))
+                        self.mons.append(self.new_monster_from_spec(nx,ny,e))
                         if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
                             self.runto(self.mons[-1])
                     break
@@ -2115,6 +2129,7 @@ class Game:
         m.held=m.scared=m.confused=0
         m.running=False; m.dest=DEST_PLAYER; m.turn=True
         m.mean=True; m.target=False; m.found=False; m.vf_hit=0
+        self.set_monster_disguise(m)
         if self.p.depth>29:
             m.flags.add(rogue_monsters.FLAG_HASTE)
         if rogue_rings.is_wearing(self.p, rogue_rings.R_AGGR):
@@ -2146,6 +2161,7 @@ class Game:
         m.flags.add(rogue_monsters.FLAG_CANCELLED)
         m.flags.discard(rogue_monsters.FLAG_INVISIBLE)
         m.flags.discard(rogue_monsters.FLAG_CAN_CONFUSE)
+        rogue_monsters.reveal_disguise(m)
         if self.p.held_by is m:
             self.p.held_by=None
         m.vf_hit=0
@@ -2396,6 +2412,7 @@ class Game:
                 tx,ty=nx,ny; path.append((tx,ty))
                 self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
                 self.runto(m)
+                self.reveal_xeroc_for_attack(m, thrown=True)
                 hit,dmg=self.roll_player_attack(m,thrown,True)
                 mn=self.combat_monster_name(m)
                 item=self.ident.name(thrown)

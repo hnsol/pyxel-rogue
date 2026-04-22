@@ -280,6 +280,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("invis", medusa.flags)
         self.assertNotIn("confuse", medusa.flags)
 
+    def test_rogue_544_cancelled_xeroc_reveals_disguise_as_type(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_CANCEL sets t_disguise = t_type.
+        import rogue_sticks
+
+        game = new_game(seed=305)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 2, game.p.y, sym="X", name="xeroc")
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+
+        cancel = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_CANCEL, charges=1)
+        game.zap_stick(cancel, 1, 0)
+
+        self.assertEqual(xeroc.disguise, "X")
+        self.assertEqual(game.visible_monster_sym(xeroc), "X")
+
     def test_rogue_544_zap_polymorph_replaces_monster_type_with_rnd_26(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH calls new_monster(tp, rnd(26)+'A', pos).
         import rogue_sticks
@@ -1098,6 +1114,24 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.rnd = old_rnd
 
+    def test_rogue_544_xeroc_new_monster_uses_rnd_thing_disguise(self):
+        # Rogue 5.4.4 monsters.c:new_monster() sets X t_disguise = misc.c:rnd_thing().
+        game = new_game(seed=306)
+        set_open_floor(game)
+        game.p.depth = 7
+        monster = monster_at(game.p.x + 1, game.p.y, sym="H", name="hobgoblin")
+        spec = next(s for s in rogue.BESTIARY if s.sym == "X")
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 2
+            game.set_monster_from_spec(monster, spec)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(monster.sym, "X")
+        self.assertEqual(monster.disguise, "=")
+        self.assertEqual(game.visible_monster_sym(monster), "=")
+
     def test_rogue_544_levitation_blocks_stairs_pickup_and_traps(self):
         # Rogue 5.4.4 command.c:levit_check() blocks stairs and pickup;
         # move.c:be_trapped() returns before trap effects while ISLEVIT.
@@ -1422,6 +1456,26 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.make_item = old_make_item
 
         self.assertEqual(nymph.pack, [])
+
+    def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
+        # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
+        game = new_game(seed=307)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 1, game.p.y, sym="X", name="xeroc", hp=40, level=7, armor=7, damage="4x4", exp=100)
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+        calls = []
+        old_roll_player_attack = game.roll_player_attack
+        try:
+            game.roll_player_attack = lambda *args, **kwargs: calls.append(args) or (True, 5)
+            game.p_attack(xeroc)
+        finally:
+            game.roll_player_attack = old_roll_player_attack
+
+        self.assertEqual(calls, [])
+        self.assertEqual(xeroc.hp, 40)
+        self.assertEqual(xeroc.disguise, "X")
+        self.assertIn("wait!  That's a xeroc!", game.msgs)
 
     def test_rogue544_treasure_room_counts_match_new_level_treas_room(self):
         # Rogue 5.4.4 new_level.c:treas_room() uses MINTREAS/MAXTREAS

@@ -7,6 +7,21 @@ FLAG_INVISIBLE = "invis"     # Rogue 5.4.4 ISINVIS
 FLAG_SLOW = "slow"           # Rogue 5.4.4 ISSLOW
 
 
+def initial_disguise(sym, random_thing):
+    """Rogue 5.4.4 monsters.c:new_monster() sets Xeroc t_disguise = rnd_thing()."""
+    return random_thing() if sym == "X" else sym
+
+
+def is_disguised_xeroc(monster):
+    """Rogue 5.4.4 fight.c:attack() checks t_type == 'X' and t_disguise != 'X'."""
+    return monster.sym == "X" and getattr(monster, "disguise", monster.sym) != "X"
+
+
+def reveal_disguise(monster):
+    """Rogue 5.4.4 sticks.c:WS_CANCEL sets t_disguise = t_type."""
+    monster.disguise = monster.sym
+
+
 def is_cancelled(monster):
     return FLAG_CANCELLED in monster.flags
 
