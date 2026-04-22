@@ -27,9 +27,10 @@ from rogue_rng import RogueRng
 import rogue_monsters
 import rogue_rings
 import rogue_sticks
+import rogue_dungeon
 
 RNG = RogueRng(random)
-UI_BUILD = "260422_1445"
+UI_BUILD = "260422_1459"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1343,7 +1344,7 @@ class Game:
         if not cands:
             return False
         x,y=RNG.choice(cands)
-        spec=RNG.choice([b for b in BESTIARY if b.min_depth<=self.p.depth] or BESTIARY)
+        spec=self.random_monster_spec(self.p.depth)
         monster=Monster(
             x, y, spec.sym, spec.name, monster_hp(spec),
             spec.level, spec.armor, spec.damage, spec.exp, spec.flags
@@ -1352,12 +1353,16 @@ class Game:
         self.runto(monster)
         return True
 
-    def give_pack(self,m):
+    def random_monster_spec(self, depth):
+        return RNG.choice([b for b in BESTIARY if b.min_depth<=depth] or BESTIARY)
+
+    def give_pack(self,m,depth=None):
         spec=self.monster_spec_for_sym(m.sym)
-        if not spec or self.p.depth < getattr(self, "max_depth", self.p.depth):
+        depth = self.p.depth if depth is None else depth
+        if not spec or depth < getattr(self, "max_depth", self.p.depth):
             return
         if RNG.rnd(100) < spec.carry:
-            m.pack.append(make_item(self.p.depth))
+            m.pack.append(make_item(depth))
 
     def wanderer_floor_candidates(self):
         player_room=self.room_containing(self.p.x,self.p.y)
@@ -1374,6 +1379,8 @@ class Game:
     def _spawn_items(self):
         d=self.p.depth
         rooms=self.usable_rooms()
+        if rogue_dungeon.should_place_treasure_room(RNG):
+            self._spawn_treasure_room()
         for _ in range(RNG.randint(1,3)):
             rm=RNG.choice(rooms)
             for _ in range(20):
@@ -1387,6 +1394,33 @@ class Game:
                 ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
                     it=make_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
+
+    def _spawn_treasure_room(self, room=None):
+        # Rogue 5.4.4 new_level.c:treas_room().
+        rooms=self.usable_rooms()
+        room = room or RNG.choice(rooms)
+        inner_area=max(0,(room.w-2)*(room.h-2))
+        treasure_count, monster_count = rogue_dungeon.treasure_room_counts(inner_area,RNG)
+        for _ in range(treasure_count):
+            for _ in range(2 * rogue_dungeon.MAXTRIES):
+                ix,iy=self.random_room_tile(room,{T_FLOOR,T_CORR})
+                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy) and not self.mon_at(ix,iy):
+                    it=make_item(self.p.depth); it.x,it.y=ix,iy; self.gitems.append(it); break
+        monster_depth=self.p.depth+1
+        for _ in range(monster_count):
+            for _ in range(rogue_dungeon.MAXTRIES):
+                mx,my=self.random_room_tile(room,{T_FLOOR,T_CORR})
+                if (self.tm[my][mx] in (T_FLOOR,T_CORR) and not self.gi_at(mx,my)
+                        and not self.mon_at(mx,my) and (mx,my)!=(self.p.x,self.p.y)):
+                    spec=self.random_monster_spec(monster_depth)
+                    monster=Monster(
+                        mx, my, spec.sym, spec.name, monster_hp(spec),
+                        spec.level, spec.armor, spec.damage, spec.exp, spec.flags
+                    )
+                    monster.mean=True
+                    self.give_pack(monster,depth=monster_depth)
+                    self.mons.append(monster)
+                    break
 
     def _spawn_amulet(self):
         # Rogue 5.4.4 new_level.c: level >= AMULETLEVEL && !amulet.

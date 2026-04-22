@@ -108,7 +108,7 @@
   - 現行 Pyxel 版は 14 種実装済み。
   - [x] `P_LSD` hallucination の効果実装（視覚混乱、search `probinc`、invisible monster 表示への反映）
   - [x] `P_LEVIT` levitation（`ISLEVIT` 相当、罠・階段無効化、床上アイテム拾得不可、`daemons.c:land()` で復帰）
-- [ ] **treasure room（俗称モンスターハウス）**（`new_level.c:138, 180-231` の `treas_room()`）
+- [x] **treasure room（俗称モンスターハウス）**（`new_level.c:138, 180-231` の `treas_room()`）
   - 1/20 の階で発生。`MINTREAS=2` / `MAXTREAS=10` のアイテムと、次階層相当のモンスター群を `ISMEAN` 付きで配置。部屋内モンスターには `give_pack()` も呼ぶ。
 - [x] **モンスター持ち物 `m_carry`**（`monsters.c:217-222 give_pack()`、`extern.c:monsters[]` の `m_carry`）
   - `rnd(100) < m_carry` でモンスターに `new_thing()` を持たせ、倒した時にドロップさせる。
@@ -235,7 +235,7 @@
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携
 - [ ] 巻物が原作 18 種のうち 12 種のみ実装（identify 分化 / monster confusion / food detection / protect armor が欠落。詳細は Phase 4 タスク参照）
 - [x] ポーションを原作 14 種へ更新（hallucination / levitation 接続済み）
-- [ ] treasure room（モンスターハウス）が未実装。`give_pack` / `m_carry` は通常モンスター生成と死亡時ドロップへ接続済みだが、`treas_room()` の部屋単位配置は未対応
+- [x] treasure room（モンスターハウス）を `new_level.c:treas_room()` 準拠で接続済み。`rogue_dungeon.py` に個数計算と発生ゲートを分離。
 
 ## テスト・基盤タスク
 

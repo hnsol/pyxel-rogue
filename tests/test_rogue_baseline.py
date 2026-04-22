@@ -1423,6 +1423,81 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(nymph.pack, [])
 
+    def test_rogue544_treasure_room_counts_match_new_level_treas_room(self):
+        # Rogue 5.4.4 new_level.c:treas_room() uses MINTREAS/MAXTREAS
+        # and forces monster count to at least treasure count + 2.
+        import rogue_dungeon
+
+        rng = SequenceRng([0, 0])
+        self.assertEqual(rogue_dungeon.treasure_room_counts(16, rng), (2, 4))
+        self.assertEqual(rng.calls, [8, 8])
+
+        rng = SequenceRng([7, 7])
+        self.assertEqual(rogue_dungeon.treasure_room_counts(80, rng), (9, 11))
+
+        rng = SequenceRng([0, 0])
+        self.assertEqual(rogue_dungeon.treasure_room_counts(4, rng), (2, 4))
+
+    def test_rogue544_spawn_treasure_room_places_items_and_next_level_mean_pack_monsters(self):
+        # Rogue 5.4.4 new_level.c:treas_room() places treasures, then
+        # level++ monsters with ISMEAN and monsters.c:give_pack().
+        game = new_game(seed=303)
+        set_open_floor(game)
+        game.p.depth = 7
+        game.max_depth = 7
+        room = game.rooms[0]
+        positions = iter((x, game.p.y + 2) for x in range(2, 8))
+        spec = next(s for s in rogue.BESTIARY if s.sym == "C")
+        pack_depths = []
+        old_make_item = rogue.make_item
+        old_random_room_tile = game.random_room_tile
+        old_random_monster_spec = getattr(game, "random_monster_spec", None)
+        old_give_pack = game.give_pack
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.make_item = lambda depth: rogue.Item(rogue.CAT_FOOD, 0)
+            game.random_room_tile = lambda room_arg, tiles: next(positions)
+            game.random_monster_spec = lambda depth: spec
+            game.give_pack = lambda monster, depth=None: pack_depths.append(depth) or monster.pack.append(rogue.Item(rogue.CAT_FOOD, 0))
+
+            game._spawn_treasure_room(room)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.make_item = old_make_item
+            game.random_room_tile = old_random_room_tile
+            if old_random_monster_spec is not None:
+                game.random_monster_spec = old_random_monster_spec
+            game.give_pack = old_give_pack
+
+        self.assertEqual(len(game.gitems), 2)
+        self.assertEqual(len(game.mons), 4)
+        self.assertTrue(all(item.cat == rogue.CAT_FOOD for item in game.gitems))
+        self.assertTrue(all(monster.sym == "C" and monster.mean for monster in game.mons))
+        self.assertEqual(pack_depths, [8, 8, 8, 8])
+        self.assertTrue(all(monster.pack for monster in game.mons))
+
+    def test_rogue544_put_things_uses_one_in_20_treasure_room_gate(self):
+        # Rogue 5.4.4 new_level.c:put_things() calls treas_room() when rnd(TREAS_ROOM)==0.
+        game = new_game(seed=304)
+        set_open_floor(game)
+        calls = []
+        old_spawn_treasure_room = getattr(game, "_spawn_treasure_room", None)
+        old_rnd = rogue.RNG.rnd
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.randint = lambda a, b: 0
+            game._spawn_treasure_room = lambda room=None: calls.append(room)
+            game._spawn_items()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randint = old_randint
+            if old_spawn_treasure_room is not None:
+                game._spawn_treasure_room = old_spawn_treasure_room
+
+        self.assertEqual(calls, [None])
+
     def test_rogue_544_killed_monster_drops_pack_items_at_monster_position(self):
         # Rogue 5.4.4 fight.c:killed() calls remove_mon(..., TRUE), which falls t_pack items.
         game = new_game(seed=302)

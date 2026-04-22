@@ -263,9 +263,9 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 ポーションは `rogue.h:P_CONFUSE..P_LEVIT` / `MAXPOTIONS=14` / `potions.c:quaff()` / `extern.c:pot_info[]` を基準にする。現行 Pyxel 版は原作 14 種を実装済み。`P_LSD` は `ISHALU` 相当として `potions.c:do_pot()` / `daemons.c:come_down()` に合わせ、`misc.c:rnd_thing()` / `misc.c:look()` 相当の視覚混乱、`command.c:search()` の `probinc` 増加、invisible monster のランダム表示へ接続する。`P_LEVIT` は `ISLEVIT` 相当として罠・階段の発動条件と床上アイテム拾得を抑止し、`daemons.c:land()` 相当で解除する。
 
-treasure room（俗称モンスターハウス）は `new_level.c:138, 180-231` の `treas_room()` を基準にする。`put_things()` で 1/20 の階に発生し、`MINTREAS=2` / `MAXTREAS=10` 個のアイテムを埋めたうえで、次階層相当のモンスターを `ISMEAN` 付きで多数配置する。部屋内モンスターは `give_pack()` で持ち物も持つ。設計書および Pyxel 実装のいずれにも記述がないため、部屋タイプとしての生成、視界公開、AI（全員 `ISMEAN` で起きている扱い）を新規に設計する必要がある。
+treasure room（俗称モンスターハウス）は `new_level.c:138, 180-231` の `treas_room()` を基準にする。`put_things()` で 1/20 の階に発生し、`MINTREAS=2` / `MAXTREAS=10` 個のアイテムを埋めたうえで、次階層相当のモンスターを `ISMEAN` 付きで多数配置する。部屋内モンスターは `give_pack()` で持ち物も持つ。Pyxel 版では `rogue_dungeon.py` に treasure room の発生ゲート、`MINTREAS` / `MAXTREAS` / `MAXTRIES`、個数計算を分離し、`Game` 側は配置と既存 `make_item()` / `Monster` 生成の接続だけを担当する。
 
-`give_pack` は Rogue 5.4.4 `monsters.c:give_pack()` と `extern.c:monsters[]` の `m_carry` を基準にする。Pyxel版では `MonsterSpec.carry` に A-Z の値を持たせ、通常モンスター生成時に `level >= max_level && rnd(100) < m_carry` 相当で `make_item()` を `Monster.pack` に保持し、`fight.c:remove_mon(..., TRUE)` 相当として倒した時に床へ落とす。wandering monster は原作 `monsters.c:wanderer()` と同じく `give_pack()` を呼ばない。残事項は `new_level.c:treas_room()` の部屋単位配置で、treasure room 内モンスターへ `give_pack()` を呼ぶ接続は treasure room 実装時に行う。
+`give_pack` は Rogue 5.4.4 `monsters.c:give_pack()` と `extern.c:monsters[]` の `m_carry` を基準にする。Pyxel版では `MonsterSpec.carry` に A-Z の値を持たせ、通常モンスター生成時に `level >= max_level && rnd(100) < m_carry` 相当で `make_item()` を `Monster.pack` に保持し、`fight.c:remove_mon(..., TRUE)` 相当として倒した時に床へ落とす。wandering monster は原作 `monsters.c:wanderer()` と同じく `give_pack()` を呼ばない。treasure room 内モンスターは `treas_room()` の一時的な `level++` 相当により、次階層 depth で `give_pack()` を呼ぶ。
 
 daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()` を基準にする。現行は個別 `int` カウンタで近似しているが、`doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` を統一インフラで扱うことで、`potion of haste self` の重ね掛け、`ring of regeneration` の同時発動、wandering monster の `WANDERTIME=spread(70)` などを Rogue 5.4.4 と同じターン消費で再現できる。
 
@@ -285,7 +285,7 @@ Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C
 
 分割する場合は、ゲームロジック、データテーブル、入力、描画、設定、保存、通信、プラットフォーム差分の境界を意識する。
 
-現時点では大規模分割よりも、依存方向を整える小さな整理を優先する。`Game` 内にはまだロジック、入力、描画、文言が同居しているため、まず `TextCatalog` とロジックテストで境界を作り、以後の機能追加時に必要な範囲から分離する。
+現時点では大規模分割よりも、依存方向を整える小さな整理を優先する。分割の目的は、このプロジェクトとしてのコードの見通し・テストしやすさを上げることと、Rogue 5.4.4 C ソースとの比較を効果的にすることに置く。`Game` 内にはまだロジック、入力、描画、文言が同居しているため、まず `TextCatalog` とロジックテストで境界を作り、以後の機能追加時に必要な範囲から分離する。今後も Phase 4 タスクを進めるたびに、原作関数・定数・テーブルに対応するまとまりを見つけたら、小さな `rogue_*.py` helper へ切り出す機会を必ず確認する。
 
 Phase 4 の間は Rogue 5.4.4 忠実度を最優先にし、`core/`, `ui/`, `backend/` のような全面分割は先行しない。新規または修正対象の機能では、ゲーム状態を変える処理を Pyxel 描画・入力・保存/通信から切り離しやすい形に寄せる。設定値は将来の `Settings` 相当へ集約できるよう、言語、自動拾い、パレット、run 表示、レイアウト候補などを散在させない。
 
