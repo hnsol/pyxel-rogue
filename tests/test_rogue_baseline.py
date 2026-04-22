@@ -908,6 +908,111 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.levitating, 0)
         self.assertIn("you float gently to the ground", game.msgs)
 
+    def test_rogue_544_potion_hallucination_uses_spread_seeduration_and_comes_down(self):
+        # Rogue 5.4.4 potions.c:P_LSD uses do_pot(ISHALU, come_down, SEEDURATION).
+        game = new_game(seed=214)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 4
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.hallucinating, rogue.SEEDURATION - rogue.SEEDURATION // 20 + 4)
+        self.assertTrue(game.ident.pk[potion_kind])
+        self.assertIn("Oh, wow!  Everything seems so cosmic!", game.msgs)
+
+        game.p.hallucinating = 1
+        game.end_turn()
+
+        self.assertEqual(game.p.hallucinating, 0)
+        self.assertIn("Everything looks SO boring now.", game.msgs)
+
+    def test_rogue_544_hallucination_increases_search_probinc_and_changes_trap_name(self):
+        # Rogue 5.4.4 command.c:search() adds 3 to probinc while ISHALU.
+        game = new_game(seed=215)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.hidden_tiles[(px + 1, py)] = rogue.T_DOOR
+        game.tm[py][px + 1] = rogue.T_VWALL
+        game.p.hallucinating = 10
+
+        old_rnd = rogue.RNG.rnd
+        calls = []
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or n - 1
+            game.do_search()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn(8, calls)
+        self.assertEqual(game.tm[py][px + 1], rogue.T_VWALL)
+
+        game.hidden_tiles = {}
+        game.traps[(px - 1, py)] = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "dart trap")
+        game.tm[py][px - 1] = rogue.T_FLOOR
+        old_rnd = rogue.RNG.rnd
+        bear = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        seq = iter([0, bear])
+        try:
+            rogue.RNG.rnd = lambda n: next(seq)
+            game.do_search()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.tm[py][px - 1], rogue.T_TRAP)
+        self.assertIn("You found something!", game.msgs)
+        self.assertTrue(any("bear trap" in msg for msg in game.msgs))
+
+    def test_rogue_544_confusion_does_not_change_search_probinc(self):
+        # Rogue 5.4.4 command.c:search() probinc checks ISHALU and ISBLIND, not ISHUH.
+        game = new_game(seed=217)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.hidden_tiles[(px + 1, py)] = rogue.T_DOOR
+        game.tm[py][px + 1] = rogue.T_VWALL
+        game.p.confused = 10
+
+        old_rnd = rogue.RNG.rnd
+        calls = []
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or n - 1
+            game.do_search()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn(5, calls)
+        self.assertNotIn(8, calls)
+
+    def test_rogue_544_hallucination_randomizes_visible_items_stairs_and_monsters(self):
+        # Rogue 5.4.4 misc.c:trip_ch() and daemons.c:visuals() use rnd_thing();
+        # misc.c:look() displays visible monsters as rnd(26)+'A' while ISHALU.
+        game = new_game(seed=216)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = px + 1, py
+        game.gitems = [potion]
+        phantom = monster_at(px + 2, py, "P", "phantom", flags="invis")
+        game.mons = [phantom]
+        game.tm[py][px - 1] = rogue.T_STAIR
+        game.visible.update({(px + 1, py), (px + 2, py), (px - 1, py)})
+        game.p.see_invisible = 10
+        game.p.hallucinating = 10
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            self.assertEqual(game.visible_item_sym(potion), "!")
+            self.assertEqual(game.visible_tile_sym(px - 1, py, rogue.T_STAIR), "!")
+            self.assertEqual(game.visible_monster_sym(phantom), "A")
+        finally:
+            rogue.RNG.rnd = old_rnd
+
     def test_rogue_544_levitation_blocks_stairs_pickup_and_traps(self):
         # Rogue 5.4.4 command.c:levit_check() blocks stairs and pickup;
         # move.c:be_trapped() returns before trap effects while ISLEVIT.

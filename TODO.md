@@ -104,9 +104,9 @@
   - [ ] `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の識別分化（現行の単一 identify から分離）
   - [x] `S_FDET` food detection（階フロアの食料位置一時表示）
   - [x] `S_PROTECT` protect armor（防具の呪い・錆び防止）と現行 enchant armor (= `S_ARMOR`) の区別
-- [ ] **ポーション 14種化**（`rogue.h:P_* / MAXPOTIONS=14`、`potions.c:quaff()`）
-  - 現行 Pyxel 版は 13 種。残りは `P_LSD` hallucination。
-  - [ ] `P_LSD` hallucination の効果実装（視覚混乱、search `probinc`、invisible monster 表示への反映）
+- [x] **ポーション 14種化**（`rogue.h:P_* / MAXPOTIONS=14`、`potions.c:quaff()`）
+  - 現行 Pyxel 版は 14 種実装済み。
+  - [x] `P_LSD` hallucination の効果実装（視覚混乱、search `probinc`、invisible monster 表示への反映）
   - [x] `P_LEVIT` levitation（`ISLEVIT` 相当、罠・階段無効化、床上アイテム拾得不可、`daemons.c:land()` で復帰）
 - [ ] **treasure room（俗称モンスターハウス）**（`new_level.c:138, 180-231` の `treas_room()`）
   - 1/20 の階で発生。`MINTREAS=2` / `MAXTREAS=10` のアイテムと、次階層相当のモンスター群を `ISMEAN` 付きで配置。部屋内モンスターには `give_pack()` も呼ぶ。
@@ -228,13 +228,13 @@
 - [x] wandering monster spawn が未実装
 - [x] armor 装備中に別 armor を wear できてしまう（原作は take off 必須）
 - [x] weapon / armor / ring の呪い生成確率が Rogue 5.4.4 `things.c:new_thing()` と一致しているか未監査
-- [ ] hallucination potion が未実装（see invisible potion は `potions.c:P_SEEINVIS` / `daemons.c:unsee()` 相当を接続済み）
+- [x] hallucination potion を `potions.c:P_LSD` / `daemons.c:come_down()` 相当で接続済み
 - [ ] 投擲が斜め方向に未対応
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携
 - [ ] 巻物が原作 18 種のうち 12 種のみ実装（identify 分化 / monster confusion / food detection / protect armor が欠落。詳細は Phase 4 タスク参照）
-- [ ] ポーションが原作 14 種のうち 12 種のみ実装（hallucination / levitation が欠落）
+- [x] ポーションを原作 14 種へ更新（hallucination / levitation 接続済み）
 - [ ] treasure room（モンスターハウス）が未実装。`give_pack` / `m_carry` は通常モンスター生成と死亡時ドロップへ接続済みだが、`treas_room()` の部屋単位配置は未対応
 
 ## テスト・基盤タスク

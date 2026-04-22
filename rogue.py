@@ -215,6 +215,7 @@ CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_RING = "ring"; CAT_STICK = "stick"
 CAT_GOLD = "gold"; CAT_AMULET = "amulet"
 ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_RING:"=",CAT_STICK:"/",CAT_GOLD:"*",CAT_AMULET:","}
 ICOL = {CAT_POT:27, CAT_SCR:9, CAT_FOOD:23, CAT_WPN:6, CAT_ARM:5, CAT_RING:14, CAT_STICK:26, CAT_GOLD:29, CAT_AMULET:29}
+HALLU_THINGS = ["!","?","=","/",":",")","]","%","*",","]
 
 # ===========================================================
 #  Text catalog
@@ -226,7 +227,7 @@ POT_JA = {
     "blindness":"目が見えなくなる", "haste self":"素早くなる",
     "see invisible":"見えないものが見える", "raise level":"経験が増す",
     "detect monster":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
-    "levitation":"空中浮遊",
+    "hallucination":"幻覚の", "levitation":"空中浮遊",
 }
 SCR_JA = {
     "monster confusion":"怪物を混乱させる",
@@ -429,6 +430,7 @@ POTIONS = [
     {"name":"healing","prob":13},{"name":"extra healing","prob":5},
     {"name":"poison","prob":8},{"name":"gain strength","prob":13},
     {"name":"restore strength","prob":13},{"name":"confusion","prob":7},
+    {"name":"hallucination","prob":8},
     {"name":"blindness","prob":5},{"name":"haste self","prob":5},
     {"name":"see invisible","prob":3},{"name":"raise level","prob":2},
     {"name":"detect monster","prob":6},{"name":"magic detection","prob":6},
@@ -637,7 +639,7 @@ class Player:
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
         s.ring_l=None; s.ring_r=None
-        s.confused=s.blind=s.haste=s.see_invisible=s.levitating=0
+        s.confused=s.blind=s.haste=s.see_invisible=s.hallucinating=s.levitating=0
         s.no_command=s.no_move=0
         s.held_by=None
         s.quiet=0
@@ -1174,6 +1176,26 @@ class Game:
     def monster_color(self, sym):
         overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
         return overrides.get(sym, MCOL.get(sym, 9))
+
+    def hallucination_thing_sym(self):
+        # Rogue 5.4.4 misc.c:rnd_thing() omits Amulet before AMULETLEVEL.
+        limit = len(HALLU_THINGS) if self.p.depth >= AMULET_LEVEL else len(HALLU_THINGS) - 1
+        return HALLU_THINGS[rnd(limit)]
+
+    def visible_tile_sym(self, x, y, tile):
+        if self.p.hallucinating > 0 and tile == T_STAIR:
+            return self.hallucination_thing_sym()
+        return TILE_CH.get(tile, (" ", 0))[0]
+
+    def visible_item_sym(self, item):
+        if self.p.hallucinating > 0:
+            return self.hallucination_thing_sym()
+        return item.sym
+
+    def visible_monster_sym(self, monster):
+        if self.p.hallucinating > 0:
+            return chr(ord("A") + rnd(26))
+        return monster.sym
 
     def toggle_palette(self):
         settings = self.ensure_settings()
@@ -1910,6 +1932,9 @@ class Game:
         elif nm=="gain strength": p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
         elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
         elif nm=="confusion": p.confused=RNG.randint(15,25); self.msg("pyxel.feel_confused")
+        elif nm=="hallucination":
+            p.hallucinating += RNG.spread(SEEDURATION)
+            self.msg("potions.oh_wow_everything_seems_so_cosmic")
         elif nm=="blindness": p.blind=RNG.randint(50,100); self.msg("pyxel.darkness_falls")
         elif nm=="haste self": p.haste=RNG.randint(10,20); self.msg("pyxel.speed_up")
         elif nm=="see invisible":
@@ -2331,7 +2356,7 @@ class Game:
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
-        probinc=(3 if p.confused>0 else 0)+(2 if p.blind>0 else 0)
+        probinc=(3 if p.hallucinating>0 else 0)+(2 if p.blind>0 else 0)
         for dx,dy in dirs:
             nx,ny=p.x+dx,p.y+dy
             if 0<=nx<MAP_W and 0<=ny<MAP_H:
@@ -2341,7 +2366,12 @@ class Game:
                 elif hidden==T_CORR and rnd(3+probinc)==0:
                     found = self.reveal_hidden_at(nx,ny) or found
                 elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rnd(2+probinc)==0:
+                    trap = self.traps[(nx,ny)]
                     found = self.reveal_trap_at(nx,ny) or found
+                    if found:
+                        if p.hallucinating > 0:
+                            trap = rnd(len(TRAPS))
+                        self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
         if found:
             self.msg("pyxel.found_something")
         elif not quiet_fail:
@@ -2454,6 +2484,8 @@ class Game:
         if trap is None:
             self.msg("command.no_trap_there")
         else:
+            if self.p.hallucinating > 0:
+                trap = rnd(len(TRAPS))
             self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
 
     def do_action(self):
@@ -2544,6 +2576,10 @@ class Game:
         if self.p.blind>0: self.p.blind-=1
         if self.p.haste>0: self.p.haste-=1
         if self.p.see_invisible>0: self.p.see_invisible-=1
+        if self.p.hallucinating>0:
+            self.p.hallucinating-=1
+            if self.p.hallucinating==0:
+                self.msg("daemons.everything_looks_so_boring_now")
         if self.p.levitating>0:
             self.p.levitating-=1
             if self.p.levitating==0:
@@ -3201,15 +3237,15 @@ class Game:
                 exp = (mx,my) in self.explored and not blind
 
                 if vis:
-                    tile=self.tm[my][mx]; ch,col=TILE_CH.get(tile,(" ",0))
+                    tile=self.tm[my][mx]; _,col=TILE_CH.get(tile,(" ",0)); ch=self.visible_tile_sym(mx,my,tile)
                     if ch!=" ": self.txt(sx+1,sy+1,ch,col)
                     # Ground item
                     gi=self.gi_at(mx,my)
-                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,9))
+                    if gi: self.txt(sx+1,sy+1,self.visible_item_sym(gi),ICOL.get(gi.cat,9))
                     # Monster
                     mo=self.mon_at(mx,my)
                     if mo and self.can_see_monster(mo):
-                        self.txt(sx+1,sy+1,mo.sym,self.monster_color(mo.sym))
+                        self.txt(sx+1,sy+1,self.visible_monster_sym(mo),self.monster_color(mo.sym))
                     # Player
                     if mx==px and my==py:
                         self.txt(sx+1,sy+1,"@",30)
@@ -3273,6 +3309,7 @@ class Game:
         if p.confused>0: eff.append("Confused")
         if p.blind>0: eff.append("Blind")
         if p.haste>0: eff.append("Haste")
+        if p.hallucinating>0: eff.append("Halu")
         if p.levitating>0: eff.append("Levit")
         if not eff:
             eff.append("None")
