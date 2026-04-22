@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0045"
+UI_BUILD = "260423_0051"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -3244,6 +3244,12 @@ class Game:
         return False
     def dash_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT, pyxel.GAMEPAD1_BUTTON_B)
+    def dash_restart_dir_press(self):
+        return self.kp(pyxel.KEY_UP, pyxel.KEY_DOWN, pyxel.KEY_LEFT, pyxel.KEY_RIGHT,
+                       pyxel.KEY_H, pyxel.KEY_J, pyxel.KEY_K, pyxel.KEY_L,
+                       pyxel.KEY_Y, pyxel.KEY_U, pyxel.KEY_B, pyxel.KEY_N,
+                       pyxel.GAMEPAD1_BUTTON_DPAD_UP, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                       pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
 
     def rogue_command_action(self):
         if self.key_lower(getattr(pyxel, "KEY_T", None)): return "Throw"
@@ -3335,11 +3341,13 @@ class Game:
             return
 
         # Dash start: B/Shift held + direction
-        if self.dash_held() and not getattr(self, "dash_restart_guard", False):
+        dash_guarded = getattr(self, "dash_restart_guard", False)
+        if self.dash_held() and (not dash_guarded or self.dash_restart_dir_press()):
             d = self.held_dir()
             if d:
                 self.dashing=True; self.dash_d=d; self.dash_t=0
                 self.dash_steps=0
+                self.dash_restart_guard=False
                 self.b_used=True
                 self.dash_step()
                 return

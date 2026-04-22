@@ -3000,6 +3000,31 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual((game.p.x, game.p.y), (11, 7))
 
+    def test_rogue_544_dash_can_restart_with_run_button_held_after_stop(self):
+        # Rogue 5.4.4 command.c lets each shifted direction start do_run() again.
+        game = new_game(seed=463)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = px + 2, py
+        game.gitems = [item]
+
+        held = {rogue.pyxel.GAMEPAD1_BUTTON_B, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT}
+        rogue.pyxel.set_input(held=held, pressed=held)
+        game.update()
+        rogue.pyxel.set_input(held=held, pressed=set())
+        game.update()
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (px + 1, py))
+
+        game.gitems = []
+        held = {rogue.pyxel.GAMEPAD1_BUTTON_B, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT}
+        rogue.pyxel.set_input(held=held, pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT})
+        game.update()
+
+        self.assertTrue(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (px + 2, py))
+
     def test_rogue_544_detect_monster_does_not_leave_floor_memory(self):
         # Rogue 5.4.4 potions.c:P_MFIND uses SEEMONST/turn_see(), not map memory.
         game = new_game(seed=462)
