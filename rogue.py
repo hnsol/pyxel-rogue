@@ -32,7 +32,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_2037"
+UI_BUILD = "260423_2049"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2799,7 +2799,9 @@ class Game:
                 self.p.hp-=roll("1d6")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="an arrow killed you"
-                self.msg("move.oh_no_an_arrow_shot_you")
+                    self.msg("move.an_arrow_killed_you")
+                else:
+                    self.msg("move.oh_no_an_arrow_shot_you")
             else:
                 self.drop_arrow_at_player()
                 self.msg("move.an_arrow_shoots_past_you")

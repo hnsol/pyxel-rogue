@@ -4119,6 +4119,43 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.no_move, 4 + rogue.BEARTIME)
 
+    def test_rogue_544_arrow_trap_miss_drops_one_arrow(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_ARROW falls one ARROW on a miss.
+        game = new_game(seed=63)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(x, y)] = kind
+        game.gitems = []
+        game.trap_hits = lambda bonus=0: False
+
+        game.trigger_trap(x, y)
+
+        self.assertEqual(len(game.gitems), 1)
+        arrow = game.gitems[0]
+        self.assertEqual((arrow.cat, arrow.kind, arrow.qty), (rogue.CAT_WPN, 3, 1))
+        self.assertEqual((arrow.x, arrow.y), (game.p.x, game.p.y))
+
+    def test_rogue_544_arrow_trap_kill_uses_killed_message(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_ARROW says "an arrow killed you" on death.
+        game = new_game(seed=64)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: True
+        game.p.hp = 1
+        old_roll = rogue.roll
+        rogue.roll = lambda s: 1
+        try:
+            game.trigger_trap(x, y)
+        finally:
+            rogue.roll = old_roll
+
+        self.assertEqual(game.death_cause, "an arrow killed you")
+        self.assertIn("an arrow killed you", game.msgs)
+        self.assertNotIn("oh no! An arrow shot you", game.msgs)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4
