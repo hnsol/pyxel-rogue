@@ -80,6 +80,10 @@ class CombatMessageTests(unittest.TestCase):
 
         game.throw(arrow, 1, 0)
 
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
+
         self.assertTrue(any("hits the hobgoblin" in msg for msg in game.msgs))
         self.assertFalse(any("(1)" in msg or "damage" in msg.lower() for msg in game.msgs))
 
@@ -93,6 +97,10 @@ class CombatMessageTests(unittest.TestCase):
         game.roll_player_attack = lambda m, weap=None, thrown=False: (False, 0)
 
         game.throw(arrow, 1, 0)
+
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
 
         self.assertTrue(any("misses the hobgoblin" in msg for msg in game.msgs))
         self.assertFalse(any("(" in msg for msg in game.msgs))

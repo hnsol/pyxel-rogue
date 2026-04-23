@@ -3114,12 +3114,41 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 2, 2
         for x in range(2, 7):
             game.tm[2][x] = rogue.T_FLOOR
+        game.gitems = []
         item = rogue.Item(rogue.CAT_WPN, 4)
         game.p.inv = [item]
         game.throw(item, 1, 0)
         self.assertIsNotNone(game.throw_anim)
         self.assertEqual(game.throw_anim["path"], [(3, 2), (4, 2), (5, 2), (6, 2)])
+        self.assertEqual(game.gitems, [])
+
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
+
         self.assertEqual((game.gitems[-1].x, game.gitems[-1].y), (6, 2))
+
+    def test_rogue_544_thrown_kill_waits_until_animation_finishes(self):
+        # Rogue 5.4.4 weapons.c:missile()/do_motion() resolves hit after motion finishes.
+        game = new_game(seed=372)
+        set_open_floor(game)
+        arrow = rogue.Item(rogue.CAT_WPN, 3, qty=1)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=1, exp=0)
+        game.p.inv = [arrow]
+        game.mons = [monster]
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        game.throw(arrow, 1, 0)
+
+        self.assertTrue(monster.alive)
+        self.assertIn(monster, game.mons)
+
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
+
+        self.assertFalse(monster.alive)
+        self.assertNotIn(monster, game.mons)
 
     def test_rogue_544_throw_motion_finishes_before_monster_turn(self):
         # Rogue 5.4.4 command.c:t calls weapons.c:missile()/do_motion() before after-turn monsters.
@@ -3268,6 +3297,9 @@ class RogueBaselineTest(unittest.TestCase):
             game.throw(arrow, 1, 0)
         finally:
             rogue.random.randrange = old_randrange
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
         self.assertEqual(monster.hp, 8)
         self.assertIn(arrow, game.gitems)
 

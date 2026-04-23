@@ -32,7 +32,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_2049"
+UI_BUILD = "260423_2110"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2649,6 +2649,32 @@ class Game:
             return
         it.x,it.y=pos; self.gitems.append(it)
 
+    def resolve_throw_anim(self, anim):
+        outcome = anim.get("outcome")
+        if not outcome:
+            return
+        if outcome["kind"] == "floor":
+            self.drop_thrown(outcome["item"], outcome["x"], outcome["y"], around=outcome["around"])
+            return
+        if outcome["kind"] != "monster":
+            return
+        m = outcome["monster"]
+        thrown = outcome["item"]
+        tx, ty = outcome["x"], outcome["y"]
+        self.reveal_xeroc_for_attack(m, thrown=True)
+        hit, dmg = self.roll_player_attack(m, thrown, True)
+        mn = self.combat_monster_name(m)
+        item = self.ident.name(thrown)
+        if hit:
+            m.hp -= dmg
+            self.msg_text(self.thrown_hit_message(thrown, item, mn))
+            if not m.alive:
+                self.msg_text(self.defeated_message(mn))
+                self.award_monster_kill(m, mn)
+        else:
+            self.msg_text(self.thrown_miss_message(thrown, item, mn))
+            self.drop_thrown(thrown, tx, ty)
+
     def throw(self,it,dx,dy):
         # C: weapons.c:missile()
         p=self.p
@@ -2663,24 +2689,17 @@ class Game:
             m=self.mon_at(nx,ny)
             if m:
                 tx,ty=nx,ny; path.append((tx,ty))
-                self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
+                self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2,
+                                 "outcome":{"kind":"monster","monster":m,"item":thrown,"x":tx,"y":ty}}
                 self.runto(m)
-                self.reveal_xeroc_for_attack(m, thrown=True)
-                hit,dmg=self.roll_player_attack(m,thrown,True)
-                mn=self.combat_monster_name(m)
-                item=self.ident.name(thrown)
-                if hit:
-                    m.hp-=dmg; self.msg_text(self.thrown_hit_message(thrown,item,mn))
-                    if not m.alive:
-                        self.msg_text(self.defeated_message(mn)); self.award_monster_kill(m,mn)
-                else:
-                    self.msg_text(self.thrown_miss_message(thrown,item,mn))
-                    self.drop_thrown(thrown,tx,ty)
                 return True
             if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR: break
             tx,ty=nx,ny; path.append((tx,ty))
-        self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2}
-        self.drop_thrown(thrown,tx,ty,around=False)
+        self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2,
+                         "outcome":{"kind":"floor","item":thrown,"x":tx,"y":ty,"around":False}}
+        if not path:
+            self.resolve_throw_anim(self.throw_anim)
+            self.throw_anim = None
         return bool(path)
 
     # ---------- Movement & turns ----------
@@ -3480,7 +3499,9 @@ class Game:
         if self.throw_anim:
             self.throw_anim["tick"] += 1
             if self.throw_anim["tick"] >= len(self.throw_anim["path"]) * self.throw_anim["delay"]:
+                anim = self.throw_anim
                 self.throw_anim = None
+                self.resolve_throw_anim(anim)
                 if self.turn_after_throw_anim:
                     self.turn_after_throw_anim = False
                     self.end_turn()
