@@ -214,7 +214,7 @@ MONSTER_MISS_MESSAGE_KEYS = (
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
 ST_DEAD = 4; ST_INVENTORY = 5; ST_HELP = 6
 ST_AUX = 7; ST_WIN = 8; ST_LOADING = 9
-ST_QUIT = 10; ST_QUIT_CONFIRM = 11
+ST_QUIT = 10; ST_QUIT_CONFIRM = 11; ST_SCORE = 12
 
 # ===========================================================
 #  Item categories
@@ -3545,12 +3545,15 @@ class Game:
                     self.end_turn()
             return
         if self.st==ST_DEAD:
-            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
             return
         if self.st==ST_WIN:
-            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
             return
         if self.st==ST_QUIT:
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
+            return
+        if self.st==ST_SCORE:
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
         if self.st==ST_QUIT_CONFIRM:
@@ -3734,6 +3737,7 @@ class Game:
         elif self.st==ST_WIN: self.draw_win()
         elif self.st==ST_QUIT: self.draw_quit()
         elif self.st==ST_QUIT_CONFIRM: self.draw_quit_confirm()
+        elif self.st==ST_SCORE: self.draw_score_screen()
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)
@@ -3980,6 +3984,23 @@ class Game:
         if not scores:
             self.txt(bx + 6, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
 
+    def draw_score_screen(self):
+        bx,by=118,34; bw=340; bh=220
+        self._box(bx, by, bw, bh, TextCatalog.msg(self.lang, "ui.top_10"))
+        scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
+        y = by + 20
+        for i, entry in enumerate(scores[:10], start=1):
+            score = int(entry.get("score", 0))
+            name = str(entry.get("player_name", "rogue"))[:12]
+            flags = str(entry.get("result_flags", ""))
+            level = int(entry.get("level", 0))
+            suffix = f"{flags} L{level}"
+            self.txt(bx + 12, y, f"{i:>2} {score:>5} {name:<12} {suffix[:12]}", 10 if i == 1 else 9)
+            y += 16
+        if not scores:
+            self.txt(bx + 12, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
+        self.txt(bx + 12, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_new_game"), 10)
+
     def draw_dead(self):
         if not self.options.get("tombstone", True):
             bx,by=105,42; bw=270; bh=190
@@ -3993,9 +4014,8 @@ class Game:
             next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
             self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
             self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
-            self.txt(x,y,"A / Start  New game",10); y+=14
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10); y+=14
             self.txt(x,y,"B          Stay here",5)
-            self.draw_top_scores()
             return
         bx,by=88,30; bw=320; bh=232
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
@@ -4026,9 +4046,8 @@ class Game:
         next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
         self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=18
-        self.txt(x,y,"A / Start  New game",10); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10); y+=14
         self.txt(x,y,"B          Stay here",5)
-        self.draw_top_scores()
 
     def draw_win(self):
         bx,by=82,50; bw=334; bh=176
@@ -4040,8 +4059,7 @@ class Game:
         self.txt(x,y,f"Level: {p.level}",7); y+=14
         self.txt(x,y,f"Exp:   {p.exp}",7); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=28
-        self.txt(x,y,"A / Start  New game",10)
-        self.draw_top_scores(bx=414, by=50)
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10)
 
     def draw_quit_confirm(self):
         bx,by=176,132; bw=224; bh=56
@@ -4057,8 +4075,7 @@ class Game:
         self.txt(x,y,f"Depth: {p.depth}",7); y+=14
         self.txt(x,y,f"Level: {p.level}",7); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=26
-        self.txt(x,y,"A / Start  New game",10)
-        self.draw_top_scores(bx=414, by=60)
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10)
 
 # ===========================================================
 if __name__=="__main__":

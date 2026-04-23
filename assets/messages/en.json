@@ -332,6 +332,8 @@
   "pyxel.wield_item": "You wield the {item}.",
   "pyxel.wrenching_sensation_gut": "You feel a wrenching sensation in your gut.",
   "ui.no_scores_yet": "No scores yet.",
+  "ui.press_confirm_new_game": "A / Start  New game",
+  "ui.press_confirm_scores": "A / Start  Top 10",
   "ui.quit_confirm_hint": "A/Start: quit  B/Esc: cancel",
   "ui.top_10": "Top 10",
   "ui.you_quit_with_gold": "You quit with {gold} gold pieces.",

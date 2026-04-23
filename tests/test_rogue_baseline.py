@@ -3095,6 +3095,27 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_PLAY)
 
+    def test_result_screens_advance_to_score_screen_before_new_game(self):
+        for state in (rogue.ST_DEAD, rogue.ST_WIN, rogue.ST_QUIT):
+            game = new_game(seed=35)
+            game.st = state
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+
+            self.assertEqual(game.st, rogue.ST_SCORE, state)
+
+    def test_score_screen_starts_new_game_on_confirm(self):
+        game = new_game(seed=35)
+        game.st = rogue.ST_SCORE
+        game.turn = 12
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+
     def test_dpad_cardinal_waits_one_frame_so_second_axis_makes_one_diagonal_turn(self):
         game = new_game(seed=36)
         set_open_floor(game)
