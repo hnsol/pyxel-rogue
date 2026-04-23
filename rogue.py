@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_1928"
+UI_BUILD = "260423_1939"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2227,7 +2227,7 @@ class Game:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=RNG.randint(10,20)
             self.msg("pyxel.maniacal_laughter_echoes")
         elif nm=="sleep":
-            p.no_command=max(p.no_command,RNG.randint(4,8)); self.dashing=False; self.msg("pyxel.fall_asleep")
+            p.no_command+=rnd(SLEEPTIME)+4; self.dashing=False; self.msg("pyxel.fall_asleep")
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()

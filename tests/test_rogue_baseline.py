@@ -1005,6 +1005,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreater(game.p.no_command, 0)
         self.assertFalse(game.dashing)
 
+    def test_rogue_544_sleep_scroll_adds_to_existing_no_command(self):
+        # Rogue 5.4.4 scrolls.c:S_SLEEP uses no_command += rnd(SLEEPTIME) + 4.
+        game = new_game(seed=328)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "sleep")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        game.p.no_command = 10
+        old_rng = rogue.RNG
+        class SleepRng:
+            def rnd(self, n):
+                return 2
+
+            def randint(self, a, b):
+                return 6
+        rogue.RNG = SleepRng()
+        try:
+            game.use_scr(scroll)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(game.p.no_command, 16)
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)
