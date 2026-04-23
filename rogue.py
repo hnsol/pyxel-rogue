@@ -1544,8 +1544,10 @@ class Game:
         self.msg("command.you_cant_you_re_floating_off_the_ground")
         return True
     def walkable(self,x,y):
+        # C: move.c:turn_ok()
         return in_play_area(x,y) and self.tm[y][x] in WALKABLE
     def diag_ok(self,sx,sy,ex,ey):
+        # C: chase.c:diag_ok()
         if not in_play_area(ex,ey):
             return False
         if sx==ex or sy==ey:
@@ -1561,6 +1563,7 @@ class Game:
             if r.x<x<r.x+r.w-1 and r.y<y<r.y+r.h-1: return r
         return None
     def room_containing(self,x,y):
+        # C: chase.c:roomin()
         for r in self.rooms:
             if r.x<=x<r.x+r.w and r.y<=y<r.y+r.h: return r
         return None
@@ -1590,6 +1593,7 @@ class Game:
                     exits.append((x,y))
         return list(dict.fromkeys(exits))
     def dist2(self,a,b):
+        # C: chase.c:dist()
         return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])
     def same_ai_room(self,a,b):
         return a is not None and a==b
@@ -1687,6 +1691,7 @@ class Game:
 
     # ---------- Combat ----------
     def swing_hits(self, at_lvl, op_arm, wplus):
+        # C: fight.c:swing()
         need = (20 - at_lvl) - op_arm
         return RNG.randrange(20) + wplus >= need
 
@@ -1711,6 +1716,7 @@ class Game:
         return damage, hplus, dplus
 
     def roll_player_attack(self, m, weap=None, thrown=False):
+        # C: fight.c:roll_em()
         damage_expr, hplus, dplus = self.player_weapon_profile(weap, thrown)
         if not m.running:
             hplus += 4
@@ -1724,6 +1730,7 @@ class Game:
         return True, total
 
     def award_monster_kill(self, m, translated_name=None):
+        # C: fight.c:killed()
         mn = translated_name or TextCatalog.monster(self.lang,m.name)
         self.p.exp+=m.exp
         if self.p.held_by is m:
@@ -1734,6 +1741,7 @@ class Game:
         return mn
 
     def p_attack(self, m):
+        # C: fight.c:fight()
         self.runto(m)
         if self.reveal_xeroc_for_attack(m, thrown=False):
             return
@@ -1770,6 +1778,7 @@ class Game:
         return None
 
     def remove_monster(self,m,was_kill=False):
+        # C: fight.c:remove_mon()
         if was_kill:
             for item in list(getattr(m, "pack", [])):
                 pos=(m.x,m.y) if self.walkable(m.x,m.y) and not self.gi_at(m.x,m.y) else self.fall_position(m.x,m.y)
@@ -1783,6 +1792,7 @@ class Game:
             self.mons.remove(m)
 
     def runto(self,m,dest=DEST_PLAYER):
+        # C: chase.c:runto()
         m.running=True; m.held=0; m.dest=dest
 
     def aggravate_monsters(self):
@@ -1827,6 +1837,7 @@ class Game:
         return RNG.roll(1,20) >= 14 + which - m.level//2
 
     def m_attack(self,m):
+        # C: fight.c:attack()
         mn=self.combat_monster_name(m,upper=True)
         if self.swing_hits(m.level, self.p.ac, 0):
             dmg=roll_damage_expr(m.damage_expr)
@@ -1873,6 +1884,7 @@ class Game:
         else: self.msg_text(self.monster_miss_message(mn))
 
     def m_turn(self,m):
+        # C: chase.c (monster turn loop)
         if not m.alive: return
         if not m.running: return
         self.move_monst(m)
@@ -1880,6 +1892,7 @@ class Game:
             self.move_monst(m)
 
     def move_monst(self,m):
+        # C: chase.c:move_monst()
         if m.held>0: m.held-=1; return
         for _ in range(rogue_monsters.chase_steps_for_turn(m)):
             if self.do_chase(m)==-1:
@@ -1887,6 +1900,7 @@ class Game:
         rogue_monsters.finish_chase_turn(m)
 
     def do_chase(self,m):
+        # C: chase.c:do_chase()
         dest=self.find_dest(m)
         rer=self.room_for_ai(m.x,m.y,actor=True)
         ree=self.room_for_ai(dest[0],dest[1],actor=False)
@@ -1913,6 +1927,7 @@ class Game:
         return min(gold,key=lambda p:self.dist2((m.x,m.y),p))
 
     def find_dest(self,m):
+        # C: chase.c:find_dest()
         if "steal_gold" in m.flags and m.dest==DEST_GOLD:
             target=self.room_gold_target(m)
             if target:
@@ -1927,6 +1942,7 @@ class Game:
             m.dest=DEST_PLAYER
 
     def random_monster_move(self,m):
+        # C: chase.c:rndmove()
         dirs=list(DIR8.values())+[(0,0)]
         RNG.shuffle(dirs)
         for dx,dy in dirs:
@@ -1946,6 +1962,7 @@ class Game:
         return not (gi and self.is_scare_monster(gi))
 
     def chase(self,m,dest):
+        # C: chase.c:chase()
         px,py=self.p.x,self.p.y
         if m.scared>0:
             m.scared-=1
@@ -2354,6 +2371,7 @@ class Game:
         return RNG.choice(cands) if cands else None
 
     def relocate_monster(self,m,pos):
+        # C: chase.c:relocate()
         if pos and self.walkable(pos[0],pos[1]) and not self.mon_at(pos[0],pos[1]):
             m.x,m.y=pos
 
@@ -2632,6 +2650,7 @@ class Game:
 
     # ---------- Movement & turns ----------
     def try_move(self, dx, dy):
+        # C: move.c:do_move()
         p = self.p
         if p.held_by and not p.held_by.alive:
             p.held_by=None
@@ -2670,6 +2689,7 @@ class Game:
         return False
 
     def do_search(self, front_only=False, spend_turn=True, quiet_fail=False):
+        # C: command.c:search()
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
@@ -2713,6 +2733,7 @@ class Game:
         self.gitems.append(arrow)
 
     def teleport_player(self):
+        # C: scrolls.c (teleportation)
         cands=[
             (x,y)
             for y,row in enumerate(self.tm)
@@ -2724,6 +2745,7 @@ class Game:
             self.update_fov(); self._center_cam()
 
     def trigger_trap(self,x,y):
+        # C: move.c:be_trapped()
         self.reveal_trap_at(x,y)
         kind=self.traps.get((x,y),0)
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
@@ -2766,6 +2788,7 @@ class Game:
             self.mysterious_trap_msg()
 
     def rust_armor(self):
+        # C: move.c:rust_armor()
         arm=self.p.arm
         if not arm or arm.data["name"]=="leather armor":
             return
