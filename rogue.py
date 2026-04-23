@@ -16,6 +16,7 @@ Gamepad:                        Keyboard:
                                 ?              Help
 """
 
+from __future__ import annotations
 import pyxel
 import json
 import random
@@ -410,10 +411,10 @@ class TextCatalog:
 # ===========================================================
 #  Dice
 # ===========================================================
-def roll(s):
+def roll(s: str) -> int:
     n, d = s.split("d"); return RNG.roll(int(n), int(d))
 
-def roll_damage_expr(expr):
+def roll_damage_expr(expr: str) -> int:
     total = 0
     for part in expr.split("/"):
         sep = "x" if "x" in part else "d"
@@ -421,13 +422,13 @@ def roll_damage_expr(expr):
         total += RNG.roll(int(n), int(d))
     return total
 
-def rnd(n):
+def rnd(n: int) -> int:
     return RNG.rnd(n)
 
-def in_map(x,y):
+def in_map(x: int, y: int) -> bool:
     return 0 <= x < MAP_W and 0 <= y < MAP_H
 
-def in_play_area(x,y):
+def in_play_area(x: int, y: int) -> bool:
     return 0 <= x < MAP_W and PLAY_Y_MIN <= y <= PLAY_Y_MAX
 
 # ===========================================================
@@ -638,7 +639,7 @@ class Monster:
     @property
     def alive(s): return s.hp>0
 
-def monster_hp(spec):
+def monster_hp(spec: object) -> int:
     return max(1, roll_damage_expr(f"{spec.level}x8"))
 
 class Player:
