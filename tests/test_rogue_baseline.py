@@ -968,6 +968,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertEqual([(mo.x, mo.y) for mo in game.mons], [(game.p.x - 1, game.p.y - 1)])
 
+    def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
+        # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
+        cases = [
+            ("monster confusion", lambda g: None),
+            ("scare monster", lambda g: g.mons.append(monster_at(g.p.x + 1, g.p.y))),
+            ("remove curse", lambda g: setattr(g.p.wpn, "cursed", True)),
+            ("aggravate monsters", lambda g: g.mons.append(monster_at(g.p.x + 1, g.p.y))),
+        ]
+        for name, setup in cases:
+            with self.subTest(name=name):
+                game = new_game(seed=326)
+                set_open_floor(game)
+                kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == name)
+                scroll = rogue.Item(rogue.CAT_SCR, kind)
+                game.p.inv.append(scroll)
+                setup(game)
+
+                game.use_scr(scroll)
+
+                self.assertFalse(game.ident.sk[kind])
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)
