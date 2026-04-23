@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_1939"
+UI_BUILD = "260423_2000"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -822,6 +822,7 @@ class DGen:
 
     @staticmethod
     def gen(depth):
+        # C: new_level.c:new_level()
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
         gone=set()
         for _ in range(rnd(4)):
@@ -1343,6 +1344,7 @@ class Game:
         self.cam_y = max(min_y, min(self.p.y - ZV_ROWS//2, max_y))
 
     def _spawn_mons(self):
+        # C: new_level.c:put_things()
         d=self.p.depth; n=RNG.randint(3,4+d)
         cands=[b for b in BESTIARY if b.min_depth<=d]
         if not cands: cands=[b for b in BESTIARY if b.min_depth<=3]
@@ -1359,6 +1361,7 @@ class Game:
                     break
 
     def spawn_wanderer(self):
+        # C: monsters.c:wanderer()
         cands=self.wanderer_floor_candidates()
         if not cands:
             return False
@@ -1373,6 +1376,7 @@ class Game:
         return RNG.choice([b for b in BESTIARY if b.min_depth<=depth] or BESTIARY)
 
     def new_monster_from_spec(self,x,y,spec,depth=None):
+        # C: monsters.c:new_monster()
         monster=Monster(
             x, y, spec.sym, spec.name, monster_hp(spec),
             spec.level, spec.armor, spec.damage, spec.exp, spec.flags
@@ -1384,6 +1388,7 @@ class Game:
         m.disguise = rogue_monsters.initial_disguise(m.sym, lambda: self.random_thing_sym(depth))
 
     def give_pack(self,m,depth=None):
+        # C: monsters.c:give_pack()
         spec=self.monster_spec_for_sym(m.sym)
         depth = self.p.depth if depth is None else depth
         if not spec or depth < getattr(self, "max_depth", self.p.depth):
@@ -1404,6 +1409,7 @@ class Game:
         ]
 
     def _spawn_items(self):
+        # C: new_level.c:put_things()
         d=self.p.depth
         rooms=self.usable_rooms()
         if rogue_dungeon.should_place_treasure_room(RNG):
@@ -1796,11 +1802,13 @@ class Game:
         m.running=True; m.held=0; m.dest=dest
 
     def aggravate_monsters(self):
+        # C: misc.c:aggravate()
         for mo in self.mons:
             mo.held=mo.scared=0
             self.runto(mo)
 
     def wake_monster(self,m):
+        # C: monsters.c:wake_monster()
         if not m.alive:
             return
         if (not m.running and m.mean and m.held<=0 and rnd(3)!=0
@@ -1822,6 +1830,7 @@ class Game:
                 self.wake_monster(mo)
 
     def can_see_monster(self, m):
+        # C: misc.c:cansee()
         return (rogue_monsters.FLAG_INVISIBLE not in m.flags
                 or self.p.see_invisible > 0
                 or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS))
@@ -2006,6 +2015,7 @@ class Game:
 
     # ---------- Item effects ----------
     def use_pot(self,it):
+        # C: potions.c:quaff()
         p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
             self.ident.pk[it.kind]=True
@@ -2122,23 +2132,28 @@ class Game:
         return True
 
     def nohaste(self):
+        # C: daemons.c:nohaste()
         self.p.haste = 0
         self.haste_half_turn = False
         self.msg("daemons.you_feel_yourself_slowing_down")
 
     def come_down(self):
+        # C: daemons.c:come_down()
         self.p.hallucinating = 0
         self.msg("daemons.everything_looks_so_boring_now")
 
     def land(self):
+        # C: daemons.c:land()
         self.p.levitating = 0
         self.msg("daemons.you_float_gently_to_the_ground")
 
     def unconfuse(self):
+        # C: daemons.c:unconfuse()
         self.p.confused = 0
         self.msg("daemons.you_feel_less_value_now", value="trippy" if self.p.hallucinating > 0 else "confused")
 
     def sight(self):
+        # C: daemons.c:sight()
         self.p.blind = 0
         self.update_fov()
         self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")
@@ -2204,6 +2219,7 @@ class Game:
         return ()
 
     def use_scr(self,it):
+        # C: scrolls.c:read_scroll()
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             p.can_confuse_monster=True
@@ -2353,6 +2369,7 @@ class Game:
             self.runto(m)
 
     def polymorph_monster(self,m):
+        # C: sticks.c (WS_POLYMORPH)
         spec=self.monster_spec_for_sym(chr(RNG.rnd(26)+ord("A")))
         if spec:
             self.set_monster_from_spec(m,spec)
@@ -2376,6 +2393,7 @@ class Game:
             m.x,m.y=pos
 
     def cancel_monster(self,m):
+        # C: sticks.c (WS_CANCEL)
         m.flags.add(rogue_monsters.FLAG_CANCELLED)
         m.flags.discard(rogue_monsters.FLAG_INVISIBLE)
         m.flags.discard(rogue_monsters.FLAG_CAN_CONFUSE)
@@ -2479,6 +2497,7 @@ class Game:
         return False
 
     def zap_stick(self,it,dx,dy):
+        # C: sticks.c:do_zap()
         if it.cat != CAT_STICK:
             self.msg("sticks.you_cant_zap_with_that")
             return False
@@ -2539,15 +2558,18 @@ class Game:
         return True
 
     def eat(self,it):
+        # C: misc.c:eat()
         self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+RNG.randrange(400))
         self.p.state="normal"
         self.msg("pyxel.eat_item_yum", item=it.data["name"]); self.p.rm_item(it)
 
     def wield(self,it):
+        # C: weapons.c:wield()
         if self.p.wpn and self.p.wpn.cursed: self.msg("pyxel.cant_let_go"); return
         self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
 
     def wear(self,it):
+        # C: armor.c:wear()
         if self.p.arm:
             msg = (
                 TextCatalog.msg(self.lang, "armor.you_are_already_wearing_some")
@@ -2559,6 +2581,7 @@ class Game:
         self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
 
     def put_on_ring(self,it):
+        # C: rings.c:ring_on()
         if self.p.ring_l is not None and self.p.ring_r is not None:
             self.msg("pyxel.already_ring_each_hand")
             return
@@ -2572,6 +2595,7 @@ class Game:
             self.msg("pyxel.now_wearing_item", item=self.ident.name(it))
 
     def takeoff(self,it):
+        # C: armor.c:take_off()
         if it is self.p.arm:
             if it.cursed: self.msg("pyxel.its_cursed"); return
             self.p.arm=None; self.p.recalc_ac()
@@ -2586,6 +2610,7 @@ class Game:
         self.msg("pyxel.remove_item", item=self.ident.name(it))
 
     def drop(self,it):
+        # C: things.c:drop()
         if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
             self.msg("pyxel.its_cursed"); return
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
@@ -2608,6 +2633,7 @@ class Game:
         return choice
 
     def drop_thrown(self,it,x,y,around=True):
+        # C: weapons.c:fall()
         pos=self.fall_position(x,y) if around else None
         pos=pos or ((x,y) if self.walkable(x,y) and not self.gi_at(x,y) else None)
         if not pos:
@@ -2616,6 +2642,7 @@ class Game:
         it.x,it.y=pos; self.gitems.append(it)
 
     def throw(self,it,dx,dy):
+        # C: weapons.c:missile()
         p=self.p
         if it is p.wpn and it.cursed: self.msg("pyxel.cant_let_go_short"); return False
         if it.stackable and it.qty>1:
@@ -2864,6 +2891,7 @@ class Game:
         self.end_turn()
 
     def pickup_at(self,x,y):
+        # C: pack.c:pick_up()
         p=self.p
         gi=self.gi_at(x,y)
         if not gi:
