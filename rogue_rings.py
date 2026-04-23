@@ -101,14 +101,17 @@ def init_stones(rng):
 
 
 def is_ring(item, kind):
+    """Return True if item is a ring of the given kind constant."""
     return item is not None and getattr(item, "kind", None) == kind
 
 
 def is_wearing(player, kind):
+    """Return True if player is wearing a ring of the given kind in either hand."""
     return is_ring(player.ring_l, kind) or is_ring(player.ring_r, kind)
 
 
 def wearing_hands(player, kind):
+    """Yield LEFT and/or RIGHT for each hand wearing a ring of the given kind."""
     if is_ring(player.ring_l, kind):
         yield LEFT
     if is_ring(player.ring_r, kind):
@@ -116,6 +119,7 @@ def wearing_hands(player, kind):
 
 
 def ring_num(item):
+    """Return the enchantment suffix string for bonus rings (e.g. ' [+2]')."""
     kind = getattr(item, "kind", None)
     if kind not in _BONUS_RINGS:
         return ""
@@ -136,10 +140,12 @@ def ring_eat(ring, rng):
 
 
 def equipped_ring(player, hand):
+    """Return the ring equipped in the given hand slot (LEFT or RIGHT)."""
     return player.ring_l if hand == LEFT else player.ring_r
 
 
 def ring_slot_for(player, ring):
+    """Return LEFT, RIGHT, or None depending on which hand holds the ring."""
     if player.ring_l is ring:
         return LEFT
     if player.ring_r is ring:
@@ -148,6 +154,7 @@ def ring_slot_for(player, ring):
 
 
 def put_on_ring(player, ring, hand=None):
+    """Rogue 5.4.4 rings.c:ring_on() — equip ring into hand slot."""
     if ring_slot_for(player, ring) is not None:
         return False
     if hand is None:
@@ -170,6 +177,7 @@ def put_on_ring(player, ring, hand=None):
 
 
 def remove_ring(player, ring):
+    """Rogue 5.4.4 rings.c:ring_off() — remove ring; refuses if cursed."""
     hand = ring_slot_for(player, ring)
     if hand is None or getattr(ring, "cursed", False):
         return False
@@ -182,18 +190,21 @@ def remove_ring(player, ring):
 
 
 def _apply_on_effect(player, ring):
+    """Apply stat side-effects when a ring is equipped (rings.c:ring_on)."""
     if ring.kind == R_ADDSTR:
         player.st += ring.ench
         player.max_st += ring.ench
 
 
 def _remove_on_effect(player, ring):
+    """Reverse stat side-effects when a ring is removed (rings.c:ring_off)."""
     if ring.kind == R_ADDSTR:
         player.st -= ring.ench
         player.max_st -= ring.ench
 
 
 def protection_bonus(player):
+    """Sum R_PROTECT enchantments from both equipped rings."""
     total = 0
     for ring in (player.ring_l, player.ring_r):
         if is_ring(ring, R_PROTECT):
@@ -202,6 +213,7 @@ def protection_bonus(player):
 
 
 def weapon_hit_bonus(player, weapon, thrown=False):
+    """Return R_ADDHIT bonus for wielded (non-thrown) weapon."""
     if thrown or weapon is not player.wpn:
         return 0
     total = 0
@@ -212,6 +224,7 @@ def weapon_hit_bonus(player, weapon, thrown=False):
 
 
 def weapon_damage_bonus(player, weapon, thrown=False):
+    """Return R_ADDDAM bonus for wielded (non-thrown) weapon."""
     if thrown or weapon is not player.wpn:
         return 0
     total = 0
@@ -222,4 +235,5 @@ def weapon_damage_bonus(player, weapon, thrown=False):
 
 
 def regeneration_count(player):
+    """Return number of R_REGEN rings equipped (0, 1 or 2)."""
     return int(is_ring(player.ring_l, R_REGEN)) + int(is_ring(player.ring_r, R_REGEN))
