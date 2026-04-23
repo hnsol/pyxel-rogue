@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_1831"
+UI_BUILD = "260423_1846"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2187,7 +2187,7 @@ class Game:
         return ()
 
     def use_scr(self,it):
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster","enchant weapon","enchant armor")
+        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster","teleportation","enchant weapon","enchant armor")
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
@@ -2229,7 +2229,10 @@ class Game:
         elif nm=="sleep":
             p.no_command=max(p.no_command,RNG.randint(4,8)); self.msg("pyxel.fall_asleep")
         elif nm=="teleportation":
+            old_room = self.room_at(p.x, p.y)
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
+            if old_room is not self.room_at(p.x, p.y):
+                self.ident.sk[it.kind]=True
             self.msg("pyxel.teleported")
         elif nm=="create monster":
             for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):

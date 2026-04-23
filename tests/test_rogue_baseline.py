@@ -917,6 +917,39 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(armor.cursed)
         self.assertEqual(armor.ench, 1)
 
+    def test_rogue_544_teleport_scroll_identifies_only_when_room_changes(self):
+        # Rogue 5.4.4 scrolls.c:S_TELEP sets scr_info[S_TELEP].oi_know only if cur_room != proom.
+        game = new_game(seed=324)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room_a = rogue.Room(1, 1, 8, 6)
+        room_b = rogue.Room(20, 1, 8, 6)
+        game.rooms = [room_a, room_b]
+        for room in game.rooms:
+            for y in range(room.y + 1, room.y + room.h - 1):
+                for x in range(room.x + 1, room.x + room.w - 1):
+                    game.tm[y][x] = rogue.T_FLOOR
+        game.p.x, game.p.y = room_a.inner()
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "teleportation")
+        same_room_scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(same_room_scroll)
+        game.usable_rooms = lambda: [room_a]
+        game.random_room_tile = lambda room, tiles: room.inner()
+
+        game.use_scr(same_room_scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertIs(game.room_at(game.p.x, game.p.y), room_a)
+
+        other_room_scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(other_room_scroll)
+        game.p.x, game.p.y = room_a.inner()
+        game.usable_rooms = lambda: [room_b]
+
+        game.use_scr(other_room_scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertIs(game.room_at(game.p.x, game.p.y), room_b)
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)
