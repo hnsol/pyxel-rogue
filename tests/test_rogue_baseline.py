@@ -1027,6 +1027,30 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.no_command, 16)
 
+    def test_rogue_544_magic_mapping_reveals_hidden_features_and_traps(self):
+        # Rogue 5.4.4 scrolls.c:S_MAP turns hidden DOOR/PASSAGE/TRAP into real mapped terrain.
+        game = new_game(seed=329)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.hidden_tiles[(px + 1, py)] = rogue.T_DOOR
+        game.tm[py][px + 1] = rogue.T_VWALL
+        game.hidden_tiles[(px, py + 1)] = rogue.T_CORR
+        game.tm[py + 1][px] = rogue.T_VOID
+        game.traps[(px - 1, py)] = 1
+        game.tm[py][px - 1] = rogue.T_FLOOR
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "magic mapping")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertEqual(game.tm[py][px + 1], rogue.T_DOOR)
+        self.assertEqual(game.tm[py + 1][px], rogue.T_CORR)
+        self.assertEqual(game.tm[py][px - 1], rogue.T_TRAP)
+        self.assertNotIn((px + 1, py), game.hidden_tiles)
+        self.assertIn((px + 1, py), game.explored)
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)

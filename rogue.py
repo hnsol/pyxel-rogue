@@ -32,7 +32,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_2010"
+UI_BUILD = "260423_2016"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2292,6 +2292,13 @@ class Game:
             else:
                 self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":
+            for (x,y),tile in list(self.hidden_tiles.items()):
+                self.tm[y][x]=tile
+                self.explored.add((x,y))
+                self.hidden_tiles.pop((x,y),None)
+            for x,y in self.traps:
+                self.tm[y][x]=T_TRAP
+                self.explored.add((x,y))
             for y in range(MAP_H):
                 for x in range(MAP_W):
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
