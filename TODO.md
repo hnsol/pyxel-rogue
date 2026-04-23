@@ -86,7 +86,7 @@
   - [ ] `IdentTable` を種類単位 `oi_know` / `oi_guess` 相当と個体 `ISKNOW` 相当に分ける
   - [ ] `things.c:inv_name()/nameit()` 準拠で、未鑑定・仮名・正式鑑定・個体詳細の表示を分ける
   - [ ] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける（`P_SEEINVIS` / `P_MFIND` / `P_TFIND` など一部対応済み）
-  - [ ] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll と `call_it()` 相当を分ける（`S_FDET` / `S_PROTECT` / `S_HOLD` / `S_ENCH` など一部対応済み）
+  - [ ] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll と `call_it()` 相当を分ける（`S_FDET` / `S_PROTECT` / `S_HOLD` / `S_ARMOR` / `S_ENCH` など一部対応済み）
   - [ ] `wizard.c:whatis()/set_know()` 準拠の対象選択式 identify を実装する
   - [ ] `command.c:call()` 相当の命名機能を追加する（potion/scroll/ring/stick は種類仮名 `oi_guess`、weapon/armor は個体ラベル `o_label`。未実装）
   - [ ] `things.c:print_disc()` 相当の discovered list / 思い出し機能を追加する（`oi_know` / `oi_guess` の一覧。未実装）
