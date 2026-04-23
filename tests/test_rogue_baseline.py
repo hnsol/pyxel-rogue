@@ -4106,6 +4106,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.no_command, 7 + rogue.SLEEPTIME)
         self.assertFalse(game.dashing)
 
+    def test_rogue_544_bear_trap_adds_bear_time(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_BEAR uses no_move += BEARTIME.
+        game = new_game(seed=62)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        game.traps[(x, y)] = kind
+        game.p.no_move = 4
+
+        game.trigger_trap(x, y)
+
+        self.assertEqual(game.p.no_move, 4 + rogue.BEARTIME)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4
