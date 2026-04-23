@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_0853"
+UI_BUILD = "260423_1612"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -232,7 +232,7 @@ POT_JA = {
     "restore strength":"強さが元にもどる", "confusion":"頭が混乱する",
     "blindness":"目が見えなくなる", "haste self":"素早くなる",
     "see invisible":"見えないものが見える", "raise level":"経験が増す",
-    "detect monster":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
+    "monster detection":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
     "hallucination":"幻覚の", "levitation":"空中浮遊",
 }
 SCR_JA = {
@@ -434,13 +434,13 @@ def in_play_area(x,y):
 #  Item data  (Rogue 5.4.4)
 # ===========================================================
 POTIONS = [
-    {"name":"healing","prob":13},{"name":"extra healing","prob":5},
+    {"name":"confusion","prob":7},{"name":"hallucination","prob":8},
     {"name":"poison","prob":8},{"name":"gain strength","prob":13},
-    {"name":"restore strength","prob":13},{"name":"confusion","prob":7},
-    {"name":"hallucination","prob":8},
-    {"name":"blindness","prob":5},{"name":"haste self","prob":5},
-    {"name":"see invisible","prob":3},{"name":"raise level","prob":2},
-    {"name":"detect monster","prob":6},{"name":"magic detection","prob":6},
+    {"name":"see invisible","prob":3},{"name":"healing","prob":13},
+    {"name":"monster detection","prob":6},{"name":"magic detection","prob":6},
+    {"name":"raise level","prob":2},{"name":"extra healing","prob":5},
+    {"name":"haste self","prob":5},{"name":"restore strength","prob":13},
+    {"name":"blindness","prob":5},
     {"name":"levitation","prob":6},
 ]
 POT_COLORS = ["blue","red","green","grey","brown","clear",
@@ -2055,7 +2055,7 @@ class Game:
             self.ident.pk[it.kind]=True
             p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
             self.msg("pyxel.rise_to_level", level=p.level)
-        elif nm=="detect monster":
+        elif nm=="monster detection":
             if p.see_monsters > 0:
                 self.fuses.lengthen("turn_see", HUHDURATION)
                 p.see_monsters += HUHDURATION

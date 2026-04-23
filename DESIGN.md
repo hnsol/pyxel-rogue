@@ -173,7 +173,7 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 UI差分として、原作の `gethand()` による左右手プロンプトは、携帯機向けメニュー操作では最初の空きスロットへ装備し、解除時は装備中アイテムを選ぶ方式にしている。左右どちらに装備されているかはインベントリ表示の `(on left hand)` / `(on right hand)` で確認できる。今後、左右指定が攻略上必要になる場面が出た場合は、ゲーム状態の差分を出さずに方向入力で手を選ぶUIへ拡張する。
 
-see invisible potion は Rogue 5.4.4 `potions.c:P_SEEINVIS` / `do_pot()`, `misc.c:spread()`, `rogue.h:CANSEE/SEEDURATION`, `daemons.c:unsee()` に合わせ、`spread(SEEDURATION)` の間だけ invisible monster の表示条件へ反映する。`P_SEEINVIS` 末尾の `sight()` 相当により blind も解除する。hallucination 中の invisible monster は `misc.c:look()` 相当により正体ではなくランダムな A-Z として表示する。detect monster potion は `potions.c:P_MFIND` の `SEEMONST` / `turn_see()` 相当として、現在フロアのモンスターを一時表示し、`HUHDURATION` 後の `turn_see(TRUE)` fuse で解除する。
+see invisible potion は Rogue 5.4.4 `potions.c:P_SEEINVIS` / `do_pot()`, `misc.c:spread()`, `rogue.h:CANSEE/SEEDURATION`, `daemons.c:unsee()` に合わせ、`spread(SEEDURATION)` の間だけ invisible monster の表示条件へ反映する。`P_SEEINVIS` 末尾の `sight()` 相当により blind も解除する。hallucination 中の invisible monster は `misc.c:look()` 相当により正体ではなくランダムな A-Z として表示する。monster detection potion は `potions.c:P_MFIND` の `SEEMONST` / `turn_see()` 相当として、現在フロアのモンスターを一時表示し、`HUHDURATION` 後の `turn_see(TRUE)` fuse で解除する。
 
 Xeroc は Rogue 5.4.4 `monsters.c:new_monster()` の `t_disguise = rnd_thing()`、`misc.c:look()` の `t_disguise` 表示、`fight.c:attack()` の近接正体露出、`sticks.c:do_zap()` の `WS_CANCEL` による `t_disguise = t_type` を基準にする。Pyxel 版では `Monster.disguise` を `t_disguise` 相当として持ち、通常表示では擬態文字を描き、hallucination 中は既存 `rnd(26)+'A'` 表示を優先する。近接攻撃で未露出の Xeroc に触れた場合は正体を表示して攻撃をそこで止める。投擲時は正体露出後に攻撃判定を続ける。
 

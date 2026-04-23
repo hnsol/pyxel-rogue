@@ -120,7 +120,7 @@
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
-  - [x] `detect monster` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）

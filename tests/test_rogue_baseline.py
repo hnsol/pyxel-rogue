@@ -663,6 +663,17 @@ class RogueBaselineTest(unittest.TestCase):
         stick.known = True
         self.assertEqual(ident.name(stick), "wand of light [12 charges](copper)")
 
+    def test_rogue_544_potion_table_order_and_probabilities(self):
+        # Rogue 5.4.4 rogue.h:P_* / MAXPOTIONS and extern.c:pot_info[].
+        self.assertEqual([p["name"] for p in rogue.POTIONS], [
+            "confusion", "hallucination", "poison", "gain strength",
+            "see invisible", "healing", "monster detection", "magic detection",
+            "raise level", "extra healing", "haste self", "restore strength",
+            "blindness", "levitation",
+        ])
+        self.assertEqual([p["prob"] for p in rogue.POTIONS],
+                         [7, 8, 8, 13, 3, 13, 6, 6, 2, 5, 5, 13, 5, 6])
+
     def test_rogue_544_ring_generation_bonuses_and_curses(self):
         # Rogue 5.4.4 things.c:new_thing() ring case.
         import rogue_rings
@@ -1018,7 +1029,7 @@ class RogueBaselineTest(unittest.TestCase):
         set_open_floor(game)
 
         see = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
-        mfind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "detect monster")
+        mfind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
         haste = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "haste self")
         see_pot = rogue.Item(rogue.CAT_POT, see)
         mfind_pot = rogue.Item(rogue.CAT_POT, mfind)
@@ -3221,7 +3232,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         monster = monster_at(*old)
         game.mons = [monster]
-        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "detect monster")
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
 
         game.use_pot(rogue.Item(rogue.CAT_POT, kind))
         self.assertEqual(game.p.see_monsters, rogue.HUHDURATION)
