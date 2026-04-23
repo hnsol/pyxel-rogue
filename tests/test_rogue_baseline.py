@@ -989,6 +989,22 @@ class RogueBaselineTest(unittest.TestCase):
 
                 self.assertFalse(game.ident.sk[kind])
 
+    def test_rogue_544_sleep_scroll_stops_running(self):
+        # Rogue 5.4.4 scrolls.c:S_SLEEP clears player ISRUN after setting no_command.
+        game = new_game(seed=327)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "sleep")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        game.dashing = True
+        game.dash_d = (1, 0)
+        game.dash_steps = 2
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertGreater(game.p.no_command, 0)
+        self.assertFalse(game.dashing)
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)
