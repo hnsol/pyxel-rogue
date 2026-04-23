@@ -950,6 +950,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.ident.sk[kind])
         self.assertIs(game.room_at(game.p.x, game.p.y), room_b)
 
+    def test_rogue_544_create_monster_uses_eight_neighbors_and_does_not_identify(self):
+        # Rogue 5.4.4 scrolls.c:S_CREATE scans the full 3x3 ring and does not set oi_know.
+        game = new_game(seed=325)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = [rogue.Room(1, 1, 8, 8)]
+        game.p.x, game.p.y = 4, 4
+        game.tm[game.p.y][game.p.x] = rogue.T_FLOOR
+        game.tm[game.p.y - 1][game.p.x - 1] = rogue.T_FLOOR
+        game.mons = []
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "create monster")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertEqual([(mo.x, mo.y) for mo in game.mons], [(game.p.x - 1, game.p.y - 1)])
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)

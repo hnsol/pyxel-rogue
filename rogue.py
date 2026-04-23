@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_1846"
+UI_BUILD = "260423_1904"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2187,7 +2187,7 @@ class Game:
         return ()
 
     def use_scr(self,it):
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster","teleportation","enchant weapon","enchant armor")
+        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster","teleportation","enchant weapon","create monster","enchant armor")
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
@@ -2235,17 +2235,28 @@ class Game:
                 self.ident.sk[it.kind]=True
             self.msg("pyxel.teleported")
         elif nm=="create monster":
-            for dx,dy in((-1,0),(1,0),(0,-1),(0,1)):
-                nx,ny=p.x+dx,p.y+dy
-                if self.walkable(nx,ny) and not self.mon_at(nx,ny):
-                    cs=[b for b in BESTIARY if b.min_depth<=p.depth]
-                    if cs:
-                        e=RNG.choice(cs)
-                        self.mons.append(self.new_monster_from_spec(nx,ny,e))
-                        if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
-                            self.runto(self.mons[-1])
-                    break
-            self.msg("pyxel.monster_appears")
+            cands=[]
+            for dy in (-1,0,1):
+                for dx in (-1,0,1):
+                    if dx==0 and dy==0:
+                        continue
+                    nx,ny=p.x+dx,p.y+dy
+                    if self.walkable(nx,ny) and not self.mon_at(nx,ny):
+                        gi=self.gi_at(nx,ny)
+                        if gi and self.is_scare_scroll(gi):
+                            continue
+                        cands.append((nx,ny))
+            if cands:
+                nx,ny=RNG.choice(cands)
+                cs=[b for b in BESTIARY if b.min_depth<=p.depth]
+                if cs:
+                    e=RNG.choice(cs)
+                    self.mons.append(self.new_monster_from_spec(nx,ny,e))
+                    if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
+                        self.runto(self.mons[-1])
+                self.msg("pyxel.monster_appears")
+            else:
+                self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":
             for y in range(MAP_H):
                 for x in range(MAP_W):
