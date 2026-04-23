@@ -32,7 +32,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_2000"
+UI_BUILD = "260423_2010"
 
 LANG_EN = "en"
 LANG_JA = "ja"
