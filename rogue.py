@@ -32,7 +32,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_2016"
+UI_BUILD = "260423_2027"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2792,7 +2792,7 @@ class Game:
             self.p.no_move=max(self.p.no_move,BEARTIME)
             self.msg("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
-            self.p.no_command=max(self.p.no_command,SLEEPTIME)
+            self.p.no_command+=SLEEPTIME
             self.msg("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):

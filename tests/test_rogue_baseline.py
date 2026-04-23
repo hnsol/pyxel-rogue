@@ -4091,6 +4091,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 1)
         self.assertIn("you are caught in a bear trap", game.msgs)
 
+    def test_rogue_544_sleeping_gas_trap_adds_sleep_time(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_SLEEP uses no_command += SLEEPTIME.
+        game = new_game(seed=61)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "sleeping gas trap")
+        game.traps[(x, y)] = kind
+        game.p.no_command = 7
+        game.dashing = True
+
+        game.trigger_trap(x, y)
+
+        self.assertEqual(game.p.no_command, 7 + rogue.SLEEPTIME)
+        self.assertFalse(game.dashing)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4
