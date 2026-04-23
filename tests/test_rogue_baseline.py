@@ -870,6 +870,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.ident.sk[kind])
         self.assertGreater(monster.held, 0)
 
+    def test_rogue_544_enchant_weapon_identifies_only_with_current_weapon(self):
+        # Rogue 5.4.4 scrolls.c:S_ENCH leaves scr_info unknown when cur_weapon is NULL.
+        game = new_game(seed=322)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant weapon")
+        empty_scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.wpn = None
+        game.p.inv.append(empty_scroll)
+
+        game.use_scr(empty_scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertIn("you feel a strange sense of loss", game.msgs)
+
+        weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=0, cursed=True)
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.wpn = weapon
+        game.p.inv.extend([weapon, scroll])
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertFalse(weapon.cursed)
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)

@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_1810"
+UI_BUILD = "260423_1813"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2187,7 +2187,7 @@ class Game:
         return ()
 
     def use_scr(self,it):
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster")
+        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster","enchant weapon")
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
@@ -2202,12 +2202,13 @@ class Game:
             else: self.msg("pyxel.feel_vaguely_uneasy")
         elif nm=="enchant weapon":
             if p.wpn:
+                self.ident.sk[it.kind]=True
                 p.wpn.cursed=False
                 if RNG.randrange(2)==0: p.wpn.hit_plus+=1
                 else: p.wpn.dam_plus+=1
                 p.wpn.ench=p.wpn.hit_plus
                 self.msg("pyxel.item_glows_blue", item=p.wpn.data["name"])
-            else: self.msg("pyxel.feel_sense_of_loss")
+            else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="enchant armor":
             if p.arm: p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg("pyxel.armor_glows")
             else: self.msg("pyxel.feel_sense_of_loss")
