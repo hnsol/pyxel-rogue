@@ -31,7 +31,7 @@ import rogue_dungeon
 import rogue_daemons
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_1612"
+UI_BUILD = "260423_1810"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2187,7 +2187,7 @@ class Game:
         return ()
 
     def use_scr(self,it):
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor")
+        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("food detection","protect armor","hold monster")
         if nm=="monster confusion":
             p.can_confuse_monster=True
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
@@ -2246,9 +2246,17 @@ class Game:
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
             self.msg("pyxel.map_appears_in_mind")
         elif nm=="hold monster":
+            held = False
             for mo in self.mons:
-                if abs(mo.x-p.x)+abs(mo.y-p.y)<=4: mo.held=RNG.randint(10,20)
-            self.msg("pyxel.nearby_monsters_freeze")
+                if abs(mo.x-p.x)<=2 and abs(mo.y-p.y)<=2 and mo.running:
+                    mo.running = False
+                    mo.held=RNG.randint(10,20)
+                    held = True
+            if held:
+                self.ident.sk[it.kind]=True
+                self.msg("pyxel.nearby_monsters_freeze")
+            else:
+                self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="food detection":
             found=False
             for gi in self.gitems:

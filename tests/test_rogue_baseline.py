@@ -846,6 +846,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertIn("you feel a strange sense of loss", game.msgs)
 
+    def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
+        # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
+        game = new_game(seed=321)
+        set_open_floor(game)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "hold monster")
+        empty_scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(empty_scroll)
+
+        game.use_scr(empty_scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertIn("you feel a strange sense of loss", game.msgs)
+
+        hold_scroll = rogue.Item(rogue.CAT_SCR, kind)
+        monster = monster_at(game.p.x + 1, game.p.y)
+        monster.running = True
+        game.p.inv.append(hold_scroll)
+        game.mons = [monster]
+
+        game.use_scr(hold_scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertGreater(monster.held, 0)
+
     def test_rogue_544_scroll_table_has_five_identify_types(self):
         # Rogue 5.4.4 rogue.h:S_* / MAXSCROLLS and extern.c:scr_info[].
         self.assertEqual(len(rogue.SCROLLS), 18)
