@@ -86,6 +86,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Shift+方向: ダッシュ
 - Esc: メニュー / キャンセル
 - Tab: 補助メニュー
+- 補助メニュー: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
 - Tab+Enter: 周囲8マスsearch
 - Tab+Esc: quick throw
 - Tab+方向: 発見済み罠の種類確認
@@ -126,7 +127,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - HUD / Inventory / Help / Death の文言辞書化
 - 可変レイアウト、フォント選択
 - BGM
-- ハイスコア
+- ハイスコア / 全履歴
 - リプレイ
 
 ## 参考リンク

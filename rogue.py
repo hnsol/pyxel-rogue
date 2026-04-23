@@ -30,9 +30,10 @@ import rogue_rings
 import rogue_sticks
 import rogue_dungeon
 import rogue_daemons
+from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260423_2110"
+UI_BUILD = "260424_0001"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -213,6 +214,7 @@ MONSTER_MISS_MESSAGE_KEYS = (
 ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
 ST_DEAD = 4; ST_INVENTORY = 5; ST_HELP = 6
 ST_AUX = 7; ST_WIN = 8; ST_LOADING = 9
+ST_QUIT = 10; ST_QUIT_CONFIRM = 11
 
 # ===========================================================
 #  Item categories
@@ -564,7 +566,7 @@ MENU_ACTIONS = [
     ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Put on", CAT_RING),("Take off",None),
     ("Zap",     CAT_STICK),("Throw",   None),   ("Drop",   None),
 ]
-AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette"]
+AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
 
 # ===========================================================
 #  Classes
@@ -1292,8 +1294,44 @@ class Game:
         self.wander_between = 0
         self.fuses = rogue_daemons.FuseList()
         self.haste_half_turn = False
+        self.result_scores = []
+        self.result_entry = None
+        self.result_outcome = None
         self.descend()
         self.msg("pyxel.welcome_to_dungeons")
+
+    def result_level(self, outcome):
+        return self.max_depth if outcome == "winner" else self.p.depth
+
+    def result_flags(self, outcome):
+        if outcome == "killed" and self.p.has_amulet:
+            return "killed_with_amulet"
+        return outcome
+
+    def result_killer(self, outcome):
+        if outcome in ("quit", "winner"):
+            return ""
+        killer = self.death_cause or "died"
+        return killer.replace("killed by a ", "").replace("killed by ", "")
+
+    def enter_result_state(self, outcome):
+        self.result_outcome = outcome
+        self.result_entry = build_score_entry(
+            result_flags=self.result_flags(outcome),
+            level=self.result_level(outcome),
+            killer=self.result_killer(outcome),
+            player_name=self.options.get("name", "rogue"),
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            gold=self.p.gold,
+        )
+        save_score_entry(self.result_entry)
+        self.result_scores = get_top_scores(load_score_entries(), limit=10)
+        if outcome == "winner":
+            self.st = ST_WIN
+        elif outcome == "quit":
+            self.st = ST_QUIT
+        else:
+            self.st = ST_DEAD
 
     def set_lang(self, lang):
         self.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
@@ -2907,7 +2945,7 @@ class Game:
         if p.has_amulet:
             if p.depth <= 1:
                 self.msg("pyxel.escaped_with_amulet")
-                self.st=ST_WIN
+                self.enter_result_state("winner")
                 return
             p.depth-=2
             self.descend()
@@ -2971,7 +3009,7 @@ class Game:
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
         if not self.p.alive:
-            self.msg("pyxel.died_restart"); self.st=ST_DEAD
+            self.msg("pyxel.died_restart"); self.enter_result_state("killed")
             self.turn_msg_start = len(self.msgs)
             return
         if self.p.no_command>0: self.p.no_command-=1
@@ -3021,7 +3059,7 @@ class Game:
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
-            self.msg("pyxel.died_restart"); self.st=ST_DEAD
+            self.msg("pyxel.died_restart"); self.enter_result_state("killed")
         self.turn_msg_start = len(self.msgs)
 
     def roll_wanderer(self):
@@ -3512,6 +3550,17 @@ class Game:
         if self.st==ST_WIN:
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
+        if self.st==ST_QUIT:
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
+            return
+        if self.st==ST_QUIT_CONFIRM:
+            if self.btn_overlay_cancel():
+                self.st=ST_PLAY
+                return
+            if self.btn_a() or self.btn_start_tap():
+                self.enter_result_state("quit")
+                return
+            return
         if self.st==ST_PLAY:   self.upd_play()
         elif self.st==ST_MENU: self.upd_menu()
         elif self.st==ST_ITEM: self.upd_item()
@@ -3657,6 +3706,8 @@ class Game:
         elif act=="Palette":
             self.toggle_palette()
             self.st=ST_PLAY
+        elif act=="Quit":
+            self.st=ST_QUIT_CONFIRM
         self.dir_pending=None
 
     # =====================================================
@@ -3681,6 +3732,8 @@ class Game:
         elif self.st==ST_HELP: self.draw_help()
         elif self.st==ST_DEAD: self.draw_dead()
         elif self.st==ST_WIN: self.draw_win()
+        elif self.st==ST_QUIT: self.draw_quit()
+        elif self.st==ST_QUIT_CONFIRM: self.draw_quit_confirm()
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)
@@ -3914,6 +3967,19 @@ class Game:
         for ln in commands:
             self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11
 
+    def draw_top_scores(self, bx=412, by=30):
+        bw=156; bh=144
+        self._box(bx, by, bw, bh, TextCatalog.msg(self.lang, "ui.top_10"))
+        scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
+        y = by + 16
+        for i, entry in enumerate(scores[:10], start=1):
+            name = str(entry.get("player_name", "rogue"))[:8]
+            score = int(entry.get("score", 0))
+            self.txt(bx + 6, y, f"{i:>2} {score:>5} {name}", 9 if i != 1 else 10)
+            y += 12
+        if not scores:
+            self.txt(bx + 6, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
+
     def draw_dead(self):
         if not self.options.get("tombstone", True):
             bx,by=105,42; bw=270; bh=190
@@ -3929,6 +3995,7 @@ class Game:
             self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
             self.txt(x,y,"A / Start  New game",10); y+=14
             self.txt(x,y,"B          Stay here",5)
+            self.draw_top_scores()
             return
         bx,by=88,30; bw=320; bh=232
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
@@ -3961,6 +4028,7 @@ class Game:
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=18
         self.txt(x,y,"A / Start  New game",10); y+=14
         self.txt(x,y,"B          Stay here",5)
+        self.draw_top_scores()
 
     def draw_win(self):
         bx,by=82,50; bw=334; bh=176
@@ -3973,6 +4041,24 @@ class Game:
         self.txt(x,y,f"Exp:   {p.exp}",7); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",5); y+=28
         self.txt(x,y,"A / Start  New game",10)
+        self.draw_top_scores(bx=414, by=50)
+
+    def draw_quit_confirm(self):
+        bx,by=176,132; bw=224; bh=56
+        self._box(bx,by,bw,bh,"-- Quit --")
+        self.txt(bx+12, by+20, TextCatalog.msg(self.lang, "main.really_quit"), 10)
+        self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), 5)
+
+    def draw_quit(self):
+        bx,by=96,60; bw=300; bh=148
+        self._box(bx,by,bw,bh,"=== Quit ===")
+        p=self.p; x=bx+18; y=by+24
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),10); y+=24
+        self.txt(x,y,f"Depth: {p.depth}",7); y+=14
+        self.txt(x,y,f"Level: {p.level}",7); y+=14
+        self.txt(x,y,f"Turn:  {self.turn}",5); y+=26
+        self.txt(x,y,"A / Start  New game",10)
+        self.draw_top_scores(bx=414, by=60)
 
 # ===========================================================
 if __name__=="__main__":

@@ -1781,7 +1781,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
         self.assertEqual(rogue.HUD_W, 78)
         self.assertEqual(rogue.MSG_LINES, 7)
-        self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -3026,6 +3026,74 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("    |  killed by a  |", calls)
         self.assertTrue(any("hobgoblin" in c for c in calls))
         self.assertTrue(any("123 Au" in c for c in calls))
+
+    def test_rogue_544_score_entry_uses_ninety_percent_gold_on_death(self):
+        entry = rogue.build_score_entry(
+            score=0,
+            result_flags="killed",
+            level=7,
+            killer="hobgoblin",
+            player_name="tester",
+            timestamp="2026-04-24T12:00:00Z",
+            gold=123,
+        )
+
+        self.assertEqual(entry["score"], 110)
+        self.assertEqual(entry["result_flags"], "killed")
+        self.assertEqual(entry["killer"], "hobgoblin")
+
+    def test_rogue_544_score_entry_keeps_full_gold_for_quit_and_win(self):
+        quit_entry = rogue.build_score_entry(
+            score=0,
+            result_flags="quit",
+            level=7,
+            killer="",
+            player_name="tester",
+            timestamp="2026-04-24T12:00:00Z",
+            gold=123,
+        )
+        win_entry = rogue.build_score_entry(
+            score=0,
+            result_flags="winner",
+            level=26,
+            killer="",
+            player_name="tester",
+            timestamp="2026-04-24T12:00:00Z",
+            gold=456,
+        )
+
+        self.assertEqual(quit_entry["score"], 123)
+        self.assertEqual(win_entry["score"], 456)
+
+    def test_top_scores_sort_by_score_and_limit_to_ten(self):
+        entries = [
+            {"score": score, "player_name": f"p{score}", "result_flags": "quit", "level": 1, "killer": "", "timestamp": "t"}
+            for score in (5, 42, 17, 90, 12, 33, 75, 10, 60, 55, 99)
+        ]
+
+        top = rogue.get_top_scores(entries, limit=10)
+
+        self.assertEqual(len(top), 10)
+        self.assertEqual([entry["score"] for entry in top], [99, 90, 75, 60, 55, 42, 33, 17, 12, 10])
+
+    def test_aux_quit_enters_quit_confirm_state(self):
+        game = new_game(seed=35)
+        game.open_aux()
+        game.acur = rogue.AUX_ACTIONS.index("Quit")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_QUIT_CONFIRM)
+
+    def test_quit_confirm_cancel_returns_to_play(self):
+        game = new_game(seed=35)
+        game.st = rogue.ST_QUIT_CONFIRM
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
 
     def test_dpad_cardinal_waits_one_frame_so_second_axis_makes_one_diagonal_turn(self):
         game = new_game(seed=36)

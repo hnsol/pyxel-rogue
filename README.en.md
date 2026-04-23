@@ -72,6 +72,7 @@ Gamepad:
 - B hold + D-pad: Dash
 - A+B: Wait a turn
 - Select: Assist menu
+- Assist menu: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
 - Select+A: Search around all 8 neighboring tiles
 - Select+B: Quick throw (choose direction, then item)
 - Select+D-pad: Inspect a discovered trap
@@ -126,7 +127,7 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 - HUD / Inventory / Help / Death text catalog coverage
 - Responsive layout and font selection
 - BGM
-- High scores
+- High scores / full history
 - Replay support
 
 ## Links
