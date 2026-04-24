@@ -432,5 +432,9 @@
   "wizard.wizard_s_password": "ウィザードのパスワード:",
   "wizard.you_dont_have_anything_in_your_pack_to_identify": "調べる持ちものは、１つも持っていない。",
   "wizard.you_must_identify_a_item": "{item}を調べなければならない。",
-  "wizard.you_must_identify_something": "何かを調べなければならない。"
+  "wizard.you_must_identify_something": "何かを調べなければならない。",
+  "misc.what_to_call_it": "名前をつける：",
+  "misc.discoveries_title": "発見リスト",
+  "misc.nothing_discovered": "（未発見）",
+  "misc.discoveries_hint": "[↑↓スクロール / A または Esc で閉じる]"
 }

@@ -432,5 +432,9 @@
   "wizard.wizard_s_password": "wizard's Password:",
   "wizard.you_dont_have_anything_in_your_pack_to_identify": "you don't have anything in your pack to identify",
   "wizard.you_must_identify_a_item": "you must identify a {item}",
-  "wizard.you_must_identify_something": "you must identify something"
+  "wizard.you_must_identify_something": "you must identify something",
+  "misc.what_to_call_it": "What do you want to call it? ",
+  "misc.discoveries_title": "Discoveries",
+  "misc.nothing_discovered": "(nothing discovered)",
+  "misc.discoveries_hint": "[↑↓ scroll / A or Esc to close]"
 }
