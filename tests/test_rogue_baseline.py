@@ -4326,6 +4326,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.st, 16)
 
+    def test_rogue_544_mysterious_trap_only_rolls_color_for_color_messages(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_MYST rolls rnd(cNCOLORS) only in color message branches.
+        game = new_game(seed=67)
+        calls = []
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            game.mysterious_trap_msg()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls, [11])
+        self.assertIn("you are suddenly in a parallel dimension", game.msgs)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4

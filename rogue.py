@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0008"
+UI_BUILD = "260425_0018"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2996,21 +2996,21 @@ class Game:
             self.msg("move.your_armor_weakens")
 
     def mysterious_trap_msg(self):
-        color=RNG.choice(RAINBOW)
         msgs=[
-            ("move.you_are_suddenly_in_a_parallel_dimension",{}),
-            ("move.the_light_in_here_suddenly_seems_color",{"color":color}),
-            ("move.you_feel_a_sting_in_the_side_of_your_neck",{}),
-            ("move.multi_colored_lines_swirl_around_you_then_fade",{}),
-            ("move.a_color_light_flashes_in_your_eyes",{"color":color}),
-            ("move.a_spike_shoots_past_your_ear",{}),
-            ("pyxel.color_sparks_dance_armor",{"color":color}),
-            ("move.you_suddenly_feel_very_thirsty",{}),
-            ("move.you_feel_time_speed_up_suddenly",{}),
-            ("move.time_now_seems_to_be_going_slower",{}),
-            ("pyxel.pack_turns_color",{"color":color}),
+            ("move.you_are_suddenly_in_a_parallel_dimension",None),
+            ("move.the_light_in_here_suddenly_seems_color","color"),
+            ("move.you_feel_a_sting_in_the_side_of_your_neck",None),
+            ("move.multi_colored_lines_swirl_around_you_then_fade",None),
+            ("move.a_color_light_flashes_in_your_eyes","color"),
+            ("move.a_spike_shoots_past_your_ear",None),
+            ("pyxel.color_sparks_dance_armor","color"),
+            ("move.you_suddenly_feel_very_thirsty",None),
+            ("move.you_feel_time_speed_up_suddenly",None),
+            ("move.time_now_seems_to_be_going_slower",None),
+            ("pyxel.pack_turns_color","color"),
         ]
-        key,kw=RNG.choice(msgs)
+        key,arg=msgs[rnd(11)]
+        kw={"color":RAINBOW[rnd(len(RAINBOW))]} if arg=="color" else {}
         self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
