@@ -4299,5 +4299,73 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.random.randrange = old_randrange
 
 
+class TestCallIt(unittest.TestCase):
+    def setUp(self):
+        self.g = new_game(seed=1)
+
+    def test_call_sets_guess_on_unknown_potion(self):
+        """oi_know=False のポーションに仮名が設定される"""
+        from rogue import CAT_POT
+        pots = [i for i in self.g.p.inv if i.cat == CAT_POT]
+        if not pots:
+            self.skipTest("no potions in start inventory")
+        it = pots[0]
+        it.known = False
+        self.g.ident.pk[it.kind] = False
+        self.g._call_it_apply(it, "boo")
+        self.assertEqual(self.g.ident.pg[it.kind], "boo")
+
+    def test_call_clears_guess_when_known(self):
+        """oi_know=True なら既存 oi_guess をクリアして何もしない"""
+        from rogue import CAT_POT
+        pots = [i for i in self.g.p.inv if i.cat == CAT_POT]
+        if not pots:
+            self.skipTest("no potions in start inventory")
+        it = pots[0]
+        self.g.ident.pk[it.kind] = True
+        self.g.ident.pg[it.kind] = "old_name"
+        self.g._call_it_apply(it, "new_name")
+        self.assertIsNone(self.g.ident.pg[it.kind])
+
+    def test_call_empty_string_clears_guess(self):
+        """空文字確定で oi_guess がクリアされる"""
+        from rogue import CAT_POT
+        pots = [i for i in self.g.p.inv if i.cat == CAT_POT]
+        if not pots:
+            self.skipTest("no potions in start inventory")
+        it = pots[0]
+        it.known = False
+        self.g.ident.pk[it.kind] = False
+        self.g.ident.pg[it.kind] = "old"
+        self.g._call_it_apply(it, "")
+        self.assertIsNone(self.g.ident.pg[it.kind])
+
+
+class TestPrintDisc(unittest.TestCase):
+    def setUp(self):
+        self.g = new_game(seed=1)
+
+    def test_disc_lines_has_nothing_when_empty(self):
+        """何も識別していなければ nothing_discovered テキストが含まれる"""
+        lines = self.g._disc_lines()
+        texts = [t for _, t in lines]
+        self.assertTrue(any("nothing" in t.lower() or "未発見" in t for t in texts))
+
+    def test_disc_lines_shows_known_potion(self):
+        """oi_know=True のポーションが一覧に現れる"""
+        self.g.ident.pk[0] = True
+        lines = self.g._disc_lines()
+        # セクション見出し・空行・nothing 以外の行がある
+        non_header = [t for col, t in lines if t and not t.startswith("--") and not t.startswith("(") and not t.startswith("（")]
+        self.assertTrue(len(non_header) > 0)
+
+    def test_disc_lines_shows_guess_potion(self):
+        """oi_guess のあるポーションが一覧に現れる"""
+        self.g.ident.pg[0] = "boo"
+        lines = self.g._disc_lines()
+        texts = [t for _, t in lines]
+        self.assertTrue(any("boo" in t for t in texts))
+
+
 if __name__ == "__main__":
     unittest.main()
