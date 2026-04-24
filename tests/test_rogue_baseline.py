@@ -4354,6 +4354,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("you pack turns red!", game.msgs)
         self.assertNotIn("your pack turns red!", game.msgs)
 
+    def test_rogue_544_mysterious_trap_armor_sparks_uses_source_message_key(self):
+        # Rogue 5.4.4 move.c:T_MYST case 6 says "%s sparks dance across your armor".
+        game = new_game(seed=69, lang=rogue.LANG_JA)
+        seq = iter([6, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(seq)
+            game.mysterious_trap_msg()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn("red火花がよろいの上で踊った。", game.msgs)
+        self.assertNotIn("redの火花がよろいの上で踊った。", game.msgs)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4

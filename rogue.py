@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0029"
+UI_BUILD = "260425_0038"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -3003,7 +3003,7 @@ class Game:
             ("move.multi_colored_lines_swirl_around_you_then_fade",None),
             ("move.a_color_light_flashes_in_your_eyes","color"),
             ("move.a_spike_shoots_past_your_ear",None),
-            ("pyxel.color_sparks_dance_armor","color"),
+            ("move.value_sparks_dance_across_your_armor","value"),
             ("move.you_suddenly_feel_very_thirsty",None),
             ("move.you_feel_time_speed_up_suddenly",None),
             ("move.time_now_seems_to_be_going_slower",None),
