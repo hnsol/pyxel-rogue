@@ -3905,6 +3905,8 @@ class Game:
         # Overlays
         if self.st==ST_MENU: self.draw_menu()
         elif self.st==ST_ITEM: self.draw_isel()
+        elif self.st==ST_CALL: self.draw_call_input()
+        elif self.st==ST_DISC: self.draw_disc()
         elif self.st==ST_DIR: self.draw_dirp()
         elif self.st==ST_AUX: self.draw_aux()
         elif self.st==ST_INVENTORY: self.draw_inventory()
@@ -4076,6 +4078,17 @@ class Game:
             c=27 if ri==self.icur else 9
             pre=">" if ri==self.icur else " "
             self.txt(bx+4,ty,f"{pre}{lt}) {ln[:32]}",c)
+
+    def draw_call_input(self):
+        if self.call_item is None:
+            self.draw_isel()
+            return
+        prompt = TextCatalog.msg(self.lang, "misc.what_to_call_it")
+        bx, by = ZV_X + 20, ZV_Y + 60; bw = 240; bh = 36
+        self._box(bx, by, bw, bh, f"-- {self.cact} --")
+        self.txt(bx + 4, by + 14, f"{prompt}", 9)
+        cursor = "_" if (pyxel.frame_count // 15) % 2 == 0 else " "
+        self.txt(bx + 4, by + 24, f"> {self.call_input}{cursor}", 27)
 
     def draw_dirp(self):
         bx,by=ZV_X+50,ZV_Y+90
