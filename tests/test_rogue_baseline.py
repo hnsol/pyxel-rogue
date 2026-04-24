@@ -1067,6 +1067,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_identify_potion_scroll_only_identifies_matching_type(self):
         # Rogue 5.4.4 scrolls.c:S_ID_POTION calls whatis(TRUE, POTION).
+        # Now interactive: use_scr() sets up picker, item_confirm() completes it.
         game = new_game(seed=317)
         pot = rogue.Item(rogue.CAT_POT, 0)
         other_scroll = rogue.Item(rogue.CAT_SCR, 0)
@@ -1076,7 +1077,15 @@ class RogueBaselineTest(unittest.TestCase):
         game.ident.pk[pot.kind] = False
         game.ident.sk[other_scroll.kind] = False
 
-        game.use_scr(ident_scroll)
+        pending = game.use_scr(ident_scroll)
+        # use_scr returns True and sets up picker when unidentified items exist.
+        self.assertTrue(pending)
+        self.assertEqual(game.cact, "Identify")
+        self.assertIn(pot, game.fitems)
+        self.assertNotIn(other_scroll, game.fitems)
+        # Simulate player confirming selection of the potion.
+        game.icur = game.fitems.index(pot)
+        game.item_confirm()
 
         self.assertTrue(game.ident.sk[ident_kind])
         self.assertTrue(game.ident.pk[pot.kind])

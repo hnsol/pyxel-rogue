@@ -590,13 +590,18 @@ class Room:
     def inner(s):
         return RNG.randint(s.x+1,s.x+s.w-2),RNG.randint(s.y+1,s.y+s.h-2)
 
+FLAG_ISKNOW = "ISKNOW"
+
 class Item:
     _nid=0
     def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None,charges=0,known=True):
         s.uid=Item._nid; Item._nid+=1
         s.cat=cat; s.kind=kind; s.cursed=cursed; s.qty=qty
         s.charges=charges
-        s.known=known
+        s.o_flags: set = set()
+        s.o_label: str | None = None
+        if known:
+            s.o_flags.add(FLAG_ISKNOW)
         if cat==CAT_WPN:
             s.hit_plus = ench if hit_plus is None else hit_plus
             s.dam_plus = 0 if dam_plus is None else dam_plus
@@ -608,6 +613,13 @@ class Item:
         s.x=s.y=0
         s.picked_up=False
         s.protected=False
+    @property
+    def known(s):
+        return FLAG_ISKNOW in s.o_flags
+    @known.setter
+    def known(s, v):
+        if v: s.o_flags.add(FLAG_ISKNOW)
+        else: s.o_flags.discard(FLAG_ISKNOW)
     @property
     def data(s):
         if s.cat==CAT_POT: return POTIONS[s.kind]
@@ -743,10 +755,13 @@ class IdentTable:
             n=RNG.randint(2,3); st=(i*3)%len(syls)
             s.snam.append(" ".join(syls[(st+j)%len(syls)] for j in range(n)))
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
+        s.pg=[None]*len(POTIONS); s.sg=[None]*len(SCROLLS)
         s.rstones=rogue_rings.init_stones(RNG)
         s.rk=[False]*len(RINGS)
+        s.rg=[None]*len(RINGS)
         s.wtypes,s.wmades=rogue_sticks.init_materials(RNG)
         s.wk=[False]*len(STICKS)
+        s.wg=[None]*len(STICKS)
     def set_lang(s, lang):
         s.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
     def name(s,it,lang=None):
@@ -755,12 +770,19 @@ class IdentTable:
             if s.pk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_POT, POTIONS[it.kind]["name"])
                 return f"potion of {nm}" if lang==LANG_EN else f"{nm}水薬"
+            if s.pg[it.kind] is not None:
+                g=s.pg[it.kind]
+                col=s.pcol[it.kind]
+                return f"{col} potion called {g}" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬（{g}）"
             col=s.pcol[it.kind]
             return f"{col} potion" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬"
         if it.cat==CAT_SCR:
             if s.sk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_SCR, SCROLLS[it.kind]["name"])
                 return f"scroll of {nm}" if lang==LANG_EN else f"{nm}巻き物"
+            if s.sg[it.kind] is not None:
+                g=s.sg[it.kind]
+                return f"scroll called {g}" if lang==LANG_EN else f"巻き物（{g}）"
             return f"scroll [{s.snam[it.kind]}]" if lang==LANG_EN else f"巻き物 [{s.snam[it.kind]}]"
         if it.cat==CAT_FOOD:
             nm=TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
@@ -789,8 +811,11 @@ class IdentTable:
             spec=RINGS[it.kind]
             if s.rk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_RING, spec["name"])
-                num=rogue_rings.ring_num(it) if getattr(it, "known", True) else ""
+                num=rogue_rings.ring_num(it) if it.known else ""
                 return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}の指輪{num}"
+            if s.rg[it.kind] is not None:
+                g=s.rg[it.kind]; stone=s.rstones[it.kind]
+                return f"{stone} ring called {g}" if lang==LANG_EN else f"{stone}の指輪（{g}）"
             stone=s.rstones[it.kind]
             return f"{stone} ring" if lang==LANG_EN else f"{stone}の指輪"
         if it.cat==CAT_STICK:
@@ -799,8 +824,11 @@ class IdentTable:
             made=s.wmades[it.kind]
             if s.wk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_STICK, spec["name"])
-                charges=rogue_sticks.charge_str(it) if getattr(it, "known", True) else ""
+                charges=rogue_sticks.charge_str(it) if it.known else ""
                 return f"{typ} of {nm}{charges}({made})" if lang==LANG_EN else f"{nm}の{typ}{charges}({made})"
+            if s.wg[it.kind] is not None:
+                g=s.wg[it.kind]
+                return f"{made} {typ} called {g}" if lang==LANG_EN else f"{made}{typ}（{g}）"
             return f"{made} {typ}"
         if it.cat==CAT_AMULET:
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
@@ -2207,14 +2235,17 @@ class Game:
             return it.protected or it.ench != 0
         return False
 
-    def identify_item(self, it):
+    def set_know(self, it):
         # Rogue 5.4.4 wizard.c:set_know().
+        # Sets type-level oi_know, clears oi_guess, sets instance ISKNOW flag.
         if it.cat == CAT_POT:
             self.ident.pk[it.kind] = True
+            self.ident.pg[it.kind] = None
             it.known = True
             return True
         if it.cat == CAT_SCR:
             self.ident.sk[it.kind] = True
+            self.ident.sg[it.kind] = None
             it.known = True
             return True
         if it.cat == CAT_WPN or it.cat == CAT_ARM:
@@ -2222,13 +2253,19 @@ class Game:
             return True
         if it.cat == CAT_RING:
             self.ident.rk[it.kind] = True
+            self.ident.rg[it.kind] = None
             it.known = True
             return True
         if it.cat == CAT_STICK:
             self.ident.wk[it.kind] = True
+            self.ident.wg[it.kind] = None
             it.known = True
             return True
         return False
+
+    def identify_item(self, it):
+        # Backward-compat alias for set_know().
+        return self.set_know(it)
 
     def needs_identify(self, it):
         if it.cat == CAT_POT:
@@ -2268,10 +2305,11 @@ class Game:
             self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
             unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
             if unid:
-                t=RNG.choice(unid)
-                self.identify_item(t)
-                self.msg("pyxel.it_is_item", item=self.ident.name(t))
-            else: self.msg("pyxel.feel_vaguely_uneasy")
+                # Interactive target selection (Rogue 5.4.4 wizard.c:whatis()).
+                self.fitems=unid; self.icur=0; self.cact="Identify"; self.st=ST_ITEM
+                return True  # Caller must NOT call close_menu()/end_turn() yet.
+            else:
+                self.msg("pyxel.feel_vaguely_uneasy")
         elif nm=="enchant weapon":
             if p.wpn:
                 self.ident.sk[it.kind]=True
@@ -3256,8 +3294,16 @@ class Game:
         if a=="Zap":
             self.zap_item=it; self.dact="Zap"; self.st=ST_DIR
             return
+        if a=="Identify":
+            # Rogue 5.4.4 wizard.c:whatis() — player selected item to identify.
+            self.set_know(it)
+            self.msg("pyxel.it_is_item", item=self.ident.name(it))
+            self.close_menu(); self.end_turn()
+            return
         if a=="Quaff":   self.use_pot(it)
-        elif a=="Read":  self.use_scr(it)
+        elif a=="Read":
+            if self.use_scr(it):
+                return  # use_scr set up next picker state; don't close yet.
         elif a=="Eat":   self.eat(it)
         elif a=="Wield": self.wield(it)
         elif a=="Wear":  self.wear(it)
