@@ -3830,6 +3830,17 @@ class Game:
         if self.btn_overlay_cancel():
             self.close_menu(); return
 
+    def upd_disc(self):
+        lines = self._disc_lines()
+        visible = 18
+        max_scroll = max(0, len(lines) - visible)
+        dy = self.menu_vertical_press()
+        if dy:
+            self.disc_scroll = max(0, min(self.disc_scroll + dy, max_scroll))
+            return
+        if self.btn_a() or self.btn_overlay_cancel():
+            self.st = ST_PLAY; return
+
     def upd_dir(self):
         d=self.dir_prompt_press()
         if d: self.dir_confirm(*d); return
