@@ -3728,7 +3728,7 @@ class Game:
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
         if self.btn_trap_inspect(): self.start_trap_inspect(); return
-        if self.key_upper(pyxel.KEY_D):
+        if self.key_upper(getattr(pyxel, "KEY_D", None)):
             self.disc_scroll = 0; self.st = ST_DISC; return
         aname = self.rogue_command_action()
         if aname:
@@ -4089,6 +4089,20 @@ class Game:
         self.txt(bx + 4, by + 14, f"{prompt}", 9)
         cursor = "_" if (pyxel.frame_count // 15) % 2 == 0 else " "
         self.txt(bx + 4, by + 24, f"> {self.call_input}{cursor}", 27)
+
+    def draw_disc(self):
+        bx, by = 20, 12; bw = SCR_W - 40; bh = SCR_H - 80
+        title = TextCatalog.msg(self.lang, "misc.discoveries_title")
+        hint  = TextCatalog.msg(self.lang, "misc.discoveries_hint")
+        self._box(bx, by, bw, bh, f"=== {title} ===")
+        lines = self._disc_lines()
+        visible = (bh - 24) // 9
+        start = self.disc_scroll
+        for i, (col, text) in enumerate(lines[start:start + visible]):
+            if not text:
+                continue
+            self.txt(bx + 6, by + 16 + i * 9, text[:60], col if col else 9)
+        self.txt(bx + 4, by + bh - 10, hint, 5)
 
     def draw_dirp(self):
         bx,by=ZV_X+50,ZV_Y+90
