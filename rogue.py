@@ -3309,6 +3309,7 @@ class Game:
     def close_menu(self):
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
         self.throw_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
+        self.call_item=None; self.call_input=""; self.call_preset_idx=0
         self.b_menu_guard=False; self.dir_pending=None
 
     def menu_select(self):
