@@ -29,3 +29,4 @@ tmp/
 
 # Local Rogue 5.4.4 reference source
 vendor/rogue544/
+.worktrees/
