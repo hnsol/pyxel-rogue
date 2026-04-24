@@ -3324,6 +3324,8 @@ class Game:
             self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm or i is p.ring_l or i is p.ring_r]
         elif aname in("Throw","Drop"):
             self.fitems=list(p.inv)
+        elif aname=="Call":
+            self.fitems=[i for i in p.inv if i.cat in (CAT_POT, CAT_SCR, CAT_RING, CAT_STICK)]
         elif cat:
             self.fitems=[i for i in p.inv if i.cat==cat]
         else:
@@ -3333,6 +3335,9 @@ class Game:
         self.icur=0
         if aname=="Throw":
             self.throw_dir=None; self.dact="Throw"; self.st=ST_DIR
+        elif aname=="Call":
+            self.call_item=None; self.call_input=CALL_PRESETS[0]; self.call_preset_idx=0
+            self.st=ST_CALL
         else:
             self.st=ST_ITEM
 
@@ -3629,6 +3634,7 @@ class Game:
         if self.key_lower(pyxel.KEY_Z): return "Zap"
         if self.key_upper(getattr(pyxel, "KEY_W", None)): return "Wield"
         if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off"
+        if self.key_lower(pyxel.KEY_C): return "Call"
         return None
 
     # ---------- Update ----------
@@ -3674,6 +3680,8 @@ class Game:
         if self.st==ST_PLAY:   self.upd_play()
         elif self.st==ST_MENU: self.upd_menu()
         elif self.st==ST_ITEM: self.upd_item()
+        elif self.st==ST_CALL: self.upd_call()
+        elif self.st==ST_DISC: self.upd_disc()
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
         elif self.st==ST_HELP:
@@ -3720,6 +3728,8 @@ class Game:
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
         if self.btn_trap_inspect(): self.start_trap_inspect(); return
+        if self.key_upper(pyxel.KEY_D):
+            self.disc_scroll = 0; self.st = ST_DISC; return
         aname = self.rogue_command_action()
         if aname:
             self.start_item_action(aname)
@@ -3771,6 +3781,54 @@ class Game:
                 self.st=ST_MENU
             self.throw_dir=None
             return
+
+    def upd_call(self):
+        # Phase 1: アイテム選択
+        if self.call_item is None:
+            dy = self.menu_vertical_press()
+            if dy and self.fitems:
+                self.icur = (self.icur + dy) % len(self.fitems)
+                return
+            if self.btn_a():
+                it = self.fitems[self.icur] if self.fitems else None
+                if it is None:
+                    self.close_menu(); return
+                self.call_item = it
+                return
+            if self.btn_overlay_cancel():
+                self.close_menu(); return
+            return
+        # Phase 2: テキスト入力
+        dy = self.menu_vertical_press()
+        if dy:
+            self.call_preset_idx = (self.call_preset_idx - dy) % len(CALL_PRESETS)
+            self.call_input = CALL_PRESETS[self.call_preset_idx]
+            return
+        # キーボード文字入力
+        for key_name, ch in (
+            ("KEY_A","a"),("KEY_B","b"),("KEY_C","c"),("KEY_D","d"),
+            ("KEY_E","e"),("KEY_F","f"),("KEY_G","g"),("KEY_H","h"),
+            ("KEY_I","i"),("KEY_J","j"),("KEY_K","k"),("KEY_L","l"),
+            ("KEY_M","m"),("KEY_N","n"),("KEY_O","o"),("KEY_P","p"),
+            ("KEY_Q","q"),("KEY_R","r"),("KEY_S","s"),("KEY_T","t"),
+            ("KEY_U","u"),("KEY_V","v"),("KEY_W","w"),("KEY_X","x"),
+            ("KEY_Y","y"),("KEY_Z","z"),("KEY_SPACE"," "),
+        ):
+            k = getattr(pyxel, key_name, None)
+            if k is not None and pyxel.btnp(k):
+                c = ch.upper() if (ch.isalpha() and self.shift_held()) else ch
+                self.call_input = (self.call_input + c)[:16]
+                return
+        if pyxel.btnp(pyxel.KEY_BACKSPACE):
+            self.call_input = self.call_input[:-1]
+            return
+        if self.btn_a() or pyxel.btnp(pyxel.KEY_RETURN):
+            self._call_it_apply(self.call_item, self.call_input)
+            self.close_menu()
+            # ターン消費なし (misc.c:call_it() 準拠)
+            return
+        if self.btn_overlay_cancel():
+            self.close_menu(); return
 
     def upd_dir(self):
         d=self.dir_prompt_press()
