@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0115"
+UI_BUILD = "260425_0125"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -803,19 +803,21 @@ class IdentTable:
             nm=TextCatalog.item_kind(lang, CAT_WPN, it.data["name"])
             if it.stackable and it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
                 nm = f"{nm}s"
+            label = f" called {it.o_label}" if it.o_label else ""
             if not getattr(it, "known", True):
                 prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
-                return f"{prefix}{nm}"
+                return f"{prefix}{nm}{label}"
             hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
             dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
             prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
-            return f"{prefix}{hp},{dp} {nm}"
+            return f"{prefix}{hp},{dp} {nm}{label}"
         if it.cat==CAT_ARM:
             e=it.ench; nm=TextCatalog.item_kind(lang, CAT_ARM, it.data["name"])
+            label = f" called {it.o_label}" if it.o_label else ""
             if not getattr(it, "known", True):
-                return nm
+                return f"{nm}{label}"
             protection = 10 - (it.data["ac"] - e)
-            return f"{'+' if e>=0 else ''}{e} {nm} [protection {protection}]"
+            return f"{'+' if e>=0 else ''}{e} {nm} [protection {protection}]{label}"
         if it.cat==CAT_RING:
             spec=RINGS[it.kind]
             if s.rk[it.kind]:
@@ -2297,6 +2299,8 @@ class Game:
                 self.ident.wg[it.kind] = None
             else:
                 self.ident.wg[it.kind] = val
+        elif it.cat in (CAT_WPN, CAT_ARM):
+            it.o_label = val
 
     def _disc_lines(self):
         # things.c:print_disc(*) — 全カテゴリの発見済みアイテム名を (color, text) リストで返す

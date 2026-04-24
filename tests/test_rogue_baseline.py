@@ -4460,6 +4460,20 @@ class TestCallIt(unittest.TestCase):
         self.g._call_it_apply(it, "")
         self.assertIsNone(self.g.ident.pg[0])
 
+    def test_rogue_544_call_sets_weapon_and_armor_o_label(self):
+        # Rogue 5.4.4 command.c:call() stores weapon/armor names in o_label;
+        # things.c:inv_name() appends "called NAME".
+        weapon = rogue.Item(rogue.CAT_WPN, 0, known=False)
+        armor = rogue.Item(rogue.CAT_ARM, 1, known=False)
+
+        self.g._call_it_apply(weapon, "sting")
+        self.g._call_it_apply(armor, "lucky")
+
+        self.assertEqual(weapon.o_label, "sting")
+        self.assertEqual(armor.o_label, "lucky")
+        self.assertEqual(self.g.item_name(weapon), "mace called sting")
+        self.assertEqual(self.g.item_name(armor), "ring mail called lucky")
+
 
 class TestPrintDisc(unittest.TestCase):
     def setUp(self):
