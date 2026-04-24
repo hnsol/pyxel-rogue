@@ -85,8 +85,9 @@
   - [x] `things.c:inv_name()/nameit()` 準拠の3層表示（`oi_know` → `oi_guess` → appearance）をポーション/巻物/指輪/杖に実装
   - [x] `wizard.c:whatis()/set_know()` 準拠の対象選択式 identify 実装（`item_confirm()` に "Identify" ブランチ）
   - [x] ring の `ring_num()` と stick の `charge_str()` は種類判明だけでなく個体 `ISKNOW` 後に表示する
-  - [ ] `command.c:call()` 相当の命名機能（"C" キー）— `oi_guess` に仮名格納、weapon/armor は `o_label`。**次セッション優先**
-  - [ ] `things.c:print_disc()` 相当の discovered list（"D" キー）— `oi_know`/`oi_guess` 一覧表示。**次セッション優先**
+  - [x] `command.c:call()` / `misc.c:call_it()` 相当の命名機能（`c` キー）— potion / scroll / ring / stick の `oi_guess` を設定
+  - [x] `things.c:print_disc()` 相当の discovered list（`D` キー）— `oi_know`/`oi_guess` 一覧表示
+  - [ ] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
   - [ ] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
   - [ ] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll を分ける
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
@@ -135,7 +136,7 @@
 - [x] キーボードでも A/B/Select/Start 相当の最低限操作（Enter, Esc, Tab, Space）を割り当てる
 - [ ] pyxapp / 中華ゲーム機向けの Pyxel 終了方法追加（セーブ / システム系インタフェースで扱う）
 - [x] Rogue V5 直打ちキーボードショートカット基礎（`t/q/r/e/w/W/T/i/?/s/^/z`。既存メニュー項目への入口として実装し、プレイ中だけ発火）
-- [ ] Rogue V5 `c` call と `P` put on ring の直打ち入力を追加する。英字キーは原作コマンドを優先するため、Pad style では使わない。
+- [ ] Rogue V5 `P` put on ring の直打ち入力を追加する。`c` call は実装済み。英字キーは原作コマンドを優先するため、Pad style では使わない。
 - [ ] Item overlay で `a-z` のアイテム letter 直接選択を追加する。プレイ中の Rogue commands とは別レイヤーとして扱い、overlay 中は文字コマンドを発火させない。
 - [x] B+D-pad run 開始をホールド方向判定にし、B と D-pad の押下順に依存しないよう修正
 - [x] メニュー中のB短押しキャンセルを Pyxel Web / SteamDeck Firefox でも直感通りにする
