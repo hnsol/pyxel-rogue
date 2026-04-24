@@ -2274,6 +2274,56 @@ class Game:
             return True
         return False
 
+    def _call_it_apply(self, it, name: str):
+        # misc.c:call_it() — oi_know なら oi_guess クリア、それ以外は name をセット（空文字はクリア）
+        val = name.strip() if name else None
+        if it.cat == CAT_POT:
+            if self.ident.pk[it.kind]:
+                self.ident.pg[it.kind] = None
+            else:
+                self.ident.pg[it.kind] = val
+        elif it.cat == CAT_SCR:
+            if self.ident.sk[it.kind]:
+                self.ident.sg[it.kind] = None
+            else:
+                self.ident.sg[it.kind] = val
+        elif it.cat == CAT_RING:
+            if self.ident.rk[it.kind]:
+                self.ident.rg[it.kind] = None
+            else:
+                self.ident.rg[it.kind] = val
+        elif it.cat == CAT_STICK:
+            if self.ident.wk[it.kind]:
+                self.ident.wg[it.kind] = None
+            else:
+                self.ident.wg[it.kind] = val
+
+    def _disc_lines(self):
+        # things.c:print_disc(*) — 全カテゴリの発見済みアイテム名を (color, text) リストで返す
+        nothing = TextCatalog.msg(self.lang, "misc.nothing_discovered")
+        lang = self.lang
+        result = []
+
+        def section(label, cat, table, known_arr, guess_arr):
+            result.append((27, f"-- {label} --"))
+            found = 0
+            for i in range(len(table)):
+                if known_arr[i] or (guess_arr[i] is not None):
+                    dummy = Item(cat, i, known=known_arr[i])
+                    result.append((9, self.ident.name(dummy)))
+                    found += 1
+            if found == 0:
+                result.append((5, nothing))
+
+        section("Potions" if lang == LANG_EN else "水薬",   CAT_POT,   POTIONS, self.ident.pk, self.ident.pg)
+        result.append((0, ""))
+        section("Scrolls" if lang == LANG_EN else "巻き物", CAT_SCR,   SCROLLS, self.ident.sk, self.ident.sg)
+        result.append((0, ""))
+        section("Rings"   if lang == LANG_EN else "指輪",   CAT_RING,  RINGS,   self.ident.rk, self.ident.rg)
+        result.append((0, ""))
+        section("Sticks"  if lang == LANG_EN else "杖",     CAT_STICK, STICKS,  self.ident.wk, self.ident.wg)
+        return result
+
     def identify_item(self, it):
         # Backward-compat alias for set_know().
         return self.set_know(it)

@@ -4303,42 +4303,32 @@ class TestCallIt(unittest.TestCase):
     def setUp(self):
         self.g = new_game(seed=1)
 
+    def _make_pot(self, kind=0):
+        from rogue import Item, CAT_POT
+        return Item(CAT_POT, kind, known=False)
+
     def test_call_sets_guess_on_unknown_potion(self):
         """oi_know=False のポーションに仮名が設定される"""
-        from rogue import CAT_POT
-        pots = [i for i in self.g.p.inv if i.cat == CAT_POT]
-        if not pots:
-            self.skipTest("no potions in start inventory")
-        it = pots[0]
-        it.known = False
-        self.g.ident.pk[it.kind] = False
+        it = self._make_pot(kind=0)
+        self.g.ident.pk[0] = False
         self.g._call_it_apply(it, "boo")
-        self.assertEqual(self.g.ident.pg[it.kind], "boo")
+        self.assertEqual(self.g.ident.pg[0], "boo")
 
     def test_call_clears_guess_when_known(self):
-        """oi_know=True なら既存 oi_guess をクリアして何もしない"""
-        from rogue import CAT_POT
-        pots = [i for i in self.g.p.inv if i.cat == CAT_POT]
-        if not pots:
-            self.skipTest("no potions in start inventory")
-        it = pots[0]
-        self.g.ident.pk[it.kind] = True
-        self.g.ident.pg[it.kind] = "old_name"
+        """oi_know=True なら既存 oi_guess をクリアする"""
+        it = self._make_pot(kind=0)
+        self.g.ident.pk[0] = True
+        self.g.ident.pg[0] = "old_name"
         self.g._call_it_apply(it, "new_name")
-        self.assertIsNone(self.g.ident.pg[it.kind])
+        self.assertIsNone(self.g.ident.pg[0])
 
     def test_call_empty_string_clears_guess(self):
         """空文字確定で oi_guess がクリアされる"""
-        from rogue import CAT_POT
-        pots = [i for i in self.g.p.inv if i.cat == CAT_POT]
-        if not pots:
-            self.skipTest("no potions in start inventory")
-        it = pots[0]
-        it.known = False
-        self.g.ident.pk[it.kind] = False
-        self.g.ident.pg[it.kind] = "old"
+        it = self._make_pot(kind=0)
+        self.g.ident.pk[0] = False
+        self.g.ident.pg[0] = "old"
         self.g._call_it_apply(it, "")
-        self.assertIsNone(self.g.ident.pg[it.kind])
+        self.assertIsNone(self.g.ident.pg[0])
 
 
 class TestPrintDisc(unittest.TestCase):
