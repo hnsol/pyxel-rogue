@@ -4306,6 +4306,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("a poisoned dart killed you", game.msgs)
         self.assertNotIn("a small dart just hit you in the shoulder", game.msgs)
 
+    def test_rogue_544_dart_trap_kill_does_not_lower_strength_after_death(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_DART calls death('d') before poison strength loss.
+        game = new_game(seed=66)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "dart trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: True
+        game.save_vs_poison = lambda: False
+        game.p.hp = 1
+        game.p.st = 16
+        old_roll = rogue.roll
+        rogue.roll = lambda s: 1
+        try:
+            game.trigger_trap(x, y)
+        finally:
+            rogue.roll = old_roll
+
+        self.assertEqual(game.p.st, 16)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4
