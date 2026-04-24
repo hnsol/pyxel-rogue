@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260424_0002"
+UI_BUILD = "260424_0003"
 
 LANG_EN = "en"
 LANG_JA = "ja"
