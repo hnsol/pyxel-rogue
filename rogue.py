@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0100"
+UI_BUILD = "260425_0115"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -3639,6 +3639,7 @@ class Game:
         if self.key_lower(pyxel.KEY_Z): return "Zap"
         if self.key_upper(getattr(pyxel, "KEY_W", None)): return "Wield"
         if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off"
+        if self.key_upper(getattr(pyxel, "KEY_P", None)): return "Put on"
         if self.key_lower(pyxel.KEY_C): return "Call"
         return None
 

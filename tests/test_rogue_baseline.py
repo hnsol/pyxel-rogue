@@ -47,7 +47,7 @@ def install_pyxel_mock():
         "KEY_H", "KEY_J", "KEY_K", "KEY_L",
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
         "KEY_Z", "KEY_X", "KEY_C", "KEY_S",
-        "KEY_Q", "KEY_W", "KEY_E", "KEY_T",
+        "KEY_Q", "KEY_W", "KEY_E", "KEY_T", "KEY_P",
         "KEY_I", "KEY_6", "KEY_SPACE",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_BACKSPACE",
         "KEY_PERIOD", "KEY_COMMA", "KEY_MINUS",
@@ -2967,6 +2967,19 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
         game.update()
         self.assertEqual(game.st, rogue.ST_MENU)
+
+    def test_rogue_544_keyboard_upper_p_opens_put_on_ring(self):
+        # Rogue 5.4.4 command.c:command() maps 'P' to rings.c:ring_on().
+        game = new_game(seed=35)
+        game.start_item_action = lambda aname, cat=None: setattr(game, "shortcut", (aname, cat))
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_P, rogue.pyxel.KEY_SHIFT},
+            pressed={rogue.pyxel.KEY_P},
+        )
+        game.update()
+
+        self.assertEqual(game.shortcut, ("Put on", None))
 
     def test_keyboard_overlays_use_enter_escape_not_z_c(self):
         game = new_game(seed=35)
