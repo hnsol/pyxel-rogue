@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0038"
+UI_BUILD = "260425_0048"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2917,11 +2917,9 @@ class Game:
         return rnd(20) < 7 + self.p.level//2
 
     def drop_arrow_at_player(self):
-        if self.gi_at(self.p.x,self.p.y):
-            return
         arrow=Item(CAT_WPN,3,qty=1)
-        arrow.x,arrow.y=self.p.x,self.p.y
-        self.gitems.append(arrow)
+        # C: move.c:T_ARROW falls via weapons.c:fall()/fallpos().
+        self.drop_thrown(arrow,self.p.x,self.p.y)
 
     def teleport_player(self):
         # C: scrolls.c (teleportation)

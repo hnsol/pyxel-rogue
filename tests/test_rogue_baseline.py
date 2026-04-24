@@ -4249,8 +4249,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.no_move, 4 + rogue.BEARTIME)
 
-    def test_rogue_544_arrow_trap_miss_drops_one_arrow(self):
-        # Rogue 5.4.4 move.c:be_trapped() T_ARROW falls one ARROW on a miss.
+    def test_rogue_544_arrow_trap_miss_drops_one_arrow_with_fallpos(self):
+        # Rogue 5.4.4 move.c:T_ARROW uses weapons.c:fall()/fallpos() on a miss.
         game = new_game(seed=63)
         set_open_floor(game)
         x, y = game.p.x + 1, game.p.y
@@ -4264,7 +4264,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(game.gitems), 1)
         arrow = game.gitems[0]
         self.assertEqual((arrow.cat, arrow.kind, arrow.qty), (rogue.CAT_WPN, 3, 1))
-        self.assertEqual((arrow.x, arrow.y), (game.p.x, game.p.y))
+        self.assertNotEqual((arrow.x, arrow.y), (game.p.x, game.p.y))
+        self.assertLessEqual(abs(arrow.x - game.p.x), 1)
+        self.assertLessEqual(abs(arrow.y - game.p.y), 1)
+
+    def test_rogue_544_arrow_trap_miss_uses_fallpos_when_player_tile_has_item(self):
+        # Rogue 5.4.4 move.c:T_ARROW uses weapons.c:fall()/fallpos() on a miss.
+        game = new_game(seed=70)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: False
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        food.x, food.y = game.p.x, game.p.y
+        game.gitems = [food]
+
+        game.trigger_trap(x, y)
+
+        arrows = [it for it in game.gitems if it.cat == rogue.CAT_WPN and it.kind == 3]
+        self.assertEqual(len(arrows), 1)
+        arrow = arrows[0]
+        self.assertNotEqual((arrow.x, arrow.y), (game.p.x, game.p.y))
+        self.assertLessEqual(abs(arrow.x - game.p.x), 1)
+        self.assertLessEqual(abs(arrow.y - game.p.y), 1)
 
     def test_rogue_544_arrow_trap_kill_uses_killed_message(self):
         # Rogue 5.4.4 move.c:be_trapped() T_ARROW says "an arrow killed you" on death.
