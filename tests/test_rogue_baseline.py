@@ -4340,6 +4340,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [11])
         self.assertIn("you are suddenly in a parallel dimension", game.msgs)
 
+    def test_rogue_544_mysterious_trap_pack_turns_message_matches_source(self):
+        # Rogue 5.4.4 move.c:T_MYST case 10 says "you pack turns %s!".
+        game = new_game(seed=68)
+        seq = iter([10, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(seq)
+            game.mysterious_trap_msg()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn("you pack turns red!", game.msgs)
+        self.assertNotIn("your pack turns red!", game.msgs)
+
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4

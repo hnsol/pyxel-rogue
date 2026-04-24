@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0018"
+UI_BUILD = "260425_0029"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -3007,10 +3007,10 @@ class Game:
             ("move.you_suddenly_feel_very_thirsty",None),
             ("move.you_feel_time_speed_up_suddenly",None),
             ("move.time_now_seems_to_be_going_slower",None),
-            ("pyxel.pack_turns_color","color"),
+            ("move.you_pack_turns_value","value"),
         ]
         key,arg=msgs[rnd(11)]
-        kw={"color":RAINBOW[rnd(len(RAINBOW))]} if arg=="color" else {}
+        kw={arg:RAINBOW[rnd(len(RAINBOW))]} if arg in ("color","value") else {}
         self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
