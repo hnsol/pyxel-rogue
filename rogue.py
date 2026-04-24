@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260424_2350"
+UI_BUILD = "260424_2359"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2971,7 +2971,9 @@ class Game:
                     self.p.st-=1
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="a poisoned dart killed you"
-                self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
+                    self.msg("move.a_poisoned_dart_killed_you")
+                else:
+                    self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
                 self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")
         elif name=="rust trap":
