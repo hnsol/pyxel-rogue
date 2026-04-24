@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0048"
+UI_BUILD = "260425_0100"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1933,7 +1933,7 @@ class Game:
             self.msg_text(self.monster_hit_message(mn))
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if not rogue_monsters.is_cancelled(m):
-                if "rust" in m.flags and self.p.arm and self.p.arm.ench>-3:
+                if "rust" in m.flags and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
                 if "steal_gold" in m.flags and self.p.gold>0:
                     s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
@@ -2983,15 +2983,19 @@ class Game:
     def rust_armor(self):
         # C: move.c:rust_armor()
         arm=self.p.arm
-        if not arm or arm.data["name"]=="leather armor":
+        if not self.can_rust_armor(arm):
             return
         if arm.protected or rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM):
             self.msg("move.the_rust_vanishes_instantly")
             return
-        if arm.ench>-3:
-            arm.ench-=1
-            self.p.recalc_ac()
-            self.msg("move.your_armor_weakens")
+        arm.ench-=1
+        self.p.recalc_ac()
+        self.msg("move.your_armor_weakens")
+
+    def can_rust_armor(self, arm):
+        # C: move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
+        return bool(arm and arm.cat==CAT_ARM and arm.data["name"]!="leather armor"
+                    and arm.data["ac"] - arm.ench < 9)
 
     def mysterious_trap_msg(self):
         msgs=[

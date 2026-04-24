@@ -1784,6 +1784,18 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(game.ident.rk[rogue_rings.R_NOP])
 
+    def test_rogue_544_rust_armor_uses_current_armor_class_limit(self):
+        # Rogue 5.4.4 move.c:rust_armor() rusts armor while o_arm < 9.
+        game = new_game(seed=212)
+        armor = rogue.Item(rogue.CAT_ARM, 7, ench=-3)
+        game.p.arm = armor
+        game.p.recalc_ac()
+
+        game.rust_armor()
+
+        self.assertEqual(armor.ench, -4)
+        self.assertIn("your armor weakens", game.msgs)
+
     def test_full_map_layout_baseline(self):
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 360))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
