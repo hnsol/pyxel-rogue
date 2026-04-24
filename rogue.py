@@ -215,6 +215,15 @@ ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
 ST_DEAD = 4; ST_INVENTORY = 5; ST_HELP = 6
 ST_AUX = 7; ST_WIN = 8; ST_LOADING = 9
 ST_QUIT = 10; ST_QUIT_CONFIRM = 11; ST_SCORE = 12
+ST_CALL = 13; ST_DISC = 14
+
+CALL_PRESETS = [
+    "good", "bad",  "meh",  "skip",
+    "try",  "use",  "id?",  "boo",
+    "zap",  "hmm",  "ugh",  "yay",
+    "wow",  "odd",  "???",  "!!!",
+]
+
 
 # ===========================================================
 #  Item categories
@@ -1296,6 +1305,8 @@ class Game:
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
+        self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
+        self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
         self.cam_x = self.cam_y = 0
