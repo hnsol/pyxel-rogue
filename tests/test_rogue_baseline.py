@@ -2116,6 +2116,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [True])
         self.assertEqual(game.p.st, 10)
+        self.assertIn("a bite momentarily weakens you", game.msgs)
 
     def test_rogue_544_poison_potion_ends_hallucination_after_strength_loss(self):
         # Rogue 5.4.4 potions.c:P_POISON calls daemons.c:come_down() after chg_str().
