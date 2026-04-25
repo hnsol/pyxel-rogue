@@ -1853,6 +1853,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, game.p.max_hp)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_doctor_high_level_heal_uses_rnd_level_minus_seven_plus_one(self):
+        # Rogue 5.4.4 daemons.c:doctor() heals high-level players by rnd(lv - 7) + 1.
+        game = new_game(seed=319)
+        game.daemons.kill("runners")
+        game.daemons.kill("stomach")
+        game.p.level = 10
+        game.p.hp = 10
+        game.p.max_hp = 20
+        game.p.quiet = 2
+        calls = []
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 2
+            game.do_after_daemons()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls, [3])
+        self.assertEqual(game.p.hp, 13)
+        self.assertEqual(game.p.quiet, 0)
+
     def test_rogue_544_stomach_does_not_extend_existing_no_command_faint(self):
         # Rogue 5.4.4 daemons.c:stomach() returns when no_command is already nonzero.
         game = new_game(seed=315)

@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0615"
+UI_BUILD = "260426_0642"
 
 # ===========================================================
 #  Font
@@ -658,7 +658,7 @@ class Player:
             if s.quiet+(s.level<<1)>20:
                 s.hp+=1
         elif s.quiet>=3:
-            s.hp+=RNG.randint(1,max(1,s.level-7))
+            s.hp+=RNG.rnd(s.level-7)+1
         s.hp+=rogue_rings.regeneration_count(s)
         if s.hp!=old:
             s.hp=min(s.hp,s.max_hp); s.quiet=0
