@@ -968,6 +968,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = room_a.inner()
         game.p.held_by = flytrap
         flytrap.vf_hit = 4
+        game.p.no_move = 5
+        game.dashing = True
+        game.dash_steps = 3
         game.usable_rooms = lambda: [room_b]
 
         game.use_scr(other_room_scroll)
@@ -976,6 +979,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.room_at(game.p.x, game.p.y), room_b)
         self.assertIsNone(game.p.held_by)
         self.assertEqual(flytrap.vf_hit, 0)
+        self.assertEqual(game.p.no_move, 0)
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.dash_steps, 0)
         self.assertNotIn("You are teleported!", game.msgs)
 
     def test_rogue_544_create_monster_uses_eight_neighbors_and_does_not_identify(self):
