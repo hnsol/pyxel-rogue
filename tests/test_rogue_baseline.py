@@ -1263,6 +1263,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.pk[mfind])
         self.assertTrue(game.ident.pk[haste])
 
+    def test_rogue_544_monster_detection_without_monsters_uses_feeling_message(self):
+        # Rogue 5.4.4 potions.c:P_MFIND calls turn_see(FALSE), then choose_str("normal", "strange") if none appear.
+        game = new_game(seed=319)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.mons = []
+
+        game.use_pot(potion)
+
+        self.assertFalse(game.ident.pk[kind])
+        self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
+        self.assertNotIn("You sense monsters.", game.msgs)
+
     def test_rogue_544_magic_detection_sees_monster_pack_magic(self):
         # Rogue 5.4.4 potions.c:P_TFIND scans mlist t_pack with is_magic().
         import rogue_rings

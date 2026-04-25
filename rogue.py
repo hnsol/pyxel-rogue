@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0135"
+UI_BUILD = "260425_0146"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2169,7 +2169,11 @@ class Game:
             else:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
                 p.see_monsters = HUHDURATION
-            self.msg("pyxel.sense_monsters")
+            if self.mons:
+                self.msg("pyxel.sense_monsters")
+            else:
+                self.msg("potions.you_have_a_item_feeling_for_a_moment_then_it_passes",
+                         item="normal" if p.hallucinating > 0 else "strange")
         elif nm=="magic detection":
             found = False
             for i in self.gitems:
