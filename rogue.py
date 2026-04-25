@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2052"
+UI_BUILD = "260425_2058"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1808,13 +1808,23 @@ class Game:
         if not m.running:
             hplus += 4
         hplus += self.p.str_hit_plus()
-        if not self.swing_hits(self.p.level, m.armor, hplus):
-            return False, 0
+        did_hit = False
         total = 0
         for part in damage_expr.split("/"):
-            total += roll_damage_expr(part)
-        total = max(0, total + dplus + self.p.str_dam_plus())
-        return True, total
+            if self.swing_hits(self.p.level, m.armor, hplus):
+                total += max(0, roll_damage_expr(part) + dplus + self.p.str_dam_plus())
+                did_hit = True
+        return did_hit, total
+
+    def roll_monster_attack(self, m):
+        # C: fight.c:roll_em()
+        did_hit = False
+        total = 0
+        for part in m.damage_expr.split("/"):
+            if self.swing_hits(m.level, self.p.ac, 0):
+                total += roll_damage_expr(part)
+                did_hit = True
+        return did_hit, total
 
     def award_monster_kill(self, m, translated_name=None):
         # C: fight.c:killed()
@@ -1929,8 +1939,8 @@ class Game:
     def m_attack(self,m):
         # C: fight.c:attack()
         mn=self.combat_monster_name(m,upper=True)
-        if self.swing_hits(m.level, self.p.ac, 0):
-            dmg=roll_damage_expr(m.damage_expr)
+        hit,dmg=self.roll_monster_attack(m)
+        if hit:
             if dmg:
                 self.p.hp-=dmg
             self.msg_text(self.monster_hit_message(mn))

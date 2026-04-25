@@ -2421,6 +2421,20 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.randrange = old_randrange
 
+    def test_rogue_544_roll_em_swings_once_per_damage_part(self):
+        # Rogue 5.4.4 fight.c:roll_em() calls swing() inside the damage-part loop.
+        game = new_game(seed=8)
+        set_open_floor(game)
+        game.p.hp = 20
+        monster = monster_at(game.p.x + 1, game.p.y, damage="1x1/1x1")
+        game.mons = [monster]
+        swings = iter([False, True])
+        game.swing_hits = lambda at_lvl, op_arm, wplus: next(swings)
+
+        game.m_attack(monster)
+
+        self.assertEqual(game.p.hp, 19)
+
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
         mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)
