@@ -1795,6 +1795,20 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.random.randrange = old_randrange
         self.assertEqual(game.p.st, 10)
 
+    def test_rogue_544_poison_potion_ends_hallucination_after_strength_loss(self):
+        # Rogue 5.4.4 potions.c:P_POISON calls daemons.c:come_down() after chg_str().
+        game = new_game(seed=213)
+        poison = next(i for i, spec in enumerate(rogue.POTIONS) if spec["name"] == "poison")
+        potion = rogue.Item(rogue.CAT_POT, poison)
+        game.p.inv.append(potion)
+        game.p.hallucinating = 10
+        game.fuses.fuse("come_down", 10, rogue.rogue_daemons.AFTER)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.hallucinating, 0)
+        self.assertIn("Everything looks SO boring now.", game.msgs)
+
     def test_rogue_544_ring_maintain_armor_blocks_rust_and_adornment_stays_unidentified(self):
         # Rogue 5.4.4 move.c:rust_armor() checks R_SUSTARM; R_NOP has no wear-time effect.
         import rogue_rings

@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0158"
+UI_BUILD = "260425_0210"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2116,6 +2116,7 @@ class Game:
                 self.msg("potions.you_feel_momentarily_sick")
             else:
                 l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("pyxel.feel_sick_strength_loss", count=l)
+                self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("pyxel.strength_plus_one")
         elif nm=="restore strength": p.st=p.max_st; self.msg("pyxel.feel_warm_all_over")
@@ -2231,6 +2232,8 @@ class Game:
 
     def come_down(self):
         # C: daemons.c:come_down()
+        if self.p.hallucinating <= 0:
+            return
         self.p.hallucinating = 0
         self.msg("daemons.everything_looks_so_boring_now")
 
