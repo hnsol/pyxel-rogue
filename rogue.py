@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2139"
+UI_BUILD = "260425_2143"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1336,6 +1336,8 @@ class Game:
         self.wander_between = 0
         self.fuses = rogue_daemons.FuseList()
         self.daemons = rogue_daemons.DaemonList()
+        self.daemons.start("doctor", rogue_daemons.AFTER)
+        self.daemons.start("stomach", rogue_daemons.AFTER)
         self.haste_half_turn = False
         self.result_scores = []
         self.result_entry = None
@@ -3173,15 +3175,6 @@ class Game:
         self.turn+=1
         for i in range(msg_start, len(self.msg_turns)):
             self.msg_turns[i] = self.turn
-        m=self.p.hunger()
-        if m:
-            self.msg(m); self.dashing=False
-        if self.p.hp<=0 and not self.death_cause:
-            self.death_cause="starved to death"
-        if not self.p.alive:
-            self.msg("pyxel.died_restart"); self.enter_result_state("killed")
-            self.turn_msg_start = len(self.msgs)
-            return
         if self.p.no_command>0: self.p.no_command-=1
         if self.p.confused>0 and self.fuses.remaining("unconfuse")==0:
             self.p.confused-=1
@@ -3226,7 +3219,6 @@ class Game:
                 self.p.haste -= 1
                 if self.p.haste == 0:
                     self.msg("daemons.you_feel_yourself_slowing_down")
-        self.p.heal_tick()
         self.ring_after_turn()
         for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
@@ -3265,6 +3257,18 @@ class Game:
         for name in self.daemons.tick(rogue_daemons.AFTER):
             if name == "rollwand":
                 self.roll_wanderer()
+            elif name == "doctor":
+                self.p.heal_tick()
+            elif name == "stomach":
+                self.run_stomach()
+
+    def run_stomach(self):
+        # C: daemons.c:stomach()
+        m=self.p.hunger()
+        if m:
+            self.msg(m); self.dashing=False
+        if self.p.hp<=0 and not self.death_cause:
+            self.death_cause="starved to death"
 
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):
