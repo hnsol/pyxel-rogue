@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0210"
+UI_BUILD = "260425_0222"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2107,8 +2107,13 @@ class Game:
             self.msg("pyxel.feel_better_amount", count=h)
         elif nm=="extra healing":
             self.ident.pk[it.kind]=True
-            h=max(1,roll("1d8")*p.level); p.hp=min(p.hp+h,p.max_hp+2)
-            if p.hp>p.max_hp: p.max_hp=p.hp
+            h=max(1,roll("1d8")*p.level)
+            p.hp += h
+            if p.hp > p.max_hp:
+                if p.hp > p.max_hp + p.level + 1:
+                    p.max_hp += 1
+                p.max_hp += 1
+                p.hp = p.max_hp
             self.msg("pyxel.feel_much_better_amount", count=h)
         elif nm=="poison":
             self.ident.pk[it.kind]=True

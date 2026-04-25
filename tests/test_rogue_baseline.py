@@ -3412,6 +3412,40 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, game.p.max_hp - 4)
         self.assertIn("You feel much better. (+1)", game.msgs)
 
+    def test_rogue_544_extra_healing_can_raise_max_hp_by_two(self):
+        # Rogue 5.4.4 potions.c:P_XHEAL increments max_hp twice when the overflow exceeds level + 1.
+        game = new_game(seed=392)
+        extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
+        potion = rogue.Item(rogue.CAT_POT, extra_healing)
+        game.p.inv.append(potion)
+        game.p.level = 1
+        game.p.hp = game.p.max_hp
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 8
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual((game.p.hp, game.p.max_hp), (18, 18))
+
+    def test_rogue_544_extra_healing_small_overflow_raises_max_hp_by_one(self):
+        # Rogue 5.4.4 potions.c:P_XHEAL skips the pre-increment unless overflow exceeds level + 1.
+        game = new_game(seed=393)
+        extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
+        potion = rogue.Item(rogue.CAT_POT, extra_healing)
+        game.p.inv.append(potion)
+        game.p.level = 2
+        game.p.hp = game.p.max_hp
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 1
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
+
     def test_rogue_544_healing_can_raise_max_hp_by_one(self):
         # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp when healing overflows.
         game = new_game(seed=391)
