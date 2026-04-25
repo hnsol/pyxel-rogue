@@ -1583,6 +1583,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.fuses.remaining("come_down"), 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
 
+    def test_rogue_544_hallucination_turns_off_detect_monster_display(self):
+        # Rogue 5.4.4 potions.c:P_LSD calls turn_see(FALSE) when SEEMONST is active.
+        game = new_game(seed=216)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+        game.p.see_monsters = rogue.HUHDURATION
+        game.fuses.fuse("turn_see", rogue.HUHDURATION, rogue.rogue_daemons.AFTER)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.see_monsters, 0)
+
     def test_rogue_544_potion_hallucination_lengthens_come_down_fuse(self):
         # Rogue 5.4.4 potions.c:do_pot(P_LSD) lengthens come_down when ISHALU is already set.
         game = new_game(seed=313)

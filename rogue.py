@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0244"
+UI_BUILD = "260425_0255"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2144,6 +2144,8 @@ class Game:
             if p.hallucinating > 0:
                 self.fuses.lengthen("come_down", duration)
             else:
+                if p.see_monsters > 0:
+                    p.see_monsters = 0
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
