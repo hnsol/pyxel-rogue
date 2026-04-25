@@ -968,6 +968,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = room_a.inner()
         game.p.held_by = flytrap
         flytrap.vf_hit = 4
+        flytrap.damage_expr = "4x1"
         game.p.no_move = 5
         game.dashing = True
         game.dash_steps = 3
@@ -979,6 +980,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.room_at(game.p.x, game.p.y), room_b)
         self.assertIsNone(game.p.held_by)
         self.assertEqual(flytrap.vf_hit, 0)
+        self.assertEqual(flytrap.damage_expr, "0x0")
         self.assertEqual(game.p.no_move, 0)
         self.assertFalse(game.dashing)
         self.assertEqual(game.dash_steps, 0)

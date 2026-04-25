@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2219"
+UI_BUILD = "260425_2222"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2582,6 +2582,7 @@ class Game:
         # Rogue 5.4.4 wizard.c:teleport() clears ISHELD/vf_hit after teleporting.
         if self.p.held_by is not None:
             self.p.held_by.vf_hit = 0
+            self.p.held_by.damage_expr = "0x0"
             self.p.held_by = None
 
     def finish_teleport(self):
