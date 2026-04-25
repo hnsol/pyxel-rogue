@@ -1284,6 +1284,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("You feel warm all over.", game.msgs)
         self.assertNotIn(potion, game.p.inv)
 
+    def test_rogue_544_restore_strength_does_not_lower_strength_above_max(self):
+        # Rogue 5.4.4 potions.c:P_RESTORE only raises pstats.s_str when below max_stats.s_str.
+        import rogue_rings
+
+        game = new_game(seed=324)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "restore strength")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR, ench=2)
+        game.p.max_st = 18
+        game.p.st = 20
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.st, 20)
+        self.assertEqual(game.p.max_st, 18)
+        self.assertFalse(game.ident.pk[kind])
+
     def test_rogue_544_gain_strength_potion_uses_original_message(self):
         # Rogue 5.4.4 potions.c:P_STRENGTH sets oi_know and says the bulging muscles message.
         game = new_game(seed=323)

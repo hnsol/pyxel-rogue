@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0330"
+UI_BUILD = "260425_0342"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2127,7 +2127,15 @@ class Game:
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
-        elif nm=="restore strength": p.st=p.max_st; self.msg("potions.hey_this_tastes_great_it_make_you_feel_warm_all_over")
+        elif nm=="restore strength":
+            # Rogue 5.4.4 potions.c:P_RESTORE temporarily removes R_ADDSTR before restoring max_stats.s_str.
+            addstr = sum(r.ench for r in (p.ring_l, p.ring_r) if rogue_rings.is_ring(r, rogue_rings.R_ADDSTR))
+            base_max = p.max_st - addstr
+            base_st = p.st - addstr
+            if base_st < base_max:
+                base_st = base_max
+            p.st = max(3, min(31, base_st + addstr))
+            self.msg("potions.hey_this_tastes_great_it_make_you_feel_warm_all_over")
         elif nm=="confusion":
             if not self.ident.pk[it.kind]:
                 self.ident.pk[it.kind]=p.hallucinating <= 0
