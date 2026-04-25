@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0825"
+UI_BUILD = "260426_0834"
 
 # ===========================================================
 #  Font
@@ -641,7 +641,6 @@ class Player:
         amulet_eat = 1 if s.has_amulet else 0
         s.food-=1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG) - amulet_eat
         if s.food<=0:
-            s.state="faint"
             return None
         if s.food<MORETIME:
             s.state="weak"

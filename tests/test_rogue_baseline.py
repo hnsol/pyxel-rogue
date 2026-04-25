@@ -1932,6 +1932,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [8])
         self.assertEqual(game.p.no_command, 11)
 
+    def test_rogue_544_stomach_crossing_zero_does_not_faint_until_next_tick(self):
+        # Rogue 5.4.4 daemons.c:stomach() only runs faint logic when food_left <= 0 at entry.
+        game = new_game(seed=320)
+        game.p.food = 1
+        game.p.state = "weak"
+        game.p.no_command = 0
+
+        game.run_stomach()
+
+        self.assertEqual(game.p.food, 0)
+        self.assertEqual(game.p.state, "weak")
+        self.assertEqual(game.p.no_command, 0)
+
     def test_rogue_544_no_command_recovery_message_when_counter_reaches_zero(self):
         # Rogue 5.4.4 command.c:command() prints "you can move again" when --no_command reaches 0.
         game = new_game(seed=317)
