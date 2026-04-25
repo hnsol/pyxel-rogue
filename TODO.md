@@ -88,7 +88,7 @@
   - [x] `command.c:call()` / `misc.c:call_it()` 相当の命名機能（`c` キー）— potion / scroll / ring / stick の `oi_guess` を設定
   - [x] `things.c:print_disc()` 相当の discovered list（`D` キー）— `oi_know`/`oi_guess` 一覧表示
   - [x] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
-  - [ ] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
+  - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
   - [ ] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll を分ける
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）

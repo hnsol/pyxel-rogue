@@ -1377,6 +1377,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
         self.assertNotIn("You sense magic.", game.msgs)
 
+    def test_rogue_544_raise_level_potion_uses_e_levels_and_original_message(self):
+        # Rogue 5.4.4 extern.c:e_levels[] and potions.c:raise_level() set exp to e_levels[level-1]+1.
+        game = new_game(seed=325)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "raise level")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.p.level = 10
+        game.p.exp = 5200
+
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.RNG.randint = lambda a, b: 4
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.randint = old_randint
+
+        self.assertEqual(game.p.level, 11)
+        self.assertEqual(game.p.exp, 5201)
+        self.assertEqual(rogue.Player.EXP_T[11], 13000)
+        self.assertTrue(game.ident.pk[kind])
+        self.assertIn("you suddenly feel much more skillful", game.msgs)
+        self.assertNotIn("You rise to level 11!", game.msgs)
+
     def test_rogue_544_do_pot_does_not_forget_known_confusion_while_hallucinating(self):
         # Rogue 5.4.4 potions.c:do_pot() only assigns oi_know when it is not already known.
         game = new_game(seed=319)

@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0354"
+UI_BUILD = "260425_0408"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -666,8 +666,9 @@ def monster_hp(spec: object) -> int:
     return max(1, roll_damage_expr(f"{spec.level}x8"))
 
 class Player:
-    EXP_T=[0,10,20,40,80,160,320,640,1300,2600,5200,10000,20000,
-           40000,80000,160000,320000,640000,1300000,2600000,5200000]
+    # Rogue 5.4.4 extern.c:e_levels[] with a leading level-1 sentinel for Pyxel indexing.
+    EXP_T=[0,10,20,40,80,160,320,640,1300,2600,5200,13000,26000,
+           50000,100000,200000,400000,800000,2000000,4000000,8000000]
     def __init__(s):
         s.x=s.y=0; s.hp=s.max_hp=16; s.st=s.max_st=16
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
@@ -2184,8 +2185,8 @@ class Game:
                 self.msg("daemons.the_veil_of_darkness_lifts")
         elif nm=="raise level":
             self.ident.pk[it.kind]=True
-            p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]; p.lvlup()
-            self.msg("pyxel.rise_to_level", level=p.level)
+            p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)] + 1; p.lvlup()
+            self.msg("potions.you_suddenly_feel_much_more_skillful")
         elif nm=="monster detection":
             if p.see_monsters > 0:
                 self.fuses.lengthen("turn_see", HUHDURATION)
