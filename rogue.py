@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0512"
+UI_BUILD = "260426_0527"
 
 # ===========================================================
 #  Font
@@ -636,7 +636,7 @@ class Player:
             s.state="faint"
             if s.no_command or RNG.randrange(5)!=0:
                 return None
-            s.no_command+=RNG.randint(4,11)
+            s.no_command+=RNG.rnd(8)+4
             return "pyxel.faint_from_lack_of_food"
         amulet_eat = 1 if s.has_amulet else 0
         s.food-=1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG) - amulet_eat

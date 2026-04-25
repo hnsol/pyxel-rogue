@@ -1871,6 +1871,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.food, -1)
         self.assertEqual(game.p.no_command, 5)
 
+    def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
+        # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
+        game = new_game(seed=316)
+        game.p.food = 0
+        game.p.no_command = 0
+        calls = []
+        old_randrange = rogue.RNG.randrange
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.randrange = lambda n: 0
+
+            def fake_rnd(n):
+                calls.append(n)
+                return 7
+
+            rogue.RNG.rnd = fake_rnd
+            game.run_stomach()
+        finally:
+            rogue.RNG.randrange = old_randrange
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls, [8])
+        self.assertEqual(game.p.no_command, 11)
+
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
         game = new_game(seed=311)
