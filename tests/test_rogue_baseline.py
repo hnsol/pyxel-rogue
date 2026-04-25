@@ -1745,6 +1745,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("wait, what's going on here. Huh? What? Who?", game.msgs)
 
         game.p.confused = 1
+        game.fuses.extinguish("unconfuse")
         game.fuses.fuse("unconfuse", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 
@@ -1774,6 +1775,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("a cloak of darkness falls around you", game.msgs)
 
         game.p.blind = 1
+        game.fuses.extinguish("sight")
         game.fuses.fuse("sight", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 
@@ -1795,6 +1797,29 @@ class RogueBaselineTest(unittest.TestCase):
         fuses.extinguish("nohaste")
         self.assertEqual(fuses.tick(rogue_daemons.AFTER), [])
         self.assertEqual(fuses.remaining("nohaste"), 0)
+
+    def test_rogue_544_daemon_table_keeps_duplicate_slots(self):
+        # Rogue 5.4.4 daemon.c:start_daemon()/kill_daemon() use slots, not a unique map.
+        import rogue_daemons
+
+        daemons = rogue_daemons.DaemonList()
+        daemons.start("rollwand", rogue_daemons.BEFORE)
+        daemons.start("rollwand", rogue_daemons.BEFORE)
+        self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["rollwand", "rollwand"])
+
+        daemons.kill("rollwand")
+        self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["rollwand"])
+
+    def test_rogue_544_fuse_table_keeps_duplicate_slots(self):
+        # Rogue 5.4.4 daemon.c:fuse()/extinguish() use slots, not a unique map.
+        import rogue_daemons
+
+        fuses = rogue_daemons.FuseList()
+        fuses.fuse("swander", 1, rogue_daemons.BEFORE)
+        fuses.fuse("swander", 1, rogue_daemons.BEFORE)
+        fuses.extinguish("swander")
+
+        self.assertEqual(fuses.tick(rogue_daemons.BEFORE), ["swander"])
 
     def test_rogue_544_main_starts_after_daemons(self):
         # Rogue 5.4.4 main.c starts runners, doctor, and stomach with start_daemon(..., AFTER).
@@ -2085,6 +2110,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("you start to float in the air", game.msgs)
 
         game.p.levitating = 1
+        game.fuses.extinguish("land")
         game.fuses.fuse("land", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 
@@ -2131,6 +2157,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Oh, wow!  Everything seems so cosmic!", game.msgs)
 
         game.p.hallucinating = 1
+        game.fuses.extinguish("come_down")
         game.fuses.fuse("come_down", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 
@@ -4655,6 +4682,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("H", [s for _, s, _ in calls])
 
         game.p.see_monsters = 1
+        game.fuses.extinguish("turn_see")
         game.fuses.fuse("turn_see", 1, rogue.rogue_daemons.AFTER)
         game.end_turn()
 

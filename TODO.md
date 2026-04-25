@@ -137,6 +137,7 @@
   - [x] `swander / rollwand` を初回 `fuse(AFTER)`、以後 `start_daemon(BEFORE)` / `fuse(BEFORE)` へ接続
   - [x] `doctor / stomach` を `start_daemon(AFTER)` へ接続
   - [x] `runners` を `start_daemon(AFTER)` へ接続
+  - [x] `daemon.c` 準拠で delayed action を unique map ではなくスロット列として扱い、同名 daemon/fuse の重複登録と `kill_daemon()` / `extinguish()` の先頭1件削除を再現
   - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）
