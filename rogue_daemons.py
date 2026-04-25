@@ -51,6 +51,24 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
     return None
 
 
+def swander(actions) -> None:
+    """Rogue 5.4.4 daemons.c:swander()."""
+    actions.daemons.start("rollwand", BEFORE)
+
+
+def rollwand(actions, rng, between: int, wander_time: int, wanderer) -> int:
+    """Rogue 5.4.4 daemons.c:rollwand()."""
+    between += 1
+    if between < 4:
+        return between
+    between = 0
+    if rng.roll(1, 6) == 4:
+        wanderer()
+        actions.daemons.kill("rollwand")
+        actions.fuses.fuse("swander", wander_time, BEFORE)
+    return between
+
+
 class FuseList:
     """Small fuse table matching daemon.c:fuse()/lengthen()/extinguish()/do_fuses()."""
 

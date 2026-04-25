@@ -110,6 +110,14 @@ class WanderingMonsterTests(unittest.TestCase):
         self.assertFalse(game.daemons.running("rollwand", rogue.rogue_daemons.AFTER))
         self.assertEqual(len(game.mons), 0)
 
+    def test_rogue_544_daemons_helper_swander_starts_rollwand_before(self):
+        actions = rogue.rogue_daemons.DelayedActionTable()
+
+        rogue.rogue_daemons.swander(actions)
+
+        self.assertTrue(actions.daemons.running("rollwand", rogue.rogue_daemons.BEFORE))
+        self.assertFalse(actions.daemons.running("rollwand", rogue.rogue_daemons.AFTER))
+
     def test_rogue_544_rollwand_daemon_reschedules_swander_fuse_after_spawn(self):
         # Rogue 5.4.4 daemons.c:rollwand() kills rollwand and fuses swander after wanderer().
         game = new_game(seed=103)
@@ -127,6 +135,24 @@ class WanderingMonsterTests(unittest.TestCase):
         self.assertEqual(len(game.mons), 1)
         self.assertFalse(game.daemons.running("rollwand"))
         self.assertGreater(game.fuses.remaining("swander"), 0)
+
+    def test_rogue_544_daemons_helper_rollwand_reschedules_on_success(self):
+        actions = rogue.rogue_daemons.DelayedActionTable()
+        actions.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+        calls = []
+
+        between = rogue.rogue_daemons.rollwand(
+            actions,
+            FixedRng(),
+            between=3,
+            wander_time=67,
+            wanderer=lambda: calls.append("spawn"),
+        )
+
+        self.assertEqual(between, 0)
+        self.assertEqual(calls, ["spawn"])
+        self.assertFalse(actions.daemons.running("rollwand"))
+        self.assertEqual(actions.fuses.remaining("swander"), 67)
 
     def test_rogue_544_rollwand_reschedules_even_if_pyxel_spawn_fails(self):
         # Rogue 5.4.4 daemons.c:rollwand() reschedules after calling monsters.c:wanderer().

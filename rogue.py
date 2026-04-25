@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0852"
+UI_BUILD = "260426_0856"
 
 # ===========================================================
 #  Font
@@ -3219,19 +3219,18 @@ class Game:
 
     def swander(self):
         # C: daemons.c:swander()
-        self.daemons.start("rollwand", rogue_daemons.BEFORE)
+        rogue_daemons.swander(self.delayed_actions)
 
     def roll_wanderer(self):
         # C: daemons.c:rollwand()
-        self.wander_between+=1
-        if self.wander_between<4:
-            return
-        self.wander_between=0
-        if RNG.roll(1,6)==4:
-            self.spawn_wanderer()
-            self.daemons.kill("rollwand")
-            self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.BEFORE)
-            self.wander_timer=self.fuses.remaining("swander")
+        self.wander_between = rogue_daemons.rollwand(
+            self.delayed_actions,
+            RNG,
+            self.wander_between,
+            RNG.spread(WANDERTIME),
+            self.spawn_wanderer,
+        )
+        self.wander_timer=self.fuses.remaining("swander")
 
     def do_after_daemons(self):
         # Rogue 5.4.4 command.c calls do_daemons(AFTER) before do_fuses(AFTER).
