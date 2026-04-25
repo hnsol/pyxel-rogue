@@ -118,6 +118,23 @@ from rogue_palettes import (
     PALETTES,
 )
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
+from rogue_timing import (
+    AMULET_LEVEL,
+    BEARTIME,
+    BOLT_LENGTH,
+    BORE_LEVEL,
+    HEALTIME,
+    HUHDURATION,
+    HUNGERTIME,
+    MAX_TRAPS,
+    MORETIME,
+    SEEDURATION,
+    SLEEPTIME,
+    STARVETIME,
+    STOMACHSIZE,
+    VS_MAGIC,
+    WANDERTIME,
+)
 from rogue_ui import (
     AUX_ACTIONS,
     BACK_TAP_FRAMES,
@@ -142,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0033"
+UI_BUILD = "260426_0044"
 
 # ===========================================================
 #  Font
@@ -152,23 +169,8 @@ FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 
 INV_MAX = 26
 DASH_INTERVAL = 2                # frames between dash steps
-HUNGERTIME = 1300
-MORETIME = 150
-STOMACHSIZE = 2000
-STARVETIME = 850
-SEEDURATION = 850
-HEALTIME = 30
-MAX_TRAPS = 10
-AMULET_LEVEL = 26
-WANDERTIME = 70
-BEARTIME = 3
-SLEEPTIME = 5
-BORE_LEVEL = 50
-BOLT_LENGTH = 6
-VS_MAGIC = 3
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
-HUHDURATION = 20
 HELP_HEADER_COL = 31
 HELP_TEXT_COL = 30
 

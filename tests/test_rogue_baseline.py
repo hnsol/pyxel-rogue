@@ -204,6 +204,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.Settings(language="xx").language, rogue.LANG_EN)
         self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
 
+    def test_timing_constants_are_split_without_changing_values(self):
+        import rogue_timing
+
+        names = (
+            "HUNGERTIME", "MORETIME", "STOMACHSIZE", "STARVETIME",
+            "SEEDURATION", "HEALTIME", "MAX_TRAPS", "AMULET_LEVEL",
+            "WANDERTIME", "BEARTIME", "SLEEPTIME", "BORE_LEVEL",
+            "BOLT_LENGTH", "VS_MAGIC", "HUHDURATION",
+        )
+        self.assertEqual({name: getattr(rogue, name) for name in names}, {name: getattr(rogue_timing, name) for name in names})
+        self.assertEqual((rogue.HUNGERTIME, rogue.SEEDURATION, rogue.WANDERTIME), (1300, 850, 70))
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 
