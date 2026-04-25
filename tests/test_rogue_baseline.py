@@ -144,6 +144,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(set(rogue.PALETTES), set(rogue.PALETTE_IDS))
         self.assertTrue(all(len(colors) == 32 for colors in rogue.PALETTES.values()))
 
+    def test_map_tables_are_split_without_changing_play_area(self):
+        import rogue_map
+
+        self.assertEqual((rogue.MAP_W, rogue.MAP_H), (rogue_map.MAP_W, rogue_map.MAP_H))
+        self.assertEqual((rogue.PLAY_Y_MIN, rogue.PLAY_Y_MAX), (rogue_map.PLAY_Y_MIN, rogue_map.PLAY_Y_MAX))
+        self.assertEqual(rogue.PLAY_H, rogue_map.PLAY_H)
+        self.assertEqual(rogue.TILE_CH, rogue_map.TILE_CH)
+        self.assertEqual(rogue.WALKABLE, rogue_map.WALKABLE)
+        self.assertEqual((rogue.ROOM_DARK, rogue.ROOM_GONE, rogue.ROOM_MAZE), ("dark", "gone", "maze"))
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 

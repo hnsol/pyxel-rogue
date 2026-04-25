@@ -1,0 +1,27 @@
+NUMCOLS, NUMLINES = 80, 24
+STATLINE = NUMLINES - 1
+MAP_W, MAP_H = NUMCOLS, NUMLINES
+PLAY_Y_MIN, PLAY_Y_MAX = 1, STATLINE - 1
+PLAY_H = PLAY_Y_MAX - PLAY_Y_MIN + 1
+GRID_C, GRID_R = 3, 3
+SEC_W, SEC_H = MAP_W // GRID_C, MAP_H // GRID_R
+RM_MIN_W, RM_MAX_W = 5, 12
+RM_MIN_H, RM_MAX_H = 4, 7
+
+ROOM_DARK = "dark"
+ROOM_GONE = "gone"
+ROOM_MAZE = "maze"
+
+T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
+TILE_CH = {
+    T_VOID:  (" ",  0),
+    T_FLOOR: (".", 12),
+    T_HWALL: ("-",  4),
+    T_VWALL: ("|",  3),
+    T_DOOR:  ("+", 18),
+    T_CORR:  ("#",  5),
+    T_STAIR: ("%", 29),
+    T_TRAP:  ("^", 28),
+}
+MEMORY_TILE_COLOR = 5
+WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}

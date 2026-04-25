@@ -30,6 +30,38 @@ import rogue_rings
 import rogue_sticks
 import rogue_dungeon
 import rogue_daemons
+from rogue_map import (
+    GRID_C,
+    GRID_R,
+    MAP_H,
+    MAP_W,
+    MEMORY_TILE_COLOR,
+    NUMCOLS,
+    NUMLINES,
+    PLAY_H,
+    PLAY_Y_MAX,
+    PLAY_Y_MIN,
+    RM_MAX_H,
+    RM_MAX_W,
+    RM_MIN_H,
+    RM_MIN_W,
+    ROOM_DARK,
+    ROOM_GONE,
+    ROOM_MAZE,
+    SEC_H,
+    SEC_W,
+    STATLINE,
+    TILE_CH,
+    T_CORR,
+    T_DOOR,
+    T_FLOOR,
+    T_HWALL,
+    T_STAIR,
+    T_TRAP,
+    T_VOID,
+    T_VWALL,
+    WALKABLE,
+)
 from rogue_palettes import (
     DEFAULT_PALETTE,
     GBC_HIGH_CONTRAST_PALETTE,
@@ -45,7 +77,7 @@ from rogue_palettes import (
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2258"
+UI_BUILD = "260425_2305"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -72,37 +104,6 @@ class Settings:
 # ===========================================================
 _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
-
-# ===========================================================
-#  Map
-# ===========================================================
-NUMCOLS, NUMLINES = 80, 24
-STATLINE = NUMLINES - 1
-MAP_W, MAP_H = NUMCOLS, NUMLINES
-PLAY_Y_MIN, PLAY_Y_MAX = 1, STATLINE - 1
-PLAY_H = PLAY_Y_MAX - PLAY_Y_MIN + 1
-GRID_C, GRID_R = 3, 3
-SEC_W, SEC_H = MAP_W // GRID_C, MAP_H // GRID_R
-RM_MIN_W, RM_MAX_W = 5, 12
-RM_MIN_H, RM_MAX_H = 4, 7
-ROOM_DARK = "dark"
-ROOM_GONE = "gone"
-ROOM_MAZE = "maze"
-
-# Tiles
-T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
-TILE_CH = {
-    T_VOID:  (" ",  0),
-    T_FLOOR: (".", 12),
-    T_HWALL: ("-",  4),
-    T_VWALL: ("|",  3),
-    T_DOOR:  ("+", 18),
-    T_CORR:  ("#",  5),
-    T_STAIR: ("%", 29),
-    T_TRAP:  ("^", 28),
-}
-MEMORY_TILE_COLOR = 5
-WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}
 
 # ===========================================================
 #  Screen layout  (BDF j10r: ASCII 6×~10 px)
