@@ -128,6 +128,24 @@ class WanderingMonsterTests(unittest.TestCase):
         self.assertFalse(game.daemons.running("rollwand"))
         self.assertGreater(game.fuses.remaining("swander"), 0)
 
+    def test_rogue_544_rollwand_reschedules_even_if_pyxel_spawn_fails(self):
+        # Rogue 5.4.4 daemons.c:rollwand() reschedules after calling monsters.c:wanderer().
+        game = new_game(seed=104)
+        game.fuses.extinguish("swander")
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+        game.wander_between = 3
+        game.spawn_wanderer = lambda: False
+        original_rng = rogue.RNG
+        rogue.RNG = FixedRng()
+        try:
+            game.end_turn()
+        finally:
+            rogue.RNG = original_rng
+
+        self.assertFalse(game.daemons.running("rollwand"))
+        self.assertGreater(game.fuses.remaining("swander"), 0)
+        self.assertEqual(game.wander_between, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
