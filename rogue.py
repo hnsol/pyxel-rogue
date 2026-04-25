@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0005"
+UI_BUILD = "260426_0013"
 
 # ===========================================================
 #  Font
@@ -374,6 +374,10 @@ def roll_damage_expr(expr: str) -> int:
 
 def rnd(n: int) -> int:
     return RNG.rnd(n)
+
+def goldcalc(level: int) -> int:
+    # C: rogue.h:GOLDCALC
+    return rnd(50 + 10 * level) + 2
 
 def in_map(x: int, y: int) -> bool:
     return 0 <= x < MAP_W and 0 <= y < MAP_H
@@ -1894,8 +1898,10 @@ class Game:
                 if "rust" in m.flags and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
                 if "steal_gold" in m.flags and self.p.gold>0:
-                    s=min(self.p.gold,RNG.randint(10,50)+RNG.randint(10,50))
-                    self.p.gold-=s; self.msg("fight.your_purse_feels_lighter")
+                    loss=goldcalc(self.p.depth)
+                    if not self.save_vs_magic():
+                        loss += sum(goldcalc(self.p.depth) for _ in range(4))
+                    self.p.gold=max(0,self.p.gold-loss); self.msg("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return
                 if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
                         and not self.save_vs_poison() and self.p.st>3):

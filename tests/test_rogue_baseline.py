@@ -2396,6 +2396,30 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [1, 2])
 
+    def test_rogue_544_leprechaun_steals_gold_with_goldcalc(self):
+        # Rogue 5.4.4 fight.c:attack() subtracts GOLDCALC once, plus four
+        # more times on failed VS_MAGIC; rogue.h:GOLDCALC uses rnd(50+10*level)+2.
+        game = new_game(seed=303)
+        set_open_floor(game)
+        game.p.depth = 3
+        game.p.gold = 100
+        leprechaun = monster_at(game.p.x + 1, game.p.y, "L", "leprechaun", damage="0x0", flags="steal_gold")
+        game.mons = [leprechaun]
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.save_vs_magic = lambda: False
+        game.monster_hit_message = lambda name: "hit"
+        calls = []
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            game.m_attack(leprechaun)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls, [80, 80, 80, 80, 80])
+        self.assertEqual(game.p.gold, 90)
+        self.assertNotIn(leprechaun, game.mons)
+
     def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
         # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
         game = new_game(seed=307)
