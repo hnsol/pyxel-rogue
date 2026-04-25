@@ -870,8 +870,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.ident.sk[kind])
         self.assertGreater(monster.held, 0)
 
-    def test_rogue_544_enchant_weapon_identifies_only_with_current_weapon(self):
-        # Rogue 5.4.4 scrolls.c:S_ENCH leaves scr_info unknown when cur_weapon is NULL.
+    def test_rogue_544_enchant_weapon_does_not_identify_on_read(self):
+        # Rogue 5.4.4 scrolls.c:S_ENCH enchants cur_weapon but does not set scr_info[].oi_know.
         game = new_game(seed=322)
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant weapon")
         empty_scroll = rogue.Item(rogue.CAT_SCR, kind)
@@ -890,11 +890,11 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_scr(scroll)
 
-        self.assertTrue(game.ident.sk[kind])
+        self.assertFalse(game.ident.sk[kind])
         self.assertFalse(weapon.cursed)
 
-    def test_rogue_544_enchant_armor_identifies_only_with_current_armor(self):
-        # Rogue 5.4.4 scrolls.c:S_ARMOR has no effect and does not identify without cur_armor.
+    def test_rogue_544_enchant_armor_does_not_identify_on_read(self):
+        # Rogue 5.4.4 scrolls.c:S_ARMOR enchants cur_armor but does not set scr_info[].oi_know.
         game = new_game(seed=323)
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant armor")
         empty_scroll = rogue.Item(rogue.CAT_SCR, kind)
@@ -913,7 +913,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_scr(scroll)
 
-        self.assertTrue(game.ident.sk[kind])
+        self.assertFalse(game.ident.sk[kind])
         self.assertFalse(armor.cursed)
         self.assertEqual(armor.ench, 1)
 
