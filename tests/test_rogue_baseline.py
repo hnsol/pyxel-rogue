@@ -5207,6 +5207,29 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.st, 16)
 
+    def test_rogue_544_dart_trap_poison_save_runs_before_min_strength_check(self):
+        # Rogue 5.4.4 move.c:T_DART calls save(VS_POISON) before chg_str(-1);
+        # the save is still consumed when Strength is already at the floor.
+        game = new_game(seed=67)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "dart trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: True
+        game.p.hp = 10
+        game.p.st = 3
+        calls = []
+        game.save_vs_poison = lambda: calls.append(True) or False
+        old_roll = rogue.roll
+        rogue.roll = lambda s: 1
+        try:
+            game.trigger_trap(x, y)
+        finally:
+            rogue.roll = old_roll
+
+        self.assertEqual(calls, [True])
+        self.assertEqual(game.p.st, 3)
+
     def test_rogue_544_mysterious_trap_only_rolls_color_for_color_messages(self):
         # Rogue 5.4.4 move.c:be_trapped() T_MYST rolls rnd(cNCOLORS) only in color message branches.
         game = new_game(seed=67)

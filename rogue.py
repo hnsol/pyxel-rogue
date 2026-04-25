@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0110"
+UI_BUILD = "260426_0120"
 
 # ===========================================================
 #  Font
@@ -3008,9 +3008,9 @@ class Game:
                     self.death_cause="a poisoned dart killed you"
                     self.msg("move.a_poisoned_dart_killed_you")
                     return
-                if (self.p.st>3 and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
-                        and not self.save_vs_poison()):
-                    self.p.st-=1
+                if not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR) and not self.save_vs_poison():
+                    if self.p.st>3:
+                        self.p.st-=1
                 self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
                 self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")
