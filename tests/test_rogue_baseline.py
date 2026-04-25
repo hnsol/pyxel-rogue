@@ -128,6 +128,22 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def test_palette_tables_are_split_without_changing_defaults(self):
+        import rogue_palettes
+
+        self.assertEqual(rogue.DEFAULT_PALETTE, rogue_palettes.PALETTE_GBC_HIGH_CONTRAST)
+        self.assertEqual(
+            rogue.PALETTE_IDS,
+            (
+                rogue_palettes.PALETTE_GBC,
+                rogue_palettes.PALETTE_GBC_HIGH_CONTRAST,
+                rogue_palettes.PALETTE_FLEXOKI_LIGHT,
+            ),
+        )
+        self.assertEqual(rogue.PALETTE_LABELS[rogue.DEFAULT_PALETTE], "GBC High Contrast")
+        self.assertEqual(set(rogue.PALETTES), set(rogue.PALETTE_IDS))
+        self.assertTrue(all(len(colors) == 32 for colors in rogue.PALETTES.values()))
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 
