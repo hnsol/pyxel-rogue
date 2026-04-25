@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0642"
+UI_BUILD = "260426_0820"
 
 # ===========================================================
 #  Font
@@ -3275,6 +3275,8 @@ class Game:
     def run_runners(self):
         # C: chase.c:runners()
         for mo in self.mons:
+            if mo.held > 0 or not mo.running:
+                continue
             self.m_turn(mo)
 
     def run_stomach(self):

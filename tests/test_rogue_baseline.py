@@ -1826,6 +1826,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 10)
         self.assertEqual(game.p.food, 100)
 
+    def test_rogue_544_runners_skips_held_running_monsters(self):
+        # Rogue 5.4.4 chase.c:runners() gates move_monst() on !ISHELD && ISRUN.
+        game = new_game(seed=310)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 3, game.p.y)
+        monster.running = True
+        monster.held = 2
+        game.mons = [monster]
+        moved = []
+        game.move_monst = lambda m: moved.append(m)
+
+        game.run_runners()
+
+        self.assertEqual(moved, [])
+        self.assertEqual(monster.held, 2)
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)
@@ -4200,7 +4216,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.st = rogue.ST_ITEM
         turns = []
         game.m_turn = lambda monster: turns.append(monster)
-        game.mons = [monster_at(game.p.x, game.p.y + 3)]
+        monster = monster_at(game.p.x, game.p.y + 3)
+        monster.running = True
+        game.mons = [monster]
 
         game.item_confirm()
 
