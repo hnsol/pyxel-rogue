@@ -367,6 +367,8 @@
   "scrolls.s": "。",
   "scrolls.s_around_you": "たち",
   "scrolls.the_monster": "怪物",
+  "scrolls.the_monster_freezes": "怪物は動けなくなった。",
+  "scrolls.the_monsters_around_you_freeze": "まわりの怪物たちは動けなくなった。",
   "scrolls.there_is_nothing_on_it_to_read": "それには読むところがない。",
   "scrolls.this_scroll_is_an_item_scroll": "これは{item}を調べる巻き物だった。",
   "scrolls.what_a_puzzling_scroll": "なんとも不可解な巻き物だ！",

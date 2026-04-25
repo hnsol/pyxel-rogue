@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0509"
+UI_BUILD = "260425_0520"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2478,15 +2478,15 @@ class Game:
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
             self.msg("scrolls.oh_now_this_scroll_has_a_map_on_it")
         elif nm=="hold monster":
-            held = False
+            held_count = 0
             for mo in self.mons:
                 if abs(mo.x-p.x)<=2 and abs(mo.y-p.y)<=2 and mo.running:
                     mo.running = False
                     mo.held=RNG.randint(10,20)
-                    held = True
-            if held:
+                    held_count += 1
+            if held_count:
                 self.ident.sk[it.kind]=True
-                self.msg("pyxel.nearby_monsters_freeze")
+                self.msg("scrolls.the_monster_freezes" if held_count == 1 else "scrolls.the_monsters_around_you_freeze")
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="food detection":

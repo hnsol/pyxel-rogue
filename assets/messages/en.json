@@ -367,6 +367,8 @@
   "scrolls.s": "s",
   "scrolls.s_around_you": "s around you",
   "scrolls.the_monster": "the monster",
+  "scrolls.the_monster_freezes": "the monster freezes",
+  "scrolls.the_monsters_around_you_freeze": "the monsters around you freeze",
   "scrolls.there_is_nothing_on_it_to_read": "there is nothing on it to read",
   "scrolls.this_scroll_is_an_item_scroll": "this scroll is an {item} scroll",
   "scrolls.what_a_puzzling_scroll": "what a puzzling scroll!",

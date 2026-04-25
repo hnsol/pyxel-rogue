@@ -869,6 +869,19 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(game.ident.sk[kind])
         self.assertGreater(monster.held, 0)
+        self.assertIn("the monster freezes", game.msgs)
+        self.assertNotIn("Nearby monsters freeze!", game.msgs)
+
+        multi_scroll = rogue.Item(rogue.CAT_SCR, kind)
+        second = monster_at(game.p.x + 2, game.p.y)
+        monster.running = True
+        second.running = True
+        game.p.inv.append(multi_scroll)
+        game.mons = [monster, second]
+
+        game.use_scr(multi_scroll)
+
+        self.assertIn("the monsters around you freeze", game.msgs)
 
     def test_rogue_544_enchant_weapon_does_not_identify_on_read(self):
         # Rogue 5.4.4 scrolls.c:S_ENCH enchants cur_weapon but does not set scr_info[].oi_know.
