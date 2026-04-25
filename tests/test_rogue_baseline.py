@@ -2099,6 +2099,24 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.random.randrange = old_randrange
         self.assertEqual(game.p.st, 10)
 
+    def test_rogue_544_rattlesnake_save_runs_before_sustain_strength_check(self):
+        # Rogue 5.4.4 fight.c:attack() calls save(VS_POISON), then checks R_SUSTSTR.
+        import rogue_rings
+
+        game = new_game(seed=213)
+        set_open_floor(game)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SUSTSTR)
+        game.p.st = 10
+        snake = monster_at(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 20, 100, "0x0", 5, "poison")
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+        calls = []
+        game.save_vs_poison = lambda: calls.append(True) or False
+
+        game.m_attack(snake)
+
+        self.assertEqual(calls, [True])
+        self.assertEqual(game.p.st, 10)
+
     def test_rogue_544_poison_potion_ends_hallucination_after_strength_loss(self):
         # Rogue 5.4.4 potions.c:P_POISON calls daemons.c:come_down() after chg_str().
         game = new_game(seed=213)

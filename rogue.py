@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0101"
+UI_BUILD = "260426_0110"
 
 # ===========================================================
 #  Font
@@ -1906,9 +1906,9 @@ class Game:
                     if self.p.gold != old_gold:
                         self.msg("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return
-                if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
-                        and not self.save_vs_poison() and self.p.st>3):
-                    self.p.st-=1; self.msg("pyxel.feel_weaker")
+                if "poison" in m.flags and not self.save_vs_poison():
+                    if not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR) and self.p.st>3:
+                        self.p.st-=1; self.msg("pyxel.feel_weaker")
                 if "drain_level" in m.flags and rnd(100)<15:
                     if self.p.exp == 0:
                         self.p.hp = 0
