@@ -4934,6 +4934,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLessEqual(abs(arrow.x - game.p.x), 1)
         self.assertLessEqual(abs(arrow.y - game.p.y), 1)
 
+    def test_rogue_544_trap_hits_ignore_worn_armor(self):
+        # Rogue 5.4.4 move.c:be_trapped() calls swing(..., pstats.s_arm, 1),
+        # not cur_armor->o_arm; extern.c:INIT_STATS sets pstats.s_arm to 10.
+        game = new_game(seed=71)
+        game.p.level = 1
+        game.p.arm = rogue.Item(rogue.CAT_ARM, 7, ench=20)
+        game.p.recalc_ac()
+        old_randrange = rogue.RNG.randrange
+        try:
+            rogue.RNG.randrange = lambda n: 8
+            self.assertFalse(game.trap_hits(game.p.level - 1))
+            rogue.RNG.randrange = lambda n: 9
+            self.assertTrue(game.trap_hits(game.p.level - 1))
+        finally:
+            rogue.RNG.randrange = old_randrange
+
     def test_rogue_544_arrow_trap_kill_uses_killed_message(self):
         # Rogue 5.4.4 move.c:be_trapped() T_ARROW says "an arrow killed you" on death.
         game = new_game(seed=64)

@@ -91,6 +91,7 @@
   - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
   - [x] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll を分ける
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
+- [x] Rogue 5.4.4 `move.c:be_trapped()` / `fight.c:swing()` 準拠の arrow/dart trap 命中式監査（装備中 armor ではなく `pstats.s_arm` を使う）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）

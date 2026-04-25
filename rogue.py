@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2326"
+UI_BUILD = "260425_2339"
 
 # ===========================================================
 #  Font
@@ -2919,9 +2919,9 @@ class Game:
         if spend_turn:
             self.end_turn()
 
-    def trap_hits(self, bonus=0):
-        th=RNG.randint(1,20)+bonus
-        return th>=self.p.ac or th-bonus==20
+    def trap_hits(self, at_lvl):
+        # C: move.c:be_trapped() uses pstats.s_arm, not cur_armor->o_arm.
+        return self.swing_hits(at_lvl, 10, 1)
 
     def save_vs_poison(self):
         return rnd(20) < 7 + self.p.level//2
