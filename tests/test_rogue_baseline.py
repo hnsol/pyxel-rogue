@@ -2510,6 +2510,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hp, 16)
 
+    def test_rogue_544_venus_flytrap_hit_updates_next_damage_expr(self):
+        # Rogue 5.4.4 fight.c:attack() sets monsters['F'-'A'].m_stats.s_dmg to "%dx1".
+        game = new_game(seed=8)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 1, game.p.y, "F", "venus flytrap", damage="0x0", flags="hold")
+        game.p.hp = 20
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+
+        game.m_attack(flytrap)
+
+        self.assertEqual(flytrap.vf_hit, 1)
+        self.assertEqual(flytrap.damage_expr, "1x1")
+        self.assertEqual(game.p.hp, 19)
+
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
         mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)

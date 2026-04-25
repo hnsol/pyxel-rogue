@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2216"
+UI_BUILD = "260425_2219"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1985,6 +1985,7 @@ class Game:
                     self.msg("fight.you_are_frozen")
                 if "hold" in m.flags:
                     m.vf_hit+=1
+                    m.damage_expr=f"{m.vf_hit}x1"
                     self.p.held_by=m
                     self.p.hp-=1
                     if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
