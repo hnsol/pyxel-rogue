@@ -176,6 +176,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.AUX_ACTIONS, rogue_ui.AUX_ACTIONS)
         self.assertEqual((rogue.B_TAP_FRAMES, rogue.BACK_TAP_FRAMES), (8, 8))
 
+    def test_layout_constants_are_split_without_changing_screen_geometry(self):
+        import rogue_layout
+
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 360))
+        self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
+        self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
+        self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (rogue_layout.ZV_PX_W, rogue_layout.ZV_PX_H))
+        self.assertEqual((rogue.HUD_X, rogue.HUD_W), (rogue_layout.HUD_X, rogue_layout.HUD_W))
+        self.assertEqual((rogue.MSG_LINES, rogue.MSG_COLS), (7, rogue_layout.MSG_COLS))
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 

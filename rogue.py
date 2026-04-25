@@ -44,6 +44,28 @@ from rogue_items import (
     ICOL,
     ISYM,
 )
+from rogue_layout import (
+    DEAD_ZONE_X,
+    DEAD_ZONE_Y,
+    HUD_W,
+    HUD_X,
+    HUD_Y,
+    MSG_COLS,
+    MSG_LINES,
+    MSG_LINE_H,
+    MSG_X,
+    MSG_Y,
+    SCR_H,
+    SCR_W,
+    TILE_H,
+    TILE_W,
+    ZV_COLS,
+    ZV_PX_H,
+    ZV_PX_W,
+    ZV_ROWS,
+    ZV_X,
+    ZV_Y,
+)
 from rogue_map import (
     GRID_C,
     GRID_R,
@@ -113,7 +135,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2334"
+UI_BUILD = "260426_0008"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -140,29 +162,6 @@ class Settings:
 # ===========================================================
 _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
-
-# ===========================================================
-#  Screen layout  (BDF j10r: ASCII 6×~10 px)
-# ===========================================================
-SCR_W, SCR_H = 576, 360
-TILE_W, TILE_H = 6, 12          # per-char cell in zoom view
-ZV_COLS, ZV_ROWS = MAP_W, PLAY_H # Rogue 5.4.4 dungeon area: 80×22
-ZV_PX_W = ZV_COLS * TILE_W      # 480
-ZV_PX_H = ZV_ROWS * TILE_H      # 264
-DEAD_ZONE_X = 8                  # camera edge zone; leaves ~50% center still
-DEAD_ZONE_Y = 5
-
-# Main view + right HUD
-ZV_X, ZV_Y = 4, 1                # top-left pixel of full dungeon view
-HUD_X = ZV_X + ZV_PX_W + 10
-HUD_Y = ZV_Y
-HUD_W = SCR_W - HUD_X - 4
-
-# Messages
-MSG_LINES = 7
-MSG_LINE_H = 10
-MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * MSG_LINE_H - 2
-MSG_COLS = (SCR_W - MSG_X * 2) // 6
 
 INV_MAX = 26
 DASH_INTERVAL = 2                # frames between dash steps

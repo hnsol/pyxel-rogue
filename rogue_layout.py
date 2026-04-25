@@ -1,0 +1,19 @@
+from rogue_map import MAP_W, PLAY_H
+
+SCR_W, SCR_H = 576, 360
+TILE_W, TILE_H = 6, 12
+ZV_COLS, ZV_ROWS = MAP_W, PLAY_H
+ZV_PX_W = ZV_COLS * TILE_W
+ZV_PX_H = ZV_ROWS * TILE_H
+DEAD_ZONE_X = 8
+DEAD_ZONE_Y = 5
+
+ZV_X, ZV_Y = 4, 1
+HUD_X = ZV_X + ZV_PX_W + 10
+HUD_Y = ZV_Y
+HUD_W = SCR_W - HUD_X - 4
+
+MSG_LINES = 7
+MSG_LINE_H = 10
+MSG_X, MSG_Y = 4, SCR_H - MSG_LINES * MSG_LINE_H - 2
+MSG_COLS = (SCR_W - MSG_X * 2) // 6
