@@ -1908,6 +1908,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.no_command, 0)
         self.assertIn("you can move again", game.msgs)
 
+    def test_rogue_544_before_daemons_run_before_no_command_decrement(self):
+        # Rogue 5.4.4 command.c:command() calls do_daemons(BEFORE) before --no_command.
+        game = new_game(seed=318)
+        seen = []
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+        game.roll_wanderer = lambda: seen.append(game.p.no_command)
+        game.p.no_command = 1
+
+        game.end_turn()
+
+        self.assertEqual(seen, [1])
+        self.assertEqual(game.p.no_command, 0)
+
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
         game = new_game(seed=311)

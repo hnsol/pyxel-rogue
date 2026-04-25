@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0548"
+UI_BUILD = "260426_0615"
 
 # ===========================================================
 #  Font
@@ -3181,6 +3181,7 @@ class Game:
         self.turn+=1
         for i in range(msg_start, len(self.msg_turns)):
             self.msg_turns[i] = self.turn
+        self.do_before_daemons()
         if self.p.no_command>0:
             self.p.no_command-=1
             if self.p.no_command==0:
@@ -3201,7 +3202,6 @@ class Game:
             self.p.levitating-=1
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
-        self.do_before_daemons()
         self.do_after_daemons()
         due_fuses = self.fuses.tick(rogue_daemons.AFTER)
         if "unconfuse" in due_fuses:
