@@ -80,7 +80,7 @@
 - [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [x] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査
 - [x] Rogue 5.4.4 `passages.c` 準拠の浅い階の通路グラフ・余剰エッジ数の固定 seed 監査
-- [ ] **鑑定・命名・発見リスト忠実度**
+- [x] **鑑定・命名・発見リスト忠実度**
   - [x] `IdentTable` に `pg/sg/rg/wg`（型レベル `oi_guess` 相当）追加、`Item` に `o_flags`/`o_label` 追加、`known` を `FLAG_ISKNOW` property 化
   - [x] `things.c:inv_name()/nameit()` 準拠の3層表示（`oi_know` → `oi_guess` → appearance）をポーション/巻物/指輪/杖に実装
   - [x] `wizard.c:whatis()/set_know()` 準拠の対象選択式 identify 実装（`item_confirm()` に "Identify" ブランチ）
