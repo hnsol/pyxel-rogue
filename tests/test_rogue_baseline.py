@@ -1927,6 +1927,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 13)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_daemons_helper_doctor_matches_high_level_roll(self):
+        # Rogue 5.4.4 daemons.c:doctor() lives in rogue_daemons.py as pure logic.
+        player = rogue.Player()
+        player.level = 10
+        player.hp = 10
+        player.max_hp = 20
+        player.quiet = 2
+        calls = []
+        rng = SequenceRng([2])
+        old_rnd = rng.rnd
+        rng.rnd = lambda n: calls.append(n) or old_rnd(n)
+
+        rogue.rogue_daemons.doctor_tick(player, rng, regeneration_count=0)
+
+        self.assertEqual(calls, [3])
+        self.assertEqual(player.hp, 13)
+        self.assertEqual(player.quiet, 0)
+
     def test_rogue_544_stomach_does_not_extend_existing_no_command_faint(self):
         # Rogue 5.4.4 daemons.c:stomach() returns when no_command is already nonzero.
         game = new_game(seed=315)
@@ -1963,6 +1981,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.food, -1)
         self.assertEqual(game.p.state, "weak")
         self.assertEqual(game.p.no_command, 0)
+
+    def test_rogue_544_daemons_helper_stomach_keeps_state_when_faint_roll_fails(self):
+        # Rogue 5.4.4 daemons.c:stomach() lives in rogue_daemons.py as pure logic.
+        player = rogue.Player()
+        player.food = 0
+        player.state = "weak"
+        player.no_command = 0
+        rng = SequenceRng([1])
+        rng.randrange = lambda n: 1
+
+        msg = rogue.rogue_daemons.stomach_tick(
+            player,
+            rng,
+            food_cost=1,
+            moretime=rogue.MORETIME,
+            starvetime=rogue.STARVETIME,
+        )
+
+        self.assertIsNone(msg)
+        self.assertEqual(player.food, -1)
+        self.assertEqual(player.state, "weak")
+        self.assertEqual(player.no_command, 0)
 
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.

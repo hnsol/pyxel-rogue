@@ -6,6 +6,51 @@ AFTER = "after"
 MAXDAEMONS = 20
 
 
+def doctor_tick(player, rng, regeneration_count: int = 0) -> None:
+    """Rogue 5.4.4 daemons.c:doctor()."""
+    level = player.level
+    old_hp = player.hp
+    player.quiet += 1
+    if level < 8:
+        if player.quiet + (level << 1) > 20:
+            player.hp += 1
+    elif player.quiet >= 3:
+        player.hp += rng.rnd(level - 7) + 1
+    player.hp += regeneration_count
+    if player.hp != old_hp:
+        player.hp = min(player.hp, player.max_hp)
+        player.quiet = 0
+
+
+def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
+    """Rogue 5.4.4 daemons.c:stomach()."""
+    previous_state = player.state
+    if player.food <= 0:
+        if player.food < -starvetime:
+            player.hp = 0
+            player.state = "faint"
+            return "pyxel.starve_to_death"
+        player.food -= 1
+        if player.no_command or rng.randrange(5) != 0:
+            return None
+        player.state = "faint"
+        player.no_command += rng.rnd(8) + 4
+        return "pyxel.faint_from_lack_of_food"
+
+    old_food = player.food
+    player.food -= food_cost
+    if player.food <= 0:
+        return None
+    if player.food < moretime and old_food >= moretime:
+        player.state = "weak"
+        return "pyxel.are_weak" if previous_state != "weak" else None
+    if player.food < 2 * moretime and old_food >= 2 * moretime:
+        player.state = "hungry"
+        return "pyxel.feel_hungry" if previous_state != "hungry" else None
+    player.state = "normal"
+    return None
+
+
 class FuseList:
     """Small fuse table matching daemon.c:fuse()/lengthen()/extinguish()/do_fuses()."""
 

@@ -138,6 +138,7 @@
   - [x] `doctor / stomach` を `start_daemon(AFTER)` へ接続
   - [x] `runners` を `start_daemon(AFTER)` へ接続
   - [x] `daemon.c` 準拠で delayed action を unique map ではなく共通スロット列として扱い、daemon/fuse 合計 `MAXDAEMONS=20`、同名 daemon/fuse の重複登録、`kill_daemon()` / `extinguish()` の先頭1件削除を再現
+  - [x] `daemons.c:doctor()` / `stomach()` 相当の純ロジックを `rogue_daemons.py` へ小分割し、`Game` / `Player` 側から委譲
   - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）

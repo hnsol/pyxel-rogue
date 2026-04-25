@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0848"
+UI_BUILD = "260426_0852"
 
 # ===========================================================
 #  Font
@@ -628,39 +628,11 @@ class Player:
             s.level+=1; g=RNG.randint(3,8); s.max_hp+=g; s.hp+=g; return True
         return False
     def hunger(s):
-        prev=s.state
-        if s.food<=0:
-            if s.food < -STARVETIME:
-                s.hp=0; s.state="faint"; return "pyxel.starve_to_death"
-            s.food-=1
-            if s.no_command or RNG.randrange(5)!=0:
-                return None
-            s.state="faint"
-            s.no_command+=RNG.rnd(8)+4
-            return "pyxel.faint_from_lack_of_food"
         amulet_eat = 1 if s.has_amulet else 0
-        s.food-=1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG) - amulet_eat
-        if s.food<=0:
-            return None
-        if s.food<MORETIME:
-            s.state="weak"
-            return "pyxel.are_weak" if prev!="weak" else None
-        if s.food<2*MORETIME:
-            s.state="hungry"
-            return "pyxel.feel_hungry" if prev!="hungry" else None
-        s.state="normal"
-        return None
+        food_cost = 1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG) - amulet_eat
+        return rogue_daemons.stomach_tick(s, RNG, food_cost, MORETIME, STARVETIME)
     def heal_tick(s):
-        s.quiet+=1
-        old=s.hp
-        if s.level<8:
-            if s.quiet+(s.level<<1)>20:
-                s.hp+=1
-        elif s.quiet>=3:
-            s.hp+=RNG.rnd(s.level-7)+1
-        s.hp+=rogue_rings.regeneration_count(s)
-        if s.hp!=old:
-            s.hp=min(s.hp,s.max_hp); s.quiet=0
+        rogue_daemons.doctor_tick(s, RNG, rogue_rings.regeneration_count(s))
     def recalc_ac(s):
         s.ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else 10
         s.ac -= rogue_rings.protection_bonus(s)
