@@ -1894,6 +1894,7 @@ class RogueBaselineTest(unittest.TestCase):
         # Rogue 5.4.4 daemons.c:stomach() returns when no_command is already nonzero.
         game = new_game(seed=315)
         game.p.food = 0
+        game.p.state = "weak"
         game.p.no_command = 5
         old_randrange = rogue.RNG.randrange
         old_randint = rogue.RNG.randint
@@ -1906,7 +1907,25 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.randint = old_randint
 
         self.assertEqual(game.p.food, -1)
+        self.assertEqual(game.p.state, "weak")
         self.assertEqual(game.p.no_command, 5)
+
+    def test_rogue_544_stomach_keeps_state_when_faint_roll_fails(self):
+        # Rogue 5.4.4 daemons.c:stomach() sets hungry_state=3 only after faint starts.
+        game = new_game(seed=321)
+        game.p.food = 0
+        game.p.state = "weak"
+        game.p.no_command = 0
+        old_randrange = rogue.RNG.randrange
+        try:
+            rogue.RNG.randrange = lambda n: 1
+            game.run_stomach()
+        finally:
+            rogue.RNG.randrange = old_randrange
+
+        self.assertEqual(game.p.food, -1)
+        self.assertEqual(game.p.state, "weak")
+        self.assertEqual(game.p.no_command, 0)
 
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
