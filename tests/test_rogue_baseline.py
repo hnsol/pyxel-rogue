@@ -2497,6 +2497,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.dashing)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_venus_flytrap_miss_still_deals_vf_hit(self):
+        # Rogue 5.4.4 fight.c:attack() subtracts vf_hit when an F misses.
+        game = new_game(seed=8)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 1, game.p.y, "F", "venus flytrap", damage="0x0", flags="hold")
+        flytrap.vf_hit = 4
+        game.p.hp = 20
+        game.swing_hits = lambda at_lvl, op_arm, wplus: False
+
+        game.m_attack(flytrap)
+
+        self.assertEqual(game.p.hp, 16)
+
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
         mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)
