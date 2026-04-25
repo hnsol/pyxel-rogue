@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0306"
+UI_BUILD = "260425_0318"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2105,7 +2105,7 @@ class Game:
                 p.max_hp += 1
                 p.hp = p.max_hp
             self.sight()
-            self.msg("pyxel.feel_better_amount", count=h)
+            self.msg("potions.you_begin_to_feel_better")
         elif nm=="extra healing":
             self.ident.pk[it.kind]=True
             h=max(1,roll("1d8")*p.level)
@@ -2117,7 +2117,7 @@ class Game:
                 p.hp = p.max_hp
             self.sight()
             self.come_down()
-            self.msg("pyxel.feel_much_better_amount", count=h)
+            self.msg("potions.you_begin_to_feel_much_better")
         elif nm=="poison":
             self.ident.pk[it.kind]=True
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):

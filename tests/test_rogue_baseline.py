@@ -3412,7 +3412,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(weapon.cursed)
         self.assertEqual((weapon.hit_plus, weapon.dam_plus), (1, 0))
 
-    def test_extra_healing_reports_recovery_even_without_max_hp_increase(self):
+    def test_rogue_544_extra_healing_uses_plain_quaff_message(self):
+        # Rogue 5.4.4 potions.c:P_XHEAL msg("you begin to feel much better").
         game = new_game(seed=390)
         extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
         potion = rogue.Item(rogue.CAT_POT, extra_healing)
@@ -3426,7 +3427,8 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.randrange = old_randrange
 
         self.assertEqual(game.p.hp, game.p.max_hp - 4)
-        self.assertIn("You feel much better. (+1)", game.msgs)
+        self.assertIn("you begin to feel much better", game.msgs)
+        self.assertNotIn("You feel much better. (+1)", game.msgs)
 
     def test_rogue_544_extra_healing_can_raise_max_hp_by_two(self):
         # Rogue 5.4.4 potions.c:P_XHEAL increments max_hp twice when the overflow exceeds level + 1.
@@ -3477,7 +3479,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Everything looks SO boring now.", game.msgs)
 
     def test_rogue_544_healing_can_raise_max_hp_by_one(self):
-        # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp when healing overflows.
+        # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp, then uses a plain msg.
         game = new_game(seed=391)
         healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
         potion = rogue.Item(rogue.CAT_POT, healing)
@@ -3492,6 +3494,8 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.roll = old_roll
 
         self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
+        self.assertIn("you begin to feel better", game.msgs)
+        self.assertNotIn("You feel better. (+1)", game.msgs)
 
     def test_rogue_544_healing_calls_sight_when_blind(self):
         # Rogue 5.4.4 potions.c:P_HEALING calls daemons.c:sight().
