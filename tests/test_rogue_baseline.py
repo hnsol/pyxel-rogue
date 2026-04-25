@@ -186,6 +186,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.HUD_X, rogue.HUD_W), (rogue_layout.HUD_X, rogue_layout.HUD_W))
         self.assertEqual((rogue.MSG_LINES, rogue.MSG_COLS), (7, rogue_layout.MSG_COLS))
 
+    def test_combat_message_keys_are_split_without_changing_order(self):
+        import rogue_combat_text
+
+        self.assertEqual(rogue.PLAYER_HIT_MESSAGE_KEYS, rogue_combat_text.PLAYER_HIT_MESSAGE_KEYS)
+        self.assertEqual(rogue.PLAYER_MISS_MESSAGE_KEYS, rogue_combat_text.PLAYER_MISS_MESSAGE_KEYS)
+        self.assertEqual(rogue.MONSTER_HIT_MESSAGE_KEYS, rogue_combat_text.MONSTER_HIT_MESSAGE_KEYS)
+        self.assertEqual(rogue.MONSTER_MISS_MESSAGE_KEYS, rogue_combat_text.MONSTER_MISS_MESSAGE_KEYS)
+        self.assertEqual(rogue.PLAYER_HIT_MESSAGE_KEYS[0], "fight.player_hit_excellent")
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 
