@@ -4538,6 +4538,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreaterEqual(game.p.no_command, 2)
         self.assertIn("you are frozen", game.msgs)
 
+    def test_rogue_544_ice_monster_refreezes_without_repeating_message(self):
+        # Rogue 5.4.4 fight.c:attack() only prints the frozen message
+        # when no_command was zero before adding rnd(2)+2.
+        game = new_game(seed=503)
+        set_open_floor(game)
+        game.p.ac = 0
+        game.p.hp = 99
+        game.p.no_command = 5
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.m_attack(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.no_command, 7)
+        self.assertNotIn("you are frozen", game.msgs)
+
     def test_rattlesnake_poison_strength_depends_on_save(self):
         game = new_game(seed=504)
         set_open_floor(game)
