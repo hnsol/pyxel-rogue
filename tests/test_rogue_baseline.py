@@ -1288,6 +1288,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((monster.x, monster.y), game.explored)
         self.assertNotIn((food.x, food.y), game.visible)
 
+    def test_rogue_544_magic_detection_without_magic_uses_feeling_message(self):
+        # Rogue 5.4.4 potions.c:P_TFIND uses choose_str("normal", "strange") when no magic is found.
+        game = new_game(seed=321)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "magic detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        food.x, food.y = game.p.x + 2, game.p.y
+        game.p.inv.append(potion)
+        game.gitems = [food]
+        game.mons = []
+
+        game.use_pot(potion)
+
+        self.assertFalse(game.ident.pk[kind])
+        self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
+        self.assertNotIn("You sense magic.", game.msgs)
+
     def test_rogue_544_do_pot_does_not_forget_known_confusion_while_hallucinating(self):
         # Rogue 5.4.4 potions.c:do_pot() only assigns oi_know when it is not already known.
         game = new_game(seed=319)

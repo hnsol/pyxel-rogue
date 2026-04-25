@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0125"
+UI_BUILD = "260425_0135"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2182,7 +2182,10 @@ class Game:
                     self.visible.add((mo.x,mo.y)); self.explored.add((mo.x,mo.y))
             if found:
                 self.ident.pk[it.kind]=True
-            self.msg("pyxel.sense_magic")
+                self.msg("pyxel.sense_magic")
+            else:
+                self.msg("potions.you_have_a_item_feeling_for_a_moment_then_it_passes",
+                         item="normal" if p.hallucinating > 0 else "strange")
         elif nm=="levitation":
             self.ident.pk[it.kind]=True
             duration = RNG.spread(HEALTIME)
