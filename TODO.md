@@ -99,6 +99,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith レベルドレイン経験値監査（`e_levels[s_lvl-1]+1`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith exp 0 drain 死亡監査（`death('W')`）
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Vampire max_hp drain 死亡監査（`death('V')`）
 - [x] Rattlesnake / Ice monster の Rogue 5.4.4 準拠寄せ（毒セーヴによるStr低下、命中時凍結）
 - [x] 最小 baseline ロジックテスト整備
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加

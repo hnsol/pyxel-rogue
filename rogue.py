@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0028"
+UI_BUILD = "260426_0035"
 
 # ===========================================================
 #  Font
@@ -1917,7 +1917,11 @@ class Game:
                     self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("fight.you_suddenly_feel_weaker")
                 if "drain" in m.flags and rnd(100)<30:
                     loss=roll("1d3")
-                    self.p.max_hp=max(1,self.p.max_hp-loss)
+                    self.p.max_hp-=loss
+                    if self.p.max_hp<=0:
+                        self.p.hp = 0
+                        self.death_cause = f"killed by a {m.name}"
+                        return
                     self.p.hp=max(1,min(self.p.hp-loss,self.p.max_hp)); self.msg("fight.you_suddenly_feel_weaker")
                 if "confuse" in m.flags and not self.save_vs_magic():
                     self.p.confused=RNG.randint(10,20); self.msg("pyxel.feel_confused_bang")

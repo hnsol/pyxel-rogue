@@ -2466,6 +2466,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 0)
         self.assertEqual(game.death_cause, "killed by a wraith")
 
+    def test_rogue_544_vampire_drain_kills_when_max_hp_reaches_zero(self):
+        # Rogue 5.4.4 fight.c:attack() calls death('V') if max_hp <= 0.
+        game = new_game(seed=306)
+        set_open_floor(game)
+        game.p.hp = 2
+        game.p.max_hp = 2
+        vampire = monster_at(game.p.x + 1, game.p.y, "V", "vampire", damage="0x0", flags="drain")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda name: "hit"
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 3
+            game.m_attack(vampire)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(game.p.hp, 0)
+        self.assertEqual(game.death_cause, "killed by a vampire")
+
     def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
         # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
         game = new_game(seed=307)
