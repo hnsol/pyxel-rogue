@@ -168,7 +168,7 @@ _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 
 INV_MAX = 26
-DASH_INTERVAL = 2                # frames between dash steps
+DASH_INTERVAL = 1                # frames between dash steps
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
 HELP_HEADER_COL = 31

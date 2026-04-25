@@ -3144,7 +3144,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.auto_pickup)
         self.assertEqual(game.settings.palette, rogue.DEFAULT_PALETTE)
         self.assertTrue(game.settings.show_run_steps)
-        self.assertEqual(rogue.DASH_INTERVAL, 2)
+        self.assertEqual(rogue.DASH_INTERVAL, 1)
         self.assertEqual(game.run_step_interval(), rogue.DASH_INTERVAL)
         before = (game.turn, game.p.depth, len(game.mons), len(game.gitems))
 
