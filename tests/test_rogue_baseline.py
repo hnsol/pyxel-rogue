@@ -715,6 +715,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertEqual(game.p.hp, 30)
 
+    def test_rogue_544_dragon_breath_death_cause_is_dragon_not_flame(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() calls death(moat(start)->t_type) for monster-started bolts.
+        game = new_game(seed=224)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 10
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon")
+        dragon.running = True
+        game.mons = [dragon]
+        game.save_vs_magic = lambda: False
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertLessEqual(game.p.hp, 0)
+        self.assertEqual(game.death_cause, "killed by a dragon")
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

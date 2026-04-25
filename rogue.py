@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0241"
+UI_BUILD = "260426_0325"
 
 # ===========================================================
 #  Font
@@ -2672,6 +2672,7 @@ class Game:
         # Rogue 5.4.4 sticks.c:fire_bolt() hit_hero is true when start != &hero.
         x,y=start_x,start_y
         hit_hero=(start_x,start_y)!=(self.p.x,self.p.y)
+        source_monster=self.mon_at(start_x,start_y) if hit_hero else None
         changed=False
         steps=0
         bounces=0
@@ -2704,7 +2705,8 @@ class Game:
                 if not self.save_vs_magic():
                     self.p.hp-=RNG.roll(6,6)
                     if self.p.hp<=0 and not self.death_cause:
-                        self.death_cause=f"killed by a {name}"
+                        killer=source_monster.name if source_monster else name
+                        self.death_cause=f"killed by a {killer}"
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True
                 self.msg("sticks.the_value_whizzes_by_you", value=name)
