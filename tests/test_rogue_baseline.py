@@ -1878,6 +1878,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hallucinating, 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
 
+    def test_rogue_544_poison_potion_uses_original_sick_message(self):
+        # Rogue 5.4.4 potions.c:P_POISON says "you feel very sick now" after chg_str().
+        game = new_game(seed=214)
+        set_open_floor(game)
+        poison = next(i for i, spec in enumerate(rogue.POTIONS) if spec["name"] == "poison")
+        potion = rogue.Item(rogue.CAT_POT, poison)
+        game.p.inv.append(potion)
+        game.p.st = 10
+
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.RNG.randint = lambda a, b: 2
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.randint = old_randint
+
+        self.assertEqual(game.p.st, 8)
+        self.assertTrue(game.ident.pk[poison])
+        self.assertIn("you feel very sick now", game.msgs)
+        self.assertNotIn("You feel sick. (Str -2)", game.msgs)
+
     def test_rogue_544_ring_maintain_armor_blocks_rust_and_adornment_stays_unidentified(self):
         # Rogue 5.4.4 move.c:rust_armor() checks R_SUSTARM; R_NOP has no wear-time effect.
         import rogue_rings

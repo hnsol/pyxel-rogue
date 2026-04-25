@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0342"
+UI_BUILD = "260425_0354"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2123,7 +2123,7 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("pyxel.feel_sick_strength_loss", count=l)
+                l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
