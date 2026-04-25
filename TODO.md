@@ -241,7 +241,7 @@
 - [x] armor 装備中に別 armor を wear できてしまう（原作は take off 必須）
 - [x] weapon / armor / ring の呪い生成確率が Rogue 5.4.4 `things.c:new_thing()` と一致しているか未監査
 - [x] hallucination potion を `potions.c:P_LSD` / `daemons.c:come_down()` 相当で接続済み
-- [ ] 投擲が斜め方向に未対応
+- [x] 投擲が斜め方向に未対応（`misc.c:get_dir()` / `weapons.c:missile()/do_motion()` 準拠の期待値テストで既存対応を確認）
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携

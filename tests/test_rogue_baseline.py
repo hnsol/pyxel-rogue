@@ -4510,6 +4510,35 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ITEM)
         self.assertEqual(game.throw_dir, (-1, 0))
 
+    def test_rogue_544_throw_direction_prompt_accepts_vi_diagonals(self):
+        # Rogue 5.4.4 misc.c:get_dir() accepts y/u/b/n for diagonal missile directions.
+        game = new_game(seed=482)
+        set_open_floor(game)
+        game.start_item_action("Throw")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_U}, pressed={rogue.pyxel.KEY_U})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.throw_dir, (1, -1))
+
+    def test_rogue_544_throw_motion_travels_diagonally(self):
+        # Rogue 5.4.4 weapons.c:missile()/do_motion() advances by both deltas.
+        game = new_game(seed=483)
+        game.mons = []
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 2, 5
+        for i in range(5):
+            game.tm[5 - i][2 + i] = rogue.T_FLOOR
+        game.gitems = []
+        item = rogue.Item(rogue.CAT_WPN, 4)
+        game.p.inv = [item]
+
+        game.throw(item, 1, -1)
+
+        self.assertIsNotNone(game.throw_anim)
+        self.assertEqual(game.throw_anim["path"], [(3, 4), (4, 3), (5, 2), (6, 1)])
+
     def test_cardinal_move_does_not_linger_into_second_step(self):
         game = new_game(seed=49)
         set_open_floor(game)
