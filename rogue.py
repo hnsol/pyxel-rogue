@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0021"
+UI_BUILD = "260426_0028"
 
 # ===========================================================
 #  Font
@@ -1907,6 +1907,10 @@ class Game:
                         and not self.save_vs_poison() and self.p.st>3):
                     self.p.st-=1; self.msg("pyxel.feel_weaker")
                 if "drain_level" in m.flags and rnd(100)<15:
+                    if self.p.exp == 0:
+                        self.p.hp = 0
+                        self.death_cause = f"killed by a {m.name}"
+                        return
                     if self.p.level>1:
                         self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1]+1)
                     self.p.max_hp=max(1,self.p.max_hp-roll("1d10"))
