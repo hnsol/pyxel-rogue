@@ -1266,6 +1266,40 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.pk[mfind])
         self.assertTrue(game.ident.pk[haste])
 
+    def test_rogue_544_restore_strength_potion_does_not_identify_on_quaff(self):
+        # Rogue 5.4.4 potions.c:P_RESTORE restores strength but does not set pot_info[].oi_know.
+        game = new_game(seed=322)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "restore strength")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.p.max_st = 16
+        game.p.st = 9
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.st, 16)
+        self.assertFalse(game.ident.pk[kind])
+        self.assertIn("hey, this tastes great.  It make you feel warm all over", game.msgs)
+        self.assertNotIn("You feel warm all over.", game.msgs)
+        self.assertNotIn(potion, game.p.inv)
+
+    def test_rogue_544_gain_strength_potion_uses_original_message(self):
+        # Rogue 5.4.4 potions.c:P_STRENGTH sets oi_know and says the bulging muscles message.
+        game = new_game(seed=323)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "gain strength")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.st, 17)
+        self.assertTrue(game.ident.pk[kind])
+        self.assertIn("you feel stronger, now.  What bulging muscles!", game.msgs)
+        self.assertNotIn("Str +1!", game.msgs)
+        self.assertNotIn(potion, game.p.inv)
+
     def test_rogue_544_monster_detection_without_monsters_uses_feeling_message(self):
         # Rogue 5.4.4 potions.c:P_MFIND calls turn_see(FALSE), then choose_str("normal", "strange") if none appear.
         game = new_game(seed=319)
