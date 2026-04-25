@@ -4585,6 +4585,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.save_vs_poison = lambda: False
         game.m_attack(monster)
         self.assertEqual(game.p.st, 9)
+        self.assertIn("you feel a bite in your leg and now feel weaker", game.msgs)
 
         game.save_vs_poison = lambda: True
         game.m_attack(monster)

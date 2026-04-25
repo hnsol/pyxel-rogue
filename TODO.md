@@ -106,6 +106,7 @@
 - [x] Rattlesnake / Ice monster の Rogue 5.4.4 準拠寄せ（毒セーヴによるStr低下、命中時凍結）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Rattlesnake sustain strength save 順序監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Rattlesnake sustain strength メッセージ監査
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Rattlesnake 毒低下メッセージ監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Ice monster freeze メッセージ再表示監査
 - [x] Rogue 5.4.4 `move.c:T_DART` 準拠の dart trap poison save 順序監査
 - [x] Rogue 5.4.4 `misc.c:add_str()` 準拠の poison potion Strength 下限監査
