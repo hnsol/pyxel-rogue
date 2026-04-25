@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0424"
+UI_BUILD = "260426_0447"
 
 # ===========================================================
 #  Font
@@ -633,10 +633,11 @@ class Player:
             if s.food < -STARVETIME:
                 s.hp=0; s.state="faint"; return "pyxel.starve_to_death"
             s.food-=1
-            if RNG.randrange(5)==0:
-                s.no_command=max(s.no_command,RNG.randint(4,11))
-                s.state="faint"; return "pyxel.faint_from_lack_of_food"
-            s.state="faint"; return None
+            s.state="faint"
+            if s.no_command or RNG.randrange(5)!=0:
+                return None
+            s.no_command+=RNG.randint(4,11)
+            return "pyxel.faint_from_lack_of_food"
         s.food-=1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG)
         if s.food<=0:
             s.state="faint"

@@ -1849,6 +1849,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, game.p.max_hp)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_stomach_does_not_extend_existing_no_command_faint(self):
+        # Rogue 5.4.4 daemons.c:stomach() returns when no_command is already nonzero.
+        game = new_game(seed=315)
+        game.p.food = 0
+        game.p.no_command = 5
+        old_randrange = rogue.RNG.randrange
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.RNG.randrange = lambda n: 0
+            rogue.RNG.randint = lambda a, b: b
+            game.run_stomach()
+        finally:
+            rogue.RNG.randrange = old_randrange
+            rogue.RNG.randint = old_randint
+
+        self.assertEqual(game.p.food, -1)
+        self.assertEqual(game.p.no_command, 5)
+
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
         game = new_game(seed=311)
