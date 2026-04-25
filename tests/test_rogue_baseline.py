@@ -1879,6 +1879,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(moved, [])
         self.assertEqual(monster.held, 2)
 
+    def test_rogue_544_chase_helper_runners_filters_held_and_not_running(self):
+        # Rogue 5.4.4 chase.c:runners() lives in rogue_chase.py as a small boundary.
+        import rogue_chase
+
+        sleeping = monster_at(1, 1)
+        held = monster_at(2, 1)
+        running = monster_at(3, 1)
+        held.running = True
+        held.held = 1
+        running.running = True
+        moved = []
+
+        rogue_chase.runners([sleeping, held, running], lambda monster: moved.append(monster))
+
+        self.assertEqual(moved, [running])
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)

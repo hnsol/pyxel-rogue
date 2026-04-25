@@ -30,6 +30,7 @@ import rogue_rings
 import rogue_sticks
 import rogue_dungeon
 import rogue_daemons
+import rogue_chase
 from rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
     MONSTER_MISS_MESSAGE_KEYS,
@@ -160,7 +161,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0856"
+UI_BUILD = "260426_0858"
 
 # ===========================================================
 #  Font
@@ -3246,10 +3247,7 @@ class Game:
 
     def run_runners(self):
         # C: chase.c:runners()
-        for mo in self.mons:
-            if mo.held > 0 or not mo.running:
-                continue
-            self.m_turn(mo)
+        rogue_chase.runners(self.mons, self.m_turn)
 
     def run_stomach(self):
         # C: daemons.c:stomach()
