@@ -1363,6 +1363,10 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = lambda n: 0
             player.hunger()
             self.assertEqual(player.food, 98)
+            player.has_amulet = True
+            player.food = 100
+            player.hunger()
+            self.assertEqual(player.food, 99)
         finally:
             rogue.RNG.rnd = old_rnd
 
