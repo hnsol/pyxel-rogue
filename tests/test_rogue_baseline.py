@@ -195,6 +195,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.MONSTER_MISS_MESSAGE_KEYS, rogue_combat_text.MONSTER_MISS_MESSAGE_KEYS)
         self.assertEqual(rogue.PLAYER_HIT_MESSAGE_KEYS[0], "fight.player_hit_excellent")
 
+    def test_language_settings_are_split_without_changing_defaults(self):
+        import rogue_lang
+
+        self.assertEqual((rogue.LANG_EN, rogue.LANG_JA), (rogue_lang.LANG_EN, rogue_lang.LANG_JA))
+        self.assertEqual(rogue.DEFAULT_LANG, rogue_lang.DEFAULT_LANG)
+        self.assertEqual(rogue.Settings, rogue_lang.Settings)
+        self.assertEqual(rogue.Settings(language="xx").language, rogue.LANG_EN)
+        self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 
