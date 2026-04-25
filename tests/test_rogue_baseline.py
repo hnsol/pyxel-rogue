@@ -3446,6 +3446,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
 
+    def test_rogue_544_extra_healing_ends_hallucination(self):
+        # Rogue 5.4.4 potions.c:P_XHEAL calls daemons.c:come_down().
+        game = new_game(seed=394)
+        extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
+        potion = rogue.Item(rogue.CAT_POT, extra_healing)
+        game.p.inv.append(potion)
+        game.p.hallucinating = 10
+        game.fuses.fuse("come_down", 10, rogue.rogue_daemons.AFTER)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.hallucinating, 0)
+        self.assertIn("Everything looks SO boring now.", game.msgs)
+
     def test_rogue_544_healing_can_raise_max_hp_by_one(self):
         # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp when healing overflows.
         game = new_game(seed=391)
