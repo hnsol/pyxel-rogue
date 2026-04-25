@@ -3398,6 +3398,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, game.p.max_hp - 4)
         self.assertIn("You feel much better. (+1)", game.msgs)
 
+    def test_rogue_544_healing_can_raise_max_hp_by_one(self):
+        # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp when healing overflows.
+        game = new_game(seed=391)
+        healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, healing)
+        game.p.inv.append(potion)
+        game.p.level = 1
+        game.p.hp = game.p.max_hp
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 1
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
+
     def test_random_weapon_generation_changes_hit_plus_only(self):
         old_random = rogue.random.random
         old_randint = rogue.random.randint
