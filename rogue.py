@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0138"
+UI_BUILD = "260426_0148"
 
 # ===========================================================
 #  Font
@@ -2113,7 +2113,7 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.randint(1,3); p.st=max(1,p.st-l); self.msg("potions.you_feel_very_sick_now")
+                l=RNG.randint(1,3); p.st=max(3,p.st-l); self.msg("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
