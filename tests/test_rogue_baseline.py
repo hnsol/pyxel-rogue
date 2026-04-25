@@ -995,6 +995,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(game.ident.sk[kind])
         self.assertEqual([(mo.x, mo.y) for mo in game.mons], [(game.p.x - 1, game.p.y - 1)])
+        self.assertNotIn("A monster appears!", game.msgs)
 
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.

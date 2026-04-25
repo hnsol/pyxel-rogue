@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0532"
+UI_BUILD = "260425_0544"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2462,7 +2462,6 @@ class Game:
                     self.mons.append(self.new_monster_from_spec(nx,ny,e))
                     if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
                         self.runto(self.mons[-1])
-                self.msg("pyxel.monster_appears")
             else:
                 self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":
