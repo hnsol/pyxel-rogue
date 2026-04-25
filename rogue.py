@@ -89,9 +89,31 @@ from rogue_palettes import (
     PALETTES,
 )
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
+from rogue_ui import (
+    AUX_ACTIONS,
+    BACK_TAP_FRAMES,
+    B_TAP_FRAMES,
+    CALL_PRESETS,
+    MENU_ACTIONS,
+    ST_AUX,
+    ST_CALL,
+    ST_DEAD,
+    ST_DIR,
+    ST_DISC,
+    ST_HELP,
+    ST_INVENTORY,
+    ST_ITEM,
+    ST_LOADING,
+    ST_MENU,
+    ST_PLAY,
+    ST_QUIT,
+    ST_QUIT_CONFIRM,
+    ST_SCORE,
+    ST_WIN,
+)
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2321"
+UI_BUILD = "260425_2334"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -188,23 +210,6 @@ MONSTER_MISS_MESSAGE_KEYS = (
     "fight.monster_miss_barely",
     "fight.monster_miss_doesnt_hit",
 )
-
-# ===========================================================
-#  UI states
-# ===========================================================
-ST_PLAY = 0; ST_MENU = 1; ST_ITEM = 2; ST_DIR = 3
-ST_DEAD = 4; ST_INVENTORY = 5; ST_HELP = 6
-ST_AUX = 7; ST_WIN = 8; ST_LOADING = 9
-ST_QUIT = 10; ST_QUIT_CONFIRM = 11; ST_SCORE = 12
-ST_CALL = 13; ST_DISC = 14
-
-CALL_PRESETS = [
-    "good", "bad",  "meh",  "skip",
-    "try",  "use",  "id?",  "boo",
-    "zap",  "hmm",  "ugh",  "yay",
-    "wow",  "odd",  "???",  "!!!",
-]
-
 
 # ===========================================================
 #  Text catalog
@@ -535,18 +540,6 @@ DIR8 = {
     "N":(0,-1),"S":(0,1),"W":(-1,0),"E":(1,0),
     "NW":(-1,-1),"NE":(1,-1),"SW":(-1,1),"SE":(1,1),
 }
-B_TAP_FRAMES = 8
-BACK_TAP_FRAMES = 8
-
-# ===========================================================
-#  Menu actions
-# ===========================================================
-MENU_ACTIONS = [
-    ("Quaff",   CAT_POT),("Read",   CAT_SCR),("Eat",    CAT_FOOD),
-    ("Wield",   CAT_WPN),("Wear",   CAT_ARM),("Put on", CAT_RING),("Take off",None),
-    ("Zap",     CAT_STICK),("Throw",   None),   ("Drop",   None),
-]
-AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
 
 # ===========================================================
 #  Classes

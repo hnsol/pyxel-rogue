@@ -166,6 +166,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.ICOL, rogue_items.ICOL)
         self.assertEqual(rogue.HALLU_THINGS, rogue_items.HALLU_THINGS)
 
+    def test_ui_tables_are_split_without_changing_menu_actions(self):
+        import rogue_ui
+
+        self.assertEqual((rogue.ST_PLAY, rogue.ST_MENU, rogue.ST_ITEM, rogue.ST_DIR), (0, 1, 2, 3))
+        self.assertEqual((rogue.ST_QUIT, rogue.ST_QUIT_CONFIRM, rogue.ST_SCORE), (10, 11, 12))
+        self.assertEqual(rogue.CALL_PRESETS, rogue_ui.CALL_PRESETS)
+        self.assertEqual(rogue.MENU_ACTIONS, rogue_ui.MENU_ACTIONS)
+        self.assertEqual(rogue.AUX_ACTIONS, rogue_ui.AUX_ACTIONS)
+        self.assertEqual((rogue.B_TAP_FRAMES, rogue.BACK_TAP_FRAMES), (8, 8))
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 
