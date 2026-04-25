@@ -2435,6 +2435,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hp, 19)
 
+    def test_rogue_544_roll_em_gives_monster_plus_four_when_player_cannot_act(self):
+        # Rogue 5.4.4 command.c clears player ISRUN during no_command;
+        # fight.c:roll_em() gives +4 to hit when the defender lacks ISRUN.
+        game = new_game(seed=8)
+        set_open_floor(game)
+        game.p.no_command = 1
+        monster = monster_at(game.p.x + 1, game.p.y, damage="1x1")
+        seen_wplus = []
+        game.swing_hits = lambda at_lvl, op_arm, wplus: seen_wplus.append(wplus) or False
+
+        game.roll_monster_attack(monster)
+
+        self.assertEqual(seen_wplus, [4])
+
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
         mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)

@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2058"
+UI_BUILD = "260425_2100"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1818,10 +1818,11 @@ class Game:
 
     def roll_monster_attack(self, m):
         # C: fight.c:roll_em()
+        hplus = 4 if self.p.stuck else 0
         did_hit = False
         total = 0
         for part in m.damage_expr.split("/"):
-            if self.swing_hits(m.level, self.p.ac, 0):
+            if self.swing_hits(m.level, self.p.ac, hplus):
                 total += roll_damage_expr(part)
                 did_hit = True
         return did_hit, total
