@@ -1895,6 +1895,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [8])
         self.assertEqual(game.p.no_command, 11)
 
+    def test_rogue_544_no_command_recovery_message_when_counter_reaches_zero(self):
+        # Rogue 5.4.4 command.c:command() prints "you can move again" when --no_command reaches 0.
+        game = new_game(seed=317)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.no_command = 1
+
+        game.end_turn()
+
+        self.assertEqual(game.p.no_command, 0)
+        self.assertIn("you can move again", game.msgs)
+
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
         game = new_game(seed=311)

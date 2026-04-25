@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0527"
+UI_BUILD = "260426_0548"
 
 # ===========================================================
 #  Font
@@ -3181,7 +3181,10 @@ class Game:
         self.turn+=1
         for i in range(msg_start, len(self.msg_turns)):
             self.msg_turns[i] = self.turn
-        if self.p.no_command>0: self.p.no_command-=1
+        if self.p.no_command>0:
+            self.p.no_command-=1
+            if self.p.no_command==0:
+                self.msg("command.you_can_move_again")
         if self.p.confused>0 and self.fuses.remaining("unconfuse")==0:
             self.p.confused-=1
         if self.p.blind>0 and self.fuses.remaining("sight")==0:
