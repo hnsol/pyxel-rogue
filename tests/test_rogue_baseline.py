@@ -1003,6 +1003,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual([(mo.x, mo.y) for mo in game.mons], [(game.p.x - 1, game.p.y - 1)])
         self.assertNotIn("A monster appears!", game.msgs)
 
+    def test_rogue_544_create_monster_uses_reservoir_candidate_pick(self):
+        # Rogue 5.4.4 scrolls.c:S_CREATE chooses neighbors with rnd(++i) == 0.
+        class CreateMonsterRng:
+            def __init__(self):
+                self.rnd_calls = []
+
+            def rnd(self, n):
+                self.rnd_calls.append(n)
+                return 0 if n in (1, 8) else 1
+
+            def choice(self, seq):
+                return seq[0]
+
+            def roll(self, number, sides):
+                return number
+
+        game = new_game(seed=331)
+        set_open_floor(game)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "create monster")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        old_rng = rogue.RNG
+        test_rng = CreateMonsterRng()
+        rogue.RNG = test_rng
+        try:
+            game.use_scr(scroll)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(test_rng.rnd_calls[:8], [1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertEqual([(mo.x, mo.y) for mo in game.mons], [(game.p.x + 1, game.p.y + 1)])
+
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
         cases = [
