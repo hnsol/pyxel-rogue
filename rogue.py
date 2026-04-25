@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0408"
+UI_BUILD = "260425_0421"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2507,7 +2507,6 @@ class Game:
         elif nm=="protect armor":
             if p.arm:
                 p.arm.protected=True
-                self.ident.sk[it.kind]=True
                 self.msg("scrolls.your_armor_is_covered_by_a_shimmering_color_shield", color="gold")
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")

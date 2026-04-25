@@ -812,8 +812,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("your nose tingles", game.msgs)
 
     def test_rogue_544_scroll_protect_armor_marks_armor_protected_and_blocks_rust(self):
-        # Rogue 5.4.4 scrolls.c:S_PROTECT sets ISPROT; move.c:rust_armor()
-        # then prints the instant-vanish rust message and does not lower armor.
+        # Rogue 5.4.4 scrolls.c:S_PROTECT sets ISPROT but does not set scr_info[].oi_know;
+        # move.c:rust_armor() then prints the instant-vanish rust message and does not lower armor.
         game = new_game(seed=315)
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "protect armor")
         scroll = rogue.Item(rogue.CAT_SCR, kind)
@@ -824,7 +824,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_scr(scroll)
 
-        self.assertTrue(game.ident.sk[kind])
+        self.assertFalse(game.ident.sk[kind])
         self.assertTrue(armor.protected)
         self.assertIn("your armor is covered by a shimmering gold shield", game.msgs)
 
