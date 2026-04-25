@@ -3110,6 +3110,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(top), 10)
         self.assertEqual([entry["score"] for entry in top], [99, 90, 75, 60, 55, 42, 33, 17, 12, 10])
 
+    def test_rogue_544_score_lines_match_rip_score_printf(self):
+        # Rogue 5.4.4 rip.c:score() prints "Top Ten Scores:", "   Score Name",
+        # then "%2d %5d %s: %s on level %d" plus killer text and period.
+        entries = [
+            {"score": 346, "player_name": "masatora", "result_flags": "killed", "level": 4, "killer": "orc"},
+            {"score": 194, "player_name": "masatora", "result_flags": "killed", "level": 3, "killer": "bat"},
+            {"score": 109, "player_name": "masatora", "result_flags": "quit", "level": 1, "killer": ""},
+            {"score": 47, "player_name": "masatora", "result_flags": "killed", "level": 2, "killer": "kestrel"},
+        ]
+
+        lines = rogue.format_top_score_lines(entries)
+
+        self.assertEqual(
+            lines,
+            [
+                "Top Ten Scores:",
+                "   Score Name",
+                " 1   346 masatora: killed on level 4 by an orc.",
+                " 2   194 masatora: killed on level 3 by a bat.",
+                " 3   109 masatora: quit on level 1.",
+                " 4    47 masatora: killed on level 2 by a kestrel.",
+            ],
+        )
+
     def test_aux_quit_enters_quit_confirm_state(self):
         game = new_game(seed=35)
         game.open_aux()

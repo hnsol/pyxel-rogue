@@ -30,7 +30,7 @@ import rogue_rings
 import rogue_sticks
 import rogue_dungeon
 import rogue_daemons
-from rogue_scores import build_score_entry, get_top_scores, load_score_entries, save_score_entry
+from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
 UI_BUILD = "260425_0125"
@@ -4199,17 +4199,12 @@ class Game:
 
     def draw_score_screen(self):
         bx,by=118,34; bw=340; bh=220
-        self._box(bx, by, bw, bh, TextCatalog.msg(self.lang, "ui.top_10"))
+        self._box(bx, by, bw, bh)
         scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
-        y = by + 20
-        for i, entry in enumerate(scores[:10], start=1):
-            score = int(entry.get("score", 0))
-            name = str(entry.get("player_name", "rogue"))[:12]
-            flags = str(entry.get("result_flags", ""))
-            level = int(entry.get("level", 0))
-            suffix = f"{flags} L{level}"
-            self.txt(bx + 12, y, f"{i:>2} {score:>5} {name:<12} {suffix[:12]}", 10 if i == 1 else 9)
-            y += 16
+        y = by + 14
+        for i, line in enumerate(format_top_score_lines(scores)):
+            self.txt(bx + 12, y, line, 10 if i == 0 else 9)
+            y += 14
         if not scores:
             self.txt(bx + 12, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
         self.txt(bx + 12, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_new_game"), 10)

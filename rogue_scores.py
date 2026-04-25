@@ -44,6 +44,41 @@ def get_top_scores(entries: list[dict[str, Any]], limit: int = 10) -> list[dict[
     return sorted(entries, key=lambda entry: int(entry.get("score", 0)), reverse=True)[:limit]
 
 
+def score_reason(result_flags: str) -> str:
+    # Rogue 5.4.4 rip.c:score() reason[] table.
+    return {
+        "killed": "killed",
+        "quit": "quit",
+        "winner": "A total winner",
+        "killed_with_amulet": "killed with Amulet",
+    }.get(str(result_flags), str(result_flags))
+
+
+def article_for(name: str) -> str:
+    if not name:
+        return ""
+    return "an" if name[0].lower() in "aeiou" else "a"
+
+
+def format_score_line(rank: int, entry: dict[str, Any]) -> str:
+    score = int(entry.get("score", 0))
+    name = str(entry.get("player_name", "rogue"))
+    flags = str(entry.get("result_flags", ""))
+    level = int(entry.get("level", 0))
+    line = f"{rank:2d} {score:5d} {name}: {score_reason(flags)} on level {level}"
+    if flags in ("killed", "killed_with_amulet"):
+        killer = str(entry.get("killer", "")).strip()
+        if killer:
+            line += f" by {article_for(killer)} {killer}"
+    return line + "."
+
+
+def format_top_score_lines(entries: list[dict[str, Any]], limit: int = 10) -> list[str]:
+    lines = ["Top Ten Scores:", "   Score Name"]
+    lines.extend(format_score_line(i, entry) for i, entry in enumerate(entries[:limit], start=1))
+    return lines
+
+
 def _read_web_scores() -> list[dict[str, Any]]:
     from js import localStorage
 
