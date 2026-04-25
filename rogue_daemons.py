@@ -9,14 +9,14 @@ MAXDAEMONS = 20
 class FuseList:
     """Small fuse table matching daemon.c:fuse()/lengthen()/extinguish()/do_fuses()."""
 
-    def __init__(self) -> None:
-        self._fuses: list[dict] = []
+    def __init__(self, slots: list[dict] | None = None) -> None:
+        self._fuses = [] if slots is None else slots
 
     def fuse(self, name: str, time: int, when: str = AFTER) -> None:
         """Schedule name to fire after time turns in the given phase."""
         if len(self._fuses) >= MAXDAEMONS:
             return
-        self._fuses.append({"name": name, "time": max(0, int(time)), "when": when})
+        self._fuses.append({"kind": "fuse", "name": name, "time": max(0, int(time)), "when": when})
 
     def lengthen(self, name: str, extra: int) -> None:
         """Extend an existing fuse by extra turns (daemon.c:lengthen)."""
@@ -40,7 +40,7 @@ class FuseList:
         """Decrement and return names of expired fuses (daemon.c:do_fuses)."""
         due = []
         for fuse in list(self._fuses):
-            if fuse["when"] != when or fuse["time"] <= 0:
+            if fuse.get("kind") != "fuse" or fuse["when"] != when or fuse["time"] <= 0:
                 continue
             fuse["time"] -= 1
             if fuse["time"] == 0:
@@ -51,7 +51,7 @@ class FuseList:
 
     def _find(self, name: str) -> dict | None:
         for fuse in self._fuses:
-            if fuse["name"] == name:
+            if fuse.get("kind") == "fuse" and fuse["name"] == name:
                 return fuse
         return None
 
@@ -59,29 +59,44 @@ class FuseList:
 class DaemonList:
     """Small daemon table matching daemon.c:start_daemon()/kill_daemon()/do_daemons()."""
 
-    def __init__(self) -> None:
-        self._daemons: list[dict] = []
+    def __init__(self, slots: list[dict] | None = None) -> None:
+        self._daemons = [] if slots is None else slots
 
     def start(self, name: str, when: str = AFTER) -> None:
         """Start name as a daemon in the given phase."""
         if len(self._daemons) >= MAXDAEMONS:
             return
-        self._daemons.append({"name": name, "when": when})
+        self._daemons.append({"kind": "daemon", "name": name, "when": when})
 
     def kill(self, name: str) -> None:
         """Remove a daemon from the table (daemon.c:kill_daemon)."""
         for idx, daemon in enumerate(self._daemons):
-            if daemon["name"] == name:
+            if daemon.get("kind") == "daemon" and daemon["name"] == name:
                 del self._daemons[idx]
                 return
 
     def running(self, name: str, when: str | None = None) -> bool:
         """Return whether name is active, optionally limited to a phase."""
         return any(
-            daemon["name"] == name and (when is None or daemon["when"] == when)
+            daemon.get("kind") == "daemon"
+            and daemon["name"] == name
+            and (when is None or daemon["when"] == when)
             for daemon in self._daemons
         )
 
     def tick(self, when: str = AFTER) -> list[str]:
         """Return active daemon names for the given phase (daemon.c:do_daemons)."""
-        return [daemon["name"] for daemon in list(self._daemons) if daemon["when"] == when]
+        return [
+            daemon["name"]
+            for daemon in list(self._daemons)
+            if daemon.get("kind") == "daemon" and daemon["when"] == when
+        ]
+
+
+class DelayedActionTable:
+    """Shared daemon.c d_list backing both daemons and fuses."""
+
+    def __init__(self) -> None:
+        self._slots: list[dict] = []
+        self.fuses = FuseList(self._slots)
+        self.daemons = DaemonList(self._slots)

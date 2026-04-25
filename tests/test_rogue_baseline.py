@@ -1821,6 +1821,18 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(fuses.tick(rogue_daemons.BEFORE), ["swander"])
 
+    def test_rogue_544_daemon_and_fuse_share_maxdaemon_slots(self):
+        # Rogue 5.4.4 daemon.c stores daemons and fuses in one MAXDAEMONS d_list.
+        import rogue_daemons
+
+        actions = rogue_daemons.DelayedActionTable()
+        for idx in range(rogue_daemons.MAXDAEMONS):
+            actions.daemons.start(f"daemon_{idx}", rogue_daemons.AFTER)
+
+        actions.fuses.fuse("blocked", 1, rogue_daemons.AFTER)
+
+        self.assertEqual(actions.fuses.tick(rogue_daemons.AFTER), [])
+
     def test_rogue_544_main_starts_after_daemons(self):
         # Rogue 5.4.4 main.c starts runners, doctor, and stomach with start_daemon(..., AFTER).
         game = new_game(seed=309)

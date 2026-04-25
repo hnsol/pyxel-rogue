@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0841"
+UI_BUILD = "260426_0848"
 
 # ===========================================================
 #  Font
@@ -1266,8 +1266,9 @@ class Game:
         self.max_depth = 0
         self.wander_timer = 0
         self.wander_between = 0
-        self.fuses = rogue_daemons.FuseList()
-        self.daemons = rogue_daemons.DaemonList()
+        self.delayed_actions = rogue_daemons.DelayedActionTable()
+        self.fuses = self.delayed_actions.fuses
+        self.daemons = self.delayed_actions.daemons
         self.daemons.start("runners", rogue_daemons.AFTER)
         self.daemons.start("doctor", rogue_daemons.AFTER)
         self.daemons.start("stomach", rogue_daemons.AFTER)
