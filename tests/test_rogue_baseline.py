@@ -1234,6 +1234,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.can_see_monster(phantom))
         self.assertEqual(game.p.see_invisible, rogue.SEEDURATION - rogue.SEEDURATION // 20 + 7)
         self.assertEqual(game.fuses.remaining("unsee"), rogue.SEEDURATION - rogue.SEEDURATION // 20 + 7)
+        # Rogue 5.4.4 potions.c P_SEEINVIS/p_actions uses prbuf with extern.c fruit.
+        self.assertIn("this potion tastes like slime-mold juice", game.msgs)
+        self.assertNotIn("You can see invisible monsters.", game.msgs)
         self.assertNotIn(potion, game.p.inv)
 
     def test_rogue_544_potion_knowit_flags_follow_quaff_branches(self):
