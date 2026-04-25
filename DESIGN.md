@@ -151,7 +151,7 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 モンスターの戦闘値は Rogue 5.4.4 `extern.c:monsters[]` の `s_lvl`, `s_arm`, `s_dmg`, `s_exp` を名前付き `MonsterSpec` として持つ。tuple の位置引数で `level` と `armor` を取り違えると、プレイヤー命中率や plate mail の防御力が大きく壊れるため、代表モンスターと `fight.c:swing` の境界値をテストで固定する。Hobgoblin は `level=1`, `armor=5`, `damage="1x8"`, `exp=3`、Ice monster は `level=1`, `armor=9`, `damage="0x0"`, `exp=5` を監査対象にする。
 
-残差分として、通路番号付き passages、Dragon breath、指輪・杖・cancellation とAIの完全連携は未完了。Dragon breath の最小接続は Rogue 5.4.4 `chase.c:do_chase()` の `DRAGONSHOT` 分岐と `sticks.c:fire_bolt()` に合わせ、同じ部屋内で直線・射程内・非 `ISCANC` なら `rnd(5)==0` で Dragon の位置から flame bolt を撃つ。wandering monster は Rogue 5.4.4 の `main.c:fuse(swander, 0, WANDERTIME, AFTER)`, `daemons.c:swander()` / `rollwand()`, `monsters.c:wanderer()` を基準にし、`WANDERTIME` は `rogue.h` の `spread(70)` として扱う。暗い部屋、迷路部屋、gone room は生成と視界への接続を先行実装済みで、今後も原作関数を確認しながらアイテム・モンスター配置やAI所属を詰める。
+残差分として、通路番号付き passages、Dragon breath、指輪・杖・cancellation とAIの完全連携は未完了。Dragon breath の最小接続は Rogue 5.4.4 `chase.c:do_chase()` の `DRAGONSHOT` 分岐と `sticks.c:fire_bolt()` に合わせ、同じ部屋内で直線・射程内・非 `ISCANC` なら `rnd(5)==0` で Dragon の位置から flame bolt を撃つ。wandering monster は Rogue 5.4.4 の `main.c:fuse(swander, 0, WANDERTIME, AFTER)`, `daemons.c:swander()` / `rollwand()`, `monsters.c:wanderer()` を基準にし、初回 `swander` は AFTER fuse、以後の `rollwand` daemon と再予約 `swander` は BEFORE として扱う。`WANDERTIME` は `rogue.h` の `spread(70)` とする。暗い部屋、迷路部屋、gone room は生成と視界への接続を先行実装済みで、今後も原作関数を確認しながらアイテム・モンスター配置やAI所属を詰める。
 
 ## 武器メカニクス
 
@@ -273,7 +273,7 @@ treasure room（俗称モンスターハウス）は `new_level.c:138, 180-231` 
 
 daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()` を基準にする。現行は個別 `int` カウンタで近似しているが、`doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` を統一インフラで扱うことで、`potion of haste self` の重ね掛け、`ring of regeneration` の同時発動、wandering monster の `WANDERTIME=spread(70)` などを Rogue 5.4.4 と同じターン消費で再現できる。
 
-初期移行として `rogue_daemons.py` に `FuseList` を追加し、`daemon.c:fuse()`, `lengthen()`, `extinguish()`, `do_fuses(AFTER)` と比較できる境界を作る。まず `potions.c:P_HASTE` / `misc.c:add_haste(TRUE)` / `daemons.c:nohaste()` を接続し、haste 中は `command.c:command()` の `ntimes++` 相当として、2回のプレイヤー行動につき1回だけ AFTER fuse、空腹、モンスター行動を進める。haste self の二重使用は `rnd(8)` の `no_command` を加え、`nohaste` fuse を消して失神メッセージを出す。`potions.c:P_CONFUSE`, `P_SEEINVIS`, `P_LSD`, `P_BLIND`, `P_LEVIT`, `P_MFIND` は `do_pot()` / `turn_see()` 相当として未発動時に `fuse()`、発動中の再使用で `lengthen()` する。doctor、stomach、runners、swander、rollwand など daemon 系は、後続タスクで同じ `FuseList` へ段階移行する。
+初期移行として `rogue_daemons.py` に `FuseList` を追加し、`daemon.c:fuse()`, `lengthen()`, `extinguish()`, `do_fuses(AFTER)` と比較できる境界を作る。まず `potions.c:P_HASTE` / `misc.c:add_haste(TRUE)` / `daemons.c:nohaste()` を接続し、haste 中は `command.c:command()` の `ntimes++` 相当として、2回のプレイヤー行動につき1回だけ AFTER fuse、空腹、モンスター行動を進める。haste self の二重使用は `rnd(8)` の `no_command` を加え、`nohaste` fuse を消して失神メッセージを出す。`potions.c:P_CONFUSE`, `P_SEEINVIS`, `P_LSD`, `P_BLIND`, `P_LEVIT`, `P_MFIND` は `do_pot()` / `turn_see()` 相当として未発動時に `fuse()`、発動中の再使用で `lengthen()` する。`swander` / `rollwand` は `main.c` の初回 `fuse(AFTER)` と `daemons.c` の `start_daemon(BEFORE)` / 再予約 `fuse(BEFORE)` に合わせる。doctor、stomach、runners など daemon 系は、後続タスクで同じ `FuseList` へ段階移行する。
 
 Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
 

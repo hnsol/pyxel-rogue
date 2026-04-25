@@ -82,7 +82,7 @@ class WanderingMonsterTests(unittest.TestCase):
         game = new_game(seed=101)
         two_room_floor(game)
         game.fuses.extinguish("swander")
-        game.daemons.start("rollwand", rogue.rogue_daemons.AFTER)
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
         game.wander_between = 3
         original_rng = rogue.RNG
         rogue.RNG = FixedRng()
@@ -96,9 +96,9 @@ class WanderingMonsterTests(unittest.TestCase):
         self.assertGreater(game.fuses.remaining("swander"), 0)
         self.assertEqual(game.wander_between, 0)
 
-    def test_rogue_544_swander_fuse_starts_rollwand_after_daemon(self):
+    def test_rogue_544_swander_fuse_starts_rollwand_before_daemon(self):
         # Rogue 5.4.4 main.c:fuse(swander, WANDERTIME, AFTER);
-        # daemons.c:swander() starts rollwand as an AFTER daemon.
+        # daemons.c:swander() starts rollwand as a BEFORE daemon.
         game = new_game(seed=102)
         two_room_floor(game)
         game.fuses.extinguish("swander")
@@ -106,7 +106,8 @@ class WanderingMonsterTests(unittest.TestCase):
 
         game.end_turn()
 
-        self.assertTrue(game.daemons.running("rollwand", rogue.rogue_daemons.AFTER))
+        self.assertTrue(game.daemons.running("rollwand", rogue.rogue_daemons.BEFORE))
+        self.assertFalse(game.daemons.running("rollwand", rogue.rogue_daemons.AFTER))
         self.assertEqual(len(game.mons), 0)
 
     def test_rogue_544_rollwand_daemon_reschedules_swander_fuse_after_spawn(self):
@@ -114,7 +115,7 @@ class WanderingMonsterTests(unittest.TestCase):
         game = new_game(seed=103)
         two_room_floor(game)
         game.fuses.extinguish("swander")
-        game.daemons.start("rollwand", rogue.rogue_daemons.AFTER)
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
         game.wander_between = 3
         original_rng = rogue.RNG
         rogue.RNG = FixedRng()
@@ -124,7 +125,7 @@ class WanderingMonsterTests(unittest.TestCase):
             rogue.RNG = original_rng
 
         self.assertEqual(len(game.mons), 1)
-        self.assertFalse(game.daemons.running("rollwand", rogue.rogue_daemons.AFTER))
+        self.assertFalse(game.daemons.running("rollwand"))
         self.assertGreater(game.fuses.remaining("swander"), 0)
 
 

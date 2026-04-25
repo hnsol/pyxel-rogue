@@ -1822,6 +1822,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 10)
         self.assertEqual(game.p.food, 100)
 
+    def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
+        # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
+        game = new_game(seed=311)
+        game.swander()
+
+        self.assertTrue(game.daemons.running("rollwand", rogue.rogue_daemons.BEFORE))
+        self.assertFalse(game.daemons.running("rollwand", rogue.rogue_daemons.AFTER))
+
+    def test_rogue_544_rollwand_success_reschedules_swander_before_fuse(self):
+        # Rogue 5.4.4 daemons.c:rollwand() calls fuse(swander, ..., WANDERTIME, BEFORE).
+        game = new_game(seed=312)
+        old_roll = rogue.RNG.roll
+        old_spread = rogue.RNG.spread
+        try:
+            rogue.RNG.roll = lambda number, sides: 4
+            rogue.RNG.spread = lambda n: 1
+            game.wander_between = 3
+            game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+            game.spawn_wanderer = lambda: True
+            game.roll_wanderer()
+        finally:
+            rogue.RNG.roll = old_roll
+            rogue.RNG.spread = old_spread
+
+        self.assertFalse(game.daemons.running("rollwand"))
+        self.assertEqual(game.fuses.tick(rogue.rogue_daemons.AFTER), [])
+        self.assertEqual(game.fuses.tick(rogue.rogue_daemons.BEFORE), ["swander"])
+
     def test_rogue_544_potion_haste_self_uses_nohaste_fuse_and_half_turns(self):
         # Rogue 5.4.4 potions.c:P_HASTE calls misc.c:add_haste(TRUE);
         # command.c:command() gives hasted player two actions before do_fuses(AFTER).
