@@ -935,7 +935,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("Your armor glows!", game.msgs)
 
     def test_rogue_544_teleport_scroll_identifies_only_when_room_changes(self):
-        # Rogue 5.4.4 scrolls.c:S_TELEP sets scr_info[S_TELEP].oi_know only if cur_room != proom.
+        # Rogue 5.4.4 scrolls.c:S_TELEP calls wizard.c:teleport(), which emits no log
+        # and clears ISHELD/vf_hit when teleporting away from a Venus Flytrap.
         game = new_game(seed=324)
         game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
         room_a = rogue.Room(1, 1, 8, 6)
@@ -946,6 +947,10 @@ class RogueBaselineTest(unittest.TestCase):
                 for x in range(room.x + 1, room.x + room.w - 1):
                     game.tm[y][x] = rogue.T_FLOOR
         game.p.x, game.p.y = room_a.inner()
+        flytrap = monster_at(game.p.x + 1, game.p.y, "F", "venus flytrap")
+        flytrap.vf_hit = 4
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "teleportation")
         same_room_scroll = rogue.Item(rogue.CAT_SCR, kind)
         game.p.inv.append(same_room_scroll)
@@ -956,16 +961,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(game.ident.sk[kind])
         self.assertIs(game.room_at(game.p.x, game.p.y), room_a)
+        self.assertNotIn("You are teleported!", game.msgs)
 
         other_room_scroll = rogue.Item(rogue.CAT_SCR, kind)
         game.p.inv.append(other_room_scroll)
         game.p.x, game.p.y = room_a.inner()
+        game.p.held_by = flytrap
+        flytrap.vf_hit = 4
         game.usable_rooms = lambda: [room_b]
 
         game.use_scr(other_room_scroll)
 
         self.assertTrue(game.ident.sk[kind])
         self.assertIs(game.room_at(game.p.x, game.p.y), room_b)
+        self.assertIsNone(game.p.held_by)
+        self.assertEqual(flytrap.vf_hit, 0)
+        self.assertNotIn("You are teleported!", game.msgs)
 
     def test_rogue_544_create_monster_uses_eight_neighbors_and_does_not_identify(self):
         # Rogue 5.4.4 scrolls.c:S_CREATE scans the full 3x3 ring and does not set oi_know.

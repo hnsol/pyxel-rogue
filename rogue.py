@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0520"
+UI_BUILD = "260425_0532"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2441,7 +2441,7 @@ class Game:
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
             if old_room is not self.room_at(p.x, p.y):
                 self.ident.sk[it.kind]=True
-            self.msg("pyxel.teleported")
+            self.clear_player_hold()
         elif nm=="create monster":
             cands=[]
             for dy in (-1,0,1):
@@ -2548,6 +2548,12 @@ class Game:
             m.flags.add(rogue_monsters.FLAG_HASTE)
         if rogue_rings.is_wearing(self.p, rogue_rings.R_AGGR):
             self.runto(m)
+
+    def clear_player_hold(self):
+        # Rogue 5.4.4 wizard.c:teleport() clears ISHELD/vf_hit after teleporting.
+        if self.p.held_by is not None:
+            self.p.held_by.vf_hit = 0
+            self.p.held_by = None
 
     def polymorph_monster(self,m):
         # C: sticks.c (WS_POLYMORPH)
@@ -2968,6 +2974,7 @@ class Game:
         if cands:
             self.p.x,self.p.y=RNG.choice(cands)
             self.update_fov(); self._center_cam()
+            self.clear_player_hold()
 
     def trigger_trap(self,x,y):
         # C: move.c:be_trapped()
