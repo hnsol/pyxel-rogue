@@ -2378,6 +2378,24 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(nymph.pack, [])
 
+    def test_rogue_544_nymph_steal_uses_reservoir_selection(self):
+        # Rogue 5.4.4 fight.c:attack() picks among magic pack items with rnd(++nobj)==0.
+        game = new_game(seed=302)
+        first = rogue.Item(rogue.CAT_POT, 0)
+        second = rogue.Item(rogue.CAT_SCR, 0)
+        equipped = rogue.Item(rogue.CAT_WPN, 0)
+        game.p.inv = [equipped, first, second]
+        game.p.wpn = equipped
+        calls = []
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            self.assertIs(game.monster_has_magic_item_to_steal(), second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls, [1, 2])
+
     def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
         # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
         game = new_game(seed=307)

@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2339"
+UI_BUILD = "260426_0005"
 
 # ===========================================================
 #  Font
@@ -1806,12 +1806,16 @@ class Game:
         return not thrown
 
     def monster_has_magic_item_to_steal(self):
+        steal = None
+        nobj = 0
         for it in self.p.inv:
             if it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r:
                 continue
             if it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM, CAT_RING, CAT_STICK):
-                return it
-        return None
+                nobj += 1
+                if rnd(nobj) == 0:
+                    steal = it
+        return steal
 
     def remove_monster(self,m,was_kill=False):
         # C: fight.c:remove_mon()
