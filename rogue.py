@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0013"
+UI_BUILD = "260426_0021"
 
 # ===========================================================
 #  Font
@@ -1908,7 +1908,7 @@ class Game:
                     self.p.st-=1; self.msg("pyxel.feel_weaker")
                 if "drain_level" in m.flags and rnd(100)<15:
                     if self.p.level>1:
-                        self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1])
+                        self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1]+1)
                     self.p.max_hp=max(1,self.p.max_hp-roll("1d10"))
                     self.p.hp=max(1,min(self.p.hp,self.p.max_hp)); self.msg("fight.you_suddenly_feel_weaker")
                 if "drain" in m.flags and rnd(100)<30:

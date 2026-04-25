@@ -2420,6 +2420,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.gold, 90)
         self.assertNotIn(leprechaun, game.mons)
 
+    def test_rogue_544_wraith_drain_sets_exp_to_new_level_threshold_plus_one(self):
+        # Rogue 5.4.4 fight.c:attack() sets s_exp = e_levels[s_lvl-1] + 1
+        # after Wraith level drain decrements s_lvl.
+        game = new_game(seed=304)
+        set_open_floor(game)
+        game.p.level = 3
+        game.p.exp = 50
+        game.p.hp = 20
+        game.p.max_hp = 20
+        wraith = monster_at(game.p.x + 1, game.p.y, "W", "wraith", damage="0x0", flags="drain_level")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda name: "hit"
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 1
+            game.m_attack(wraith)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(game.p.level, 2)
+        self.assertEqual(game.p.exp, rogue.Player.EXP_T[1] + 1)
+        self.assertEqual((game.p.hp, game.p.max_hp), (19, 19))
+
     def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
         # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
         game = new_game(seed=307)
