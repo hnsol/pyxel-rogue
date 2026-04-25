@@ -259,7 +259,7 @@
 - [x] 投擲が斜め方向に未対応（`misc.c:get_dir()` / `weapons.c:missile()/do_motion()` 準拠の期待値テストで既存対応を確認）
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
-- [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携
+- [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携（Dragon breath の同室・直線・射程・`ISCANC` ゲートは `chase.c:do_chase()` / `sticks.c:fire_bolt()` 準拠で接続済み）
 - [x] 巻物 18 種化完了（identify 対象選択 UI 含む）
 - [x] ポーションを原作 14 種へ更新（hallucination / levitation 接続済み）
 - [x] treasure room（モンスターハウス）を `new_level.c:treas_room()` 準拠で接続済み。`rogue_dungeon.py` に個数計算と発生ゲートを分離。

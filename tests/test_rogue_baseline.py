@@ -670,6 +670,51 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(dragon.running)
         self.assertIn("the flame bounces", game.msgs)
 
+    def test_rogue_544_dragon_breaths_flame_from_line_within_bolt_length(self):
+        # Rogue 5.4.4 chase.c:do_chase() Dragon calls fire_bolt() with rnd(DRAGONSHOT)==0.
+        game = new_game(seed=222)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [dragon]
+        game.save_vs_magic = lambda: False
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            calls = []
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [5])
+        self.assertEqual(game.p.hp, 18)
+        self.assertEqual((dragon.x, dragon.y), (game.p.x + rogue.BOLT_LENGTH, game.p.y))
+        self.assertIn("you are hit by the flame", game.msgs)
+
+    def test_rogue_544_cancelled_dragon_does_not_breathe_or_roll_dragonshot(self):
+        # Rogue 5.4.4 chase.c:do_chase() gates Dragon breath with !ISCANC before rnd(DRAGONSHOT).
+        game = new_game(seed=223)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="cancel")
+        game.mons = [dragon]
+        old_rnd = rogue.RNG.rnd
+        try:
+            calls = []
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            self.assertFalse(game.try_dragon_breath(dragon))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(calls, [])
+        self.assertEqual(game.p.hp, 30)
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

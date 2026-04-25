@@ -123,6 +123,7 @@ from rogue_timing import (
     BEARTIME,
     BOLT_LENGTH,
     BORE_LEVEL,
+    DRAGONSHOT,
     HEALTIME,
     HUHDURATION,
     HUNGERTIME,
@@ -159,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0157"
+UI_BUILD = "260426_0241"
 
 # ===========================================================
 #  Font
@@ -1988,12 +1989,35 @@ class Game:
             exits=self.room_exits(rer)
             if exits:
                 chase_dest=min(exits,key=lambda p:self.dist2(p,dest))
+        elif self.try_dragon_breath(m):
+            return 0
         moved_or_attack=self.chase(m,chase_dest)
         if moved_or_attack=="attack":
             return 0
         if m.dest!=DEST_PLAYER and (m.x,m.y)==dest:
             self.collect_monster_dest(m,dest)
         return 0
+
+    def try_dragon_breath(self,m):
+        # C: chase.c:do_chase() Dragon flame bolt gate.
+        dx=self.p.x-m.x
+        dy=self.p.y-m.y
+        if m.sym!="D":
+            return False
+        if not (dx==0 or dy==0 or abs(dx)==abs(dy)):
+            return False
+        if self.dist2((m.x,m.y),(self.p.x,self.p.y)) > BOLT_LENGTH * BOLT_LENGTH:
+            return False
+        if rogue_monsters.is_cancelled(m):
+            return False
+        if RNG.rnd(DRAGONSHOT)!=0:
+            return False
+        sx=(dx>0)-(dx<0)
+        sy=(dy>0)-(dy<0)
+        self.dashing=False
+        self.p.quiet=0
+        self.fire_bolt_from(m.x,m.y,sx,sy,"flame")
+        return True
 
     def room_gold_target(self,m):
         mr=self.room_for_ai(m.x,m.y)
@@ -2642,8 +2666,12 @@ class Game:
 
     def fire_bolt(self, dx, dy, name):
         # Rogue 5.4.4 sticks.c:fire_bolt() bounces from walls/doors and uses 6x6 damage.
-        x,y=self.p.x,self.p.y
-        hit_hero=False
+        return self.fire_bolt_from(self.p.x,self.p.y,dx,dy,name)
+
+    def fire_bolt_from(self, start_x, start_y, dx, dy, name):
+        # Rogue 5.4.4 sticks.c:fire_bolt() hit_hero is true when start != &hero.
+        x,y=start_x,start_y
+        hit_hero=(start_x,start_y)!=(self.p.x,self.p.y)
         changed=False
         steps=0
         bounces=0

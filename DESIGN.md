@@ -151,7 +151,7 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 モンスターの戦闘値は Rogue 5.4.4 `extern.c:monsters[]` の `s_lvl`, `s_arm`, `s_dmg`, `s_exp` を名前付き `MonsterSpec` として持つ。tuple の位置引数で `level` と `armor` を取り違えると、プレイヤー命中率や plate mail の防御力が大きく壊れるため、代表モンスターと `fight.c:swing` の境界値をテストで固定する。Hobgoblin は `level=1`, `armor=5`, `damage="1x8"`, `exp=3`、Ice monster は `level=1`, `armor=9`, `damage="0x0"`, `exp=5` を監査対象にする。
 
-残差分として、通路番号付き passages、Dragon breath、指輪・杖・cancellation とAIの完全連携は未完了。wandering monster は Rogue 5.4.4 の `main.c:fuse(swander, 0, WANDERTIME, AFTER)`, `daemons.c:swander()` / `rollwand()`, `monsters.c:wanderer()` を基準にし、`WANDERTIME` は `rogue.h` の `spread(70)` として扱う。暗い部屋、迷路部屋、gone room は生成と視界への接続を先行実装済みで、今後も原作関数を確認しながらアイテム・モンスター配置やAI所属を詰める。
+残差分として、通路番号付き passages、Dragon breath、指輪・杖・cancellation とAIの完全連携は未完了。Dragon breath の最小接続は Rogue 5.4.4 `chase.c:do_chase()` の `DRAGONSHOT` 分岐と `sticks.c:fire_bolt()` に合わせ、同じ部屋内で直線・射程内・非 `ISCANC` なら `rnd(5)==0` で Dragon の位置から flame bolt を撃つ。wandering monster は Rogue 5.4.4 の `main.c:fuse(swander, 0, WANDERTIME, AFTER)`, `daemons.c:swander()` / `rollwand()`, `monsters.c:wanderer()` を基準にし、`WANDERTIME` は `rogue.h` の `spread(70)` として扱う。暗い部屋、迷路部屋、gone room は生成と視界への接続を先行実装済みで、今後も原作関数を確認しながらアイテム・モンスター配置やAI所属を詰める。
 
 ## 武器メカニクス
 
