@@ -97,6 +97,7 @@
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Leprechaun purse 0 hit 消滅監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith レベルドレイン経験値監査（`e_levels[s_lvl-1]+1`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith level 1 drain 経験値監査（`--s_lvl==0`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith exp 0 drain 死亡監査（`death('W')`）

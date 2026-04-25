@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0051"
+UI_BUILD = "260426_0101"
 
 # ===========================================================
 #  Font
@@ -1897,11 +1897,14 @@ class Game:
             if not rogue_monsters.is_cancelled(m):
                 if "rust" in m.flags and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
-                if "steal_gold" in m.flags and self.p.gold>0:
+                if "steal_gold" in m.flags:
+                    old_gold = self.p.gold
                     loss=goldcalc(self.p.depth)
                     if not self.save_vs_magic():
                         loss += sum(goldcalc(self.p.depth) for _ in range(4))
-                    self.p.gold=max(0,self.p.gold-loss); self.msg("fight.your_purse_feels_lighter")
+                    self.p.gold=max(0,self.p.gold-loss)
+                    if self.p.gold != old_gold:
+                        self.msg("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return
                 if ("poison" in m.flags and not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR)
                         and not self.save_vs_poison() and self.p.st>3):

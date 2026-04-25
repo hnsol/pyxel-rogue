@@ -2420,6 +2420,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.gold, 90)
         self.assertNotIn(leprechaun, game.mons)
 
+    def test_rogue_544_leprechaun_disappears_even_when_purse_is_empty(self):
+        # Rogue 5.4.4 fight.c:attack() always remove_mon()s a Leprechaun hit;
+        # the purse message is only printed when purse != lastpurse.
+        game = new_game(seed=303)
+        set_open_floor(game)
+        game.p.depth = 3
+        game.p.gold = 0
+        leprechaun = monster_at(game.p.x + 1, game.p.y, "L", "leprechaun", damage="0x0", flags="steal_gold")
+        game.mons = [leprechaun]
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.save_vs_magic = lambda: True
+        game.monster_hit_message = lambda name: "hit"
+
+        game.m_attack(leprechaun)
+
+        self.assertEqual(game.p.gold, 0)
+        self.assertNotIn(leprechaun, game.mons)
+        self.assertNotIn("your purse feels lighter", game.msgs)
+
     def test_rogue_544_wraith_drain_sets_exp_to_new_level_threshold_plus_one(self):
         # Rogue 5.4.4 fight.c:attack() sets s_exp = e_levels[s_lvl-1] + 1
         # after Wraith level drain decrements s_lvl.
