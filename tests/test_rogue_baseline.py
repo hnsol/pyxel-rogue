@@ -4539,6 +4539,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNotNone(game.throw_anim)
         self.assertEqual(game.throw_anim["path"], [(3, 4), (4, 3), (5, 2), (6, 1)])
 
+    def test_rogue_544_thrown_item_falls_around_door_it_hits(self):
+        # Rogue 5.4.4 weapons.c:do_motion() stops on DOOR, then fall(TRUE) uses fallpos() around that hit cell.
+        game = new_game(seed=484)
+        game.mons = []
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 2, 2
+        game.tm[2][2] = rogue.T_FLOOR
+        game.tm[2][3] = rogue.T_FLOOR
+        game.tm[2][4] = rogue.T_DOOR
+        game.tm[3][4] = rogue.T_FLOOR
+        game.gitems = []
+        item = rogue.Item(rogue.CAT_WPN, 4)
+        game.p.inv = [item]
+        fall_calls = []
+        game.fall_position = lambda x, y: fall_calls.append((x, y)) or (4, 3)
+
+        game.throw(item, 1, 0)
+        for _ in range(len(game.throw_anim["path"]) * game.throw_anim["delay"]):
+            rogue.pyxel.set_input()
+            game.update()
+
+        self.assertEqual(fall_calls, [(4, 2)])
+        self.assertEqual((game.gitems[-1].x, game.gitems[-1].y), (4, 3))
+
     def test_cardinal_move_does_not_linger_into_second_step(self):
         game = new_game(seed=49)
         set_open_floor(game)

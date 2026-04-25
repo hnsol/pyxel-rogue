@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0044"
+UI_BUILD = "260425_2326"
 
 # ===========================================================
 #  Font
@@ -2838,10 +2838,12 @@ class Game:
                                  "outcome":{"kind":"monster","monster":m,"item":thrown,"x":tx,"y":ty}}
                 self.runto(m)
                 return True
-            if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR: break
+            if not self.walkable(nx,ny) or self.tm[ny][nx]==T_DOOR:
+                tx,ty=nx,ny
+                break
             tx,ty=nx,ny; path.append((tx,ty))
         self.throw_anim={"path":path,"sym":thrown.sym,"col":ICOL.get(thrown.cat,7),"tick":0,"delay":2,
-                         "outcome":{"kind":"floor","item":thrown,"x":tx,"y":ty,"around":False}}
+                         "outcome":{"kind":"floor","item":thrown,"x":tx,"y":ty,"around":True}}
         if not path:
             self.resolve_throw_anim(self.throw_anim)
             self.throw_anim = None
