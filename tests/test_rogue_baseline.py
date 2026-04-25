@@ -2526,6 +2526,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(flytrap.damage_expr, "1x1")
         self.assertEqual(game.p.hp, 19)
 
+    def test_rogue_544_killing_venus_flytrap_resets_hold_damage(self):
+        # Rogue 5.4.4 fight.c:killed() clears ISHELD/vf_hit and restores F damage.
+        game = new_game(seed=8)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 1, game.p.y, "F", "venus flytrap", hp=1, damage="3x1", flags="hold")
+        flytrap.vf_hit = 3
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        game.p_attack(flytrap)
+
+        self.assertIsNone(game.p.held_by)
+        self.assertEqual(flytrap.vf_hit, 0)
+        self.assertEqual(flytrap.damage_expr, "0x0")
+
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
         mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)

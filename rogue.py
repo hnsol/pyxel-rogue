@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2222"
+UI_BUILD = "260425_2226"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1839,6 +1839,8 @@ class Game:
         mn = translated_name or TextCatalog.monster(self.lang,m.name)
         self.p.exp+=m.exp
         if self.p.held_by is m:
+            m.vf_hit=0
+            m.damage_expr="0x0"
             self.p.held_by=None
         if self.p.lvlup():
             self.msg("pyxel.welcome_to_level", level=self.p.level)
