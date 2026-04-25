@@ -2479,18 +2479,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(seen_wplus, [4])
 
-    def test_rogue_544_fight_and_attack_reset_quiet_healing_counter(self):
-        # Rogue 5.4.4 fight.c:fight()/attack() set quiet = 0 before resolving combat.
+    def test_rogue_544_fight_and_attack_stop_running_and_reset_quiet(self):
+        # Rogue 5.4.4 fight.c:fight()/attack() clear count/running and set quiet = 0.
         game = new_game(seed=8)
         set_open_floor(game)
         player_target = monster_at(game.p.x + 1, game.p.y, hp=20)
+        game.dashing = True
         game.p.quiet = 19
         game.p_attack(player_target)
+        self.assertFalse(game.dashing)
         self.assertEqual(game.p.quiet, 0)
 
         monster = monster_at(game.p.x + 1, game.p.y, hp=20, damage="1x1")
+        game.dashing = True
         game.p.quiet = 19
         game.m_attack(monster)
+        self.assertFalse(game.dashing)
         self.assertEqual(game.p.quiet, 0)
 
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
