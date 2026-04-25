@@ -2446,6 +2446,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.exp, rogue.Player.EXP_T[1] + 1)
         self.assertEqual((game.p.hp, game.p.max_hp), (19, 19))
 
+    def test_rogue_544_wraith_drain_at_level_one_keeps_level_and_clears_exp(self):
+        # Rogue 5.4.4 fight.c:attack() decrements s_lvl, then restores it
+        # to 1 and clears s_exp when --s_lvl reaches 0.
+        game = new_game(seed=304)
+        set_open_floor(game)
+        game.p.level = 1
+        game.p.exp = 5
+        game.p.hp = 20
+        game.p.max_hp = 20
+        wraith = monster_at(game.p.x + 1, game.p.y, "W", "wraith", damage="0x0", flags="drain_level")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda name: "hit"
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 1
+            game.m_attack(wraith)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(game.p.level, 1)
+        self.assertEqual(game.p.exp, 0)
+        self.assertEqual((game.p.hp, game.p.max_hp), (19, 19))
+
     def test_rogue_544_wraith_drain_kills_when_exp_is_zero(self):
         # Rogue 5.4.4 fight.c:attack() calls death('W') if pstats.s_exp == 0.
         game = new_game(seed=305)

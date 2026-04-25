@@ -159,7 +159,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0043"
+UI_BUILD = "260426_0051"
 
 # ===========================================================
 #  Font
@@ -1911,8 +1911,12 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    if self.p.level>1:
-                        self.p.level-=1; self.p.exp=max(0,self.p.EXP_T[self.p.level-1]+1)
+                    self.p.level-=1
+                    if self.p.level == 0:
+                        self.p.exp = 0
+                        self.p.level = 1
+                    else:
+                        self.p.exp=max(0,self.p.EXP_T[self.p.level-1]+1)
                     self.p.max_hp-=roll("1d10")
                     if self.p.max_hp<=0:
                         self.p.hp = 0
