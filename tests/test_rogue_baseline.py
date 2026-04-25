@@ -1634,17 +1634,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(fuses.tick(rogue_daemons.AFTER), [])
         self.assertEqual(fuses.remaining("nohaste"), 0)
 
-    def test_rogue_544_main_starts_doctor_and_stomach_after_daemons(self):
-        # Rogue 5.4.4 main.c starts doctor and stomach with start_daemon(..., AFTER).
+    def test_rogue_544_main_starts_after_daemons(self):
+        # Rogue 5.4.4 main.c starts runners, doctor, and stomach with start_daemon(..., AFTER).
         game = new_game(seed=309)
 
+        self.assertTrue(game.daemons.running("runners", rogue.rogue_daemons.AFTER))
         self.assertTrue(game.daemons.running("doctor", rogue.rogue_daemons.AFTER))
         self.assertTrue(game.daemons.running("stomach", rogue.rogue_daemons.AFTER))
 
-    def test_rogue_544_doctor_and_stomach_run_only_as_after_daemons(self):
-        # Rogue 5.4.4 command.c runs doctor/stomach through do_daemons(AFTER).
+    def test_rogue_544_after_daemons_gate_runners_doctor_and_stomach(self):
+        # Rogue 5.4.4 command.c runs runners/doctor/stomach through do_daemons(AFTER).
         game = new_game(seed=309)
         set_open_floor(game)
+        monster = monster_at(game.p.x + 3, game.p.y)
+        monster.running = True
+        game.mons = [monster]
+        turns = []
+        game.m_turn = lambda m: turns.append(m)
+        game.daemons.kill("runners")
         game.daemons.kill("doctor")
         game.daemons.kill("stomach")
         game.p.hp = 10
@@ -1653,6 +1660,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.end_turn()
 
+        self.assertEqual(turns, [])
         self.assertEqual(game.p.hp, 10)
         self.assertEqual(game.p.food, 100)
 

@@ -121,6 +121,7 @@
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `swander / rollwand` を `fuse(AFTER)` / `start_daemon(AFTER)` へ接続
   - [x] `doctor / stomach` を `start_daemon(AFTER)` へ接続
+  - [x] `runners` を `start_daemon(AFTER)` へ接続
   - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）

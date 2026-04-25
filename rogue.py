@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2143"
+UI_BUILD = "260425_2147"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1336,6 +1336,7 @@ class Game:
         self.wander_between = 0
         self.fuses = rogue_daemons.FuseList()
         self.daemons = rogue_daemons.DaemonList()
+        self.daemons.start("runners", rogue_daemons.AFTER)
         self.daemons.start("doctor", rogue_daemons.AFTER)
         self.daemons.start("stomach", rogue_daemons.AFTER)
         self.haste_half_turn = False
@@ -3220,7 +3221,6 @@ class Game:
                 if self.p.haste == 0:
                     self.msg("daemons.you_feel_yourself_slowing_down")
         self.ring_after_turn()
-        for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
@@ -3261,6 +3261,13 @@ class Game:
                 self.p.heal_tick()
             elif name == "stomach":
                 self.run_stomach()
+            elif name == "runners":
+                self.run_runners()
+
+    def run_runners(self):
+        # C: chase.c:runners()
+        for mo in self.mons:
+            self.m_turn(mo)
 
     def run_stomach(self):
         # C: daemons.c:stomach()
