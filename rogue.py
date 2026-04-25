@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2147"
+UI_BUILD = "260425_2211"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1847,6 +1847,7 @@ class Game:
 
     def p_attack(self, m):
         # C: fight.c:fight()
+        self.p.quiet = 0
         self.runto(m)
         if self.reveal_xeroc_for_attack(m, thrown=False):
             return
@@ -1946,6 +1947,7 @@ class Game:
 
     def m_attack(self,m):
         # C: fight.c:attack()
+        self.p.quiet = 0
         mn=self.combat_monster_name(m,upper=True)
         hit,dmg=self.roll_monster_attack(m)
         if hit:
