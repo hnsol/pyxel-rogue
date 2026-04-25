@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0233"
+UI_BUILD = "260425_0244"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2104,6 +2104,7 @@ class Game:
             if p.hp > p.max_hp:
                 p.max_hp += 1
                 p.hp = p.max_hp
+            self.sight()
             self.msg("pyxel.feel_better_amount", count=h)
         elif nm=="extra healing":
             self.ident.pk[it.kind]=True
@@ -2114,6 +2115,7 @@ class Game:
                     p.max_hp += 1
                 p.max_hp += 1
                 p.hp = p.max_hp
+            self.sight()
             self.come_down()
             self.msg("pyxel.feel_much_better_amount", count=h)
         elif nm=="poison":
@@ -2255,6 +2257,8 @@ class Game:
 
     def sight(self):
         # C: daemons.c:sight()
+        if self.p.blind <= 0:
+            return
         self.p.blind = 0
         self.update_fov()
         self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")

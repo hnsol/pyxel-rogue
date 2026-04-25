@@ -3477,6 +3477,19 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
 
+    def test_rogue_544_healing_calls_sight_when_blind(self):
+        # Rogue 5.4.4 potions.c:P_HEALING calls daemons.c:sight().
+        game = new_game(seed=395)
+        healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, healing)
+        game.p.inv.append(potion)
+        game.p.blind = 20
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.blind, 0)
+        self.assertIn("the veil of darkness lifts", game.msgs)
+
     def test_random_weapon_generation_changes_hit_plus_only(self):
         old_random = rogue.random.random
         old_randint = rogue.random.randint
