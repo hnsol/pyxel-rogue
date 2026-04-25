@@ -990,10 +990,11 @@ class RogueBaselineTest(unittest.TestCase):
                 self.assertFalse(game.ident.sk[kind])
 
     def test_rogue_544_scroll_effects_use_original_messages(self):
-        # Rogue 5.4.4 scrolls.c:read_scroll() messages for S_SLEEP/S_SCARE/S_AGGR/S_MAP.
+        # Rogue 5.4.4 scrolls.c:read_scroll() messages for S_SLEEP/S_SCARE/S_REMOVE/S_AGGR/S_MAP.
         cases = [
             ("sleep", "you fall asleep", "You fall asleep."),
             ("scare monster", "you hear maniacal laughter in the distance", "Maniacal laughter echoes."),
+            ("remove curse", "you feel as if somebody is watching over you", "Your equipment feels lighter."),
             ("aggravate monsters", "you hear a high pitched humming noise", "You hear a humming noise."),
             ("magic mapping", "oh, now this scroll has a map on it", "A map appears in your mind!"),
         ]
@@ -1004,6 +1005,8 @@ class RogueBaselineTest(unittest.TestCase):
                 kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == name)
                 scroll = rogue.Item(rogue.CAT_SCR, kind)
                 game.p.inv.append(scroll)
+                if name == "remove curse":
+                    game.p.wpn.cursed = True
 
                 game.use_scr(scroll)
 

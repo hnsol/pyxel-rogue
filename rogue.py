@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0447"
+UI_BUILD = "260425_0458"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2424,11 +2424,10 @@ class Game:
                 p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg("pyxel.armor_glows")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="remove curse":
-            changed=False
             for i in (p.wpn,p.arm,p.ring_l,p.ring_r):
                 if i and i.cursed:
-                    i.cursed=False; changed=True
-            self.msg("pyxel.equipment_feels_lighter" if changed else "pyxel.somebody_watches_over_you")
+                    i.cursed=False
+            self.msg("scrolls.you_feel_in_touch_with_the_universal_onenes" if p.hallucinating > 0 else "scrolls.you_feel_as_if_somebody_is_watching_over_you")
         elif nm=="aggravate monsters":
             self.aggravate_monsters(); self.msg("scrolls.you_hear_a_high_pitched_humming_noise")
         elif nm=="scare monster":
