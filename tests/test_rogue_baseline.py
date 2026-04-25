@@ -154,6 +154,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.WALKABLE, rogue_map.WALKABLE)
         self.assertEqual((rogue.ROOM_DARK, rogue.ROOM_GONE, rogue.ROOM_MAZE), ("dark", "gone", "maze"))
 
+    def test_item_category_tables_are_split_without_changing_symbols(self):
+        import rogue_items
+
+        self.assertEqual(
+            (rogue.CAT_POT, rogue.CAT_SCR, rogue.CAT_FOOD, rogue.CAT_WPN, rogue.CAT_ARM),
+            (rogue_items.CAT_POT, rogue_items.CAT_SCR, rogue_items.CAT_FOOD, rogue_items.CAT_WPN, rogue_items.CAT_ARM),
+        )
+        self.assertEqual((rogue.CAT_RING, rogue.CAT_STICK, rogue.CAT_GOLD, rogue.CAT_AMULET), ("ring", "stick", "gold", "amulet"))
+        self.assertEqual(rogue.ISYM, rogue_items.ISYM)
+        self.assertEqual(rogue.ICOL, rogue_items.ICOL)
+        self.assertEqual(rogue.HALLU_THINGS, rogue_items.HALLU_THINGS)
+
     def test_pyxel_escape_is_not_the_runtime_quit_key(self):
         rogue.pyxel.init_calls.clear()
 

@@ -30,6 +30,20 @@ import rogue_rings
 import rogue_sticks
 import rogue_dungeon
 import rogue_daemons
+from rogue_items import (
+    CAT_AMULET,
+    CAT_ARM,
+    CAT_FOOD,
+    CAT_GOLD,
+    CAT_POT,
+    CAT_RING,
+    CAT_SCR,
+    CAT_STICK,
+    CAT_WPN,
+    HALLU_THINGS,
+    ICOL,
+    ISYM,
+)
 from rogue_map import (
     GRID_C,
     GRID_R,
@@ -77,7 +91,7 @@ from rogue_palettes import (
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2305"
+UI_BUILD = "260425_2321"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -191,16 +205,6 @@ CALL_PRESETS = [
     "wow",  "odd",  "???",  "!!!",
 ]
 
-
-# ===========================================================
-#  Item categories
-# ===========================================================
-CAT_POT = "pot"; CAT_SCR = "scr"; CAT_FOOD = "food"
-CAT_WPN = "wpn"; CAT_ARM = "arm"; CAT_RING = "ring"; CAT_STICK = "stick"
-CAT_GOLD = "gold"; CAT_AMULET = "amulet"
-ISYM = {CAT_POT:"!",CAT_SCR:"?",CAT_FOOD:":",CAT_WPN:")",CAT_ARM:"]",CAT_RING:"=",CAT_STICK:"/",CAT_GOLD:"*",CAT_AMULET:","}
-ICOL = {CAT_POT:27, CAT_SCR:9, CAT_FOOD:23, CAT_WPN:6, CAT_ARM:5, CAT_RING:14, CAT_STICK:26, CAT_GOLD:29, CAT_AMULET:29}
-HALLU_THINGS = ["!","?","=","/",":",")","]","%","*",","]
 
 # ===========================================================
 #  Text catalog
