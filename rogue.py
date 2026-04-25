@@ -160,7 +160,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0401"
+UI_BUILD = "260426_0424"
 
 # ===========================================================
 #  Font
@@ -650,7 +650,6 @@ class Player:
         s.state="normal"
         return None
     def heal_tick(s):
-        if s.hp>=s.max_hp: return
         s.quiet+=1
         old=s.hp
         if s.level<8:

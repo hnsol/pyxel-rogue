@@ -1822,6 +1822,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 10)
         self.assertEqual(game.p.food, 100)
 
+    def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
+        # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
+        game = new_game(seed=313)
+        game.daemons.kill("runners")
+        game.daemons.kill("stomach")
+        game.p.hp = game.p.max_hp
+        game.p.quiet = 0
+
+        game.do_after_daemons()
+
+        self.assertEqual(game.p.hp, game.p.max_hp)
+        self.assertEqual(game.p.quiet, 1)
+
+    def test_rogue_544_doctor_caps_full_hp_and_resets_quiet_after_heal_check(self):
+        # Rogue 5.4.4 daemons.c:doctor() compares old HP before capping to max_hp, then clears quiet.
+        game = new_game(seed=314)
+        game.daemons.kill("runners")
+        game.daemons.kill("stomach")
+        game.p.level = 1
+        game.p.hp = game.p.max_hp
+        game.p.quiet = 18
+
+        game.do_after_daemons()
+
+        self.assertEqual(game.p.hp, game.p.max_hp)
+        self.assertEqual(game.p.quiet, 0)
+
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
         game = new_game(seed=311)
