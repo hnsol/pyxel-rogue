@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_2100"
+UI_BUILD = "260425_2129"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -1335,6 +1335,7 @@ class Game:
         self.wander_timer = 0
         self.wander_between = 0
         self.fuses = rogue_daemons.FuseList()
+        self.daemons = rogue_daemons.DaemonList()
         self.haste_half_turn = False
         self.result_scores = []
         self.result_entry = None
@@ -1391,7 +1392,10 @@ class Game:
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
-        self.wander_timer=RNG.spread(WANDERTIME)
+        self.daemons.kill("rollwand")
+        self.fuses.extinguish("swander")
+        self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.BEFORE)
+        self.wander_timer=self.fuses.remaining("swander")
         self.wander_between=0
         px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
@@ -3195,6 +3199,7 @@ class Game:
             self.p.levitating-=1
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
+        self.do_before_daemons()
         due_fuses = self.fuses.tick(rogue_daemons.AFTER)
         if "unconfuse" in due_fuses:
             self.unconfuse()
@@ -3220,7 +3225,6 @@ class Game:
                     self.msg("daemons.you_feel_yourself_slowing_down")
         self.p.heal_tick()
         self.ring_after_turn()
-        self.roll_wanderer()
         for mo in self.mons: self.m_turn(mo)
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
@@ -3228,16 +3232,30 @@ class Game:
             self.msg("pyxel.died_restart"); self.enter_result_state("killed")
         self.turn_msg_start = len(self.msgs)
 
+    def do_before_daemons(self):
+        # Rogue 5.4.4 command.c calls do_daemons(BEFORE), then do_fuses(BEFORE).
+        for name in self.daemons.tick(rogue_daemons.BEFORE):
+            if name == "rollwand":
+                self.roll_wanderer()
+        due_fuses = self.fuses.tick(rogue_daemons.BEFORE)
+        if "swander" in due_fuses:
+            self.swander()
+        self.wander_timer = self.fuses.remaining("swander")
+
+    def swander(self):
+        # C: daemons.c:swander()
+        self.daemons.start("rollwand", rogue_daemons.BEFORE)
+
     def roll_wanderer(self):
-        if self.wander_timer>0:
-            self.wander_timer-=1
-            return
+        # C: daemons.c:rollwand()
         self.wander_between+=1
         if self.wander_between<4:
             return
         self.wander_between=0
         if RNG.roll(1,6)==4 and self.spawn_wanderer():
-            self.wander_timer=RNG.spread(WANDERTIME)
+            self.daemons.kill("rollwand")
+            self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.BEFORE)
+            self.wander_timer=self.fuses.remaining("swander")
 
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):

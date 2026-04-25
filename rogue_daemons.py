@@ -43,3 +43,31 @@ class FuseList:
                 due.append(name)
                 self.extinguish(name)
         return due
+
+
+class DaemonList:
+    """Small daemon table matching daemon.c:start_daemon()/kill_daemon()/do_daemons()."""
+
+    def __init__(self) -> None:
+        self._daemons: dict[str, dict] = {}
+
+    def start(self, name: str, when: str = AFTER) -> None:
+        """Start name as a daemon in the given phase."""
+        if len(self._daemons) >= MAXDAEMONS and name not in self._daemons:
+            return
+        self._daemons[name] = {"when": when}
+
+    def kill(self, name: str) -> None:
+        """Remove a daemon from the table (daemon.c:kill_daemon)."""
+        self._daemons.pop(name, None)
+
+    def running(self, name: str, when: str | None = None) -> bool:
+        """Return whether name is active, optionally limited to a phase."""
+        daemon = self._daemons.get(name)
+        if daemon is None:
+            return False
+        return when is None or daemon["when"] == when
+
+    def tick(self, when: str = AFTER) -> list[str]:
+        """Return active daemon names for the given phase (daemon.c:do_daemons)."""
+        return [name for name, daemon in list(self._daemons.items()) if daemon["when"] == when]

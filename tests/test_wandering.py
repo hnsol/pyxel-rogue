@@ -81,7 +81,8 @@ class WanderingMonsterTests(unittest.TestCase):
     def test_rogue_544_rollwand_creates_wanderer_after_fourth_roll(self):
         game = new_game(seed=101)
         two_room_floor(game)
-        game.wander_timer = 0
+        game.fuses.extinguish("swander")
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
         game.wander_between = 3
         original_rng = rogue.RNG
         rogue.RNG = FixedRng()
@@ -92,8 +93,39 @@ class WanderingMonsterTests(unittest.TestCase):
 
         self.assertEqual(len(game.mons), 1)
         self.assertTrue(game.mons[0].running)
-        self.assertGreater(game.wander_timer, 0)
+        self.assertGreater(game.fuses.remaining("swander"), 0)
         self.assertEqual(game.wander_between, 0)
+
+    def test_rogue_544_swander_fuse_starts_rollwand_before_daemon(self):
+        # Rogue 5.4.4 main.c:fuse(swander, WANDERTIME, BEFORE);
+        # daemons.c:swander() starts rollwand as a BEFORE daemon.
+        game = new_game(seed=102)
+        two_room_floor(game)
+        game.fuses.extinguish("swander")
+        game.fuses.fuse("swander", 1, rogue.rogue_daemons.BEFORE)
+
+        game.end_turn()
+
+        self.assertTrue(game.daemons.running("rollwand", rogue.rogue_daemons.BEFORE))
+        self.assertEqual(len(game.mons), 0)
+
+    def test_rogue_544_rollwand_daemon_reschedules_swander_fuse_after_spawn(self):
+        # Rogue 5.4.4 daemons.c:rollwand() kills rollwand and fuses swander after wanderer().
+        game = new_game(seed=103)
+        two_room_floor(game)
+        game.fuses.extinguish("swander")
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+        game.wander_between = 3
+        original_rng = rogue.RNG
+        rogue.RNG = FixedRng()
+        try:
+            game.end_turn()
+        finally:
+            rogue.RNG = original_rng
+
+        self.assertEqual(len(game.mons), 1)
+        self.assertFalse(game.daemons.running("rollwand", rogue.rogue_daemons.BEFORE))
+        self.assertGreater(game.fuses.remaining("swander"), 0)
 
 
 if __name__ == "__main__":
