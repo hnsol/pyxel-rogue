@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0434"
+UI_BUILD = "260425_0447"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2430,13 +2430,13 @@ class Game:
                     i.cursed=False; changed=True
             self.msg("pyxel.equipment_feels_lighter" if changed else "pyxel.somebody_watches_over_you")
         elif nm=="aggravate monsters":
-            self.aggravate_monsters(); self.msg("pyxel.hear_humming_noise")
+            self.aggravate_monsters(); self.msg("scrolls.you_hear_a_high_pitched_humming_noise")
         elif nm=="scare monster":
             for mo in self.mons:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=RNG.randint(10,20)
-            self.msg("pyxel.maniacal_laughter_echoes")
+            self.msg("scrolls.you_hear_maniacal_laughter_in_the_distance")
         elif nm=="sleep":
-            p.no_command+=rnd(SLEEPTIME)+4; self.dashing=False; self.msg("pyxel.fall_asleep")
+            p.no_command+=rnd(SLEEPTIME)+4; self.dashing=False; self.msg("scrolls.you_fall_asleep")
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
@@ -2477,7 +2477,7 @@ class Game:
             for y in range(MAP_H):
                 for x in range(MAP_W):
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
-            self.msg("pyxel.map_appears_in_mind")
+            self.msg("scrolls.oh_now_this_scroll_has_a_map_on_it")
         elif nm=="hold monster":
             held = False
             for mo in self.mons:

@@ -989,6 +989,27 @@ class RogueBaselineTest(unittest.TestCase):
 
                 self.assertFalse(game.ident.sk[kind])
 
+    def test_rogue_544_scroll_effects_use_original_messages(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() messages for S_SLEEP/S_SCARE/S_AGGR/S_MAP.
+        cases = [
+            ("sleep", "you fall asleep", "You fall asleep."),
+            ("scare monster", "you hear maniacal laughter in the distance", "Maniacal laughter echoes."),
+            ("aggravate monsters", "you hear a high pitched humming noise", "You hear a humming noise."),
+            ("magic mapping", "oh, now this scroll has a map on it", "A map appears in your mind!"),
+        ]
+        for name, expected, old in cases:
+            with self.subTest(name=name):
+                game = new_game(seed=330)
+                set_open_floor(game)
+                kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == name)
+                scroll = rogue.Item(rogue.CAT_SCR, kind)
+                game.p.inv.append(scroll)
+
+                game.use_scr(scroll)
+
+                self.assertIn(expected, game.msgs)
+                self.assertNotIn(old, game.msgs)
+
     def test_rogue_544_sleep_scroll_stops_running(self):
         # Rogue 5.4.4 scrolls.c:S_SLEEP clears player ISRUN after setting no_command.
         game = new_game(seed=327)
