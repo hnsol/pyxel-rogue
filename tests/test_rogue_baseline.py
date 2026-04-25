@@ -892,6 +892,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(game.ident.sk[kind])
         self.assertFalse(weapon.cursed)
+        self.assertIn("your mace glows blue for a moment", game.msgs)
+        self.assertNotIn("Your mace glows blue!", game.msgs)
 
     def test_rogue_544_enchant_armor_does_not_identify_on_read(self):
         # Rogue 5.4.4 scrolls.c:S_ARMOR enchants cur_armor but does not set scr_info[].oi_know.
@@ -916,6 +918,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertFalse(armor.cursed)
         self.assertEqual(armor.ench, 1)
+        self.assertIn("your armor glows silver for a moment", game.msgs)
+        self.assertNotIn("Your armor glows!", game.msgs)
 
     def test_rogue_544_teleport_scroll_identifies_only_when_room_changes(self):
         # Rogue 5.4.4 scrolls.c:S_TELEP sets scr_info[S_TELEP].oi_know only if cur_room != proom.

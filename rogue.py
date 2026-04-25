@@ -33,7 +33,7 @@ import rogue_daemons
 from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
 
 RNG = RogueRng(random)
-UI_BUILD = "260425_0458"
+UI_BUILD = "260425_0509"
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -2417,11 +2417,11 @@ class Game:
                 if RNG.randrange(2)==0: p.wpn.hit_plus+=1
                 else: p.wpn.dam_plus+=1
                 p.wpn.ench=p.wpn.hit_plus
-                self.msg("pyxel.item_glows_blue", item=p.wpn.data["name"])
+                self.msg("scrolls.your_color_glows_color2_for_a_moment", color=p.wpn.data["name"], color2="blue")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="enchant armor":
             if p.arm:
-                p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg("pyxel.armor_glows")
+                p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg("scrolls.your_armor_glows_color_for_a_moment", color="silver")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="remove curse":
             for i in (p.wpn,p.arm,p.ring_l,p.ring_r):
