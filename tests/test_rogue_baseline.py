@@ -1390,8 +1390,9 @@ class RogueBaselineTest(unittest.TestCase):
         old_randrange = rogue.RNG.randrange
         old_rnd = rogue.RNG.rnd
         try:
-            rogue.RNG.randrange = lambda n: 0
-            rogue.RNG.rnd = lambda n: 71
+            rolls = iter([0, 71])
+            rogue.RNG.rnd = lambda n: next(rolls)
+            rogue.RNG.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
             game.eat(ration)
         finally:
             rogue.RNG.randrange = old_randrange
@@ -1413,6 +1414,30 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("my, that was a yummy slime-mold", game.msgs)
         self.assertNotIn(slime, game.p.inv)
+
+    def test_rogue_544_game_eat_uses_rnd_for_food_amount(self):
+        # Rogue 5.4.4 misc.c:eat() adds HUNGERTIME - 200 + rnd(400).
+        game = new_game(seed=205)
+        ration = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv.append(ration)
+        initial_food = game.p.food
+        old_rnd = rogue.RNG.rnd
+        old_randrange = rogue.RNG.randrange
+        calls = []
+        try:
+            def rnd(n):
+                calls.append(n)
+                return 0 if n == 400 else 70
+
+            rogue.RNG.rnd = rnd
+            rogue.RNG.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
+            game.eat(ration)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randrange = old_randrange
+
+        self.assertEqual(calls, [400, 100])
+        self.assertEqual(game.p.food, min(initial_food + rogue.HUNGERTIME - 200, rogue.STOMACHSIZE))
 
     def test_rogue_544_food_helper_eat_matches_misc_c_branches(self):
         # Rogue 5.4.4 misc.c:eat() food amount and ration/slime-mold outcome live in rogue_food.py.

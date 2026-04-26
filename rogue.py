@@ -172,7 +172,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1632"
+UI_BUILD = "260426_1641"
 
 # ===========================================================
 #  Font
@@ -2774,7 +2774,7 @@ class Game:
     def eat(self,it):
         # C: misc.c:eat()
         self.p.food, outcome, exp_gain = rogue_food.eat_food(
-            self.p.food, it.kind, RNG.randrange, RNG.rnd, HUNGERTIME, STOMACHSIZE
+            self.p.food, it.kind, RNG.rnd, RNG.rnd, HUNGERTIME, STOMACHSIZE
         )
         self.p.state="normal"
         if outcome == "slime-mold":
