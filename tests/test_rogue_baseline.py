@@ -600,6 +600,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster_a.running)
         self.assertTrue(monster_b.running)
 
+    def test_rogue_544_zap_drain_in_passage_is_not_adjacent_only(self):
+        # Rogue 5.4.4 sticks.c:drain() includes monsters in the same passage, not only adjacent monsters.
+        import rogue_sticks
+
+        game = new_game(seed=209)
+        set_open_floor(game)
+        game.p.hp = 12
+        game.tm[game.p.y][game.p.x] = rogue.T_CORR
+        monster = monster_at(game.p.x + 4, game.p.y, hp=10)
+        game.tm[monster.y][monster.x] = rogue.T_CORR
+        game.mons = [monster]
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(game.p.hp, 6)
+        self.assertEqual(monster.hp, 4)
+
     def test_rogue_544_zap_drain_too_weak_does_not_consume_charge(self):
         # Rogue 5.4.4 sticks.c:do_zap() returns before charge decrement when HP is below 2.
         import rogue_sticks

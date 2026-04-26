@@ -195,6 +195,8 @@ lightning, fire, cold は Rogue 5.4.4 `sticks.c:do_zap()` / `fire_bolt()` に合
 
 magic missile は `sticks.c:WS_MISSILE` の `o_hurldmg="1x4"`, `o_hplus=100`, `o_dplus=1`, `ISMISL`, `o_launch=cur_weapon->o_which` と `fight.c:roll_em()` を基準にし、`rogue_sticks.magic_missile_damage()` で現在武器がある場合の `o_dplus` も加える。
 
+drain life は `sticks.c:drain()` の `pstats.s_hpt /= 2` 後に対象数で割る処理を基準にする。部屋内では同じ部屋、通路内では `t_room == proom` / passage door 側の対象を集めるため、Pyxel 版の現行 passage 簡略表現では通路対象を隣接限定にしない。
+
 ## フォント
 
 Pyxel 標準フォント 4×6px は小さく、ASCII ローグの可読性に不安があった。`pyxel.Font(path)` で BDF 読込可能と判明し、現行では Pyxel 同梱の `umplus_j10r.bdf` を標準にしている。ASCII 6px / CJK 10px / 7187文字で日本語にも対応する。

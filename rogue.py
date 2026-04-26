@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1014"
+UI_BUILD = "260427_1023"
 
 # ===========================================================
 #  Font
@@ -2592,8 +2592,6 @@ class Game:
 
     def drain_targets(self):
         proom=self.room_for_ai(self.p.x,self.p.y,actor=True)
-        if proom=="corridor":
-            return [m for m in self.mons if m.alive and abs(m.x-self.p.x)<=1 and abs(m.y-self.p.y)<=1]
         return [m for m in self.mons if m.alive and self.same_ai_room(self.room_for_ai(m.x,m.y,actor=True),proom)]
 
     def drain_life(self):
