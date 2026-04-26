@@ -4,6 +4,22 @@ from __future__ import annotations
 BEFORE = "before"
 AFTER = "after"
 MAXDAEMONS = 20
+EMPTY = "empty"
+
+
+def _store_slot(slots: list[dict], value: dict) -> None:
+    for slot in slots:
+        if slot.get("kind") == EMPTY:
+            slot.clear()
+            slot.update(value)
+            return
+    if len(slots) < MAXDAEMONS:
+        slots.append(value)
+
+
+def _empty_slot(slot: dict) -> None:
+    slot.clear()
+    slot["kind"] = EMPTY
 
 
 def doctor_tick(player, rng, regeneration_count: int = 0) -> None:
@@ -83,9 +99,7 @@ class FuseList:
 
     def fuse(self, name: str, time: int, when: str = AFTER) -> None:
         """Schedule name to fire after time turns in the given phase."""
-        if len(self._fuses) >= MAXDAEMONS:
-            return
-        self._fuses.append({"kind": "fuse", "name": name, "time": max(0, int(time)), "when": when})
+        _store_slot(self._fuses, {"kind": "fuse", "name": name, "time": max(0, int(time)), "when": when})
 
     def lengthen(self, name: str, extra: int) -> None:
         """Extend an existing fuse by extra turns (daemon.c:lengthen)."""
@@ -95,9 +109,9 @@ class FuseList:
 
     def extinguish(self, name: str) -> None:
         """Cancel a pending fuse (daemon.c:extinguish)."""
-        for idx, fuse in enumerate(self._fuses):
-            if fuse["name"] == name:
-                del self._fuses[idx]
+        for fuse in self._fuses:
+            if fuse.get("kind") == "fuse" and fuse["name"] == name:
+                _empty_slot(fuse)
                 return
 
     def remaining(self, name: str) -> int:
@@ -115,7 +129,7 @@ class FuseList:
             if fuse["time"] == 0:
                 due.append(fuse["name"])
                 if fuse in self._fuses:
-                    self._fuses.remove(fuse)
+                    _empty_slot(fuse)
         return due
 
     def tick_each(self, when: str, callback) -> None:
@@ -129,7 +143,7 @@ class FuseList:
             if fuse["time"] == 0:
                 name = fuse["name"]
                 if fuse in self._fuses:
-                    self._fuses.remove(fuse)
+                    _empty_slot(fuse)
                 callback(name)
 
     def _find(self, name: str) -> dict | None:
@@ -147,15 +161,13 @@ class DaemonList:
 
     def start(self, name: str, when: str = AFTER) -> None:
         """Start name as a daemon in the given phase."""
-        if len(self._daemons) >= MAXDAEMONS:
-            return
-        self._daemons.append({"kind": "daemon", "name": name, "when": when})
+        _store_slot(self._daemons, {"kind": "daemon", "name": name, "when": when})
 
     def kill(self, name: str) -> None:
         """Remove a daemon from the table (daemon.c:kill_daemon)."""
-        for idx, daemon in enumerate(self._daemons):
+        for daemon in self._daemons:
             if daemon.get("kind") == "daemon" and daemon["name"] == name:
-                del self._daemons[idx]
+                _empty_slot(daemon)
                 return
 
     def running(self, name: str, when: str | None = None) -> bool:

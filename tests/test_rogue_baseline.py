@@ -2484,6 +2484,18 @@ class RogueBaselineTest(unittest.TestCase):
         daemons.kill("rollwand")
         self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["rollwand"])
 
+    def test_rogue_544_daemon_table_reuses_first_empty_slot(self):
+        # Rogue 5.4.4 daemon.c:d_slot() reuses the first EMPTY slot.
+        import rogue_daemons
+
+        daemons = rogue_daemons.DaemonList()
+        daemons.start("first", rogue_daemons.AFTER)
+        daemons.start("second", rogue_daemons.AFTER)
+        daemons.kill("first")
+        daemons.start("third", rogue_daemons.AFTER)
+
+        self.assertEqual(daemons.tick(rogue_daemons.AFTER), ["third", "second"])
+
     def test_rogue_544_do_daemons_runs_each_daemon_immediately(self):
         # Rogue 5.4.4 daemon.c:do_daemons() skips slots killed by an earlier daemon.
         import rogue_daemons
@@ -2513,6 +2525,18 @@ class RogueBaselineTest(unittest.TestCase):
         fuses.extinguish("swander")
 
         self.assertEqual(fuses.tick(rogue_daemons.BEFORE), ["swander"])
+
+    def test_rogue_544_fuse_table_reuses_first_empty_slot(self):
+        # Rogue 5.4.4 daemon.c:d_slot() reuses the first EMPTY slot for fuses.
+        import rogue_daemons
+
+        fuses = rogue_daemons.FuseList()
+        fuses.fuse("first", 1, rogue_daemons.AFTER)
+        fuses.fuse("second", 1, rogue_daemons.AFTER)
+        fuses.extinguish("first")
+        fuses.fuse("third", 1, rogue_daemons.AFTER)
+
+        self.assertEqual(fuses.tick(rogue_daemons.AFTER), ["third", "second"])
 
     def test_rogue_544_do_fuses_runs_each_fuse_immediately(self):
         # Rogue 5.4.4 daemon.c:do_fuses() empties and calls each fuse immediately.
