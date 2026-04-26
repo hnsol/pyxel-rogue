@@ -345,6 +345,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(rogue.ROOM_DARK, dark.flags)
         self.assertIn("the room is lit", game.msgs)
 
+    def test_rogue_544_zap_light_lit_room_uses_room_message(self):
+        # Rogue 5.4.4 sticks.c:WS_LIGHT uses the room-lit branch unless proom is ISGONE.
+        import rogue_sticks
+
+        game = new_game(seed=201)
+        room = rogue.Room(5, 5, 8, 6)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(game.tm, room)
+        game.p.x, game.p.y = 7, 7
+        game.update_fov()
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertIn("the room is lit", game.msgs)
+        self.assertNotIn("the corridor glows and then fades", game.msgs)
+
     def test_rogue_544_zap_invisibility_and_cancellation_monster_flags(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_INVIS sets ISINVIS; WS_CANCEL sets ISCANC and clears ISINVIS/CANHUH.
         import rogue_sticks
