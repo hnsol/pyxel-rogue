@@ -819,6 +819,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False, False), (False, True))
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, True), (False, False))
 
+    def test_rogue_544_sticks_helper_bolt_death_cause(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() uses death('b') for hero-started bolt deaths.
+        import rogue_sticks
+
+        self.assertEqual(rogue_sticks.bolt_death_cause(True, None), "bolt")
+        self.assertEqual(rogue_sticks.bolt_death_cause(False, "dragon"), "dragon")
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

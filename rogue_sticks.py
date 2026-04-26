@@ -99,6 +99,11 @@ def saved_monster_miss_feedback(hero_started: bool, disguised_non_monster: bool)
     return hero_started and show_miss, show_miss
 
 
+def bolt_death_cause(hero_started: bool, source_monster_name: str | None) -> str:
+    """Rogue 5.4.4 sticks.c:fire_bolt() death('b') vs source monster."""
+    return "bolt" if hero_started else source_monster_name
+
+
 def init_materials(rng):
     """Rogue 5.4.4 init.c:init_materials()."""
     wood_used = [False] * len(WOODS)

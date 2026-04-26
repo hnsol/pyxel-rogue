@@ -116,6 +116,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、擬態中 Xeroc の saved monster miss は表示/追跡しない
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` 準拠で、hero 自身の反射 bolt 死亡原因を `bolt` にする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` saved monster miss の表示/追跡分岐を `rogue_sticks.py` へ小分割
+- [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` の bolt 死亡原因分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:save_throw()` / `save()` 相当の player/monster セーヴ式と protection ring 補正を helper 化
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
