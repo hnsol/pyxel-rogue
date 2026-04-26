@@ -195,7 +195,7 @@ lightning, fire, cold は Rogue 5.4.4 `sticks.c:do_zap()` / `fire_bolt()` に合
 
 magic missile は `sticks.c:WS_MISSILE` の `o_hurldmg="1x4"`, `o_hplus=100`, `o_dplus=1`, `ISMISL`, `o_launch=cur_weapon->o_which` と `fight.c:roll_em()` を基準にし、`rogue_sticks.magic_missile_damage()` で現在武器がある場合の `o_dplus` も加える。
 
-drain life は `sticks.c:drain()` の `pstats.s_hpt /= 2` 後に対象数で割る処理を基準にする。部屋内では同じ部屋、通路内では `t_room == proom` / passage door 側の対象を集めるため、Pyxel 版の現行 passage 簡略表現では通路対象を隣接限定にしない。
+drain life は `sticks.c:drain()` の `pstats.s_hpt /= 2` 後に対象数で割る処理を `rogue_sticks.drain_life_split()` に分けて基準にする。部屋内では同じ部屋、通路内では `t_room == proom` / passage door 側の対象を集めるため、Pyxel 版の現行 passage 簡略表現では通路対象を隣接限定にしない。
 
 ## フォント
 

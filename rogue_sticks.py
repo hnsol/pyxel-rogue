@@ -119,6 +119,14 @@ def magic_missile_damage(roll_1d4: int, weapon_dam_plus: int, strength_dam_plus:
     return max(0, roll_1d4 + 1 + weapon_dam_plus + strength_dam_plus)
 
 
+def drain_life_split(current_hp: int, target_count: int) -> tuple[int, int]:
+    """Rogue 5.4.4 sticks.c:drain() HP half and per-target damage."""
+    if target_count <= 0:
+        return current_hp, 0
+    drained_hp = current_hp // 2
+    return drained_hp, drained_hp // target_count
+
+
 def init_materials(rng):
     """Rogue 5.4.4 init.c:init_materials()."""
     wood_used = [False] * len(WOODS)

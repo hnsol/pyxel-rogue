@@ -618,6 +618,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 6)
         self.assertEqual(monster.hp, 4)
 
+    def test_rogue_544_sticks_helper_drain_life_split(self):
+        # Rogue 5.4.4 sticks.c:drain() halves HP first, then divides remaining HP by target count.
+        import rogue_sticks
+
+        self.assertEqual(rogue_sticks.drain_life_split(15, 2), (7, 3))
+        self.assertEqual(rogue_sticks.drain_life_split(12, 0), (12, 0))
+
     def test_rogue_544_zap_drain_too_weak_does_not_consume_charge(self):
         # Rogue 5.4.4 sticks.c:do_zap() returns before charge decrement when HP is below 2.
         import rogue_sticks

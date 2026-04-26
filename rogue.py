@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1023"
+UI_BUILD = "260427_1030"
 
 # ===========================================================
 #  Font
@@ -2602,8 +2602,7 @@ class Game:
         if not targets:
             self.msg("sticks.you_have_a_tingling_feeling")
             return True
-        self.p.hp//=2
-        dmg=self.p.hp//len(targets)
+        self.p.hp,dmg=rogue_sticks.drain_life_split(self.p.hp, len(targets))
         for m in list(targets):
             m.hp-=dmg
             if m.alive:
