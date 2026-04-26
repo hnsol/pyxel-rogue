@@ -70,6 +70,17 @@ def venus_flytrap_miss_hp(player_hp: int, vf_hit: int) -> int:
     return player_hp - vf_hit
 
 
+def poison_bite_strength(strength: int, poison_saved: bool, sustain_strength: bool):
+    """Rogue 5.4.4 fight.c:attack() Rattlesnake poison bite."""
+    if poison_saved:
+        return strength, None
+    if sustain_strength:
+        return strength, "sustained"
+    if strength <= 3:
+        return strength, "floor"
+    return strength - 1, "weakened"
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0

@@ -5220,6 +5220,15 @@ class RogueBaselineTest(unittest.TestCase):
         game.m_attack(monster)
         self.assertEqual(game.p.st, 9)
 
+    def test_rogue_544_fight_helper_poison_bite_strength_loss(self):
+        # Rogue 5.4.4 fight.c:attack() lowers Strength only after failed poison save and no sustain strength.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=False), (9, "weakened"))
+        self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=True), (10, "sustained"))
+        self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=True, sustain_strength=False), (10, None))
+        self.assertEqual(rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False), (3, "floor"))
+
     def test_flying_monster_gets_extra_chase_move_at_distance(self):
         game = new_game(seed=505)
         set_open_floor(game)
