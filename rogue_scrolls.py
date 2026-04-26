@@ -48,3 +48,14 @@ def sleep_scroll(player, rnd, sleep_time: int) -> int:
     """Apply Rogue 5.4.4 scrolls.c:S_SLEEP no_command change."""
     player.no_command += rnd(sleep_time) + 4
     return player.no_command
+
+
+def hold_monsters(player, monsters, held_roll) -> int:
+    """Apply Rogue 5.4.4 scrolls.c:S_HOLD to running monsters near the player."""
+    count = 0
+    for monster in monsters:
+        if abs(monster.x - player.x) <= 2 and abs(monster.y - player.y) <= 2 and monster.running:
+            monster.running = False
+            monster.held = held_roll(monster)
+            count += 1
+    return count

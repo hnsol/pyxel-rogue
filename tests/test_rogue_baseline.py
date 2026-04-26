@@ -1038,6 +1038,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_scrolls.sleep_scroll(player, lambda n: 3, rogue.SLEEPTIME), 12)
         self.assertEqual(player.no_command, 12)
 
+    def test_rogue_544_scrolls_helper_hold_monster_matches_s_hold(self):
+        # Rogue 5.4.4 scrolls.c:S_HOLD clears ISRUN and sets ISHELD within two cells.
+        import rogue_scrolls
+
+        hero = rogue.Player()
+        hero.x = 10
+        hero.y = 10
+        near = monster_at(12, 10)
+        near.running = True
+        far = monster_at(13, 10)
+        far.running = True
+        sleeping = monster_at(9, 10)
+        sleeping.running = False
+
+        self.assertEqual(rogue_scrolls.hold_monsters(hero, [near, far, sleeping], lambda n: 7), 1)
+        self.assertFalse(near.running)
+        self.assertEqual(near.held, 7)
+        self.assertTrue(far.running)
+        self.assertEqual(sleeping.held, 0)
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1737"
+UI_BUILD = "260426_1745"
 
 # ===========================================================
 #  Font
@@ -2486,12 +2486,7 @@ class Game:
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
             self.msg("scrolls.oh_now_this_scroll_has_a_map_on_it")
         elif nm=="hold monster":
-            held_count = 0
-            for mo in self.mons:
-                if abs(mo.x-p.x)<=2 and abs(mo.y-p.y)<=2 and mo.running:
-                    mo.running = False
-                    mo.held=RNG.randint(10,20)
-                    held_count += 1
+            held_count = rogue_scrolls.hold_monsters(p, self.mons, lambda mo: RNG.randint(10,20))
             if held_count:
                 self.ident.sk[it.kind]=True
                 self.msg("scrolls.the_monster_freezes" if held_count == 1 else "scrolls.the_monsters_around_you_freeze")
