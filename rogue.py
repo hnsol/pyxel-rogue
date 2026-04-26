@@ -161,7 +161,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0943"
+UI_BUILD = "260426_0945"
 
 # ===========================================================
 #  Font
@@ -1842,10 +1842,12 @@ class Game:
                 self.wake_monster(mo)
 
     def can_see_monster(self, m):
-        # C: misc.c:cansee()
-        return (rogue_monsters.FLAG_INVISIBLE not in m.flags
-                or self.p.see_invisible > 0
-                or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS))
+        # C: chase.c:see_monst()
+        return rogue_chase.see_monst(
+            self.p.blind > 0,
+            rogue_monsters.FLAG_INVISIBLE in m.flags,
+            self.p.see_invisible > 0 or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS),
+        )
 
     def can_detect_monsters(self):
         return getattr(self.p, "see_monsters", 0) > 0

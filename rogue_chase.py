@@ -62,3 +62,12 @@ def roomin(x, y, rooms):
         if room.x <= x < room.x + room.w and room.y <= y < room.y + room.h:
             return room
     return None
+
+
+def see_monst(player_blind: bool, monster_invisible: bool, can_see_invisible: bool) -> bool:
+    """Rogue 5.4.4 chase.c:see_monst() sight gate."""
+    if player_blind:
+        return False
+    if monster_invisible and not can_see_invisible:
+        return False
+    return True
