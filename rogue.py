@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1444"
+UI_BUILD = "260427_1512"
 
 # ===========================================================
 #  Font
@@ -1770,7 +1770,8 @@ class Game:
             self.p.held_by=None
         if m.sym == "L" and self.p.depth >= getattr(self, "max_depth", self.p.depth):
             gold = Item(CAT_GOLD, 0)
-            gold.qty = rogue_fight.leprechaun_kill_gold(self.p.depth, self.save_vs_magic(), goldcalc)
+            first_gold = goldcalc(self.p.depth)
+            gold.qty = rogue_fight.leprechaun_kill_gold_after_first(first_gold, self.p.depth, self.save_vs_magic(), goldcalc)
             m.pack.append(gold)
         if self.p.lvlup():
             self.msg("misc.welcome_to_level_level", level=self.p.level)
@@ -1849,7 +1850,7 @@ class Game:
         ) and rnd(3)!=0):
             self.runto(m)
         if rogue_monsters.medusa_gaze_can_try(m, self.p.blind > 0, self.p.hallucinating > 0):
-            m.found=True
+            rogue_monsters.mark_found(m)
             if not self.save_vs_magic():
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))
                 mn=TextCatalog.monster(self.lang,m.name)
@@ -1897,7 +1898,8 @@ class Game:
                     self.rust_armor()
                 if rogue_monsters.has_special(m, "steal_gold"):
                     old_gold = self.p.gold
-                    loss=rogue_fight.leprechaun_gold_loss(self.p.depth, self.save_vs_magic(), goldcalc)
+                    first_loss = goldcalc(self.p.depth)
+                    loss=rogue_fight.leprechaun_gold_loss_after_first(first_loss, self.p.depth, self.save_vs_magic(), goldcalc)
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
                         self.msg("fight.your_purse_feels_lighter")

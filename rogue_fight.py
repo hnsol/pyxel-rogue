@@ -46,7 +46,13 @@ def goldcalc(level: int, rnd) -> int:
 
 def leprechaun_gold_loss(level: int, magic_saved: bool, goldcalc) -> int:
     """Rogue 5.4.4 fight.c:attack() Leprechaun purse loss."""
-    loss = goldcalc(level)
+    loss = leprechaun_gold_loss_after_first(goldcalc(level), level, magic_saved, goldcalc)
+    return loss
+
+
+def leprechaun_gold_loss_after_first(first_loss: int, level: int, magic_saved: bool, goldcalc) -> int:
+    """Rogue 5.4.4 fight.c:attack() after the first purse -= GOLDCALC."""
+    loss = first_loss
     if not magic_saved:
         loss += sum(goldcalc(level) for _ in range(4))
     return loss
@@ -54,7 +60,13 @@ def leprechaun_gold_loss(level: int, magic_saved: bool, goldcalc) -> int:
 
 def leprechaun_kill_gold(level: int, magic_saved: bool, goldcalc) -> int:
     """Rogue 5.4.4 fight.c:killed() Leprechaun dropped gold."""
-    value = goldcalc(level)
+    value = leprechaun_kill_gold_after_first(goldcalc(level), level, magic_saved, goldcalc)
+    return value
+
+
+def leprechaun_kill_gold_after_first(first_value: int, level: int, magic_saved: bool, goldcalc) -> int:
+    """Rogue 5.4.4 fight.c:killed() after o_goldval = GOLDCALC."""
+    value = first_value
     if magic_saved:
         value += sum(goldcalc(level) for _ in range(4))
     return value
@@ -90,7 +102,7 @@ def poison_bite_strength(strength: int, poison_saved: bool, sustain_strength: bo
     if sustain_strength:
         return strength, "sustained"
     if strength <= 3:
-        return strength, "floor"
+        return strength, "weakened"
     return strength - 1, "weakened"
 
 

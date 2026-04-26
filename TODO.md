@@ -127,6 +127,7 @@
 - [x] Rogue 5.4.4 `sticks.c:WS_INVIS` の `ISINVIS` 付与を `rogue_monsters.make_invisible()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` の Medusa gaze gate を `rogue_monsters.medusa_gaze_active()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` の Medusa gaze 状態 gate を `rogue_monsters.medusa_gaze_can_try()` へ小分割
+- [x] Rogue 5.4.4 `monsters.c:wake_monster()` の Medusa `ISFOUND` 更新を `rogue_monsters.mark_found()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` の mean monster 起床 gate を `rogue_monsters.mean_wake_active()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で hallucination 中は Medusa gaze を受けない
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で levitation 中は mean monster が起床しない
@@ -158,6 +159,9 @@
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Nymph 盗み対象選択を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` / `misc.c:chg_str()` 準拠で Strength 下限3の poison bite も弱化結果にする
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Leprechaun 盗み時は初回 `GOLDCALC` 後に `save(VS_MAGIC)` する
+- [x] Rogue 5.4.4 `fight.c:killed()` 準拠で Leprechaun gold drop も初回 `GOLDCALC` 後に `save(VS_MAGIC)` する
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `rogue.h:GOLDCALC` 相当の金額ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Leprechaun 金額減算回数を `rogue_fight.py` へ小分割

@@ -3960,6 +3960,13 @@ class RogueBaselineTest(unittest.TestCase):
         medusa.found = True
         self.assertFalse(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=False, hallucinating=False))
 
+    def test_rogue_544_monsters_helper_mark_medusa_gaze_found(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() sets ISFOUND before saving vs Medusa gaze.
+        medusa = monster_at(1, 1, "M", "medusa")
+        self.assertFalse(medusa.found)
+        rogue.rogue_monsters.mark_found(medusa)
+        self.assertTrue(medusa.found)
+
     def test_rogue_544_monsters_helper_mean_wake_matches_wake_monster_gate(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates ISMEAN wake by ISRUN/ISHELD/stealth/ISLEVIT.
         monster = monster_at(1, 1, "H", "hobgoblin", flags="mean")
@@ -4067,6 +4074,15 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(calls, [1, 2])
 
+    def test_rogue_544_rattlesnake_poison_reports_weakened_at_strength_floor(self):
+        # Rogue 5.4.4 fight.c:attack() calls chg_str(-1), which clamps at 3, then still prints weakened text.
+        import rogue_fight
+
+        self.assertEqual(
+            rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False),
+            (3, "weakened"),
+        )
+
     def test_rogue_544_leprechaun_steals_gold_with_goldcalc(self):
         # Rogue 5.4.4 fight.c:attack() subtracts GOLDCALC once, plus four
         # more times on failed VS_MAGIC; rogue.h:GOLDCALC uses rnd(50+10*level)+2.
@@ -4090,6 +4106,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [80, 80, 80, 80, 80])
         self.assertEqual(game.p.gold, 90)
         self.assertNotIn(leprechaun, game.mons)
+
+    def test_rogue_544_leprechaun_steal_rolls_goldcalc_before_magic_save(self):
+        # Rogue 5.4.4 fight.c:attack() does purse -= GOLDCALC before save(VS_MAGIC).
+        game = new_game(seed=304)
+        set_open_floor(game)
+        game.p.depth = 3
+        game.p.gold = 100
+        leprechaun = monster_at(game.p.x + 1, game.p.y, "L", "leprechaun", damage="0x0", flags="steal_gold")
+        game.mons = [leprechaun]
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda name: "hit"
+        events = []
+        old_rnd = rogue.RNG.rnd
+        old_save = game.save_vs_magic
+        try:
+            rogue.RNG.rnd = lambda n: events.append(f"rnd:{n}") or 0
+            game.save_vs_magic = lambda: events.append("save") or True
+            game.m_attack(leprechaun)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            game.save_vs_magic = old_save
+
+        self.assertEqual(events, ["rnd:80", "save"])
 
     def test_rogue_544_fight_helper_goldcalc_uses_level_scaled_roll(self):
         # Rogue 5.4.4 rogue.h:GOLDCALC is rnd(50 + 10 * level) + 2.
@@ -4143,6 +4182,27 @@ class RogueBaselineTest(unittest.TestCase):
 
         gold = [item for item in game.gitems if item.cat == rogue.CAT_GOLD]
         self.assertEqual([item.qty for item in gold], [10])
+
+    def test_rogue_544_killed_leprechaun_rolls_goldcalc_before_magic_save(self):
+        # Rogue 5.4.4 fight.c:killed() sets o_goldval = GOLDCALC before save(VS_MAGIC).
+        game = new_game(seed=3012)
+        set_open_floor(game)
+        game.p.depth = 3
+        game.max_depth = 3
+        leprechaun = monster_at(game.p.x + 1, game.p.y, "L", "leprechaun")
+        game.mons = [leprechaun]
+        events = []
+        old_rnd = rogue.RNG.rnd
+        old_save = game.save_vs_magic
+        try:
+            rogue.RNG.rnd = lambda n: events.append(f"rnd:{n}") or 0
+            game.save_vs_magic = lambda: events.append("save") or False
+            game.award_monster_kill(leprechaun)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            game.save_vs_magic = old_save
+
+        self.assertEqual(events, ["rnd:80", "save"])
 
     def test_rogue_544_leprechaun_disappears_even_when_purse_is_empty(self):
         # Rogue 5.4.4 fight.c:attack() always remove_mon()s a Leprechaun hit;
@@ -6679,13 +6739,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.st, 9)
 
     def test_rogue_544_fight_helper_poison_bite_strength_loss(self):
-        # Rogue 5.4.4 fight.c:attack() lowers Strength only after failed poison save and no sustain strength.
+        # Rogue 5.4.4 fight.c:attack() calls chg_str(-1), which clamps at 3 but still reports weakness.
         import rogue_fight
 
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=False), (9, "weakened"))
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=True), (10, "sustained"))
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=True, sustain_strength=False), (10, None))
-        self.assertEqual(rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False), (3, "floor"))
+        self.assertEqual(rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False), (3, "weakened"))
 
     def test_rogue_544_move_helper_can_rust_armor_matches_source_gate(self):
         # Rogue 5.4.4 move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
