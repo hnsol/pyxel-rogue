@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1030"
+UI_BUILD = "260427_1036"
 
 # ===========================================================
 #  Font
@@ -2752,7 +2752,7 @@ class Game:
                     self.relocate_monster(target,self.random_monster_floor({(target.x,target.y)}))
                 elif kind == rogue_sticks.WS_TELTO:
                     self.runto(target)
-                    self.relocate_monster(target,(self.p.x+dx,self.p.y+dy))
+                    self.relocate_monster(target,rogue_sticks.teleport_to_position((self.p.x,self.p.y),(dx,dy)))
                 else:
                     self.runto(target)
         it.charges-=1

@@ -127,6 +127,11 @@ def drain_life_split(current_hp: int, target_count: int) -> tuple[int, int]:
     return drained_hp, drained_hp // target_count
 
 
+def teleport_to_position(hero_pos: tuple[int, int], delta: tuple[int, int]) -> tuple[int, int]:
+    """Rogue 5.4.4 sticks.c:WS_TELTO new_pos = hero + delta."""
+    return hero_pos[0] + delta[0], hero_pos[1] + delta[1]
+
+
 def init_materials(rng):
     """Rogue 5.4.4 init.c:init_materials()."""
     wood_used = [False] * len(WOODS)

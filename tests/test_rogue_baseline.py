@@ -443,6 +443,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.x, monster.y), (game.p.x + 1, game.p.y))
         self.assertTrue(monster.running)
 
+    def test_rogue_544_sticks_helper_teleport_to_position(self):
+        # Rogue 5.4.4 sticks.c:WS_TELTO sets new_pos to hero + delta.
+        import rogue_sticks
+
+        self.assertEqual(rogue_sticks.teleport_to_position((10, 7), (1, -1)), (11, 6))
+
     def test_rogue_544_monster_haste_and_slow_control_move_monst_frequency(self):
         # Rogue 5.4.4 chase.c:move_monst() checks ISSLOW/t_turn, then ISHASTE, then flips t_turn.
         game = new_game(seed=205)
