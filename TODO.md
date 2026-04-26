@@ -69,6 +69,7 @@
   - [x] haste monster / slow monster の `ISHASTE` / `ISSLOW` 相当フラグと行動頻度への接続
   - [x] magic missile / drain life / nothing の効果監査と接続
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `fight.c:roll_em()` 準拠で、現在武器の `o_dplus` を magic missile damage に加算
+  - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `fight.c:roll_em()` の magic missile damage を `rogue_sticks.py` へ小分割
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious

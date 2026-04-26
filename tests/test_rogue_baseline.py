@@ -553,6 +553,13 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(monster.hp, 11)
 
+    def test_rogue_544_sticks_helper_magic_missile_damage(self):
+        # Rogue 5.4.4 sticks.c:WS_MISSILE uses 1x4 + o_dplus + cur_weapon o_dplus + strength damage.
+        import rogue_sticks
+
+        self.assertEqual(rogue_sticks.magic_missile_damage(4, 3, 1), 9)
+        self.assertEqual(rogue_sticks.magic_missile_damage(1, -5, 0), 0)
+
     def test_rogue_544_zap_magic_missile_saved_target_takes_no_damage(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE vanishes if save_throw(VS_MAGIC) succeeds.
         import rogue_sticks

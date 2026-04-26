@@ -114,6 +114,11 @@ def polymorph_identifies(in_sight: bool, can_see_monster: bool) -> bool:
     return in_sight and can_see_monster
 
 
+def magic_missile_damage(roll_1d4: int, weapon_dam_plus: int, strength_dam_plus: int) -> int:
+    """Rogue 5.4.4 sticks.c:WS_MISSILE / fight.c:roll_em()."""
+    return max(0, roll_1d4 + 1 + weapon_dam_plus + strength_dam_plus)
+
+
 def init_materials(rng):
     """Rogue 5.4.4 init.c:init_materials()."""
     wood_used = [False] * len(WOODS)
