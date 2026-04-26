@@ -117,6 +117,7 @@
 - [x] Rogue 5.4.4 `extern.c:monsters[]` flags parsing を `rogue_monsters.py` へ小分割
 - [x] Rogue 5.4.4 `new_level.c:treas_room()` の treasure room 強制 `ISMEAN` を `rogue_monsters.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` の `!ISCANC` special gate を `rogue_monsters.has_special()` へ寄せる
+- [x] Rogue 5.4.4 `ISREGEN` の `ISCANC` gate も `rogue_monsters.has_special()` へ寄せる
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の起床済みモンスター実行ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除

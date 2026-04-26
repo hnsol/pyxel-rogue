@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1333"
+UI_BUILD = "260427_1337"
 
 # ===========================================================
 #  Font
@@ -2094,7 +2094,7 @@ class Game:
             if self.walkable(nx,ny) and not self.mon_at(nx,ny) and not(nx==px and ny==py):
                 m.x,m.y=nx,ny
             return
-        if "regen" in m.flags and not rogue_monsters.is_cancelled(m) and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
+        if rogue_monsters.has_special(m, "regen") and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
         if rogue_chase.should_random_move(m.confused, m.sym, rnd):
             nx,ny=self.random_monster_move(m)
             if (nx,ny)==(px,py):
