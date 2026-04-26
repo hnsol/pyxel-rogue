@@ -1084,6 +1084,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_scrolls.food_detection_positions([food, potion], rogue.CAT_FOOD), [(3, 4)])
         self.assertEqual(rogue_scrolls.food_detection_positions([potion], rogue.CAT_FOOD), [])
 
+    def test_rogue_544_scrolls_helper_magic_mapping_targets_hidden_and_traps(self):
+        # Rogue 5.4.4 scrolls.c:S_MAP reveals hidden features and traps.
+        import rogue_scrolls
+
+        hidden = {(3, 4): rogue.T_DOOR, (5, 6): rogue.T_CORR}
+        traps = {(7, 8): 1}
+
+        self.assertEqual(
+            rogue_scrolls.magic_mapping_targets(hidden, traps, rogue.T_TRAP),
+            [((3, 4), rogue.T_DOOR), ((5, 6), rogue.T_CORR), ((7, 8), rogue.T_TRAP)],
+        )
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

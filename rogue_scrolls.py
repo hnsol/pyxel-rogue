@@ -77,3 +77,10 @@ def choose_create_monster_pos(player, candidates, rnd):
 def food_detection_positions(items, food_cat):
     """Return Rogue 5.4.4 scrolls.c:S_FDET food object positions."""
     return [(item.x, item.y) for item in items if item.cat == food_cat]
+
+
+def magic_mapping_targets(hidden_tiles, traps, trap_tile):
+    """Return Rogue 5.4.4 scrolls.c:S_MAP cells to reveal."""
+    targets = list(hidden_tiles.items())
+    targets.extend((pos, trap_tile) for pos in traps)
+    return targets

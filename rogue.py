@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1800"
+UI_BUILD = "260426_1810"
 
 # ===========================================================
 #  Font
@@ -2472,13 +2472,10 @@ class Game:
             else:
                 self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":
-            for (x,y),tile in list(self.hidden_tiles.items()):
+            for (x,y),tile in rogue_scrolls.magic_mapping_targets(self.hidden_tiles, self.traps, T_TRAP):
                 self.tm[y][x]=tile
                 self.explored.add((x,y))
                 self.hidden_tiles.pop((x,y),None)
-            for x,y in self.traps:
-                self.tm[y][x]=T_TRAP
-                self.explored.add((x,y))
             for y in range(MAP_H):
                 for x in range(MAP_W):
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
