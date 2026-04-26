@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1251"
+UI_BUILD = "260427_1258"
 
 # ===========================================================
 #  Font
@@ -2535,7 +2535,7 @@ class Game:
         m.pack=[]
         m.held=m.scared=m.confused=0
         m.running=False; m.dest=DEST_PLAYER; m.turn=True
-        m.mean=True; m.target=False; m.found=False; m.vf_hit=0
+        m.mean="mean" in m.flags; m.target=False; m.found=False; m.vf_hit=0
         self.set_monster_disguise(m)
         if self.p.depth>29:
             m.flags.add(rogue_monsters.FLAG_HASTE)

@@ -439,6 +439,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertTrue(game.ident.wk[rogue_sticks.WS_POLYMORPH])
 
+    def test_rogue_544_polymorph_restores_mean_from_new_monster_spec(self):
+        # Rogue 5.4.4 monsters.c:new_monster() rebuilds flags from extern.c:monsters[].
+        game = new_game(seed=606)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 2, game.p.y, sym="H", name="hobgoblin", flags="mean")
+        game.mons = [monster]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.polymorph_monster(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(monster.sym, "B")
+        self.assertFalse(monster.mean)
+
     def test_rogue_544_zap_teleport_away_and_teleport_to_relocate_target(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_TELAWAY uses find_floor(!hero); WS_TELTO uses hero+delta.
         import rogue_sticks
