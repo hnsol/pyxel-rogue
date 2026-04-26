@@ -412,6 +412,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.sym, monster.name), ("D", "dragon"))
         self.assertEqual((monster.x, monster.y), (game.p.x + 2, game.p.y))
         self.assertFalse(monster.running)
+        self.assertTrue(game.ident.wk[rogue_sticks.WS_POLYMORPH])
 
     def test_rogue_544_zap_teleport_away_and_teleport_to_relocate_target(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_TELAWAY uses find_floor(!hero); WS_TELTO uses hero+delta.
