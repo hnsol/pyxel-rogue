@@ -3832,6 +3832,14 @@ class RogueBaselineTest(unittest.TestCase):
             ("centaur", 4, 4, "1x2/1x5/1x5", 17),
         )
 
+    def test_rogue_544_monster_mean_flags_match_extern_table(self):
+        # Rogue 5.4.4 extern.c:monsters[] gives ISMEAN to H but not B.
+        specs = {m.sym: m for m in rogue.BESTIARY}
+        self.assertIn("mean", specs["H"].flags)
+        self.assertNotIn("mean", specs["B"].flags)
+        self.assertTrue(rogue.Monster(1, 1, "H", "hobgoblin", 3, 1, 5, "1x8", 3, specs["H"].flags).mean)
+        self.assertFalse(rogue.Monster(1, 1, "B", "bat", 1, 1, 3, "1x2", 1, specs["B"].flags).mean)
+
     def test_rogue_544_monster_carry_table_and_give_pack_probability(self):
         # Rogue 5.4.4 extern.c:monsters[] m_carry and monsters.c:give_pack().
         specs = {m.sym: m for m in rogue.BESTIARY}
@@ -6447,7 +6455,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
-        monster = monster_at(game.p.x + 2, game.p.y, hp=10, armor=100, exp=5)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=10, armor=100, exp=5, flags="mean")
         game.mons = [monster]
         game.visible.add((monster.x, monster.y))
         old_randrange = rogue.random.randrange

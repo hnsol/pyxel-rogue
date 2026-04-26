@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1242"
+UI_BUILD = "260427_1251"
 
 # ===========================================================
 #  Font
@@ -479,32 +479,32 @@ class MonsterSpec:
     carry: int = 0
 
 BESTIARY = [
-    MonsterSpec("A","aquator",5,2,"0x0/0x0",20,9,"rust"),
+    MonsterSpec("A","aquator",5,2,"0x0/0x0",20,9,"rust,mean"),
     MonsterSpec("B","bat",1,3,"1x2",1,1,"erratic,fly"),
     MonsterSpec("C","centaur",4,4,"1x2/1x5/1x5",17,7,"", carry=15),
-    MonsterSpec("D","dragon",10,-1,"1x8/1x8/3x10",5000,21,"", carry=100),
-    MonsterSpec("E","emu",1,7,"1x2",2,1,""),
-    MonsterSpec("F","venus flytrap",8,3,"0x0",80,12,"hold"),
-    MonsterSpec("G","griffin",13,2,"4x3/3x5",2000,17,"fly,regen", carry=20),
-    MonsterSpec("H","hobgoblin",1,5,"1x8",3,1,""),
+    MonsterSpec("D","dragon",10,-1,"1x8/1x8/3x10",5000,21,"mean", carry=100),
+    MonsterSpec("E","emu",1,7,"1x2",2,1,"mean"),
+    MonsterSpec("F","venus flytrap",8,3,"0x0",80,12,"hold,mean"),
+    MonsterSpec("G","griffin",13,2,"4x3/3x5",2000,17,"fly,regen,mean", carry=20),
+    MonsterSpec("H","hobgoblin",1,5,"1x8",3,1,"mean"),
     MonsterSpec("I","ice monster",1,9,"0x0",5,5,"freeze"),
     MonsterSpec("J","jabberwock",15,6,"2x12/2x4",3000,20,"", carry=70),
-    MonsterSpec("K","kestrel",1,7,"1x4",1,1,"fly"),
+    MonsterSpec("K","kestrel",1,7,"1x4",1,1,"fly,mean"),
     MonsterSpec("L","leprechaun",3,8,"1x1",10,6,"steal_gold"),
-    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,rogue_monsters.FLAG_CAN_CONFUSE, carry=40),
+    MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,f"{rogue_monsters.FLAG_CAN_CONFUSE},mean", carry=40),
     MonsterSpec("N","nymph",3,9,"0x0",37,9,"steal_item", carry=100),
     MonsterSpec("O","orc",1,6,"1x8",5,5,"", carry=15),
     MonsterSpec("P","phantom",8,3,"4x4",120,15,rogue_monsters.FLAG_INVISIBLE),
-    MonsterSpec("Q","quagga",3,3,"1x5/1x5",15,8,""),
-    MonsterSpec("R","rattlesnake",2,3,"1x6",9,4,"poison"),
-    MonsterSpec("S","snake",1,5,"1x3",2,2,""),
-    MonsterSpec("T","troll",6,4,"1x8/1x8/2x6",120,13,"regen", carry=50),
-    MonsterSpec("U","black unicorn",7,-2,"1x9/1x9/2x9",190,18,""),
-    MonsterSpec("V","vampire",8,1,"1x10",350,16,"drain,regen", carry=20),
+    MonsterSpec("Q","quagga",3,3,"1x5/1x5",15,8,"mean"),
+    MonsterSpec("R","rattlesnake",2,3,"1x6",9,4,"poison,mean"),
+    MonsterSpec("S","snake",1,5,"1x3",2,2,"mean"),
+    MonsterSpec("T","troll",6,4,"1x8/1x8/2x6",120,13,"regen,mean", carry=50),
+    MonsterSpec("U","black unicorn",7,-2,"1x9/1x9/2x9",190,18,"mean"),
+    MonsterSpec("V","vampire",8,1,"1x10",350,16,"drain,regen,mean", carry=20),
     MonsterSpec("W","wraith",5,4,"1x6",55,14,"drain_level"),
     MonsterSpec("X","xeroc",7,7,"4x4",100,11,"mimic", carry=30),
     MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,"", carry=30),
-    MonsterSpec("Z","zombie",2,8,"1x8",6,7,""),
+    MonsterSpec("Z","zombie",2,8,"1x8",6,7,"mean"),
 ]
 MCOL = {"A":14,"B":28,"C":17,"D": 2,"E": 8,"F": 5,"G":13,"H":21,"I":27,"J": 1,
         "K":15,"L":14,"M": 1,"N":26,"O":17,"P": 6,"Q":22,"R": 6,"S": 5,"T":17,
@@ -599,7 +599,7 @@ class Monster:
         s.flags=set(fl.split(",")) if fl else set()
         s.held=s.scared=s.confused=0
         s.running=False; s.dest=DEST_PLAYER; s.turn=True
-        s.mean=True; s.target=False; s.found=False; s.vf_hit=0
+        s.mean="mean" in s.flags; s.target=False; s.found=False; s.vf_hit=0
         s.pack=[]
     @property
     def alive(s): return s.hp>0
