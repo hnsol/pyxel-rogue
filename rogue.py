@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_0945"
+UI_BUILD = "260427_0951"
 
 # ===========================================================
 #  Font
@@ -2556,9 +2556,11 @@ class Game:
 
     def polymorph_monster(self,m):
         # C: sticks.c (WS_POLYMORPH)
+        pack=m.pack
         spec=self.monster_spec_for_sym(chr(RNG.rnd(26)+ord("A")))
         if spec:
             self.set_monster_from_spec(m,spec)
+            m.pack=pack
 
     def random_monster_floor(self,avoid=None):
         avoid=set(avoid or ())

@@ -4132,12 +4132,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item, game.gitems)
         self.assertEqual((item.x, item.y), (monster.x, monster.y))
 
-    def test_rogue_544_polymorph_rebuilds_monster_and_clears_pack(self):
-        # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH calls monsters.c:new_monster(), which resets t_pack.
+    def test_rogue_544_polymorph_rebuilds_monster_and_preserves_pack(self):
+        # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH saves t_pack and restores it after new_monster().
         game = new_game(seed=303)
         set_open_floor(game)
         monster = monster_at(game.p.x + 1, game.p.y)
-        monster.pack = [rogue.Item(rogue.CAT_FOOD, 0)]
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        monster.pack = [item]
         old_rnd = rogue.RNG.rnd
         try:
             rogue.RNG.rnd = lambda n: 3
@@ -4146,7 +4147,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertEqual((monster.sym, monster.name), ("D", "dragon"))
-        self.assertEqual(monster.pack, [])
+        self.assertEqual(monster.pack, [item])
 
     def test_rogue_544_weapon_table_audit_guards_init_dam_values(self):
         self.assertEqual(rogue.WEAPONS[0]["damage"], "2d4")
