@@ -157,7 +157,7 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 ## 武器メカニクス
 
-武器は Rogue 5.4.4 の `weapons.c:init_dam`, `fight.c:roll_em`, `things.c:inv_name/new_thing`, `scrolls.c:S_ENCH` を基準にする。武器は命中補正 `hit_plus` とダメージ補正 `dam_plus` を別々に持ち、表示も `+1,+1 mace (weapon in hand)` のように2値で出す。近接・投擲とも Strength の命中/ダメージ補正を通し、arrow + bow のような launcher 補正も原作に合わせて合算する。`weapons.c:fall()` / `fallpos()` / `init_weapon()` の投擲落下候補、`rnd(++cnt)==0` 選択、落下失敗時分岐、初期個数は `rogue_weapons.py` の小 helper とする。
+武器は Rogue 5.4.4 の `weapons.c:init_dam`, `fight.c:roll_em`, `things.c:inv_name/new_thing`, `scrolls.c:S_ENCH` を基準にする。武器は命中補正 `hit_plus` とダメージ補正 `dam_plus` を別々に持ち、表示も `+1,+1 mace (weapon in hand)` のように2値で出す。近接・投擲とも Strength の命中/ダメージ補正を通し、arrow + bow のような launcher 補正も原作に合わせて合算する。`weapons.c:fall()` / `fallpos()` / `init_weapon()` の投擲落下候補、`rnd(++cnt)==0` 選択、落下失敗時分岐、初期個数は `rogue_weapons.py` の小 helper とする。`things.c:new_thing()` の weapon curse/enchant と初期個数乱数も `RogueRng.rnd()` 経由に統一する。
 
 防具は当面既存の `ench` 表現を維持する。ring of dexterity / increase damage は `fight.c:roll_em` 相当に合わせ、装備中武器での近接攻撃に限って加算する。
 

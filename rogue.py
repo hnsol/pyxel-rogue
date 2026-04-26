@@ -172,7 +172,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1611"
+UI_BUILD = "260426_1618"
 
 # ===========================================================
 #  Font
@@ -1053,9 +1053,9 @@ def make_item(depth, no_food=0):
     if cat=="food": return Item(CAT_FOOD,rogue_things.new_thing_food_kind(RNG.rnd))
     if cat=="weapon":
         k=wchoice(WEAPONS)
-        r=RNG.randrange(100)
-        hit_plus,cursed=rogue_weapons.new_thing_weapon_enchant(r,RNG.randrange)
-        q=rogue_weapons.initial_weapon_count(WEAPONS[k]["name"], WEAPONS[k].get("stack", False), RNG.randrange)
+        r=RNG.rnd(100)
+        hit_plus,cursed=rogue_weapons.new_thing_weapon_enchant(r,RNG.rnd)
+        q=rogue_weapons.initial_weapon_count(WEAPONS[k]["name"], WEAPONS[k].get("stack", False), RNG.rnd)
         return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q,known=False)
     if cat=="armor":
         k=wchoice(ARMORS)

@@ -5261,6 +5261,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(item.hit_plus, -3)
         self.assertEqual(item.dam_plus, 0)
 
+    def test_rogue_544_weapon_generation_uses_rng_rnd_for_enchant(self):
+        # Rogue 5.4.4 things.c:new_thing() weapon curse/enchant uses rnd(100), then rnd(3).
+        old_rnd = rogue.RNG.rnd
+        old_randrange = rogue.RNG.randrange
+        seq = iter([80, 0, 9, 2])
+        try:
+            rogue.RNG.rnd = lambda n: next(seq)
+            rogue.RNG.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
+            item = rogue.make_item(depth=10)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randrange = old_randrange
+
+        self.assertEqual(item.cat, rogue.CAT_WPN)
+        self.assertTrue(item.cursed)
+        self.assertEqual(item.hit_plus, -3)
+
     def test_rogue_544_random_armor_generation_uses_new_thing_curse_rates(self):
         # Rogue 5.4.4 things.c:new_thing() curses armor on rnd(100) < 20.
         old_randrange = rogue.random.randrange
