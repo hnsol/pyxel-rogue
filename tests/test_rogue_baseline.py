@@ -6206,6 +6206,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster.running)
         self.assertEqual(monster.held, 0)
 
+    def test_rogue_544_thrown_hit_consumes_monster_confusion(self):
+        # Rogue 5.4.4 fight.c:fight(..., thrown=TRUE) applies CANHUH on a hit.
+        game = new_game(seed=374)
+        set_open_floor(game)
+        arrow = rogue.Item(rogue.CAT_WPN, 3, qty=1)
+        monster = monster_at(game.p.x + 2, game.p.y, name="hobgoblin", hp=10, exp=0)
+        game.p.can_confuse_monster = True
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        game.resolve_throw_anim({"outcome": {"kind": "monster", "monster": monster, "item": arrow, "x": monster.x, "y": monster.y}})
+
+        self.assertFalse(game.p.can_confuse_monster)
+        self.assertEqual(monster.confused, 1)
+        self.assertIn("your hands stop glowing red", game.msgs)
+        self.assertIn("the hobgoblin appears confused", game.msgs)
+
     def test_rogue_544_throw_motion_finishes_before_monster_turn(self):
         # Rogue 5.4.4 command.c:t calls weapons.c:missile()/do_motion() before after-turn monsters.
         game = new_game(seed=371)

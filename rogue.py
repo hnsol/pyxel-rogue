@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1730"
+UI_BUILD = "260427_1741"
 
 # ===========================================================
 #  Font
@@ -2875,9 +2875,15 @@ class Game:
         if hit:
             m.hp -= dmg
             self.msg_text(self.thrown_hit_message(thrown, item, mn))
+            if self.p.can_confuse_monster:
+                self.p.can_confuse_monster = False
+                m.confused = 1
+                self.msg("fight.your_hands_stop_glowing_color", color="red")
             if not m.alive:
                 self.msg_text(self.defeated_message(mn))
                 self.award_monster_kill(m, mn)
+            elif m.confused > 0:
+                self.msg("fight.subject_appears_confused", subject=mn)
         else:
             self.msg_text(self.thrown_miss_message(thrown, item, mn))
             self.drop_thrown(thrown, tx, ty)
