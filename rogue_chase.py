@@ -17,3 +17,14 @@ def monster_turn(monster, move_monst, distance_to_hero) -> None:
     move_monst(monster)
     if getattr(monster, "alive", False) and "fly" in getattr(monster, "flags", set()) and distance_to_hero(monster) >= 3:
         move_monst(monster)
+
+
+def move_monst(monster, do_chase, chase_steps_for_turn, finish_chase_turn) -> None:
+    """Rogue 5.4.4 chase.c:move_monst() step loop."""
+    if getattr(monster, "held", 0) > 0:
+        monster.held -= 1
+        return
+    for _ in range(chase_steps_for_turn(monster)):
+        if do_chase(monster) == -1:
+            return
+    finish_chase_turn(monster)
