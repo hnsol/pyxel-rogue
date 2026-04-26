@@ -4432,6 +4432,16 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hp, 19)
 
+    def test_rogue_544_player_unarmed_damage_uses_init_stats(self):
+        # Rogue 5.4.4 extern.c:INIT_STATS gives the player s_dmg "1x4".
+        game = new_game(seed=605)
+
+        damage_expr, hplus, dplus = game.player_weapon_profile(None, False)
+
+        self.assertEqual(damage_expr, "1x4")
+        self.assertEqual(hplus, 0)
+        self.assertEqual(dplus, 0)
+
     def test_rogue_544_fight_helper_roll_em_damage_adds_only_hit_parts(self):
         # Rogue 5.4.4 fight.c:roll_em() rolls damage only after each successful swing().
         import rogue_fight

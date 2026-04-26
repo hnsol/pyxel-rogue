@@ -174,7 +174,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1144"
+UI_BUILD = "260427_1154"
 
 # ===========================================================
 #  Font
@@ -1721,7 +1721,7 @@ class Game:
 
     def player_weapon_profile(self, weap=None, thrown=False):
         hplus = dplus = 0
-        damage = "1d2"
+        damage = "1x4"
         if weap and weap.cat == CAT_WPN:
             data = weap.data
             damage, hplus, dplus = rogue_fight.weapon_profile(
