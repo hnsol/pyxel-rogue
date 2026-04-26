@@ -7,7 +7,11 @@ def runners(monsters, monster_turn) -> None:
     for monster in list(monsters):
         if getattr(monster, "held", 0) > 0 or not getattr(monster, "running", False):
             continue
+        orig_pos = (monster.x, monster.y)
+        was_target = getattr(monster, "target", False)
         monster_turn(monster)
+        if was_target and (monster.x, monster.y) != orig_pos:
+            monster.target = False
 
 
 def monster_turn(monster, move_monst, distance_to_hero) -> None:

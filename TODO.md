@@ -113,6 +113,7 @@
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の起床済みモンスター実行ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
 - [x] Rogue 5.4.4 `chase.c:move_monst()` 相当の速度ステップ実行を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runto()` 相当の追跡開始を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:diag_ok()` 相当の斜め移動可否を `rogue_chase.py` へ小分割

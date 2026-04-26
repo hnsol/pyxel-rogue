@@ -2478,6 +2478,21 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(moved, [running])
 
+    def test_rogue_544_chase_helper_runners_clears_target_after_move(self):
+        # Rogue 5.4.4 chase.c:runners() clears ISTARGET if the monster moved.
+        import rogue_chase
+
+        monster = monster_at(3, 1)
+        monster.running = True
+        monster.target = True
+
+        def move(mon):
+            mon.x += 1
+
+        rogue_chase.runners([monster], move)
+
+        self.assertFalse(monster.target)
+
     def test_rogue_544_chase_helper_monster_turn_repeats_for_flying_at_distance(self):
         # Rogue 5.4.4 chase.c:runners() calls move_monst() again for ISFLY at distance >= 3.
         import rogue_chase
