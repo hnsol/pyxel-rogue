@@ -35,3 +35,14 @@ def roll_damage_expr(expr: str, roll) -> int:
         n, sides = part.split(sep)
         total += roll(int(n), int(sides))
     return total
+
+
+def roll_em_damage(damage_expr: str, swing, roll_part, dplus: int, add_dam: int):
+    """Rogue 5.4.4 fight.c:roll_em() per-damage-part hit loop."""
+    did_hit = False
+    total = 0
+    for part in damage_expr.split("/"):
+        if swing():
+            total += max(0, roll_part(part) + dplus + add_dam)
+            did_hit = True
+    return did_hit, total

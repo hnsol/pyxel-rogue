@@ -3303,6 +3303,25 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hp, 19)
 
+    def test_rogue_544_fight_helper_roll_em_damage_adds_only_hit_parts(self):
+        # Rogue 5.4.4 fight.c:roll_em() rolls damage only after each successful swing().
+        import rogue_fight
+
+        swings = iter([False, True])
+        rolls = []
+
+        hit, damage = rogue_fight.roll_em_damage(
+            "1x1/1x4",
+            swing=lambda: next(swings),
+            roll_part=lambda part: rolls.append(part) or 4,
+            dplus=1,
+            add_dam=2,
+        )
+
+        self.assertTrue(hit)
+        self.assertEqual(damage, 7)
+        self.assertEqual(rolls, ["1x4"])
+
     def test_rogue_544_roll_em_gives_monster_plus_four_when_player_cannot_act(self):
         # Rogue 5.4.4 command.c clears player ISRUN during no_command;
         # fight.c:roll_em() gives +4 to hit when the defender lacks ISRUN.

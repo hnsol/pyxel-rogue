@@ -110,6 +110,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `rogue.h:GOLDCALC` 相当の金額ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当のダメージ式ロールを `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の部位ごとの命中/ダメージ加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Leprechaun purse 0 hit 消滅監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith レベルドレイン経験値監査（`e_levels[s_lvl-1]+1`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith level 1 drain 経験値監査（`--s_lvl==0`）

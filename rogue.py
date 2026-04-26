@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1001"
+UI_BUILD = "260426_1003"
 
 # ===========================================================
 #  Font
@@ -1715,24 +1715,24 @@ class Game:
         if not m.running:
             hplus += 4
         hplus += self.p.str_hit_plus()
-        did_hit = False
-        total = 0
-        for part in damage_expr.split("/"):
-            if self.swing_hits(self.p.level, m.armor, hplus):
-                total += max(0, roll_damage_expr(part) + dplus + self.p.str_dam_plus())
-                did_hit = True
-        return did_hit, total
+        return rogue_fight.roll_em_damage(
+            damage_expr,
+            lambda: self.swing_hits(self.p.level, m.armor, hplus),
+            roll_damage_expr,
+            dplus,
+            self.p.str_dam_plus(),
+        )
 
     def roll_monster_attack(self, m):
         # C: fight.c:roll_em()
         hplus = 4 if self.p.stuck else 0
-        did_hit = False
-        total = 0
-        for part in m.damage_expr.split("/"):
-            if self.swing_hits(m.level, self.p.ac, hplus):
-                total += roll_damage_expr(part)
-                did_hit = True
-        return did_hit, total
+        return rogue_fight.roll_em_damage(
+            m.damage_expr,
+            lambda: self.swing_hits(m.level, self.p.ac, hplus),
+            roll_damage_expr,
+            0,
+            0,
+        )
 
     def award_monster_kill(self, m, translated_name=None):
         # C: fight.c:killed()
