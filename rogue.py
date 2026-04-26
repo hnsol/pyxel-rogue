@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1353"
+UI_BUILD = "260427_1408"
 
 # ===========================================================
 #  Font
@@ -1383,8 +1383,7 @@ class Game:
             x, y, spec.sym, spec.name, hp,
             level, armor, spec.damage, exp, spec.flags
         )
-        if depth>29:
-            monster.flags.add(rogue_monsters.FLAG_HASTE)
+        rogue_monsters.apply_deep_haste(monster, depth)
         self.set_monster_disguise(monster,depth=depth)
         return monster
 
@@ -1865,7 +1864,7 @@ class Game:
         # C: chase.c:see_monst()
         return rogue_chase.see_monst(
             self.p.blind > 0,
-            rogue_monsters.FLAG_INVISIBLE in m.flags,
+            rogue_monsters.is_invisible(m),
             self.p.see_invisible > 0 or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS),
         )
 
@@ -2537,8 +2536,7 @@ class Game:
         m.running=False; m.dest=DEST_PLAYER; m.turn=True
         m.mean=rogue_monsters.is_mean(m.flags); m.target=False; m.found=False; m.vf_hit=0
         self.set_monster_disguise(m)
-        if self.p.depth>29:
-            m.flags.add(rogue_monsters.FLAG_HASTE)
+        rogue_monsters.apply_deep_haste(m, self.p.depth)
         if rogue_rings.is_wearing(self.p, rogue_rings.R_AGGR):
             self.runto(m)
 

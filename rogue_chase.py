@@ -1,6 +1,8 @@
 """Rogue 5.4.4 chase.c helpers."""
 from __future__ import annotations
 
+import rogue_monsters
+
 
 def runners(monsters, monster_turn) -> None:
     """Rogue 5.4.4 chase.c:runners() ISHELD/ISRUN gate."""
@@ -20,7 +22,7 @@ def monster_turn(monster, move_monst, distance_to_hero) -> None:
         return
     if move_monst(monster) == -1:
         return
-    if getattr(monster, "alive", False) and "fly" in getattr(monster, "flags", set()) and distance_to_hero(monster) >= 3:
+    if getattr(monster, "alive", False) and rogue_monsters.is_flying(monster) and distance_to_hero(monster) >= 3:
         move_monst(monster)
 
 

@@ -3891,6 +3891,25 @@ class RogueBaselineTest(unittest.TestCase):
         monster = monster_at(1, 1, "O", "orc", flags="greed,cancel")
         self.assertTrue(rogue.rogue_monsters.is_greedy(monster))
 
+    def test_rogue_544_monsters_helper_is_flying_matches_isfly(self):
+        # Rogue 5.4.4 rogue.h:ISFLY drives chase.c:runners() extra movement.
+        monster = monster_at(1, 1, "K", "kestrel", flags="fly")
+        self.assertTrue(rogue.rogue_monsters.is_flying(monster))
+
+    def test_rogue_544_monsters_helper_is_invisible_matches_isinvis(self):
+        # Rogue 5.4.4 rogue.h:ISINVIS is checked by see_monst()/look() visibility.
+        monster = monster_at(1, 1, "P", "phantom", flags="invis")
+        self.assertTrue(rogue.rogue_monsters.is_invisible(monster))
+
+    def test_rogue_544_monsters_helper_apply_deep_haste_matches_new_monster(self):
+        # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
+        monster = monster_at(1, 1, "O", "orc")
+        rogue.rogue_monsters.apply_deep_haste(monster, 29)
+        self.assertNotIn("haste", monster.flags)
+
+        rogue.rogue_monsters.apply_deep_haste(monster, 30)
+        self.assertIn("haste", monster.flags)
+
     def test_rogue_544_monsters_helper_cancel_matches_ws_cancel_flags(self):
         # Rogue 5.4.4 sticks.c:WS_CANCEL sets ISCANC, clears ISINVIS/CANHUH, and reveals disguise.
         monster = monster_at(1, 1, "X", "xeroc", flags="invis,confuse")

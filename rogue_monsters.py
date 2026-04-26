@@ -2,6 +2,7 @@
 
 FLAG_CAN_CONFUSE = "confuse"  # Rogue 5.4.4 CANHUH
 FLAG_CANCELLED = "cancel"    # Rogue 5.4.4 ISCANC
+FLAG_FLYING = "fly"          # Rogue 5.4.4 ISFLY
 FLAG_HASTE = "haste"         # Rogue 5.4.4 ISHASTE
 FLAG_INVISIBLE = "invis"     # Rogue 5.4.4 ISINVIS
 FLAG_SLOW = "slow"           # Rogue 5.4.4 ISSLOW
@@ -28,6 +29,20 @@ def force_mean(monster) -> None:
 
 def is_greedy(monster) -> bool:
     return FLAG_GREED in monster.flags
+
+
+def is_flying(monster) -> bool:
+    return FLAG_FLYING in monster.flags
+
+
+def is_invisible(monster) -> bool:
+    return FLAG_INVISIBLE in monster.flags
+
+
+def apply_deep_haste(monster, depth: int) -> None:
+    """Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29."""
+    if depth > 29:
+        monster.flags.add(FLAG_HASTE)
 
 
 def randmonster(level: int, rnd, wander: bool = False) -> str:
