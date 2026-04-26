@@ -29,3 +29,12 @@ def initial_weapon_count(weapon_name: str, is_many: bool, rnd) -> int:
     if is_many:
         return rnd(8) + 8
     return 1
+
+
+def new_thing_weapon_enchant(roll100: int, rnd):
+    """Rogue 5.4.4 things.c:new_thing() weapon curse/enchant branch."""
+    if roll100 < 10:
+        return -(rnd(3) + 1), True
+    if roll100 < 15:
+        return rnd(3) + 1, False
+    return 0, False

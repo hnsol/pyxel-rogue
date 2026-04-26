@@ -5721,6 +5721,51 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_weapons.initial_weapon_count("arrow", True, lambda n: 7), 15)
         self.assertEqual(rogue_weapons.initial_weapon_count("mace", False, lambda n: 99), 1)
 
+    def test_rogue_544_weapons_helper_new_thing_weapon_enchant_matches_source(self):
+        # Rogue 5.4.4 things.c:new_thing() curses weapons on rnd(100)<10, enchants on r<15.
+        import rogue_weapons
+
+        self.assertEqual(rogue_weapons.new_thing_weapon_enchant(9, lambda n: 2), (-3, True))
+        self.assertEqual(rogue_weapons.new_thing_weapon_enchant(14, lambda n: 1), (2, False))
+        self.assertEqual(rogue_weapons.new_thing_weapon_enchant(15, lambda n: 99), (0, False))
+
+    def test_rogue_544_armor_helper_new_thing_armor_enchant_matches_source(self):
+        # Rogue 5.4.4 things.c:new_thing() curses armor on rnd(100)<20, enchants on r<28.
+        import rogue_armor
+
+        self.assertEqual(rogue_armor.new_thing_armor_enchant(19, lambda n: 2), (-3, True))
+        self.assertEqual(rogue_armor.new_thing_armor_enchant(27, lambda n: 1), (2, False))
+        self.assertEqual(rogue_armor.new_thing_armor_enchant(28, lambda n: 99), (0, False))
+
+    def test_rogue_544_things_helper_food_kind_matches_new_thing_ratio(self):
+        # Rogue 5.4.4 things.c:new_thing() makes ration unless rnd(10)==0.
+        import rogue_things
+
+        self.assertEqual(rogue_things.new_thing_food_kind(lambda n: 1), 0)
+        self.assertEqual(rogue_things.new_thing_food_kind(lambda n: 0), 1)
+
+    def test_rogue_544_things_helper_category_weights_match_source_table(self):
+        # Rogue 5.4.4 extern.c:things[] uses 26/36/16/7/7/4/4 weights.
+        import rogue_things
+
+        self.assertEqual(rogue_things.new_thing_category(0), "potion")
+        self.assertEqual(rogue_things.new_thing_category(25), "potion")
+        self.assertEqual(rogue_things.new_thing_category(26), "scroll")
+        self.assertEqual(rogue_things.new_thing_category(77), "food")
+        self.assertEqual(rogue_things.new_thing_category(78), "weapon")
+        self.assertEqual(rogue_things.new_thing_category(85), "armor")
+        self.assertEqual(rogue_things.new_thing_category(92), "ring")
+        self.assertEqual(rogue_things.new_thing_category(96), "stick")
+        self.assertEqual(rogue_things.new_thing_category(0, no_food=4), "food")
+
+    def test_rogue_544_monsters_helper_give_pack_gate_matches_source(self):
+        # Rogue 5.4.4 monsters.c:give_pack() uses level >= max_level && rnd(100) < m_carry.
+        import rogue_monsters
+
+        self.assertTrue(rogue_monsters.should_give_pack(10, 10, 20, lambda n: 19))
+        self.assertFalse(rogue_monsters.should_give_pack(9, 10, 20, lambda n: 0))
+        self.assertFalse(rogue_monsters.should_give_pack(10, 10, 20, lambda n: 20))
+
     def test_cardinal_move_does_not_linger_into_second_step(self):
         game = new_game(seed=49)
         set_open_floor(game)

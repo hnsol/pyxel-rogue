@@ -59,3 +59,8 @@ def slow_monster(monster):
     else:
         monster.flags.add(FLAG_SLOW)
     monster.turn = True
+
+
+def should_give_pack(level: int, max_level: int, carry_prob: int, rnd) -> bool:
+    """Rogue 5.4.4 monsters.c:give_pack()."""
+    return level >= max_level and rnd(100) < carry_prob

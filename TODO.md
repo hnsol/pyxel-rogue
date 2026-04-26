@@ -77,6 +77,7 @@
 - [x] Rogue 5.4.4 `daemons.c:swander()` / `rollwand()` と `monsters.c:wanderer()` 準拠の wandering monster spawn
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠の呪い生成確率監査（weapon 10%、armor 20%、一部 ring 33%、aggravate/teleport 常時 cursed）
+- [x] Rogue 5.4.4 `things.c:new_thing()` 相当の food 90/10・カテゴリ重み・weapon/armor enchant 分岐を helper 化
 - [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [x] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査
 - [x] Rogue 5.4.4 `passages.c` 準拠の浅い階の通路グラフ・余剰エッジ数の固定 seed 監査
@@ -157,7 +158,7 @@
 - [x] **treasure room（俗称モンスターハウス）**（`new_level.c:138, 180-231` の `treas_room()`）
   - 1/20 の階で発生。`MINTREAS=2` / `MAXTREAS=10` のアイテムと、次階層相当のモンスター群を `ISMEAN` 付きで配置。部屋内モンスターには `give_pack()` も呼ぶ。
 - [x] **モンスター持ち物 `m_carry`**（`monsters.c:217-222 give_pack()`、`extern.c:monsters[]` の `m_carry`）
-  - `rnd(100) < m_carry` でモンスターに `new_thing()` を持たせ、倒した時にドロップさせる。
+  - `level >= max_level && rnd(100) < m_carry` でモンスターに `new_thing()` を持たせ、倒した時にドロップさせる。
 - [ ] **daemon / fuse 期間管理インフラ**（`daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()`）
   - `doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` などを個別タイマーではなく統一インフラで扱い、`potion of haste self` 等の残ターン管理を Rogue 5.4.4 準拠にする。
   - [x] `rogue_daemons.py` に `fuse` / `lengthen` / `extinguish` / `do_fuses(AFTER)` 相当を分離し、`potion of haste self` の `nohaste` と二重使用時の失神へ接続

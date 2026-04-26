@@ -28,8 +28,10 @@ from rogue_rng import RogueRng
 import rogue_monsters
 import rogue_rings
 import rogue_sticks
+import rogue_things
 import rogue_dungeon
 import rogue_daemons
+import rogue_armor
 import rogue_chase
 import rogue_fight
 import rogue_move
@@ -164,7 +166,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1213"
+UI_BUILD = "260426_1227"
 
 # ===========================================================
 #  Font
@@ -1047,27 +1049,17 @@ def make_item(depth):
     c=RNG.random()
     if c<.26: return Item(CAT_POT,wchoice(POTIONS))
     if c<.62: return Item(CAT_SCR,wchoice(SCROLLS))
-    if c<.78: return Item(CAT_FOOD,RNG.randint(0,len(FOODS)-1))
+    if c<.78: return Item(CAT_FOOD,rogue_things.new_thing_food_kind(RNG.rnd))
     if c<.85:
         k=RNG.randint(0,len(WEAPONS)-1)
         r=RNG.randrange(100)
-        hit_plus=0
-        cursed=False
-        if r<10:
-            hit_plus-=RNG.randrange(3)+1; cursed=True
-        elif r<15:
-            hit_plus+=RNG.randrange(3)+1
-        q=RNG.randint(8,15) if WEAPONS[k].get("stack") else 1
+        hit_plus,cursed=rogue_weapons.new_thing_weapon_enchant(r,RNG.randrange)
+        q=rogue_weapons.initial_weapon_count(WEAPONS[k]["name"], WEAPONS[k].get("stack", False), RNG.randrange)
         return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q,known=False)
     if c<.92:
         k=RNG.randint(0,len(ARMORS)-1)
         r=RNG.rnd(100)
-        e=0
-        cursed=False
-        if r<20:
-            e-=RNG.rnd(3)+1; cursed=True
-        elif r<28:
-            e+=RNG.rnd(3)+1
+        e,cursed=rogue_armor.new_thing_armor_enchant(r,RNG.rnd)
         return Item(CAT_ARM,k,ench=e,cursed=cursed,known=False)
     if c<.96:
         ring=rogue_rings.make_ring(RNG, CAT_RING)
@@ -1383,9 +1375,9 @@ class Game:
         # C: monsters.c:give_pack()
         spec=self.monster_spec_for_sym(m.sym)
         depth = self.p.depth if depth is None else depth
-        if not spec or depth < getattr(self, "max_depth", self.p.depth):
+        if not spec:
             return
-        if RNG.rnd(100) < spec.carry:
+        if rogue_monsters.should_give_pack(depth, getattr(self, "max_depth", self.p.depth), spec.carry, RNG.rnd):
             m.pack.append(make_item(depth))
 
     def wanderer_floor_candidates(self):
