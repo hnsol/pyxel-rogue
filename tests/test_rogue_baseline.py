@@ -3886,6 +3886,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster.mean)
         self.assertIn("mean", monster.flags)
 
+    def test_rogue_544_monsters_helper_is_greedy_matches_isgreed(self):
+        # Rogue 5.4.4 rogue.h:ISGREED is a gold-guard chase flag, not an ISCANC special attack.
+        monster = monster_at(1, 1, "O", "orc", flags="greed,cancel")
+        self.assertTrue(rogue.rogue_monsters.is_greedy(monster))
+
+    def test_rogue_544_monsters_helper_cancel_matches_ws_cancel_flags(self):
+        # Rogue 5.4.4 sticks.c:WS_CANCEL sets ISCANC, clears ISINVIS/CANHUH, and reveals disguise.
+        monster = monster_at(1, 1, "X", "xeroc", flags="invis,confuse")
+        monster.disguise = "?"
+
+        rogue.rogue_monsters.cancel_monster(monster)
+
+        self.assertIn("cancel", monster.flags)
+        self.assertNotIn("invis", monster.flags)
+        self.assertNotIn("confuse", monster.flags)
+        self.assertEqual(monster.disguise, "X")
+
     def test_rogue_544_monster_carry_table_and_give_pack_probability(self):
         # Rogue 5.4.4 extern.c:monsters[] m_carry and monsters.c:give_pack().
         specs = {m.sym: m for m in rogue.BESTIARY}

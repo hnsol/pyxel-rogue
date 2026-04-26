@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1337"
+UI_BUILD = "260427_1353"
 
 # ===========================================================
 #  Font
@@ -1853,7 +1853,7 @@ class Game:
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))
                 mn=TextCatalog.monster(self.lang,m.name)
                 self.msg("pyxel.monster_gaze_confused", monster=mn)
-        if "greed" in m.flags and not m.running:
+        if rogue_monsters.is_greedy(m) and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
 
     def wake_visible_monsters(self):
@@ -2034,7 +2034,7 @@ class Game:
 
     def find_dest(self,m):
         # C: chase.c:find_dest()
-        if "greed" in m.flags and m.dest==DEST_GOLD:
+        if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:
                 return target
@@ -2584,10 +2584,7 @@ class Game:
 
     def cancel_monster(self,m):
         # C: sticks.c (WS_CANCEL)
-        m.flags.add(rogue_monsters.FLAG_CANCELLED)
-        m.flags.discard(rogue_monsters.FLAG_INVISIBLE)
-        m.flags.discard(rogue_monsters.FLAG_CAN_CONFUSE)
-        rogue_monsters.reveal_disguise(m)
+        rogue_monsters.cancel_monster(m)
         if self.p.held_by is m:
             self.p.held_by=None
         m.vf_hit=0

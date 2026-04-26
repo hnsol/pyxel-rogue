@@ -5,6 +5,7 @@ FLAG_CANCELLED = "cancel"    # Rogue 5.4.4 ISCANC
 FLAG_HASTE = "haste"         # Rogue 5.4.4 ISHASTE
 FLAG_INVISIBLE = "invis"     # Rogue 5.4.4 ISINVIS
 FLAG_SLOW = "slow"           # Rogue 5.4.4 ISSLOW
+FLAG_GREED = "greed"         # Rogue 5.4.4 ISGREED
 FLAG_MEAN = "mean"           # Rogue 5.4.4 ISMEAN
 
 LEVEL_MONSTERS = "KEBSHIROZLCQANYFTWPXUMVGJD"
@@ -23,6 +24,10 @@ def is_mean(flags) -> bool:
 def force_mean(monster) -> None:
     monster.flags.add(FLAG_MEAN)
     monster.mean = True
+
+
+def is_greedy(monster) -> bool:
+    return FLAG_GREED in monster.flags
 
 
 def randmonster(level: int, rnd, wander: bool = False) -> str:
@@ -77,6 +82,14 @@ def is_disguised_xeroc(monster):
 def reveal_disguise(monster):
     """Rogue 5.4.4 sticks.c:WS_CANCEL sets t_disguise = t_type."""
     monster.disguise = monster.sym
+
+
+def cancel_monster(monster) -> None:
+    """Rogue 5.4.4 sticks.c:WS_CANCEL creature flag changes."""
+    monster.flags.add(FLAG_CANCELLED)
+    monster.flags.discard(FLAG_INVISIBLE)
+    monster.flags.discard(FLAG_CAN_CONFUSE)
+    reveal_disguise(monster)
 
 
 def is_cancelled(monster):

@@ -118,6 +118,8 @@
 - [x] Rogue 5.4.4 `new_level.c:treas_room()` の treasure room 強制 `ISMEAN` を `rogue_monsters.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` の `!ISCANC` special gate を `rogue_monsters.has_special()` へ寄せる
 - [x] Rogue 5.4.4 `ISREGEN` の `ISCANC` gate も `rogue_monsters.has_special()` へ寄せる
+- [x] Rogue 5.4.4 `rogue.h:ISGREED` / `monsters.c:wanderer()` / `chase.c:do_chase()` の gold 守備フラグを `rogue_monsters.is_greedy()` へ小分割
+- [x] Rogue 5.4.4 `sticks.c:WS_CANCEL` の monster flag / disguise 更新を `rogue_monsters.cancel_monster()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の起床済みモンスター実行ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
