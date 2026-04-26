@@ -163,7 +163,9 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 装備変更は Rogue 5.4.4 の `armor.c:wear()` と `weapons.c:wield()` を分けて扱う。armor は `cur_armor != NULL` の場合に wear を拒否し、先に take off する必要がある。weapon は `weapons.c:wield()` が `dropcheck(cur_weapon)` を通るため、現在武器が cursed でなければ持ち替え可能であり、Pyxel 版でも自動置換自体は差分として扱わない。
 
-呪い生成確率は `things.c:new_thing()` を基準にする。weapon は `rnd(100) < 10` で cursed、armor は `rnd(100) < 20` で cursed、一部 ring は `rnd(3)==0` で `o_arm=-1` かつ cursed、ring of aggravate monster と ring of teleportation は常時 cursed とする。food は ration/slime-mold を `rnd(10)!=0` の90/10にし、カテゴリ重みは `extern.c:things[]` の 26/36/16/7/7/4/4 を基準にする。生成時の weapon / armor の curse / enchant は原則未鑑定情報であり、Pyxel 版では `Item.known` を Rogue 5.4.4 の `ISKNOW` 相当として扱う。armor は `armor.c:wear()` に合わせ、装備した時点で `known=True` にして enchant / protection を表示する。ring の `ring_num()` と stick の `charge_str()` は種類識別後に表示する。
+呪い生成確率は `things.c:new_thing()` を基準にする。weapon は `rnd(100) < 10` で cursed、armor は `rnd(100) < 20` で cursed、一部 ring は `rnd(3)==0` で `o_arm=-1` かつ cursed、ring of aggravate monster と ring of teleportation は常時 cursed とする。food は ration/slime-mold を `rnd(10)!=0` の90/10にし、カテゴリ重みは `extern.c:things[]` の 26/36/16/7/7/4/4 を基準にする。`things.c:pick_one()` 相当の減算式重み選択は `rogue_things.py` に分離し、カテゴリ、potion、weapon、armor の種類選択は `rnd(100)` 経由で行う。生成時の weapon / armor の curse / enchant は原則未鑑定情報であり、Pyxel 版では `Item.known` を Rogue 5.4.4 の `ISKNOW` 相当として扱う。armor は `armor.c:wear()` に合わせ、装備した時点で `known=True` にして enchant / protection を表示する。ring の `ring_num()` と stick の `charge_str()` は種類識別後に表示する。
+
+拾得処理は Rogue 5.4.4 の `pack.c:add_pack()` / `pack_room()` を基準にする。scare monster scroll は未発見なら `ISFOUND` 相当を立て、発見済みを拾うと dust で消滅する。床からの拾得では同種スタック可能な food / missile でも `pack_room()` 相当の上限確認を先に通し、満杯ならスタックせず床に残す。
 
 ## 指輪メカニクス
 

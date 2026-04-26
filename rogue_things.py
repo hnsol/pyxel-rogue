@@ -18,13 +18,24 @@ THING_CATEGORIES = [
 ]
 
 
+def pick_one(weighted_items, roll100: int) -> int:
+    """Rogue 5.4.4 things.c:pick_one()."""
+    for index, (_, weight) in enumerate(weighted_items):
+        if roll100 < weight:
+            return index
+        roll100 -= weight
+    return 0
+
+
 def new_thing_category(roll100: int, no_food: int = 0) -> str:
     """Rogue 5.4.4 things.c:new_thing() and extern.c:things[]."""
     if no_food > 3:
         return "food"
-    acc = 0
-    for name, weight in THING_CATEGORIES:
-        acc += weight
-        if roll100 < acc:
-            return name
-    return THING_CATEGORIES[-1][0]
+    return THING_CATEGORIES[pick_one(THING_CATEGORIES, roll100)][0]
+
+
+def new_thing_category_roll(rnd, no_food: int = 0) -> str:
+    """Rogue 5.4.4 things.c:new_thing() category roll."""
+    if no_food > 3:
+        return "food"
+    return new_thing_category(rnd(100), no_food)

@@ -26,6 +26,7 @@ import time
 from dataclasses import dataclass
 from rogue_rng import RogueRng
 import rogue_monsters
+import rogue_pack
 import rogue_rings
 import rogue_sticks
 import rogue_things
@@ -166,7 +167,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1227"
+UI_BUILD = "260426_1244"
 
 # ===========================================================
 #  Font
@@ -423,25 +424,25 @@ SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
 FOODS = [{"name":"food ration","nut":900},{"name":"slime-mold","nut":700}]
 
 WEAPONS = [
-    {"name":"mace","damage":"2d4","hurl_damage":"1d3","wield":True},
-    {"name":"long sword","damage":"3d4","hurl_damage":"1d2","wield":True},
-    {"name":"short bow","damage":"1d1","hurl_damage":"1d1","wield":True},
-    {"name":"arrow","damage":"1d1","hurl_damage":"2d3","wield":False,"stack":True,"missile":True,"launcher":2},
-    {"name":"dagger","damage":"1d6","hurl_damage":"1d4","wield":True,"missile":True},
-    {"name":"two-handed sword","damage":"4d4","hurl_damage":"1d2","wield":True},
-    {"name":"dart","damage":"1d1","hurl_damage":"1d3","wield":False,"stack":True,"missile":True},
-    {"name":"shuriken","damage":"1d2","hurl_damage":"2d4","wield":False,"stack":True,"missile":True},
-    {"name":"spear","damage":"2d3","hurl_damage":"1d6","wield":True,"missile":True},
+    {"name":"mace","prob":11,"damage":"2d4","hurl_damage":"1d3","wield":True},
+    {"name":"long sword","prob":11,"damage":"3d4","hurl_damage":"1d2","wield":True},
+    {"name":"short bow","prob":12,"damage":"1d1","hurl_damage":"1d1","wield":True},
+    {"name":"arrow","prob":12,"damage":"1d1","hurl_damage":"2d3","wield":False,"stack":True,"missile":True,"launcher":2},
+    {"name":"dagger","prob":8,"damage":"1d6","hurl_damage":"1d4","wield":True,"missile":True},
+    {"name":"two-handed sword","prob":10,"damage":"4d4","hurl_damage":"1d2","wield":True},
+    {"name":"dart","prob":12,"damage":"1d1","hurl_damage":"1d3","wield":False,"stack":True,"missile":True},
+    {"name":"shuriken","prob":12,"damage":"1d2","hurl_damage":"2d4","wield":False,"stack":True,"missile":True},
+    {"name":"spear","prob":12,"damage":"2d3","hurl_damage":"1d6","wield":True,"missile":True},
 ]
 
 STR_PLUS = rogue_fight.STR_PLUS
 ADD_DAM = rogue_fight.ADD_DAM
 
 ARMORS = [
-    {"name":"leather armor","ac":8},{"name":"ring mail","ac":7},
-    {"name":"studded leather","ac":7},{"name":"scale mail","ac":6},
-    {"name":"chain mail","ac":5},{"name":"splint mail","ac":4},
-    {"name":"banded mail","ac":4},{"name":"plate mail","ac":3},
+    {"name":"leather armor","prob":20,"ac":8},{"name":"ring mail","prob":15,"ac":7},
+    {"name":"studded leather","prob":15,"ac":7},{"name":"scale mail","prob":13,"ac":6},
+    {"name":"chain mail","prob":12,"ac":5},{"name":"splint mail","prob":10,"ac":4},
+    {"name":"banded mail","prob":10,"ac":4},{"name":"plate mail","prob":5,"ac":3},
 ]
 RINGS = [{"name":r.name,"prob":r.prob,"worth":r.worth} for r in rogue_rings.RINGS]
 STICKS = [{"name":s.name,"prob":s.prob,"worth":s.worth} for s in rogue_sticks.STICKS]
@@ -643,6 +644,8 @@ class Player:
         return rogue_fight.str_dam_plus(s.st)
     def inv_full(s): return len(s.inv)>=INV_MAX
     def add_item(s,it):
+        if not rogue_pack.pack_room_allows(len(s.inv), INV_MAX):
+            return False
         if it.stackable:
             for i in s.inv:
                 if i.cat==it.cat and i.kind==it.kind and i.plus_key()==it.plus_key():
@@ -1039,29 +1042,25 @@ class DGen:
 #  Item factory
 # ===========================================================
 def wchoice(tbl):
-    tot=sum(e["prob"] for e in tbl); r=RNG.randint(1,tot); a=0
-    for i,e in enumerate(tbl):
-        a+=e["prob"]
-        if r<=a: return i
-    return 0
+    return rogue_things.pick_one([(e["name"], e["prob"]) for e in tbl], RNG.rnd(sum(e["prob"] for e in tbl)))
 
 def make_item(depth):
-    c=RNG.random()
-    if c<.26: return Item(CAT_POT,wchoice(POTIONS))
-    if c<.62: return Item(CAT_SCR,wchoice(SCROLLS))
-    if c<.78: return Item(CAT_FOOD,rogue_things.new_thing_food_kind(RNG.rnd))
-    if c<.85:
-        k=RNG.randint(0,len(WEAPONS)-1)
+    cat=rogue_things.new_thing_category_roll(RNG.rnd)
+    if cat=="potion": return Item(CAT_POT,wchoice(POTIONS))
+    if cat=="scroll": return Item(CAT_SCR,wchoice(SCROLLS))
+    if cat=="food": return Item(CAT_FOOD,rogue_things.new_thing_food_kind(RNG.rnd))
+    if cat=="weapon":
+        k=wchoice(WEAPONS)
         r=RNG.randrange(100)
         hit_plus,cursed=rogue_weapons.new_thing_weapon_enchant(r,RNG.randrange)
         q=rogue_weapons.initial_weapon_count(WEAPONS[k]["name"], WEAPONS[k].get("stack", False), RNG.randrange)
         return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q,known=False)
-    if c<.92:
-        k=RNG.randint(0,len(ARMORS)-1)
+    if cat=="armor":
+        k=wchoice(ARMORS)
         r=RNG.rnd(100)
         e,cursed=rogue_armor.new_thing_armor_enchant(r,RNG.rnd)
         return Item(CAT_ARM,k,ench=e,cursed=cursed,known=False)
-    if c<.96:
+    if cat=="ring":
         ring=rogue_rings.make_ring(RNG, CAT_RING)
         return Item(CAT_RING,ring.kind,ench=ring.ench,cursed=ring.cursed,known=False)
     stick=rogue_sticks.make_stick(RNG, CAT_STICK)
@@ -3119,11 +3118,13 @@ class Game:
         if gi.cat==CAT_GOLD:
             p.gold+=gi.qty; self.gitems.remove(gi); self.msg("pyxel.gold_pieces", gold=gi.qty)
             return True
-        if self.is_scare_monster(gi) and gi.picked_up:
-            self.gitems.remove(gi)
-            self.ident.sk[gi.kind]=True
-            self.msg("pack.the_scroll_turns_to_dust_as_you_pick_it_up")
-            return True
+        if self.is_scare_monster(gi):
+            scare_result=rogue_pack.scare_scroll_pickup_result(gi.picked_up)
+            if scare_result=="dust":
+                self.gitems.remove(gi)
+                self.ident.sk[gi.kind]=True
+                self.msg("pack.the_scroll_turns_to_dust_as_you_pick_it_up")
+                return True
         if p.add_item(gi):
             gi.picked_up=True
             if gi.cat==CAT_AMULET:

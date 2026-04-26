@@ -4096,6 +4096,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(scroll, game.p.inv)
         self.assertIn("the scroll turns to dust as you pick it up", game.msgs)
 
+    def test_rogue_544_full_pack_does_not_stack_floor_food(self):
+        # Rogue 5.4.4 pack.c:add_pack() calls pack_room() before stacking food.
+        game = new_game(seed=3301)
+        game.gitems = []
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)] + [
+            rogue.Item(rogue.CAT_POT, i % len(rogue.POTIONS)) for i in range(rogue.INV_MAX - 1)
+        ]
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = game.p.x, game.p.y
+        game.gitems.append(item)
+
+        game.do_pickup()
+
+        self.assertIn(item, game.gitems)
+        self.assertEqual(game.p.inv[0].qty, 1)
+        self.assertIn("pack too full", game.msgs)
+
     def test_explored_items_remain_drawn_but_monsters_do_not(self):
         game = new_game(seed=34)
         calls = []
@@ -4865,17 +4882,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("the veil of darkness lifts", game.msgs)
 
     def test_random_weapon_generation_changes_hit_plus_only(self):
-        old_random = rogue.random.random
         old_randint = rogue.random.randint
         old_randrange = rogue.random.randrange
-        seq = iter([9, 2])
+        seq = iter([80, 0, 9, 2])
         try:
-            rogue.random.random = lambda: 0.80
-            rogue.random.randint = lambda a, b: a
+            rogue.random.randint = lambda a, b: (_ for _ in ()).throw(AssertionError("randint() used for item kind"))
             rogue.random.randrange = lambda n: next(seq)
             item = rogue.make_item(depth=10)
         finally:
-            rogue.random.random = old_random
             rogue.random.randint = old_randint
             rogue.random.randrange = old_randrange
         self.assertEqual(item.cat, rogue.CAT_WPN)
@@ -4885,23 +4899,40 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_random_armor_generation_uses_new_thing_curse_rates(self):
         # Rogue 5.4.4 things.c:new_thing() curses armor on rnd(100) < 20.
+        old_randrange = rogue.random.randrange
+        try:
+            seq = iter([88, 0, 19, 2])
+            rogue.random.randrange = lambda n: next(seq)
+            item = rogue.make_item(depth=10)
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(item.cat, rogue.CAT_ARM)
+        self.assertTrue(item.cursed)
+        self.assertEqual(item.ench, -3)
+
+    def test_rogue_544_make_item_category_uses_rnd_100_not_float_random(self):
+        # Rogue 5.4.4 things.c:new_thing() calls pick_one(things, NUMTHINGS), which uses rnd(100).
         old_random = rogue.random.random
         old_randint = rogue.random.randint
         old_randrange = rogue.random.randrange
         try:
-            rogue.random.random = lambda: 0.88
+            rogue.random.random = lambda: (_ for _ in ()).throw(AssertionError("random() used"))
             rogue.random.randint = lambda a, b: a
-            seq = iter([19, 2])
-            rogue.random.randrange = lambda n: next(seq)
+            rogue.random.randrange = lambda n: 0
             item = rogue.make_item(depth=10)
         finally:
             rogue.random.random = old_random
             rogue.random.randint = old_randint
             rogue.random.randrange = old_randrange
 
-        self.assertEqual(item.cat, rogue.CAT_ARM)
-        self.assertTrue(item.cursed)
-        self.assertEqual(item.ench, -3)
+        self.assertEqual(item.cat, rogue.CAT_POT)
+
+    def test_rogue_544_make_item_kind_uses_pick_one_weights(self):
+        # Rogue 5.4.4 things.c:new_thing() uses pick_one() for pot_info/weap_info/arm_info.
+        self.assertEqual(sum(i["prob"] for i in rogue.POTIONS), 100)
+        self.assertEqual(sum(i["prob"] for i in rogue.WEAPONS), 100)
+        self.assertEqual(sum(i["prob"] for i in rogue.ARMORS), 100)
 
     def test_rogue_544_generated_armor_is_unknown_until_worn(self):
         # Rogue 5.4.4 inv_name() hides armor enchant until ISKNOW; armor.c:wear() sets ISKNOW.
@@ -5757,6 +5788,49 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_things.new_thing_category(92), "ring")
         self.assertEqual(rogue_things.new_thing_category(96), "stick")
         self.assertEqual(rogue_things.new_thing_category(0, no_food=4), "food")
+
+    def test_rogue_544_things_helper_pick_one_uses_subtractive_prob_table(self):
+        # Rogue 5.4.4 things.c:pick_one() subtracts oi_prob from rnd(100).
+        import rogue_things
+
+        table = [("potion", 26), ("scroll", 36), ("food", 16), ("weapon", 7),
+                 ("armor", 7), ("ring", 4), ("stick", 4)]
+        self.assertEqual(rogue_things.pick_one(table, 0), 0)
+        self.assertEqual(rogue_things.pick_one(table, 25), 0)
+        self.assertEqual(rogue_things.pick_one(table, 26), 1)
+        self.assertEqual(rogue_things.pick_one(table, 61), 1)
+        self.assertEqual(rogue_things.pick_one(table, 62), 2)
+        self.assertEqual(rogue_things.pick_one(table, 99), 6)
+        self.assertEqual(rogue_things.pick_one([("only", 1)], 99), 0)
+
+    def test_rogue_544_things_helper_category_roll_forces_food_after_four_levels(self):
+        # Rogue 5.4.4 things.c:new_thing() bypasses pick_one() when no_food > 3.
+        import rogue_things
+
+        calls = []
+
+        def rnd(n):
+            calls.append(n)
+            return 96
+
+        self.assertEqual(rogue_things.new_thing_category_roll(rnd, no_food=4), "food")
+        self.assertEqual(calls, [])
+        self.assertEqual(rogue_things.new_thing_category_roll(rnd, no_food=0), "stick")
+        self.assertEqual(calls, [100])
+
+    def test_rogue_544_pack_helper_scare_scroll_found_flag_and_dust(self):
+        # Rogue 5.4.4 pack.c:add_pack() sets ISFOUND, then dusts S_SCARE on pickup.
+        import rogue_pack
+
+        self.assertEqual(rogue_pack.scare_scroll_pickup_result(False), "mark_found")
+        self.assertEqual(rogue_pack.scare_scroll_pickup_result(True), "dust")
+
+    def test_rogue_544_pack_helper_checks_room_before_stacking_floor_item(self):
+        # Rogue 5.4.4 pack.c:add_pack() calls pack_room() before stacking ISMULT items.
+        import rogue_pack
+
+        self.assertTrue(rogue_pack.pack_room_allows(25, 26))
+        self.assertFalse(rogue_pack.pack_room_allows(26, 26))
 
     def test_rogue_544_monsters_helper_give_pack_gate_matches_source(self):
         # Rogue 5.4.4 monsters.c:give_pack() uses level >= max_level && rnd(100) < m_carry.
