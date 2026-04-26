@@ -1011,6 +1011,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(armor.protected)
         self.assertFalse(rogue_scrolls.protect_armor(None))
 
+    def test_rogue_544_scrolls_helper_remove_curse_matches_s_remove(self):
+        # Rogue 5.4.4 scrolls.c:S_REMOVE uncurses only equipped armor/weapon/rings.
+        import rogue_scrolls
+
+        cursed = [rogue.Item(rogue.CAT_WPN, 0, cursed=True) for _ in range(4)]
+        rogue_scrolls.remove_curse_equipment(cursed)
+        self.assertFalse(any(item.cursed for item in cursed))
+        rogue_scrolls.remove_curse_equipment([None])
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

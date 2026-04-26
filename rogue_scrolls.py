@@ -30,3 +30,10 @@ def protect_armor(armor) -> bool:
         return False
     armor.protected = True
     return True
+
+
+def remove_curse_equipment(items) -> None:
+    """Apply Rogue 5.4.4 scrolls.c:S_REMOVE uncurse() calls."""
+    for item in items:
+        if item is not None:
+            item.cursed = False

@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1715"
+UI_BUILD = "260426_1721"
 
 # ===========================================================
 #  Font
@@ -2432,9 +2432,7 @@ class Game:
                 p.recalc_ac(); self.msg("scrolls.your_armor_glows_color_for_a_moment", color="silver")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="remove curse":
-            for i in (p.wpn,p.arm,p.ring_l,p.ring_r):
-                if i and i.cursed:
-                    i.cursed=False
+            rogue_scrolls.remove_curse_equipment((p.arm, p.wpn, p.ring_l, p.ring_r))
             self.msg("scrolls.you_feel_in_touch_with_the_universal_onenes" if p.hallucinating > 0 else "scrolls.you_feel_as_if_somebody_is_watching_over_you")
         elif nm=="aggravate monsters":
             self.aggravate_monsters(); self.msg("scrolls.you_hear_a_high_pitched_humming_noise")
