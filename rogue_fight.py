@@ -46,3 +46,8 @@ def roll_em_damage(damage_expr: str, swing, roll_part, dplus: int, add_dam: int)
             total += max(0, roll_part(part) + dplus + add_dam)
             did_hit = True
     return did_hit, total
+
+
+def hit_plus_vs_defender(hplus: int, defender_running: bool) -> int:
+    """Rogue 5.4.4 fight.c:roll_em() !ISRUN hit bonus."""
+    return hplus if defender_running else hplus + 4

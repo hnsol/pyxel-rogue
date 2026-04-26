@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1003"
+UI_BUILD = "260426_1004"
 
 # ===========================================================
 #  Font
@@ -1712,8 +1712,7 @@ class Game:
     def roll_player_attack(self, m, weap=None, thrown=False):
         # C: fight.c:roll_em()
         damage_expr, hplus, dplus = self.player_weapon_profile(weap, thrown)
-        if not m.running:
-            hplus += 4
+        hplus = rogue_fight.hit_plus_vs_defender(hplus, m.running)
         hplus += self.p.str_hit_plus()
         return rogue_fight.roll_em_damage(
             damage_expr,
@@ -1725,7 +1724,7 @@ class Game:
 
     def roll_monster_attack(self, m):
         # C: fight.c:roll_em()
-        hplus = 4 if self.p.stuck else 0
+        hplus = rogue_fight.hit_plus_vs_defender(0, not self.p.stuck)
         return rogue_fight.roll_em_damage(
             m.damage_expr,
             lambda: self.swing_hits(m.level, self.p.ac, hplus),

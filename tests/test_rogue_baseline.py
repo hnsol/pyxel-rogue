@@ -3336,6 +3336,13 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(seen_wplus, [4])
 
+    def test_rogue_544_fight_helper_hit_plus_adds_four_when_defender_not_running(self):
+        # Rogue 5.4.4 fight.c:roll_em() adds +4 when !ISRUN on the defender.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.hit_plus_vs_defender(0, defender_running=False), 4)
+        self.assertEqual(rogue_fight.hit_plus_vs_defender(2, defender_running=True), 2)
+
     def test_rogue_544_fight_and_attack_stop_running_and_reset_quiet(self):
         # Rogue 5.4.4 fight.c:fight()/attack() clear count/running and set quiet = 0.
         game = new_game(seed=8)
