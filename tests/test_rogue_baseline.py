@@ -6801,6 +6801,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.no_command, 7)
         self.assertNotIn("you are frozen", game.msgs)
 
+    def test_rogue_544_ice_monster_miss_has_no_miss_message(self):
+        # Rogue 5.4.4 fight.c:attack() skips miss() when mp->t_type == 'I'.
+        game = new_game(seed=504)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        game.roll_monster_attack = lambda m: (False, 0)
+        game.monster_miss_message = lambda subject: "ice missed"
+
+        game.m_attack(monster)
+
+        self.assertNotIn("ice missed", game.msgs)
+
     def test_rattlesnake_poison_strength_depends_on_save(self):
         game = new_game(seed=504)
         set_open_floor(game)

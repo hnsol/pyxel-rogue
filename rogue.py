@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1535"
+UI_BUILD = "260427_1542"
 
 # ===========================================================
 #  Font
@@ -1961,7 +1961,8 @@ class Game:
             if m.sym == "F" and m.vf_hit > 0:
                 self.p.hp = rogue_fight.venus_flytrap_miss_hp(self.p.hp, m.vf_hit)
                 if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
-            self.msg_text(self.monster_miss_message(mn))
+            if m.sym != "I":
+                self.msg_text(self.monster_miss_message(mn))
 
     def m_turn(self,m):
         # C: chase.c (monster turn loop)
