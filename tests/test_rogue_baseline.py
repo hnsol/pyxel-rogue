@@ -3026,6 +3026,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.exp, rogue.Player.EXP_T[1] + 1)
         self.assertEqual((game.p.hp, game.p.max_hp), (19, 19))
 
+    def test_rogue_544_fight_helper_wraith_drain_decrements_level_and_hp(self):
+        # Rogue 5.4.4 fight.c:attack() decrements level, sets exp, and subtracts fewer from hp/max_hp.
+        import rogue_fight
+
+        self.assertEqual(
+            rogue_fight.wraith_drain(3, 50, 10, 20, rogue.Player.EXP_T, lambda: 2),
+            (2, rogue.Player.EXP_T[1] + 1, 8, 18, False),
+        )
+        self.assertEqual(
+            rogue_fight.wraith_drain(1, 5, 10, 20, rogue.Player.EXP_T, lambda: 2),
+            (1, 0, 8, 18, False),
+        )
+
     def test_rogue_544_wraith_drain_at_level_one_keeps_level_and_clears_exp(self):
         # Rogue 5.4.4 fight.c:attack() decrements s_lvl, then restores it
         # to 1 and clears s_exp when --s_lvl reaches 0.

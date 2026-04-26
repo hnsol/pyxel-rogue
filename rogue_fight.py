@@ -81,6 +81,24 @@ def poison_bite_strength(strength: int, poison_saved: bool, sustain_strength: bo
     return strength - 1, "weakened"
 
 
+def wraith_drain(level: int, exp: int, hp: int, max_hp: int, exp_table, roll_fewer):
+    """Rogue 5.4.4 fight.c:attack() Wraith level drain."""
+    if exp == 0:
+        return level, exp, 0, max_hp, True
+    level -= 1
+    if level == 0:
+        exp = 0
+        level = 1
+    else:
+        exp = exp_table[level - 1] + 1
+    fewer = roll_fewer()
+    hp -= fewer
+    max_hp -= fewer
+    if hp <= 0:
+        hp = 1
+    return level, exp, hp, max_hp, max_hp <= 0
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0
