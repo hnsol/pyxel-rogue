@@ -3073,6 +3073,38 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(rolls, [3, 3, 3, 3, 3])
 
+    def test_rogue_544_fight_helper_leprechaun_kill_gold_rolls_extra_on_saved_magic(self):
+        # Rogue 5.4.4 fight.c:killed() gives GOLDCALC, plus four more when save(VS_MAGIC) succeeds.
+        import rogue_fight
+
+        rolls = []
+
+        self.assertEqual(
+            rogue_fight.leprechaun_kill_gold(3, magic_saved=True, goldcalc=lambda level: rolls.append(level) or 2),
+            10,
+        )
+        self.assertEqual(rolls, [3, 3, 3, 3, 3])
+
+    def test_rogue_544_killed_leprechaun_drops_gold_at_max_depth(self):
+        # Rogue 5.4.4 fight.c:killed() attaches Leprechaun gold to t_pack before remove_mon(..., TRUE).
+        game = new_game(seed=3011)
+        set_open_floor(game)
+        game.max_depth = game.p.depth
+        leprechaun = monster_at(game.p.x + 1, game.p.y, "L", "leprechaun")
+        game.mons = [leprechaun]
+        old_rnd = rogue.RNG.rnd
+        old_save_vs_magic = game.save_vs_magic
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.save_vs_magic = lambda: True
+            game.award_monster_kill(leprechaun)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            game.save_vs_magic = old_save_vs_magic
+
+        gold = [item for item in game.gitems if item.cat == rogue.CAT_GOLD]
+        self.assertEqual([item.qty for item in gold], [10])
+
     def test_rogue_544_leprechaun_disappears_even_when_purse_is_empty(self):
         # Rogue 5.4.4 fight.c:attack() always remove_mon()s a Leprechaun hit;
         # the purse message is only printed when purse != lastpurse.
@@ -3349,6 +3381,72 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_dungeon.should_put_things(True, 3, 4))
         self.assertTrue(rogue_dungeon.should_put_things(True, 4, 4))
         self.assertTrue(rogue_dungeon.should_put_things(False, 3, 4))
+
+    def test_rogue544_room_gold_gate_matches_do_rooms(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() places gold on rnd(2)==0 unless ascending with Amulet.
+        import rogue_dungeon
+
+        self.assertTrue(rogue_dungeon.should_place_room_gold(SequenceRng([0]), False, 3, 4))
+        self.assertFalse(rogue_dungeon.should_place_room_gold(SequenceRng([1]), False, 3, 4))
+        self.assertFalse(rogue_dungeon.should_place_room_gold(SequenceRng([0]), True, 3, 4))
+        self.assertTrue(rogue_dungeon.should_place_room_gold(SequenceRng([0]), True, 4, 4))
+
+    def test_rogue544_room_monster_gate_matches_do_rooms(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() uses 80% with gold in room, otherwise 25%.
+        import rogue_dungeon
+
+        self.assertTrue(rogue_dungeon.should_place_room_monster(SequenceRng([79]), True))
+        self.assertFalse(rogue_dungeon.should_place_room_monster(SequenceRng([80]), True))
+        self.assertTrue(rogue_dungeon.should_place_room_monster(SequenceRng([24]), False))
+        self.assertFalse(rogue_dungeon.should_place_room_monster(SequenceRng([25]), False))
+
+    def test_rogue544_rooms_helper_gone_room_selection_allows_duplicates(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() loops left_out times and may pick the same room twice.
+        import rogue_rooms
+
+        rng = SequenceRng([3, 2, 2, 5])
+        self.assertEqual(rogue_rooms.gone_room_indices(9, rng), {2, 5})
+        self.assertEqual(rng.calls, [4, 9, 9, 9])
+
+    def test_rogue544_rooms_helper_room_kind_flags_match_dark_maze_gate(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() sets ISDARK on rnd(10)<level-1, then ISMAZE on rnd(15)==0.
+        import rogue_rooms
+
+        self.assertIsNone(rogue_rooms.room_kind_flag(5, SequenceRng([4])))
+        self.assertEqual(rogue_rooms.room_kind_flag(5, SequenceRng([3, 1])), "dark")
+        self.assertEqual(rogue_rooms.room_kind_flag(5, SequenceRng([3, 0])), "maze")
+
+    def test_rogue544_spawn_mons_uses_room_gold_monster_gate(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() rolls one monster gate per real room.
+        game = new_game(seed=3303)
+        set_open_floor(game)
+        room = game.rooms[0]
+        spec = next(s for s in rogue.BESTIARY if s.sym == "E")
+        old_rnd = rogue.RNG.rnd
+        old_usable_rooms = game.usable_rooms
+        old_random_room_tile = game.random_room_tile
+        old_random_monster_spec = game.random_monster_spec
+        old_give_pack = game.give_pack
+        try:
+            game.mons = []
+            game.gitems = []
+            game.usable_rooms = lambda: [room]
+            game.random_room_tile = lambda room_arg, tiles: (game.p.x + 1, game.p.y)
+            game.random_monster_spec = lambda depth: spec
+            game.give_pack = lambda monster: None
+            rogue.RNG.rnd = lambda n: 25
+            game._spawn_mons()
+            self.assertEqual(game.mons, [])
+
+            rogue.RNG.rnd = lambda n: 24
+            game._spawn_mons()
+            self.assertEqual([m.sym for m in game.mons], ["E"])
+        finally:
+            rogue.RNG.rnd = old_rnd
+            game.usable_rooms = old_usable_rooms
+            game.random_room_tile = old_random_room_tile
+            game.random_monster_spec = old_random_monster_spec
+            game.give_pack = old_give_pack
 
     def test_rogue_544_killed_monster_drops_pack_items_at_monster_position(self):
         # Rogue 5.4.4 fight.c:killed() calls remove_mon(..., TRUE), which falls t_pack items.

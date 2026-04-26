@@ -34,3 +34,13 @@ def put_things_item_count(rng):
 def should_put_things(has_amulet: bool, level: int, max_level: int) -> bool:
     """Rogue 5.4.4 new_level.c:put_things() amulet ascent gate."""
     return not (has_amulet and level < max_level)
+
+
+def should_place_room_gold(rng, has_amulet: bool, level: int, max_level: int) -> bool:
+    """Rogue 5.4.4 rooms.c:do_rooms() room gold gate."""
+    return rng.rnd(2) == 0 and (not has_amulet or level >= max_level)
+
+
+def should_place_room_monster(rng, has_gold: bool) -> bool:
+    """Rogue 5.4.4 rooms.c:do_rooms() room monster gate."""
+    return rng.rnd(100) < (80 if has_gold else 25)

@@ -28,6 +28,7 @@ from rogue_rng import RogueRng
 import rogue_monsters
 import rogue_pack
 import rogue_rings
+import rogue_rooms
 import rogue_sticks
 import rogue_things
 import rogue_dungeon
@@ -167,7 +168,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1253"
+UI_BUILD = "260426_1357"
 
 # ===========================================================
 #  Font
@@ -775,20 +776,19 @@ class DGen:
     def gen(depth):
         # C: new_level.c:new_level()
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
-        gone=set()
-        for _ in range(rnd(4)):
-            while True:
-                i=rnd(GRID_C*GRID_R)
-                if i not in gone:
-                    gone.add(i); break
+        gone=rogue_rooms.gone_room_indices(GRID_C*GRID_R, RNG)
         for i in range(GRID_C*GRID_R):
             gx,gy=i%GRID_C,i//GRID_C
             top_x,top_y=gx*SEC_W+1,gy*SEC_H
             flags=set()
             if i in gone:
                 flags.add(ROOM_GONE)
-            elif rnd(10) < depth - 1:
-                flags.add(ROOM_MAZE if rnd(15)==0 else ROOM_DARK)
+            else:
+                kind_flag = rogue_rooms.room_kind_flag(depth, RNG)
+                if kind_flag == "maze":
+                    flags.add(ROOM_MAZE)
+                elif kind_flag == "dark":
+                    flags.add(ROOM_DARK)
             if ROOM_GONE in flags:
                 rx=top_x+rnd(SEC_W-2)+1
                 ry=top_y+rnd(SEC_H-2)+1
@@ -1300,7 +1300,7 @@ class Game:
         px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
         sr=RNG.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
-        self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
+        self._spawn_room_gold(); self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
         self._hide_secret_features(); self._spawn_traps()
         self._center_cam(); self.update_fov()
 
@@ -1329,13 +1329,12 @@ class Game:
         self.cam_y = max(min_y, min(self.p.y - ZV_ROWS//2, max_y))
 
     def _spawn_mons(self):
-        # C: new_level.c:put_things()
-        d=self.p.depth; n=RNG.randint(3,4+d)
-        cands=[b for b in BESTIARY if b.min_depth<=d]
-        if not cands: cands=[b for b in BESTIARY if b.min_depth<=3]
-        rooms=self.usable_rooms()
-        for _ in range(n):
-            rm=RNG.choice(rooms); e=RNG.choice(cands)
+        # C: rooms.c:do_rooms()
+        d=self.p.depth
+        for rm in self.usable_rooms():
+            if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(rm)):
+                continue
+            e=self.random_monster_spec(d)
             for _ in range(30):
                 mx,my=self.random_room_tile(rm, WALKABLE)
                 if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
@@ -1344,6 +1343,14 @@ class Game:
                     self.give_pack(monster)
                     self.mons.append(monster)
                     break
+
+    def room_has_gold(self, room):
+        return any(
+            item.cat == CAT_GOLD
+            and room.x <= item.x < room.x + room.w
+            and room.y <= item.y < room.y + room.h
+            for item in self.gitems
+        )
 
     def spawn_wanderer(self):
         # C: monsters.c:wanderer()
@@ -1411,19 +1418,24 @@ class Game:
         rooms=self.usable_rooms()
         if rogue_dungeon.should_place_treasure_room(RNG):
             self._spawn_treasure_room()
-        for _ in range(RNG.randint(1,3)):
-            rm=RNG.choice(rooms)
-            for _ in range(20):
-                ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
-                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
-                    g=Item(CAT_GOLD,0); g.qty=RNG.randint(1,10)*d; g.x,g.y=ix,iy
-                    self.gitems.append(g); break
         for _ in range(rogue_dungeon.put_things_item_count(RNG)):
             rm=RNG.choice(rooms)
             for _ in range(20):
                 ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
                     it=self.make_game_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
+
+    def _spawn_room_gold(self):
+        # C: rooms.c:do_rooms()
+        d=self.p.depth
+        for rm in self.usable_rooms():
+            if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
+                continue
+            for _ in range(20):
+                ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
+                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
+                    g=Item(CAT_GOLD,0); g.qty=goldcalc(d); g.x,g.y=ix,iy
+                    self.gitems.append(g); break
 
     def _spawn_treasure_room(self, room=None):
         # Rogue 5.4.4 new_level.c:treas_room().
@@ -1745,6 +1757,10 @@ class Game:
         if self.p.held_by is m:
             m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_release()
             self.p.held_by=None
+        if m.sym == "L" and self.p.depth >= getattr(self, "max_depth", self.p.depth):
+            gold = Item(CAT_GOLD, 0)
+            gold.qty = rogue_fight.leprechaun_kill_gold(self.p.depth, self.save_vs_magic(), goldcalc)
+            m.pack.append(gold)
         if self.p.lvlup():
             self.msg("pyxel.welcome_to_level", level=self.p.level)
         self.remove_monster(m, was_kill=True)

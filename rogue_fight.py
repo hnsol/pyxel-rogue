@@ -52,6 +52,14 @@ def leprechaun_gold_loss(level: int, magic_saved: bool, goldcalc) -> int:
     return loss
 
 
+def leprechaun_kill_gold(level: int, magic_saved: bool, goldcalc) -> int:
+    """Rogue 5.4.4 fight.c:killed() Leprechaun dropped gold."""
+    value = goldcalc(level)
+    if magic_saved:
+        value += sum(goldcalc(level) for _ in range(4))
+    return value
+
+
 def ice_freeze(no_command: int, bore_level: int, rnd):
     """Rogue 5.4.4 fight.c:attack() Ice monster freeze."""
     should_message = no_command <= 0
