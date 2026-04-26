@@ -4375,6 +4375,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.WEAPONS[3]["launcher"], 2)
         self.assertTrue(rogue.WEAPONS[3]["missile"])
 
+    def test_rogue_544_weapons_helper_init_dam_table_matches_source(self):
+        # Rogue 5.4.4 weapons.c:init_dam[] lives in rogue_weapons.py.
+        import rogue_weapons
+
+        self.assertEqual(rogue_weapons.INIT_DAM[0], ("2x4", "1x3", None, ()))
+        self.assertEqual(rogue_weapons.INIT_DAM[3], ("1x1", "2x3", 2, ("many", "missile")))
+
     def test_rogue_544_swing_thresholds_guard_combat_balance(self):
         game = new_game(seed=8)
 

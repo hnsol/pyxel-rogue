@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1234"
+UI_BUILD = "260427_1242"
 
 # ===========================================================
 #  Font
@@ -432,15 +432,15 @@ SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
 FOODS = [{"name":"food ration","nut":900},{"name":"slime-mold","nut":700}]
 
 WEAPONS = [
-    {"name":"mace","prob":11,"damage":"2x4","hurl_damage":"1x3","wield":True},
-    {"name":"long sword","prob":11,"damage":"3x4","hurl_damage":"1x2","wield":True},
-    {"name":"short bow","prob":12,"damage":"1x1","hurl_damage":"1x1","wield":True},
-    {"name":"arrow","prob":12,"damage":"1x1","hurl_damage":"2x3","wield":False,"stack":True,"missile":True,"launcher":2},
-    {"name":"dagger","prob":8,"damage":"1x6","hurl_damage":"1x4","wield":True,"missile":True},
-    {"name":"two-handed sword","prob":10,"damage":"4x4","hurl_damage":"1x2","wield":True},
-    {"name":"dart","prob":12,"damage":"1x1","hurl_damage":"1x3","wield":False,"stack":True,"missile":True},
-    {"name":"shuriken","prob":12,"damage":"1x2","hurl_damage":"2x4","wield":False,"stack":True,"missile":True},
-    {"name":"spear","prob":12,"damage":"2x3","hurl_damage":"1x6","wield":True,"missile":True},
+    rogue_weapons.apply_init_dam({"name":"mace","prob":11,"wield":True}, 0),
+    rogue_weapons.apply_init_dam({"name":"long sword","prob":11,"wield":True}, 1),
+    rogue_weapons.apply_init_dam({"name":"short bow","prob":12,"wield":True}, 2),
+    rogue_weapons.apply_init_dam({"name":"arrow","prob":12,"wield":False}, 3),
+    rogue_weapons.apply_init_dam({"name":"dagger","prob":8,"wield":True}, 4),
+    rogue_weapons.apply_init_dam({"name":"two-handed sword","prob":10,"wield":True}, 5),
+    rogue_weapons.apply_init_dam({"name":"dart","prob":12,"wield":False}, 6),
+    rogue_weapons.apply_init_dam({"name":"shuriken","prob":12,"wield":False}, 7),
+    rogue_weapons.apply_init_dam({"name":"spear","prob":12,"wield":True}, 8),
 ]
 
 STR_PLUS = rogue_fight.STR_PLUS
