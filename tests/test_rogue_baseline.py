@@ -1403,6 +1403,28 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([mo.sym for mo in game.mons], ["B"])
 
+    def test_rogue_544_random_monster_spec_uses_randmonster_false_table(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() uses monsters.c:randmonster(FALSE).
+        class MonsterRng:
+            def __init__(self):
+                self.rolls = iter([0, 2])
+
+            def rnd(self, n):
+                return next(self.rolls)
+
+            def choice(self, seq):
+                raise AssertionError("choice used")
+
+        game = new_game(seed=338)
+        old_rng = rogue.RNG
+        rogue.RNG = MonsterRng()
+        try:
+            spec = game.random_monster_spec(1)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(spec.sym, "B")
+
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
         cases = [

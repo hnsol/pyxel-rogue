@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1856"
+UI_BUILD = "260426_1903"
 
 # ===========================================================
 #  Font
@@ -1368,7 +1368,7 @@ class Game:
         return True
 
     def random_monster_spec(self, depth):
-        return RNG.choice([b for b in BESTIARY if b.min_depth<=depth] or BESTIARY)
+        return self.monster_spec_for_sym(rogue_monsters.randmonster(depth, RNG.rnd, wander=False))
 
     def new_monster_from_spec(self,x,y,spec,depth=None):
         # C: monsters.c:new_monster()
