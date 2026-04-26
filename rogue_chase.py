@@ -44,3 +44,13 @@ def diag_ok(sx, sy, ex, ey, in_bounds, step_ok) -> bool:
     if sx == ex or sy == ey:
         return True
     return step_ok(sx, ey) and step_ok(ex, sy)
+
+
+def dist(y1, x1, y2, x2) -> int:
+    """Rogue 5.4.4 chase.c:dist()."""
+    return ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
+
+
+def dist_points(c1, c2) -> int:
+    """Rogue 5.4.4 chase.c:dist_cp()."""
+    return dist(c1[1], c1[0], c2[1], c2[0])

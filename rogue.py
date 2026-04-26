@@ -161,7 +161,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0939"
+UI_BUILD = "260426_0941"
 
 # ===========================================================
 #  Font
@@ -1595,7 +1595,7 @@ class Game:
         return list(dict.fromkeys(exits))
     def dist2(self,a,b):
         # C: chase.c:dist()
-        return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])
+        return rogue_chase.dist_points(a, b)
     def same_ai_room(self,a,b):
         return a is not None and a==b
     def _append_msg(self, text):

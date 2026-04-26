@@ -1970,6 +1970,13 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(step_calls, [])
 
+    def test_rogue_544_chase_helper_dist_uses_squared_distance(self):
+        # Rogue 5.4.4 chase.c:dist() returns d^2, not the square root.
+        import rogue_chase
+
+        self.assertEqual(rogue_chase.dist(2, 3, 6, 9), 52)
+        self.assertEqual(rogue_chase.dist_points((3, 2), (9, 6)), 52)
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)
