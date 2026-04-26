@@ -52,6 +52,13 @@ def leprechaun_gold_loss(level: int, magic_saved: bool, goldcalc) -> int:
     return loss
 
 
+def ice_freeze(no_command: int, bore_level: int, rnd):
+    """Rogue 5.4.4 fight.c:attack() Ice monster freeze."""
+    should_message = no_command <= 0
+    no_command += rnd(2) + 2
+    return no_command, should_message, no_command > bore_level
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0

@@ -5158,6 +5158,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreaterEqual(game.p.no_command, 2)
         self.assertIn("you are frozen", game.msgs)
 
+    def test_rogue_544_fight_helper_ice_freeze_adds_duration_and_reports_initial_freeze(self):
+        # Rogue 5.4.4 fight.c:attack() adds rnd(2)+2; message only when no_command was zero.
+        import rogue_fight
+
+        self.assertEqual(
+            rogue_fight.ice_freeze(0, bore_level=50, rnd=lambda n: 1),
+            (3, True, False),
+        )
+        self.assertEqual(
+            rogue_fight.ice_freeze(5, bore_level=50, rnd=lambda n: 0),
+            (7, False, False),
+        )
+
     def test_rogue_544_ice_monster_refreezes_without_repeating_message(self):
         # Rogue 5.4.4 fight.c:attack() only prints the frozen message
         # when no_command was zero before adding rnd(2)+2.

@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1011"
+UI_BUILD = "260426_1024"
 
 # ===========================================================
 #  Font
@@ -1901,11 +1901,12 @@ class Game:
                 if "confuse" in m.flags and not self.save_vs_magic():
                     self.p.confused=RNG.randint(10,20); self.msg("pyxel.feel_confused_bang")
                 if "freeze" in m.flags:
-                    was_commanding = self.p.no_command <= 0
-                    self.p.no_command+=rnd(2)+2
-                    if self.p.no_command>BORE_LEVEL:
+                    self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
+                        self.p.no_command, BORE_LEVEL, rnd
+                    )
+                    if hypothermia:
                         self.p.hp=0; self.death_cause="hypothermia"
-                    if was_commanding:
+                    if should_message:
                         self.msg("fight.you_are_frozen")
                 if "hold" in m.flags:
                     m.vf_hit+=1
