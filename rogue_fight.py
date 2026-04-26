@@ -170,6 +170,11 @@ def player_defender_running(no_command: int) -> bool:
     return no_command <= 0
 
 
+def monster_attack_message_allowed(monster_sym: str) -> bool:
+    """Rogue 5.4.4 fight.c:attack() skips hit()/miss() for Ice monster."""
+    return monster_sym != "I"
+
+
 def weapon_profile(
     weapon,
     hit_plus: int,

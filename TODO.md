@@ -167,6 +167,8 @@
 - [x] Rogue 5.4.4 `move.c:T_BEAR` / `fight.c:roll_em()` 準拠で bear trap の `no_move` は monster 命中+4にしない
 - [x] Rogue 5.4.4 `fight.c:roll_em()` の player defender `ISRUN` 近似を `rogue_fight.player_defender_running()` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Ice monster miss は miss message を出さない
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Ice monster hit は通常 hit message を出さない
+- [x] Rogue 5.4.4 `fight.c:attack()` の Ice monster hit/miss message gate を `rogue_fight.monster_attack_message_allowed()` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `rogue.h:GOLDCALC` 相当の金額ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Leprechaun 金額減算回数を `rogue_fight.py` へ小分割

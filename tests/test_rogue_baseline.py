@@ -4805,6 +4805,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_fight.player_defender_running(no_command=1))
         self.assertTrue(rogue_fight.player_defender_running(no_command=0))
 
+    def test_rogue_544_fight_helper_monster_attack_message_gate_skips_ice(self):
+        # Rogue 5.4.4 fight.c:attack() skips hit()/miss() for Ice monster.
+        import rogue_fight
+
+        self.assertFalse(rogue_fight.monster_attack_message_allowed("I"))
+        self.assertTrue(rogue_fight.monster_attack_message_allowed("R"))
+
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
         import rogue_fight
@@ -6767,6 +6774,19 @@ class RogueBaselineTest(unittest.TestCase):
         game.m_attack(monster)
 
         self.assertGreaterEqual(game.p.no_command, 2)
+        self.assertIn("you are frozen", game.msgs)
+
+    def test_rogue_544_ice_monster_hit_has_no_hit_message(self):
+        # Rogue 5.4.4 fight.c:attack() skips hit() when mp->t_type == 'I'.
+        game = new_game(seed=5031)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda subject: "ice hit"
+
+        game.m_attack(monster)
+
+        self.assertNotIn("ice hit", game.msgs)
         self.assertIn("you are frozen", game.msgs)
 
     def test_rogue_544_fight_helper_ice_freeze_adds_duration_and_reports_initial_freeze(self):
