@@ -172,7 +172,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1641"
+UI_BUILD = "260426_1652"
 
 # ===========================================================
 #  Font
@@ -2425,7 +2425,7 @@ class Game:
         elif nm=="enchant weapon":
             if p.wpn:
                 p.wpn.cursed=False
-                if RNG.randrange(2)==0: p.wpn.hit_plus+=1
+                if RNG.rnd(2)==0: p.wpn.hit_plus+=1
                 else: p.wpn.dam_plus+=1
                 p.wpn.ench=p.wpn.hit_plus
                 self.msg("scrolls.your_color_glows_color2_for_a_moment", color=p.wpn.data["name"], color2="blue")

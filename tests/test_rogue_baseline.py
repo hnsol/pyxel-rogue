@@ -1064,6 +1064,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("your mace glows blue for a moment", game.msgs)
         self.assertNotIn("Your mace glows blue!", game.msgs)
 
+    def test_rogue_544_enchant_weapon_uses_rnd_two(self):
+        # Rogue 5.4.4 scrolls.c:S_ENCH chooses hit/damage with rnd(2).
+        game = new_game(seed=324)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant weapon")
+        weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=0, cursed=True)
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.wpn = weapon
+        game.p.inv.extend([weapon, scroll])
+        old_rnd = rogue.RNG.rnd
+        old_randrange = rogue.RNG.randrange
+        calls = []
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            rogue.RNG.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
+            game.use_scr(scroll)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randrange = old_randrange
+
+        self.assertEqual(calls, [2])
+        self.assertEqual(weapon.hit_plus, 1)
+        self.assertEqual(weapon.dam_plus, 0)
+
     def test_rogue_544_enchant_armor_does_not_identify_on_read(self):
         # Rogue 5.4.4 scrolls.c:S_ARMOR enchants cur_armor but does not set scr_info[].oi_know.
         game = new_game(seed=323)
