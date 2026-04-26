@@ -1,6 +1,23 @@
 """Rogue 5.4.4 fight.c helpers."""
 from __future__ import annotations
 
+STR_PLUS = [-7, -6, -5, -4, -3, -2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3]
+ADD_DAM = [-7, -6, -5, -4, -3, -2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6]
+
+
+def _str_index(strength: int) -> int:
+    return max(0, min(strength, len(STR_PLUS) - 1))
+
+
+def str_hit_plus(strength: int) -> int:
+    """Rogue 5.4.4 fight.c:str_plus[]."""
+    return STR_PLUS[_str_index(strength)]
+
+
+def str_dam_plus(strength: int) -> int:
+    """Rogue 5.4.4 fight.c:add_dam[]."""
+    return ADD_DAM[_str_index(strength)]
+
 
 def swing(at_lvl: int, op_arm: int, wplus: int, rnd) -> bool:
     """Rogue 5.4.4 fight.c:swing()."""

@@ -3361,6 +3361,16 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((damage, hplus, dplus), ("2d3", 4, 6))
 
+    def test_rogue_544_fight_helper_strength_tables_match_source(self):
+        # Rogue 5.4.4 fight.c:str_plus/add_dam tables clamp by strength index.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.str_hit_plus(0), -7)
+        self.assertEqual(rogue_fight.str_hit_plus(31), 3)
+        self.assertEqual(rogue_fight.str_hit_plus(40), 3)
+        self.assertEqual(rogue_fight.str_dam_plus(16), 1)
+        self.assertEqual(rogue_fight.str_dam_plus(31), 6)
+
     def test_rogue_544_fight_and_attack_stop_running_and_reset_quiet(self):
         # Rogue 5.4.4 fight.c:fight()/attack() clear count/running and set quiet = 0.
         game = new_game(seed=8)

@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1008"
+UI_BUILD = "260426_1010"
 
 # ===========================================================
 #  Font
@@ -430,8 +430,8 @@ WEAPONS = [
     {"name":"spear","damage":"2d3","hurl_damage":"1d6","wield":True,"missile":True},
 ]
 
-STR_PLUS = [-7,-6,-5,-4,-3,-2,-1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,2,2,2,2,2,2,3]
-ADD_DAM = [-7,-6,-5,-4,-3,-2,-1,0,0,0,0,0,0,0,0,0,1,1,2,3,3,4,5,5,5,5,5,5,5,5,5,6]
+STR_PLUS = rogue_fight.STR_PLUS
+ADD_DAM = rogue_fight.ADD_DAM
 
 ARMORS = [
     {"name":"leather armor","ac":8},{"name":"ring mail","ac":7},
@@ -634,9 +634,9 @@ class Player:
         s.ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else 10
         s.ac -= rogue_rings.protection_bonus(s)
     def str_hit_plus(s):
-        return STR_PLUS[max(0,min(s.st,len(STR_PLUS)-1))]
+        return rogue_fight.str_hit_plus(s.st)
     def str_dam_plus(s):
-        return ADD_DAM[max(0,min(s.st,len(ADD_DAM)-1))]
+        return rogue_fight.str_dam_plus(s.st)
     def inv_full(s): return len(s.inv)>=INV_MAX
     def add_item(s,it):
         if it.stackable:
