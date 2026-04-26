@@ -33,6 +33,7 @@ import rogue_daemons
 import rogue_chase
 import rogue_fight
 import rogue_move
+import rogue_weapons
 from rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
     MONSTER_MISS_MESSAGE_KEYS,
@@ -163,7 +164,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1150"
+UI_BUILD = "260426_1213"
 
 # ===========================================================
 #  Font
@@ -2826,20 +2827,20 @@ class Game:
         choice=None; cnt=0
         for yy in range(y-1,y+2):
             for xx in range(x-1,x+2):
-                if (xx,yy)==(self.p.x,self.p.y): continue
                 if not (0<=xx<MAP_W and 0<=yy<MAP_H): continue
-                if not self.walkable(xx,yy) or self.tm[yy][xx]==T_DOOR: continue
                 if self.mon_at(xx,yy) or self.gi_at(xx,yy): continue
-                cnt+=1
-                if RNG.randrange(cnt)==0:
-                    choice=(xx,yy)
+                tile_name = "PASSAGE" if self.tm[yy][xx] == T_CORR else "FLOOR" if self.tm[yy][xx] == T_FLOOR else ""
+                if not rogue_weapons.is_fallpos_candidate((xx,yy), (self.p.x,self.p.y), tile_name):
+                    continue
+                choice,cnt=rogue_weapons.choose_fallpos(choice,cnt,(xx,yy),RNG.randrange)
         return choice
 
     def drop_thrown(self,it,x,y,around=True):
         # C: weapons.c:fall()
         pos=self.fall_position(x,y) if around else None
         pos=pos or ((x,y) if self.walkable(x,y) and not self.gi_at(x,y) else None)
-        if not pos:
+        result,pos=rogue_weapons.fall_result(pos, it.cat==CAT_WPN)
+        if result!="drop":
             if it.cat==CAT_WPN: self.msg("pyxel.item_vanishes_as_hits_ground", item=it.data["name"])
             return
         it.x,it.y=pos; self.gitems.append(it)

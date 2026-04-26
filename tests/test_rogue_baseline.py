@@ -5681,6 +5681,46 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(fall_calls, [(4, 2)])
         self.assertEqual((game.gitems[-1].x, game.gitems[-1].y), (4, 3))
 
+    def test_rogue_544_weapons_helper_fallpos_candidate_matches_source_tiles(self):
+        # Rogue 5.4.4 weapons.c:fallpos() skips hero and accepts only FLOOR/PASSAGE.
+        import rogue_weapons
+
+        self.assertTrue(rogue_weapons.is_fallpos_candidate((4, 4), (5, 5), "FLOOR"))
+        self.assertTrue(rogue_weapons.is_fallpos_candidate((4, 4), (5, 5), "PASSAGE"))
+        self.assertFalse(rogue_weapons.is_fallpos_candidate((5, 5), (5, 5), "FLOOR"))
+        self.assertFalse(rogue_weapons.is_fallpos_candidate((4, 4), (5, 5), "DOOR"))
+
+    def test_rogue_544_weapons_helper_choose_fallpos_matches_rnd_count(self):
+        # Rogue 5.4.4 weapons.c:fallpos() replaces newpos when rnd(++cnt)==0.
+        import rogue_weapons
+
+        rng = SequenceRng([0])
+        self.assertEqual(rogue_weapons.choose_fallpos(None, 0, (4, 4), rng.rnd), ((4, 4), 1))
+        self.assertEqual(rng.calls, [1])
+
+        rng = SequenceRng([1])
+        self.assertEqual(rogue_weapons.choose_fallpos((4, 4), 1, (5, 5), rng.rnd), ((4, 4), 2))
+        self.assertEqual(rng.calls, [2])
+
+        rng = SequenceRng([0])
+        self.assertEqual(rogue_weapons.choose_fallpos((4, 4), 1, (5, 5), rng.rnd), ((5, 5), 2))
+
+    def test_rogue_544_weapons_helper_fall_result_matches_source_branches(self):
+        # Rogue 5.4.4 weapons.c:fall() attaches on fallpos success, otherwise only pr prints vanish.
+        import rogue_weapons
+
+        self.assertEqual(rogue_weapons.fall_result((4, 4), pr=True), ("drop", (4, 4)))
+        self.assertEqual(rogue_weapons.fall_result(None, pr=True), ("vanish", None))
+        self.assertEqual(rogue_weapons.fall_result(None, pr=False), ("discard", None))
+
+    def test_rogue_544_weapons_helper_initial_weapon_count_matches_source(self):
+        # Rogue 5.4.4 weapons.c:init_weapon() gives daggers rnd(4)+2, ISMANY weapons rnd(8)+8, others 1.
+        import rogue_weapons
+
+        self.assertEqual(rogue_weapons.initial_weapon_count("dagger", False, lambda n: 3), 5)
+        self.assertEqual(rogue_weapons.initial_weapon_count("arrow", True, lambda n: 7), 15)
+        self.assertEqual(rogue_weapons.initial_weapon_count("mace", False, lambda n: 99), 1)
+
     def test_cardinal_move_does_not_linger_into_second_step(self):
         game = new_game(seed=49)
         set_open_floor(game)
