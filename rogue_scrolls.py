@@ -37,3 +37,8 @@ def remove_curse_equipment(items) -> None:
     for item in items:
         if item is not None:
             item.cursed = False
+
+
+def monster_confusion(player) -> None:
+    """Apply Rogue 5.4.4 scrolls.c:S_CONFUSE to the player."""
+    player.can_confuse_monster = True
