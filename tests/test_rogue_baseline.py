@@ -6189,6 +6189,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.alive)
         self.assertNotIn(monster, game.mons)
 
+    def test_rogue_544_thrown_attack_resets_quiet_and_runto(self):
+        # Rogue 5.4.4 weapons.c:missile() resolves through fight.c:fight(..., thrown=TRUE).
+        game = new_game(seed=373)
+        set_open_floor(game)
+        arrow = rogue.Item(rogue.CAT_WPN, 3, qty=1)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=10, exp=0)
+        monster.running = False
+        monster.held = 3
+        game.p.quiet = 9
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (False, 0)
+
+        game.resolve_throw_anim({"outcome": {"kind": "monster", "monster": monster, "item": arrow, "x": monster.x, "y": monster.y}})
+
+        self.assertEqual(game.p.quiet, 0)
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.held, 0)
+
     def test_rogue_544_throw_motion_finishes_before_monster_turn(self):
         # Rogue 5.4.4 command.c:t calls weapons.c:missile()/do_motion() before after-turn monsters.
         game = new_game(seed=371)

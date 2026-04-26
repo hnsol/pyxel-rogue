@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1714"
+UI_BUILD = "260427_1730"
 
 # ===========================================================
 #  Font
@@ -2866,6 +2866,8 @@ class Game:
         m = outcome["monster"]
         thrown = outcome["item"]
         tx, ty = outcome["x"], outcome["y"]
+        self.p.quiet = 0
+        self.runto(m)
         self.reveal_xeroc_for_attack(m, thrown=True)
         hit, dmg = self.roll_player_attack(m, thrown, True)
         mn = self.combat_monster_name(m)

@@ -185,6 +185,7 @@
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` 準拠で、武器ダメージ表を `%dx%d` 表記へ統一
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` を `rogue_weapons.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
+- [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠で、weapon curse/enchant/初期個数乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `fight.c:str_plus[]` / `add_dam[]` 相当の Strength 補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Ice monster freeze `no_command += rnd(2)+2` を `rogue_fight.py` へ小分割
