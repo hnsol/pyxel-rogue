@@ -1895,6 +1895,18 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(moved, [running])
 
+    def test_rogue_544_chase_helper_monster_turn_repeats_for_flying_at_distance(self):
+        # Rogue 5.4.4 chase.c:runners() calls move_monst() again for ISFLY at distance >= 3.
+        import rogue_chase
+
+        monster = monster_at(9, 5, "K", "kestrel", flags="fly")
+        monster.running = True
+        calls = []
+
+        rogue_chase.monster_turn(monster, lambda m: calls.append(m), lambda m: 3)
+
+        self.assertEqual(calls, [monster, monster])
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)
