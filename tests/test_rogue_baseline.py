@@ -775,6 +775,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(orc.running)
         self.assertIn("the flame whizzes past the orc", game.msgs)
 
+    def test_rogue_544_bolt_miss_silent_for_disguised_xeroc(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() suppresses miss text unless ch != 'M' or t_disguise == 'M'.
+        game = new_game(seed=227)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        xeroc = monster_at(12, 10, sym="X", name="xeroc")
+        xeroc.disguise = "!"
+        game.mons = [xeroc]
+        game.monster_save_throw = lambda which, monster: True
+
+        hit = game.fire_bolt(1, 0, "flame")
+
+        self.assertFalse(hit)
+        self.assertFalse(xeroc.running)
+        self.assertNotIn("the flame whizzes past the xeroc", game.msgs)
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)
