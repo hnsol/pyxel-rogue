@@ -161,7 +161,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0934"
+UI_BUILD = "260426_0937"
 
 # ===========================================================
 #  Font
@@ -1812,7 +1812,7 @@ class Game:
 
     def runto(self,m,dest=DEST_PLAYER):
         # C: chase.c:runto()
-        m.running=True; m.held=0; m.dest=dest
+        rogue_chase.runto(m, dest)
 
     def aggravate_monsters(self):
         # C: misc.c:aggravate()

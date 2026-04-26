@@ -28,3 +28,10 @@ def move_monst(monster, do_chase, chase_steps_for_turn, finish_chase_turn) -> No
         if do_chase(monster) == -1:
             return
     finish_chase_turn(monster)
+
+
+def runto(monster, dest) -> None:
+    """Rogue 5.4.4 chase.c:runto()."""
+    monster.running = True
+    monster.held = 0
+    monster.dest = dest

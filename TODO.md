@@ -96,6 +96,7 @@
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の起床済みモンスター実行ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:move_monst()` 相当の速度ステップ実行を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:runto()` 相当の追跡開始を `rogue_chase.py` へ小分割
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）

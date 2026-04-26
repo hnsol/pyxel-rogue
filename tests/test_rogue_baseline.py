@@ -1925,6 +1925,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [monster, monster])
         self.assertEqual(finished, [monster])
 
+    def test_rogue_544_chase_helper_runto_sets_running_and_clears_held(self):
+        # Rogue 5.4.4 chase.c:runto() sets ISRUN, clears ISHELD, and sets destination.
+        import rogue_chase
+
+        monster = monster_at(3, 1)
+        monster.held = 3
+
+        rogue_chase.runto(monster, rogue.DEST_GOLD)
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.held, 0)
+        self.assertEqual(monster.dest, rogue.DEST_GOLD)
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)
