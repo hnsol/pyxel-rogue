@@ -25,6 +25,16 @@ def randmonster(level: int, rnd, wander: bool = False) -> str:
             return monster
 
 
+def exp_add(level: int, max_hp: int) -> int:
+    """Rogue 5.4.4 monsters.c:exp_add()."""
+    mod = max_hp // (8 if level == 1 else 6)
+    if level > 9:
+        mod *= 20
+    elif level > 6:
+        mod *= 4
+    return mod
+
+
 def initial_disguise(sym, random_thing):
     """Rogue 5.4.4 monsters.c:new_monster() sets Xeroc t_disguise = rnd_thing()."""
     return random_thing() if sym == "X" else sym

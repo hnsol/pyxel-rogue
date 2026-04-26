@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1934"
+UI_BUILD = "260426_1942"
 
 # ===========================================================
 #  Font
@@ -1379,7 +1379,8 @@ class Game:
         hp=max(1,RNG.roll(level,8))
         monster=Monster(
             x, y, spec.sym, spec.name, hp,
-            level, spec.armor-lev_add, spec.damage, spec.exp+lev_add*10, spec.flags
+            level, spec.armor-lev_add, spec.damage,
+            spec.exp+lev_add*10+rogue_monsters.exp_add(level,hp), spec.flags
         )
         if depth>29:
             monster.flags.add(rogue_monsters.FLAG_HASTE)
@@ -2527,6 +2528,7 @@ class Game:
         m.level=level; m.armor=spec.armor-lev_add
         m.damage_expr=spec.damage; m.exp=spec.exp+lev_add*10
         m.hp=m.max_hp=max(1,RNG.roll(level,8))
+        m.exp+=rogue_monsters.exp_add(level,m.max_hp)
         m.flags=set(spec.flags.split(",")) if spec.flags else set()
         m.pack=[]
         m.held=m.scared=m.confused=0

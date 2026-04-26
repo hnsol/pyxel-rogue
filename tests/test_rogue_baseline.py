@@ -3044,9 +3044,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [(spec.level + 3, 8)])
         self.assertEqual(monster.level, spec.level + 3)
         self.assertEqual(monster.armor, spec.armor - 3)
-        self.assertEqual(monster.exp, spec.exp + 30)
+        self.assertEqual(monster.exp, spec.exp + 30 + 8)
         self.assertEqual(monster.hp, 17)
         self.assertEqual(monster.max_hp, 17)
+
+    def test_rogue_544_monster_exp_add_uses_level_and_max_hp(self):
+        # Rogue 5.4.4 monsters.c:exp_add() scales by level and max HP.
+        import rogue_monsters
+
+        self.assertEqual(rogue_monsters.exp_add(1, 17), 2)
+        self.assertEqual(rogue_monsters.exp_add(6, 17), 2)
+        self.assertEqual(rogue_monsters.exp_add(7, 17), 8)
+        self.assertEqual(rogue_monsters.exp_add(10, 17), 40)
 
     def test_rogue_544_new_monster_hastes_after_level_29(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
