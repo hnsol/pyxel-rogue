@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1903"
+UI_BUILD = "260426_1911"
 
 # ===========================================================
 #  Font
@@ -1361,7 +1361,7 @@ class Game:
         if not cands:
             return False
         x,y=RNG.choice(cands)
-        spec=self.random_monster_spec(self.p.depth)
+        spec=self.monster_spec_for_sym(rogue_monsters.randmonster(self.p.depth, RNG.rnd, wander=True))
         monster=self.new_monster_from_spec(x,y,spec)
         self.mons.append(monster)
         self.runto(monster)

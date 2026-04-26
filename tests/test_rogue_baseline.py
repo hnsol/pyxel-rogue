@@ -1425,6 +1425,35 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(spec.sym, "B")
 
+    def test_rogue_544_spawn_wanderer_uses_randmonster_true_table(self):
+        # Rogue 5.4.4 monsters.c:wanderer() uses randmonster(TRUE).
+        class WanderRng:
+            def __init__(self):
+                self.rolls = iter([9, 6])
+
+            def rnd(self, n):
+                return next(self.rolls)
+
+            def choice(self, seq):
+                return seq[0]
+
+            def roll(self, dice, sides):
+                return dice
+
+        game = new_game(seed=339)
+        set_open_floor(game)
+        game.p.depth = 2
+        game.mons = []
+        game.wanderer_floor_candidates = lambda: [(game.p.x + 3, game.p.y)]
+        old_rng = rogue.RNG
+        rogue.RNG = WanderRng()
+        try:
+            self.assertTrue(game.spawn_wanderer())
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual([mo.sym for mo in game.mons], ["B"])
+
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
         cases = [
