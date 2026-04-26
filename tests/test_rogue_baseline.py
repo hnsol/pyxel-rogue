@@ -3686,6 +3686,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_fight.swing(1, 5, 0, lambda n: 14))
         self.assertTrue(rogue_fight.swing(1, 5, 1, lambda n: 13))
 
+    def test_rogue_544_game_swing_hits_uses_rng_rnd(self):
+        # Rogue 5.4.4 fight.c:swing() calls rnd(20).
+        game = new_game(seed=405)
+        old_rnd = rogue.RNG.rnd
+        old_randrange = rogue.RNG.randrange
+        try:
+            rogue.RNG.rnd = lambda n: 14
+            rogue.RNG.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
+            self.assertTrue(game.swing_hits(1, 5, 0))
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randrange = old_randrange
+
     def test_rogue_544_damage_expr_parser_handles_monster_attacks(self):
         old_randrange = rogue.RNG.randrange
         try:

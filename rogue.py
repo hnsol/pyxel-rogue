@@ -172,7 +172,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1625"
+UI_BUILD = "260426_1632"
 
 # ===========================================================
 #  Font
@@ -1708,7 +1708,7 @@ class Game:
     # ---------- Combat ----------
     def swing_hits(self, at_lvl, op_arm, wplus):
         # C: fight.c:swing()
-        return rogue_fight.swing(at_lvl, op_arm, wplus, RNG.randrange)
+        return rogue_fight.swing(at_lvl, op_arm, wplus, RNG.rnd)
 
     def player_weapon_profile(self, weap=None, thrown=False):
         hplus = dplus = 0
