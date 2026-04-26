@@ -2969,6 +2969,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.goldcalc(3, lambda n: calls.append(n) or 7), 9)
         self.assertEqual(calls, [80])
 
+    def test_rogue_544_fight_helper_leprechaun_gold_loss_rolls_once_plus_four_on_failed_save(self):
+        # Rogue 5.4.4 fight.c:attack() subtracts one GOLDCALC, plus four more when save fails.
+        import rogue_fight
+
+        rolls = []
+
+        self.assertEqual(
+            rogue_fight.leprechaun_gold_loss(3, magic_saved=False, goldcalc=lambda level: rolls.append(level) or 2),
+            10,
+        )
+        self.assertEqual(rolls, [3, 3, 3, 3, 3])
+
     def test_rogue_544_leprechaun_disappears_even_when_purse_is_empty(self):
         # Rogue 5.4.4 fight.c:attack() always remove_mon()s a Leprechaun hit;
         # the purse message is only printed when purse != lastpurse.

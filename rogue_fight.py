@@ -44,6 +44,14 @@ def goldcalc(level: int, rnd) -> int:
     return rnd(50 + 10 * level) + 2
 
 
+def leprechaun_gold_loss(level: int, magic_saved: bool, goldcalc) -> int:
+    """Rogue 5.4.4 fight.c:attack() Leprechaun purse loss."""
+    loss = goldcalc(level)
+    if not magic_saved:
+        loss += sum(goldcalc(level) for _ in range(4))
+    return loss
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0

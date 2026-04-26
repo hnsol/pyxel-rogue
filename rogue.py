@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1010"
+UI_BUILD = "260426_1011"
 
 # ===========================================================
 #  Font
@@ -1863,9 +1863,7 @@ class Game:
                     self.rust_armor()
                 if "steal_gold" in m.flags:
                     old_gold = self.p.gold
-                    loss=goldcalc(self.p.depth)
-                    if not self.save_vs_magic():
-                        loss += sum(goldcalc(self.p.depth) for _ in range(4))
+                    loss=rogue_fight.leprechaun_gold_loss(self.p.depth, self.save_vs_magic(), goldcalc)
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
                         self.msg("fight.your_purse_feels_lighter")
