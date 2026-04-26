@@ -31,6 +31,7 @@ import rogue_sticks
 import rogue_dungeon
 import rogue_daemons
 import rogue_chase
+import rogue_fight
 from rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
     MONSTER_MISS_MESSAGE_KEYS,
@@ -161,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0945"
+UI_BUILD = "260426_0947"
 
 # ===========================================================
 #  Font
@@ -1691,8 +1692,7 @@ class Game:
     # ---------- Combat ----------
     def swing_hits(self, at_lvl, op_arm, wplus):
         # C: fight.c:swing()
-        need = (20 - at_lvl) - op_arm
-        return RNG.randrange(20) + wplus >= need
+        return rogue_fight.swing(at_lvl, op_arm, wplus, RNG.randrange)
 
     def player_weapon_profile(self, weap=None, thrown=False):
         hplus = dplus = 0

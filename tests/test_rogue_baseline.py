@@ -3204,6 +3204,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(hits(attacker_level=1, defender_armor=7), 8)
         self.assertEqual(hits(attacker_level=1, defender_armor=5, hit_plus=1), 7)
 
+    def test_rogue_544_fight_helper_swing_uses_d20_threshold(self):
+        # Rogue 5.4.4 fight.c:swing() hits when rnd(20)+wplus >= (20-at_lvl)-op_arm.
+        import rogue_fight
+
+        self.assertFalse(rogue_fight.swing(1, 5, 0, lambda n: 13))
+        self.assertTrue(rogue_fight.swing(1, 5, 0, lambda n: 14))
+        self.assertTrue(rogue_fight.swing(1, 5, 1, lambda n: 13))
+
     def test_rogue_544_damage_expr_parser_handles_monster_attacks(self):
         old_randrange = rogue.RNG.randrange
         try:
