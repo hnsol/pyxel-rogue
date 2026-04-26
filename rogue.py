@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_0956"
+UI_BUILD = "260427_1000"
 
 # ===========================================================
 #  Font
@@ -2739,7 +2739,7 @@ class Game:
                     target.flags.add(rogue_monsters.FLAG_INVISIBLE)
                 elif kind == rogue_sticks.WS_POLYMORPH:
                     self.polymorph_monster(target)
-                    if (target.x,target.y) in self.visible and self.can_see_monster(target):
+                    if rogue_sticks.polymorph_identifies((target.x,target.y) in self.visible, self.can_see_monster(target)):
                         self.ident.wk[kind]=True
                 elif kind == rogue_sticks.WS_CANCEL:
                     self.cancel_monster(target)

@@ -835,6 +835,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_sticks.bolt_should_bounce(True, False))
         self.assertFalse(rogue_sticks.bolt_should_bounce(False, False))
 
+    def test_rogue_544_sticks_helper_polymorph_identification(self):
+        # Rogue 5.4.4 sticks.c:WS_POLYMORPH identifies only when see_monst(tp) is true after polymorph.
+        import rogue_sticks
+
+        self.assertTrue(rogue_sticks.polymorph_identifies(True, True))
+        self.assertFalse(rogue_sticks.polymorph_identifies(True, False))
+        self.assertFalse(rogue_sticks.polymorph_identifies(False, True))
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)
