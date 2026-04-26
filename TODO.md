@@ -103,6 +103,7 @@
 - [x] Rogue 5.4.4 `chase.c:roomin()` 相当の部屋矩形判定を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:see_monst()` 相当の盲目/不可視可視判定を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 相当の carry 目的地選択を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:do_chase()` 相当の Dragon flame gate / 最寄り出口 / greedy 目的地補正を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:rust_armor()` 相当の錆び合法判定・保護分岐を `rogue_move.py` へ小分割

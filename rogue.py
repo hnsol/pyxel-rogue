@@ -163,7 +163,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1109"
+UI_BUILD = "260426_1115"
 
 # ===========================================================
 #  Font
@@ -1951,9 +1951,11 @@ class Game:
         ree=self.room_for_ai(dest[0],dest[1],actor=False)
         chase_dest=dest
         if rer!=ree and hasattr(rer,"x"):
-            exits=self.room_exits(rer)
-            if exits:
-                chase_dest=min(exits,key=lambda p:self.dist2(p,dest))
+            chase_dest = rogue_chase.nearest_exit_to_dest(
+                self.room_exits(rer),
+                dest,
+                self.dist2,
+            ) or chase_dest
         elif self.try_dragon_breath(m):
             return 0
         moved_or_attack=self.chase(m,chase_dest)
@@ -1965,20 +1967,19 @@ class Game:
 
     def try_dragon_breath(self,m):
         # C: chase.c:do_chase() Dragon flame bolt gate.
-        dx=self.p.x-m.x
-        dy=self.p.y-m.y
-        if m.sym!="D":
+        direction = rogue_chase.dragon_breath_direction(
+            m.sym,
+            (m.x, m.y),
+            (self.p.x, self.p.y),
+            self.dist2((m.x, m.y), (self.p.x, self.p.y)),
+            BOLT_LENGTH,
+            rogue_monsters.is_cancelled(m),
+            RNG.rnd,
+            DRAGONSHOT,
+        )
+        if direction is None:
             return False
-        if not (dx==0 or dy==0 or abs(dx)==abs(dy)):
-            return False
-        if self.dist2((m.x,m.y),(self.p.x,self.p.y)) > BOLT_LENGTH * BOLT_LENGTH:
-            return False
-        if rogue_monsters.is_cancelled(m):
-            return False
-        if RNG.rnd(DRAGONSHOT)!=0:
-            return False
-        sx=(dx>0)-(dx<0)
-        sy=(dy>0)-(dy<0)
+        sx,sy=direction
         self.dashing=False
         self.p.quiet=0
         self.fire_bolt_from(m.x,m.y,sx,sy,"flame")
@@ -1997,8 +1998,8 @@ class Game:
     def find_dest(self,m):
         # C: chase.c:find_dest()
         if "steal_gold" in m.flags and m.dest==DEST_GOLD:
-            target=self.room_gold_target(m)
-            if target:
+            target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
+            if target != DEST_PLAYER:
                 return target
             m.dest=DEST_PLAYER
         spec = self.monster_spec_for_sym(m.sym)

@@ -105,3 +105,41 @@ def should_random_move(confused: int, monster_sym: str, rnd) -> bool:
     if monster_sym == "B" and rnd(2) == 0:
         return True
     return False
+
+
+def dragon_breath_direction(monster_sym, monster_pos, hero_pos, distance2, bolt_length, cancelled, rnd, dragonshot=5):
+    """Rogue 5.4.4 chase.c:do_chase() Dragon flame gate."""
+    mx, my = monster_pos
+    hx, hy = hero_pos
+    dx = hx - mx
+    dy = hy - my
+    if monster_sym != "D":
+        return None
+    if not (dx == 0 or dy == 0 or abs(dx) == abs(dy)):
+        return None
+    if distance2 > bolt_length * bolt_length:
+        return None
+    if cancelled:
+        return None
+    if rnd(dragonshot) != 0:
+        return None
+    return (dx > 0) - (dx < 0), (dy > 0) - (dy < 0)
+
+
+def nearest_exit_to_dest(exits, dest, distance):
+    """Rogue 5.4.4 chase.c:do_chase() nearest room exit selection."""
+    if not exits:
+        return None
+    return min(exits, key=lambda exit_pos: distance(exit_pos, dest))
+
+
+def should_stop_after_dest(monster_sym: str) -> bool:
+    """Rogue 5.4.4 chase.c:do_chase() stoprun gate after reaching t_dest."""
+    return monster_sym != "F"
+
+
+def greedy_destination(is_greedy: bool, current_dest, gold_target, player_dest):
+    """Rogue 5.4.4 chase.c:do_chase() ISGREED destination fallback."""
+    if not is_greedy:
+        return current_dest
+    return gold_target if gold_target is not None else player_dest

@@ -2021,6 +2021,50 @@ class RogueBaselineTest(unittest.TestCase):
             target,
         )
 
+    def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
+        # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
+        import rogue_chase
+
+        self.assertEqual(rogue_chase.dragon_breath_direction("D", (10, 10), (16, 10), 36, 6, False, lambda n: 0), (1, 0))
+        self.assertEqual(rogue_chase.dragon_breath_direction("D", (10, 10), (14, 14), 32, 6, False, lambda n: 0), (1, 1))
+        self.assertIsNone(rogue_chase.dragon_breath_direction("O", (10, 10), (16, 10), 36, 6, False, lambda n: 0))
+        self.assertIsNone(rogue_chase.dragon_breath_direction("D", (10, 10), (13, 14), 25, 6, False, lambda n: 0))
+        self.assertIsNone(rogue_chase.dragon_breath_direction("D", (10, 10), (17, 10), 49, 6, False, lambda n: 0))
+        self.assertIsNone(rogue_chase.dragon_breath_direction("D", (10, 10), (16, 10), 36, 6, True, lambda n: 0))
+        self.assertIsNone(rogue_chase.dragon_breath_direction("D", (10, 10), (16, 10), 36, 6, False, lambda n: 1))
+
+    def test_rogue_544_chase_helper_nearest_exit_to_dest_uses_dist_cp(self):
+        # Rogue 5.4.4 chase.c:do_chase() chooses the exit with the smallest dist_cp() to t_dest.
+        import rogue_chase
+
+        exits = [(1, 1), (5, 5), (9, 1)]
+        self.assertEqual(rogue_chase.nearest_exit_to_dest(exits, (8, 2), rogue_chase.dist_points), (9, 1))
+        self.assertIsNone(rogue_chase.nearest_exit_to_dest([], (8, 2), rogue_chase.dist_points))
+
+    def test_rogue_544_chase_helper_stop_after_dest_excludes_venus_flytrap(self):
+        # Rogue 5.4.4 chase.c:do_chase() sets stoprun after t_dest except when t_type == 'F'.
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.should_stop_after_dest("O"))
+        self.assertFalse(rogue_chase.should_stop_after_dest("F"))
+
+    def test_rogue_544_chase_helper_dragon_breath_uses_dragonshot_constant(self):
+        # Rogue 5.4.4 chase.c:do_chase() rolls rnd(DRAGONSHOT).
+        import rogue_chase
+
+        calls = []
+        rogue_chase.dragon_breath_direction("D", (10, 10), (16, 10), 36, 6, False, lambda n: calls.append(n) or 0, 7)
+
+        self.assertEqual(calls, [7])
+
+    def test_rogue_544_chase_helper_greedy_destination_falls_back_to_hero_without_gold(self):
+        # Rogue 5.4.4 chase.c:do_chase() sends ISGREED monsters after hero when room gold is gone.
+        import rogue_chase
+
+        self.assertEqual(rogue_chase.greedy_destination(True, "gold", None, "player"), "player")
+        self.assertEqual(rogue_chase.greedy_destination(True, "gold", (3, 4), "player"), (3, 4))
+        self.assertEqual(rogue_chase.greedy_destination(False, "gold", None, "player"), "gold")
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)
