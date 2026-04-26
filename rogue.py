@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1920"
+UI_BUILD = "260426_1930"
 
 # ===========================================================
 #  Font
@@ -1372,9 +1372,14 @@ class Game:
 
     def new_monster_from_spec(self,x,y,spec,depth=None):
         # C: monsters.c:new_monster()
+        if depth is None:
+            depth=self.p.depth
+        lev_add=max(0,depth-AMULET_LEVEL)
+        level=spec.level+lev_add
+        hp=max(1,RNG.roll(level,8))
         monster=Monster(
-            x, y, spec.sym, spec.name, monster_hp(spec),
-            spec.level, spec.armor, spec.damage, spec.exp, spec.flags
+            x, y, spec.sym, spec.name, hp,
+            level, spec.armor-lev_add, spec.damage, spec.exp+lev_add*10, spec.flags
         )
         self.set_monster_disguise(monster,depth=depth)
         return monster

@@ -3027,6 +3027,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.disguise, "=")
         self.assertEqual(game.visible_monster_sym(monster), "=")
 
+    def test_rogue_544_new_monster_applies_deep_level_stat_bonus(self):
+        # Rogue 5.4.4 monsters.c:new_monster() applies level-AMULETLEVEL to stats.
+        game = new_game(seed=307)
+        set_open_floor(game)
+        depth = rogue.AMULET_LEVEL + 3
+        spec = next(s for s in rogue.BESTIARY if s.sym == "C")
+        calls = []
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda n, sides: calls.append((n, sides)) or 17
+            monster = game.new_monster_from_spec(game.p.x + 1, game.p.y, spec, depth=depth)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [(spec.level + 3, 8)])
+        self.assertEqual(monster.level, spec.level + 3)
+        self.assertEqual(monster.armor, spec.armor - 3)
+        self.assertEqual(monster.exp, spec.exp + 30)
+        self.assertEqual(monster.hp, 17)
+        self.assertEqual(monster.max_hp, 17)
+
     def test_rogue_544_levitation_blocks_stairs_pickup_and_traps(self):
         # Rogue 5.4.4 command.c:levit_check() blocks stairs and pickup;
         # move.c:be_trapped() returns before trap effects while ISLEVIT.
