@@ -811,6 +811,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(xeroc.running)
         self.assertNotIn("the flame whizzes past the xeroc", game.msgs)
 
+    def test_rogue_544_sticks_helper_saved_monster_miss_feedback(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() saved monster miss display/runto branch.
+        import rogue_sticks
+
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, False), (True, True))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False, False), (False, True))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, True), (False, False))
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

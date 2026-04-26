@@ -93,6 +93,12 @@ def stick_damage(stick_type):
     return "1x1", "1x1"
 
 
+def saved_monster_miss_feedback(hero_started: bool, disguised_non_monster: bool):
+    """Rogue 5.4.4 sticks.c:fire_bolt() saved monster miss runto/message branch."""
+    show_miss = not disguised_non_monster
+    return hero_started and show_miss, show_miss
+
+
 def init_materials(rng):
     """Rogue 5.4.4 init.c:init_materials()."""
     wood_used = [False] * len(WOODS)

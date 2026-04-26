@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_0927"
+UI_BUILD = "260427_0933"
 
 # ===========================================================
 #  Font
@@ -2685,8 +2685,11 @@ class Game:
                     else:
                         self.hit_monster_with_bolt(target,name)
                     return True
-                show_miss = not rogue_monsters.is_disguised_xeroc(target)
-                if hero_started and show_miss:
+                wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
+                    hero_started,
+                    rogue_monsters.is_disguised_xeroc(target),
+                )
+                if wake_miss:
                     self.runto(target)
                 if show_miss:
                     self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
