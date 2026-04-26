@@ -42,3 +42,9 @@ def remove_curse_equipment(items) -> None:
 def monster_confusion(player) -> None:
     """Apply Rogue 5.4.4 scrolls.c:S_CONFUSE to the player."""
     player.can_confuse_monster = True
+
+
+def sleep_scroll(player, rnd, sleep_time: int) -> int:
+    """Apply Rogue 5.4.4 scrolls.c:S_SLEEP no_command change."""
+    player.no_command += rnd(sleep_time) + 4
+    return player.no_command

@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1730"
+UI_BUILD = "260426_1737"
 
 # ===========================================================
 #  Font
@@ -2441,7 +2441,7 @@ class Game:
                 if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=RNG.randint(10,20)
             self.msg("scrolls.you_hear_maniacal_laughter_in_the_distance")
         elif nm=="sleep":
-            p.no_command+=rnd(SLEEPTIME)+4; self.dashing=False; self.msg("scrolls.you_fall_asleep")
+            rogue_scrolls.sleep_scroll(p, rnd, SLEEPTIME); self.dashing=False; self.msg("scrolls.you_fall_asleep")
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
