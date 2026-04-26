@@ -59,3 +59,16 @@ def hold_monsters(player, monsters, held_roll) -> int:
             monster.held = held_roll(monster)
             count += 1
     return count
+
+
+def choose_create_monster_pos(player, candidates, rnd):
+    """Choose a Rogue 5.4.4 scrolls.c:S_CREATE target using rnd(++i)."""
+    pick = None
+    count = 0
+    for pos in candidates:
+        if pos == (player.x, player.y):
+            continue
+        count += 1
+        if rnd(count) == 0:
+            pick = pos
+    return pick

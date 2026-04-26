@@ -1058,6 +1058,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(far.running)
         self.assertEqual(sleeping.held, 0)
 
+    def test_rogue_544_scrolls_helper_create_monster_pick_matches_s_create(self):
+        # Rogue 5.4.4 scrolls.c:S_CREATE chooses candidate squares with rnd(++i) == 0.
+        import rogue_scrolls
+
+        hero = rogue.Player()
+        hero.x = 10
+        hero.y = 10
+        calls = []
+        candidates = [(9, 9), (10, 9), (11, 9)]
+        pick = rogue_scrolls.choose_create_monster_pos(hero, candidates, lambda n: calls.append(n) or 0)
+
+        self.assertEqual(calls, [1, 2, 3])
+        self.assertEqual(pick, (11, 9))
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1745"
+UI_BUILD = "260426_1752"
 
 # ===========================================================
 #  Font
@@ -2449,8 +2449,7 @@ class Game:
                 self.ident.sk[it.kind]=True
             self.finish_teleport()
         elif nm=="create monster":
-            pick=None
-            count=0
+            candidates = []
             for dy in (-1,0,1):
                 for dx in (-1,0,1):
                     if dx==0 and dy==0:
@@ -2460,9 +2459,8 @@ class Game:
                         gi=self.gi_at(nx,ny)
                         if gi and self.is_scare_scroll(gi):
                             continue
-                        count += 1
-                        if RNG.rnd(count) == 0:
-                            pick = (nx, ny)
+                        candidates.append((nx, ny))
+            pick = rogue_scrolls.choose_create_monster_pos(p, candidates, RNG.rnd)
             if pick:
                 nx,ny=pick
                 cs=[b for b in BESTIARY if b.min_depth<=p.depth]
