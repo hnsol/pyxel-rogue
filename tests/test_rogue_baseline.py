@@ -738,6 +738,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLessEqual(game.p.hp, 0)
         self.assertEqual(game.death_cause, "killed by a dragon")
 
+    def test_rogue_544_fire_bolt_hits_hero_standing_on_door(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() does not bounce from DOOR when hero is there.
+        game = new_game(seed=225)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.tm[game.p.y][game.p.x] = rogue.T_DOOR
+        game.p.hp = 30
+        dragon = monster_at(game.p.x + 3, game.p.y, sym="D", name="dragon")
+        game.mons = [dragon]
+        game.save_vs_magic = lambda: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 12
+            hit = game.fire_bolt_from(dragon.x, dragon.y, -1, 0, "flame")
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertTrue(hit)
+        self.assertEqual(game.p.hp, 18)
+        self.assertIn("you are hit by the flame", game.msgs)
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1957"
+UI_BUILD = "260427_0906"
 
 # ===========================================================
 #  Font
@@ -2654,6 +2654,17 @@ class Game:
         bounces=0
         while steps < BOLT_LENGTH and bounces < BOLT_LENGTH * 2:
             x+=dx; y+=dy
+            if hit_hero and (x,y)==(self.p.x,self.p.y):
+                hit_hero=False
+                changed=not changed
+                if not self.save_vs_magic():
+                    self.p.hp-=RNG.roll(6,6)
+                    if self.p.hp<=0 and not self.death_cause:
+                        killer=source_monster.name if source_monster else name
+                        self.death_cause=f"killed by a {killer}"
+                    self.msg("sticks.you_are_hit_by_the_value", value=name)
+                    return True
+                self.msg("sticks.the_value_whizzes_by_you", value=name)
             if self.bolt_bounces_at(x,y):
                 if not changed:
                     hit_hero=not hit_hero
@@ -2675,17 +2686,6 @@ class Game:
                     return True
                 self.runto(target)
                 self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
-            elif hit_hero and (x,y)==(self.p.x,self.p.y):
-                hit_hero=False
-                changed=not changed
-                if not self.save_vs_magic():
-                    self.p.hp-=RNG.roll(6,6)
-                    if self.p.hp<=0 and not self.death_cause:
-                        killer=source_monster.name if source_monster else name
-                        self.death_cause=f"killed by a {killer}"
-                    self.msg("sticks.you_are_hit_by_the_value", value=name)
-                    return True
-                self.msg("sticks.the_value_whizzes_by_you", value=name)
         return False
 
     def zap_stick(self,it,dx,dy):
