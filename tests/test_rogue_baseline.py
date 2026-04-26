@@ -2599,6 +2599,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 10)
         self.assertEqual(game.p.food, 100)
 
+    def test_rogue_544_new_level_does_not_reset_wandering_daemon_state(self):
+        # Rogue 5.4.4 main.c starts swander after the first new_level(); new_level.c does not reset it.
+        game = new_game(seed=326)
+        game.fuses.extinguish("swander")
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+        game.wander_between = 2
+
+        game.descend()
+
+        self.assertTrue(game.daemons.running("rollwand", rogue.rogue_daemons.BEFORE))
+        self.assertEqual(game.fuses.remaining("swander"), 0)
+        self.assertEqual(game.wander_between, 2)
+
     def test_rogue_544_runners_skips_held_running_monsters(self):
         # Rogue 5.4.4 chase.c:runners() gates move_monst() on !ISHELD && ISRUN.
         game = new_game(seed=310)

@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1621"
+UI_BUILD = "260427_1634"
 
 # ===========================================================
 #  Font
@@ -1245,6 +1245,8 @@ class Game:
         self.result_entry = None
         self.result_outcome = None
         self.descend()
+        self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
+        self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons")
 
     def result_level(self, outcome):
@@ -1297,11 +1299,7 @@ class Game:
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
-        self.daemons.kill("rollwand")
-        self.fuses.extinguish("swander")
-        self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
         self.wander_timer=self.fuses.remaining("swander")
-        self.wander_between=0
         px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
         sr=RNG.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR

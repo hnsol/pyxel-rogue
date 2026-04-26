@@ -236,6 +236,7 @@
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_MFIND` 準拠で、再使用時も `turn_see` は `lengthen()` せず重複 `fuse()` にする
   - [x] `swander / rollwand` を初回 `fuse(AFTER)`、以後 `start_daemon(BEFORE)` / `fuse(BEFORE)` へ接続
+  - [x] Rogue 5.4.4 `main.c` / `new_level.c` 準拠で、階層移動時に wandering daemon/fuse 状態をリセットしない
   - [x] `doctor / stomach` を `start_daemon(AFTER)` へ接続
   - [x] `runners` を `start_daemon(AFTER)` へ接続
   - [x] `daemon.c` 準拠で delayed action を unique map ではなく共通スロット列として扱い、daemon/fuse 合計 `MAXDAEMONS=20`、同名 daemon/fuse の重複登録、`kill_daemon()` / `extinguish()` の先頭1件削除を再現
