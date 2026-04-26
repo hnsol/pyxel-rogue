@@ -97,3 +97,18 @@ def aggravate_monsters(monsters, runto) -> None:
 def teleport_identifies(old_room, new_room) -> bool:
     """Return Rogue 5.4.4 scrolls.c:S_TELEP identification result."""
     return old_room is not new_room
+
+
+def identify_target_cats(name: str, cats) -> tuple:
+    """Return Rogue 5.4.4 scrolls.c:S_ID_* id_type[] category targets."""
+    if name == "identify potion":
+        return (cats.CAT_POT,)
+    if name == "identify scroll":
+        return (cats.CAT_SCR,)
+    if name == "identify weapon":
+        return (cats.CAT_WPN,)
+    if name == "identify armor":
+        return (cats.CAT_ARM,)
+    if name == "identify ring, wand or staff":
+        return (cats.CAT_RING, cats.CAT_STICK)
+    return ()

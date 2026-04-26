@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1831"
+UI_BUILD = "260426_1838"
 
 # ===========================================================
 #  Font
@@ -2393,17 +2393,7 @@ class Game:
 
     def identify_scroll_target_cats(self, nm):
         # Rogue 5.4.4 scrolls.c:S_ID_* id_type[].
-        if nm == "identify potion":
-            return (CAT_POT,)
-        if nm == "identify scroll":
-            return (CAT_SCR,)
-        if nm == "identify weapon":
-            return (CAT_WPN,)
-        if nm == "identify armor":
-            return (CAT_ARM,)
-        if nm == "identify ring, wand or staff":
-            return (CAT_RING, CAT_STICK)
-        return ()
+        return rogue_scrolls.identify_target_cats(nm, sys.modules[__name__])
 
     def use_scr(self,it):
         # C: scrolls.c:read_scroll()

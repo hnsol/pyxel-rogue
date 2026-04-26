@@ -1119,6 +1119,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_scrolls.teleport_identifies(room, room))
         self.assertTrue(rogue_scrolls.teleport_identifies(room, object()))
 
+    def test_rogue_544_scrolls_helper_identify_target_cats_matches_id_type(self):
+        # Rogue 5.4.4 scrolls.c:S_ID_* uses id_type[] for whatis(TRUE, ...).
+        import rogue_scrolls
+
+        self.assertEqual(rogue_scrolls.identify_target_cats("identify potion", rogue), (rogue.CAT_POT,))
+        self.assertEqual(rogue_scrolls.identify_target_cats("identify scroll", rogue), (rogue.CAT_SCR,))
+        self.assertEqual(rogue_scrolls.identify_target_cats("identify weapon", rogue), (rogue.CAT_WPN,))
+        self.assertEqual(rogue_scrolls.identify_target_cats("identify armor", rogue), (rogue.CAT_ARM,))
+        self.assertEqual(
+            rogue_scrolls.identify_target_cats("identify ring, wand or staff", rogue),
+            (rogue.CAT_RING, rogue.CAT_STICK),
+        )
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)
