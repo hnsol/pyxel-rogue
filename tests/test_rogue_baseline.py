@@ -1977,6 +1977,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_chase.dist(2, 3, 6, 9), 52)
         self.assertEqual(rogue_chase.dist_points((3, 2), (9, 6)), 52)
 
+    def test_rogue_544_chase_helper_roomin_matches_room_bounds(self):
+        # Rogue 5.4.4 chase.c:roomin() treats the full room rectangle as inside.
+        import rogue_chase
+
+        room = rogue.Room(10, 4, 6, 5)
+
+        self.assertIs(rogue_chase.roomin(10, 4, [room]), room)
+        self.assertIs(rogue_chase.roomin(15, 8, [room]), room)
+        self.assertIsNone(rogue_chase.roomin(16, 8, [room]))
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)

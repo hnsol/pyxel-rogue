@@ -161,7 +161,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0941"
+UI_BUILD = "260426_0943"
 
 # ===========================================================
 #  Font
@@ -1565,9 +1565,7 @@ class Game:
         return None
     def room_containing(self,x,y):
         # C: chase.c:roomin()
-        for r in self.rooms:
-            if r.x<=x<r.x+r.w and r.y<=y<r.y+r.h: return r
-        return None
+        return rogue_chase.roomin(x, y, self.rooms)
     def room_for_ai(self,x,y,actor=False):
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return None
