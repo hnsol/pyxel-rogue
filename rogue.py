@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_0922"
+UI_BUILD = "260427_0927"
 
 # ===========================================================
 #  Font
@@ -2661,7 +2661,7 @@ class Game:
                 if not self.save_vs_magic():
                     self.p.hp-=RNG.roll(6,6)
                     if self.p.hp<=0 and not self.death_cause:
-                        killer=source_monster.name if source_monster else name
+                        killer=source_monster.name if source_monster else "bolt"
                         self.death_cause=f"killed by a {killer}"
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True

@@ -651,6 +651,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("the ice bounces", game.msgs)
         self.assertIn("you are hit by the ice", game.msgs)
 
+    def test_rogue_544_hero_bounced_bolt_death_cause_is_bolt(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() calls death('b') when hero's own bolt kills him.
+        import rogue_sticks
+
+        game = new_game(seed=228)
+        set_open_floor(game)
+        game.p.hp = 10
+        game.tm[game.p.y][game.p.x + 1] = rogue.T_VWALL
+        game.save_vs_magic = lambda: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 12
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_COLD, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertLessEqual(game.p.hp, 0)
+        self.assertEqual(game.death_cause, "killed by a bolt")
+
     def test_rogue_544_zap_fire_bounces_off_dragon_without_damage(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() prints "the flame bounces" for Dragon and does not hit_monster().
         import rogue_sticks
