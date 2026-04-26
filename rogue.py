@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1439"
+UI_BUILD = "260427_1444"
 
 # ===========================================================
 #  Font
@@ -1848,8 +1848,7 @@ class Game:
                 self.p.levitating > 0,
         ) and rnd(3)!=0):
             self.runto(m)
-        if (rogue_monsters.medusa_gaze_active(m) and m.running and not self.p.blind
-                and self.p.hallucinating <= 0 and not m.found):
+        if rogue_monsters.medusa_gaze_can_try(m, self.p.blind > 0, self.p.hallucinating > 0):
             m.found=True
             if not self.save_vs_magic():
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))

@@ -49,6 +49,17 @@ def medusa_gaze_active(monster) -> bool:
     return monster.sym == "M" and not is_cancelled(monster)
 
 
+def medusa_gaze_can_try(monster, blind: bool, hallucinating: bool) -> bool:
+    """Rogue 5.4.4 monsters.c:wake_monster() Medusa gaze state gate."""
+    return (
+        medusa_gaze_active(monster)
+        and getattr(monster, "running", False)
+        and not blind
+        and not hallucinating
+        and not getattr(monster, "found", False)
+    )
+
+
 def mean_wake_active(monster, stealth: bool, levitating: bool) -> bool:
     """Rogue 5.4.4 monsters.c:wake_monster() ISMEAN wake gate before rnd(3)."""
     return (

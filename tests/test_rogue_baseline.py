@@ -3950,6 +3950,16 @@ class RogueBaselineTest(unittest.TestCase):
         medusa.flags.add("cancel")
         self.assertFalse(rogue.rogue_monsters.medusa_gaze_active(medusa))
 
+    def test_rogue_544_monsters_helper_medusa_gaze_can_try_matches_wake_monster(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze by ISRUN/ISBLIND/ISHALU/ISFOUND.
+        medusa = monster_at(1, 1, "M", "medusa")
+        medusa.running = True
+        self.assertTrue(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=False, hallucinating=False))
+        self.assertFalse(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=True, hallucinating=False))
+        self.assertFalse(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=False, hallucinating=True))
+        medusa.found = True
+        self.assertFalse(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=False, hallucinating=False))
+
     def test_rogue_544_monsters_helper_mean_wake_matches_wake_monster_gate(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates ISMEAN wake by ISRUN/ISHELD/stealth/ISLEVIT.
         monster = monster_at(1, 1, "H", "hobgoblin", flags="mean")
