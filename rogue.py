@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0954"
+UI_BUILD = "260426_0956"
 
 # ===========================================================
 #  Font
@@ -380,7 +380,7 @@ def rnd(n: int) -> int:
 
 def goldcalc(level: int) -> int:
     # C: rogue.h:GOLDCALC
-    return rnd(50 + 10 * level) + 2
+    return rogue_fight.goldcalc(level, rnd)
 
 def in_map(x: int, y: int) -> bool:
     return 0 <= x < MAP_W and 0 <= y < MAP_H

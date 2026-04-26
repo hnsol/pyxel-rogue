@@ -2960,6 +2960,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.gold, 90)
         self.assertNotIn(leprechaun, game.mons)
 
+    def test_rogue_544_fight_helper_goldcalc_uses_level_scaled_roll(self):
+        # Rogue 5.4.4 rogue.h:GOLDCALC is rnd(50 + 10 * level) + 2.
+        import rogue_fight
+
+        calls = []
+
+        self.assertEqual(rogue_fight.goldcalc(3, lambda n: calls.append(n) or 7), 9)
+        self.assertEqual(calls, [80])
+
     def test_rogue_544_leprechaun_disappears_even_when_purse_is_empty(self):
         # Rogue 5.4.4 fight.c:attack() always remove_mon()s a Leprechaun hit;
         # the purse message is only printed when purse != lastpurse.

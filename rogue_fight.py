@@ -20,3 +20,8 @@ def magic_item_to_steal(inventory, equipped_items, is_magic_item, rnd):
             if rnd(nobj) == 0:
                 steal = item
     return steal
+
+
+def goldcalc(level: int, rnd) -> int:
+    """Rogue 5.4.4 rogue.h:GOLDCALC."""
+    return rnd(50 + 10 * level) + 2
