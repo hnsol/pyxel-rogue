@@ -1002,6 +1002,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertIn("you feel a strange sense of loss", game.msgs)
 
+    def test_rogue_544_scrolls_helper_protect_armor_matches_s_protect(self):
+        # Rogue 5.4.4 scrolls.c:S_PROTECT sets ISPROT on current armor.
+        import rogue_scrolls
+
+        armor = rogue.Item(rogue.CAT_ARM, 1)
+        self.assertTrue(rogue_scrolls.protect_armor(armor))
+        self.assertTrue(armor.protected)
+        self.assertFalse(rogue_scrolls.protect_armor(None))
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

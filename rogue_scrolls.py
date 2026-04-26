@@ -22,3 +22,11 @@ def enchant_armor(armor) -> bool:
     armor.ench += 1
     armor.cursed = False
     return True
+
+
+def protect_armor(armor) -> bool:
+    """Apply Rogue 5.4.4 scrolls.c:S_PROTECT to the current armor."""
+    if armor is None:
+        return False
+    armor.protected = True
+    return True

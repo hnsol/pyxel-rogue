@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1708"
+UI_BUILD = "260426_1715"
 
 # ===========================================================
 #  Font
@@ -2512,8 +2512,7 @@ class Game:
             else:
                 self.msg("scrolls.your_nose_tingles")
         elif nm=="protect armor":
-            if p.arm:
-                p.arm.protected=True
+            if rogue_scrolls.protect_armor(p.arm):
                 self.msg("scrolls.your_armor_is_covered_by_a_shimmering_color_shield", color="gold")
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")
