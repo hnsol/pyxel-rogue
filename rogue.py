@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1000"
+UI_BUILD = "260427_1007"
 
 # ===========================================================
 #  Font
@@ -2616,7 +2616,8 @@ class Game:
 
     def hit_monster_with_magic_missile(self,m):
         self.runto(m)
-        dmg=max(0,RNG.roll(1,4)+1+self.p.str_dam_plus())
+        weapon_dam = self.p.wpn.dam_plus if self.p.wpn else 0
+        dmg=max(0,RNG.roll(1,4)+1+weapon_dam+self.p.str_dam_plus())
         m.hp-=dmg
         self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_MISSILE), "magic missile", self.combat_monster_name(m)))
         if not m.alive:

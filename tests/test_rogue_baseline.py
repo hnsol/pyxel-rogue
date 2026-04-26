@@ -530,8 +530,28 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(stick.charges, 0)
         self.assertTrue(game.ident.wk[rogue_sticks.WS_MISSILE])
-        self.assertEqual(monster.hp, 4)
+        self.assertEqual(monster.hp, 3)
         self.assertTrue(monster.running)
+
+    def test_rogue_544_magic_missile_adds_current_weapon_damage_plus(self):
+        # Rogue 5.4.4 sticks.c:WS_MISSILE sets o_launch=cur_weapon->o_which, so roll_em() adds cur_weapon o_dplus.
+        import rogue_sticks
+
+        game = new_game(seed=229)
+        set_open_floor(game)
+        game.p.wpn = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=3)
+        monster = monster_at(game.p.x + 2, game.p.y, hp=20)
+        game.mons = [monster]
+        game.monster_save_throw = lambda which, m: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 4
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_MISSILE, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(monster.hp, 11)
 
     def test_rogue_544_zap_magic_missile_saved_target_takes_no_damage(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE vanishes if save_throw(VS_MAGIC) succeeds.
