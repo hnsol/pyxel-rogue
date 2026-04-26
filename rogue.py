@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1512"
+UI_BUILD = "260427_1535"
 
 # ===========================================================
 #  Font
@@ -1752,7 +1752,7 @@ class Game:
 
     def roll_monster_attack(self, m):
         # C: fight.c:roll_em()
-        hplus = rogue_fight.hit_plus_vs_defender(0, not self.p.stuck)
+        hplus = rogue_fight.hit_plus_vs_defender(0, rogue_fight.player_defender_running(self.p.no_command))
         return rogue_fight.roll_em_damage(
             m.damage_expr,
             lambda: self.swing_hits(m.level, self.p.ac, hplus),
@@ -1813,7 +1813,7 @@ class Game:
         return rogue_fight.magic_item_to_steal(
             self.p.inv,
             {self.p.wpn, self.p.arm, self.p.ring_l, self.p.ring_r},
-            lambda it: it.cat in (CAT_POT, CAT_SCR, CAT_WPN, CAT_ARM, CAT_RING, CAT_STICK),
+            self.is_magic_item,
             rnd,
         )
 
@@ -2299,13 +2299,11 @@ class Game:
 
     def is_magic_item(self, it):
         # Rogue 5.4.4 potions.c:is_magic().
-        if it.cat in (CAT_POT, CAT_SCR, CAT_RING, CAT_STICK, CAT_AMULET):
-            return True
-        if it.cat == CAT_WPN:
-            return it.hit_plus != 0 or it.dam_plus != 0
-        if it.cat == CAT_ARM:
-            return it.protected or it.ench != 0
-        return False
+        return rogue_potions.is_magic_item(
+            it.cat,
+            it.cat == CAT_WPN and (it.hit_plus != 0 or it.dam_plus != 0),
+            it.cat == CAT_ARM and (it.protected or it.ench != 0),
+        )
 
     def set_know(self, it):
         # Rogue 5.4.4 wizard.c:set_know().

@@ -160,8 +160,12 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Nymph 盗み対象選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` / `misc.c:chg_str()` 準拠で Strength 下限3の poison bite も弱化結果にする
+- [x] Rogue 5.4.4 `fight.c:attack()` / `potions.c:is_magic()` 準拠で Nymph は非魔法武器/防具を盗まない
+- [x] Rogue 5.4.4 `potions.c:is_magic()` を `rogue_potions.is_magic_item()` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Leprechaun 盗み時は初回 `GOLDCALC` 後に `save(VS_MAGIC)` する
 - [x] Rogue 5.4.4 `fight.c:killed()` 準拠で Leprechaun gold drop も初回 `GOLDCALC` 後に `save(VS_MAGIC)` する
+- [x] Rogue 5.4.4 `move.c:T_BEAR` / `fight.c:roll_em()` 準拠で bear trap の `no_move` は monster 命中+4にしない
+- [x] Rogue 5.4.4 `fight.c:roll_em()` の player defender `ISRUN` 近似を `rogue_fight.player_defender_running()` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `rogue.h:GOLDCALC` 相当の金額ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Leprechaun 金額減算回数を `rogue_fight.py` へ小分割

@@ -165,6 +165,11 @@ def hit_plus_vs_defender(hplus: int, defender_running: bool) -> int:
     return hplus if defender_running else hplus + 4
 
 
+def player_defender_running(no_command: int) -> bool:
+    """Rogue 5.4.4 player ISRUN approximation for fight.c:roll_em()."""
+    return no_command <= 0
+
+
 def weapon_profile(
     weapon,
     hit_plus: int,

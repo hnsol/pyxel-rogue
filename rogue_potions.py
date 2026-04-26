@@ -2,6 +2,17 @@
 from __future__ import annotations
 
 
+def is_magic_item(category: str, weapon_magic: bool, armor_magic: bool) -> bool:
+    """Rogue 5.4.4 potions.c:is_magic()."""
+    if category in {"potion", "scroll", "stick", "ring", "amulet", "pot", "scr"}:
+        return True
+    if category in {"weapon", "wpn"}:
+        return weapon_magic
+    if category in {"armor", "arm"}:
+        return armor_magic
+    return False
+
+
 def add_str(strength: int, amount: int) -> int:
     """Rogue 5.4.4 misc.c:add_str()."""
     return max(3, min(31, strength + amount))

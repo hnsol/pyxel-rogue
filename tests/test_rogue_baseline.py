@@ -2239,6 +2239,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
         self.assertNotIn("You sense magic.", game.msgs)
 
+    def test_rogue_544_magic_detection_ignores_plain_monster_pack_weapon(self):
+        # Rogue 5.4.4 potions.c:P_TFIND uses is_magic(), so plain weapons in monster packs do not glow.
+        game = new_game(seed=322)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "magic detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        monster = monster_at(game.p.x + 4, game.p.y)
+        monster.pack = [rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=0)]
+        game.p.inv.append(potion)
+        game.mons = [monster]
+        game.visible = set()
+        game.explored = set()
+
+        game.use_pot(potion)
+
+        self.assertFalse(game.ident.pk[kind])
+        self.assertNotIn((monster.x, monster.y), game.visible)
+
     def test_rogue_544_raise_level_potion_uses_e_levels_and_original_message(self):
         # Rogue 5.4.4 extern.c:e_levels[] and potions.c:raise_level() set exp to e_levels[level-1]+1.
         game = new_game(seed=325)
@@ -4054,6 +4072,26 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [1, 2])
 
+    def test_rogue_544_nymph_steal_ignores_non_magic_weapons_and_armor(self):
+        # Rogue 5.4.4 fight.c:attack() filters pack with potions.c:is_magic().
+        game = new_game(seed=305)
+        plain_weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=0, dam_plus=0)
+        plain_armor = rogue.Item(rogue.CAT_ARM, 0, ench=0)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [plain_weapon, plain_armor, potion]
+
+        self.assertIs(game.monster_has_magic_item_to_steal(), potion)
+
+    def test_rogue_544_potions_helper_is_magic_matches_source(self):
+        # Rogue 5.4.4 potions.c:is_magic() treats only enchanted/protected weapon and armor as magic.
+        import rogue_potions
+
+        self.assertTrue(rogue_potions.is_magic_item("potion", False, False))
+        self.assertFalse(rogue_potions.is_magic_item("weapon", False, False))
+        self.assertTrue(rogue_potions.is_magic_item("weapon", True, False))
+        self.assertFalse(rogue_potions.is_magic_item("armor", False, False))
+        self.assertTrue(rogue_potions.is_magic_item("armor", False, True))
+
     def test_rogue_544_fight_helper_nymph_steal_uses_reservoir_selection(self):
         # Rogue 5.4.4 fight.c:attack() excludes equipped items and uses rnd(++nobj)==0.
         import rogue_fight
@@ -4151,6 +4189,17 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(rolls, [3, 3, 3, 3, 3])
 
+    def test_rogue_544_fight_helper_leprechaun_gold_loss_after_first(self):
+        # Rogue 5.4.4 fight.c:attack() rolls save after the first purse -= GOLDCALC.
+        import rogue_fight
+
+        rolls = []
+        self.assertEqual(
+            rogue_fight.leprechaun_gold_loss_after_first(2, 3, magic_saved=False, goldcalc=lambda level: rolls.append(level) or 2),
+            10,
+        )
+        self.assertEqual(rolls, [3, 3, 3, 3])
+
     def test_rogue_544_fight_helper_leprechaun_kill_gold_rolls_extra_on_saved_magic(self):
         # Rogue 5.4.4 fight.c:killed() gives GOLDCALC, plus four more when save(VS_MAGIC) succeeds.
         import rogue_fight
@@ -4162,6 +4211,17 @@ class RogueBaselineTest(unittest.TestCase):
             10,
         )
         self.assertEqual(rolls, [3, 3, 3, 3, 3])
+
+    def test_rogue_544_fight_helper_leprechaun_kill_gold_after_first(self):
+        # Rogue 5.4.4 fight.c:killed() rolls save after o_goldval = GOLDCALC.
+        import rogue_fight
+
+        rolls = []
+        self.assertEqual(
+            rogue_fight.leprechaun_kill_gold_after_first(2, 3, magic_saved=True, goldcalc=lambda level: rolls.append(level) or 2),
+            10,
+        )
+        self.assertEqual(rolls, [3, 3, 3, 3])
 
     def test_rogue_544_killed_leprechaun_drops_gold_at_max_depth(self):
         # Rogue 5.4.4 fight.c:killed() attaches Leprechaun gold to t_pack before remove_mon(..., TRUE).
@@ -4718,12 +4778,32 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(seen_wplus, [4])
 
+    def test_rogue_544_bear_trap_no_move_does_not_give_monster_plus_four(self):
+        # Rogue 5.4.4 move.c:T_BEAR sets no_move but does not clear player ISRUN.
+        game = new_game(seed=9)
+        set_open_floor(game)
+        game.p.no_move = 1
+        monster = monster_at(game.p.x + 1, game.p.y, damage="1x1")
+        seen_wplus = []
+        game.swing_hits = lambda at_lvl, op_arm, wplus: seen_wplus.append(wplus) or False
+
+        game.roll_monster_attack(monster)
+
+        self.assertEqual(seen_wplus, [0])
+
     def test_rogue_544_fight_helper_hit_plus_adds_four_when_defender_not_running(self):
         # Rogue 5.4.4 fight.c:roll_em() adds +4 when !ISRUN on the defender.
         import rogue_fight
 
         self.assertEqual(rogue_fight.hit_plus_vs_defender(0, defender_running=False), 4)
         self.assertEqual(rogue_fight.hit_plus_vs_defender(2, defender_running=True), 2)
+
+    def test_rogue_544_fight_helper_player_defender_running_ignores_no_move(self):
+        # Rogue 5.4.4 no_command clears ISRUN; move.c:T_BEAR no_move does not.
+        import rogue_fight
+
+        self.assertFalse(rogue_fight.player_defender_running(no_command=1))
+        self.assertTrue(rogue_fight.player_defender_running(no_command=0))
 
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
