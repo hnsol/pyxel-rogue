@@ -171,7 +171,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1444"
+UI_BUILD = "260426_1514"
 
 # ===========================================================
 #  Font
@@ -2190,10 +2190,7 @@ class Game:
                 self.fuses.fuse("unsee", duration, rogue_daemons.AFTER)
             p.see_invisible += duration
             self.msg("potions.this_potion_tastes_like_item_juice", item="slime-mold")
-            if p.blind > 0:
-                p.blind = 0
-                self.update_fov()
-                self.msg("daemons.the_veil_of_darkness_lifts")
+            self.sight()
         elif nm=="raise level":
             self.ident.pk[it.kind]=True
             p.exp=rogue_levels.raise_level_exp(p.level,p.EXP_T)
@@ -2283,6 +2280,7 @@ class Game:
         # C: daemons.c:sight()
         if self.p.blind <= 0:
             return
+        self.fuses.extinguish("sight")
         self.p.blind = 0
         self.update_fov()
         self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")

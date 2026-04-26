@@ -279,6 +279,8 @@ daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()
 
 初期移行として `rogue_daemons.py` に `DelayedActionTable` / `FuseList` / `DaemonList` を追加し、`daemon.c:fuse()`, `lengthen()`, `extinguish()`, `do_fuses(AFTER)`, `start_daemon()`, `kill_daemon()`, `do_daemons()` と比較できる境界を作る。daemon と fuse は原作同様に共通の `MAXDAEMONS=20` スロットを使い、同名の重複登録を許し、`kill_daemon()` / `extinguish()` は先頭1件だけ消す。まず `potions.c:P_HASTE` / `misc.c:add_haste(TRUE)` / `daemons.c:nohaste()` を接続し、haste 中は `command.c:command()` の `ntimes++` 相当として、2回のプレイヤー行動につき1回だけ AFTER fuse、空腹、モンスター行動を進める。haste self の二重使用は `rnd(8)` の `no_command` を加え、`nohaste` fuse を消して失神メッセージを出す。`potions.c:P_CONFUSE`, `P_SEEINVIS`, `P_LSD`, `P_BLIND`, `P_LEVIT`, `P_MFIND` は `do_pot()` / `turn_see()` 相当として未発動時に `fuse()`、発動中の再使用で `lengthen()` する。`swander` / `rollwand` は `rogue_daemons.py` の `swander()` / `rollwand()` へ小分割し、`main.c` の初回 `fuse(AFTER)` と `daemons.c` の `start_daemon(BEFORE)` / 再予約 `fuse(BEFORE)` に合わせる。doctor、stomach、runners など daemon 系は、後続タスクで同じ delayed action 境界へ段階移行する。
 
+`daemons.c:sight()` は blind を解除するときに `extinguish(sight)` も行う。Pyxel 版でも `potions.c:P_HEALING`, `P_XHEAL`, `P_SEEINVIS` から `sight()` を通し、blind 解除後に古い `sight` fuse が残らないようにする。
+
 Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
 
 ## アイテム識別

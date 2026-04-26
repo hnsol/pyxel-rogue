@@ -5093,6 +5093,50 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.blind, 0)
         self.assertIn("the veil of darkness lifts", game.msgs)
 
+    def test_rogue_544_healing_sight_extinguishes_blindness_fuse(self):
+        # Rogue 5.4.4 daemons.c:sight() calls extinguish(sight).
+        game = new_game(seed=398)
+        healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, healing)
+        game.p.inv.append(potion)
+        game.p.blind = 20
+        game.fuses.fuse("sight", 20, rogue.rogue_daemons.AFTER)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.blind, 0)
+        self.assertEqual(game.fuses.remaining("sight"), 0)
+
+    def test_rogue_544_extra_healing_calls_sight_when_blind(self):
+        # Rogue 5.4.4 potions.c:P_XHEAL calls daemons.c:sight().
+        game = new_game(seed=399)
+        extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
+        potion = rogue.Item(rogue.CAT_POT, extra_healing)
+        game.p.inv.append(potion)
+        game.p.blind = 20
+        game.fuses.fuse("sight", 20, rogue.rogue_daemons.AFTER)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.blind, 0)
+        self.assertEqual(game.fuses.remaining("sight"), 0)
+        self.assertIn("the veil of darkness lifts", game.msgs)
+
+    def test_rogue_544_see_invisible_calls_sight_when_blind(self):
+        # Rogue 5.4.4 potions.c:P_SEEINVIS calls daemons.c:sight().
+        game = new_game(seed=400)
+        see_invisible = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
+        potion = rogue.Item(rogue.CAT_POT, see_invisible)
+        game.p.inv.append(potion)
+        game.p.blind = 20
+        game.fuses.fuse("sight", 20, rogue.rogue_daemons.AFTER)
+
+        game.use_pot(potion)
+
+        self.assertEqual(game.p.blind, 0)
+        self.assertEqual(game.fuses.remaining("sight"), 0)
+        self.assertIn("the veil of darkness lifts", game.msgs)
+
     def test_rogue_544_healing_rolls_level_d4(self):
         # Rogue 5.4.4 potions.c:P_HEALING uses roll(pstats.s_lvl, 4), not roll(1, 4) * level.
         game = new_game(seed=397)
