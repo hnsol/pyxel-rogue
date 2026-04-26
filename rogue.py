@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1701"
+UI_BUILD = "260427_1714"
 
 # ===========================================================
 #  Font
@@ -1884,6 +1884,8 @@ class Game:
         # C: fight.c:attack()
         self.dashing = False
         self.p.quiet = 0
+        if rogue_monsters.is_disguised_xeroc(m) and self.p.blind <= 0:
+            rogue_monsters.reveal_disguise(m)
         mn=self.combat_monster_name(m,upper=True)
         hit,dmg=self.roll_monster_attack(m)
         if hit:

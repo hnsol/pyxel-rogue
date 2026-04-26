@@ -4549,6 +4549,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(xeroc.disguise, "X")
         self.assertIn("wait!  That's a xeroc!", game.msgs)
 
+    def test_rogue_544_monster_attack_reveals_disguised_xeroc(self):
+        # Rogue 5.4.4 fight.c:attack() also reveals attacking Xerocs before roll_em().
+        game = new_game(seed=641)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 1, game.p.y, sym="X", name="xeroc", hp=40, level=7, armor=7, damage="4x4")
+        xeroc.disguise = "?"
+        game.roll_monster_attack = lambda monster: (False, 0)
+
+        game.m_attack(xeroc)
+
+        self.assertEqual(xeroc.disguise, "X")
+
+    def test_rogue_544_blind_player_does_not_reveal_attacking_xeroc(self):
+        # Rogue 5.4.4 fight.c:attack() gates attacking Xeroc reveal with !ISBLIND.
+        game = new_game(seed=642)
+        set_open_floor(game)
+        game.p.blind = 5
+        xeroc = monster_at(game.p.x + 1, game.p.y, sym="X", name="xeroc", hp=40, level=7, armor=7, damage="4x4")
+        xeroc.disguise = "?"
+        game.roll_monster_attack = lambda monster: (False, 0)
+
+        game.m_attack(xeroc)
+
+        self.assertEqual(xeroc.disguise, "?")
+
     def test_rogue544_treasure_room_counts_match_new_level_treas_room(self):
         # Rogue 5.4.4 new_level.c:treas_room() uses MINTREAS/MAXTREAS
         # and forces monster count to at least treasure count + 2.
