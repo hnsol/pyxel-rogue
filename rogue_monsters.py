@@ -45,6 +45,11 @@ def new_monster_stats(base_level: int, base_armor: int, base_exp: int, depth: in
     return level, hp, armor, exp
 
 
+def save_throw(which: int, level: int, roll) -> bool:
+    """Rogue 5.4.4 monsters.c:save_throw()."""
+    return roll(1, 20) >= 14 + which - level // 2
+
+
 def initial_disguise(sym, random_thing):
     """Rogue 5.4.4 monsters.c:new_monster() sets Xeroc t_disguise = rnd_thing()."""
     return random_thing() if sym == "X" else sym

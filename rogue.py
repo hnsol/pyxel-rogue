@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1949"
+UI_BUILD = "260426_1957"
 
 # ===========================================================
 #  Font
@@ -1871,11 +1871,12 @@ class Game:
         return getattr(self.p, "see_monsters", 0) > 0
 
     def save_vs_magic(self):
-        return rnd(20) < 7 + self.p.level//2
+        which=VS_MAGIC-rogue_rings.protection_bonus(self.p)
+        return rogue_monsters.save_throw(which,self.p.level,RNG.roll)
 
     def monster_save_throw(self, which, m):
         # Rogue 5.4.4 monsters.c:save_throw().
-        return RNG.roll(1,20) >= 14 + which - m.level//2
+        return rogue_monsters.save_throw(which,m.level,RNG.roll)
 
     def m_attack(self,m):
         # C: fight.c:attack()
@@ -2973,7 +2974,7 @@ class Game:
         return self.swing_hits(at_lvl, 10, 1)
 
     def save_vs_poison(self):
-        return rnd(20) < 7 + self.p.level//2
+        return rogue_monsters.save_throw(0,self.p.level,RNG.roll)
 
     def drop_arrow_at_player(self):
         arrow=Item(CAT_WPN,3,qty=1)

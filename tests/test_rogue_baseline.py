@@ -3074,6 +3074,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [(7, 8)])
         self.assertEqual(stats, (7, 17, 0, 17 + 30 + 8))
 
+    def test_rogue_544_save_throw_uses_monsters_c_threshold(self):
+        # Rogue 5.4.4 monsters.c:save_throw() uses roll(1,20) >= 14 + which - lvl/2.
+        import rogue_monsters
+
+        self.assertFalse(rogue_monsters.save_throw(rogue.VS_MAGIC, 4, lambda n, sides: 14))
+        self.assertTrue(rogue_monsters.save_throw(rogue.VS_MAGIC, 4, lambda n, sides: 15))
+
+    def test_rogue_544_save_magic_uses_protection_ring_adjustment(self):
+        # Rogue 5.4.4 monsters.c:save() subtracts R_PROTECT enchantment from VS_MAGIC.
+        import rogue_rings
+
+        game = new_game(seed=309)
+        game.p.level = 4
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2)
+        calls = []
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda n, sides: calls.append((n, sides)) or 13
+            self.assertTrue(game.save_vs_magic())
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [(1, 20)])
+
     def test_rogue_544_new_monster_hastes_after_level_29(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
         game = new_game(seed=308)
@@ -7212,14 +7236,14 @@ class RogueBaselineTest(unittest.TestCase):
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)
         game.p.level = 4
-        old_randrange = rogue.random.randrange
+        old_roll = rogue.RNG.roll
         try:
-            rogue.random.randrange = lambda n: 8
+            rogue.RNG.roll = lambda n, sides: 12
             self.assertTrue(game.save_vs_poison())
-            rogue.random.randrange = lambda n: 9
+            rogue.RNG.roll = lambda n, sides: 11
             self.assertFalse(game.save_vs_poison())
         finally:
-            rogue.random.randrange = old_randrange
+            rogue.RNG.roll = old_roll
 
 
 class TestCallIt(unittest.TestCase):
