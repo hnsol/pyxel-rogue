@@ -960,6 +960,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.confused, 0)
         self.assertFalse(medusa.found)
 
+    def test_rogue_544_hallucination_prevents_medusa_gaze(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISHALU.
+        game = new_game(seed=208)
+        set_open_floor(game)
+        game.p.hallucinating = 10
+        medusa = monster_at(game.p.x + 1, game.p.y, "M", "medusa", flags="confuse")
+        medusa.running = True
+        game.mons = [medusa]
+        old_save = game.save_vs_magic
+        try:
+            game.save_vs_magic = lambda: False
+            game.wake_monster(medusa)
+        finally:
+            game.save_vs_magic = old_save
+
+        self.assertEqual(game.p.confused, 0)
+        self.assertFalse(medusa.found)
+
     def test_rogue_544_levitation_prevents_mean_monster_wake(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates mean monster wake with !ISLEVIT.
         game = new_game(seed=207)

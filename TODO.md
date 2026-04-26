@@ -126,6 +126,7 @@
 - [x] Rogue 5.4.4 `rogue.h:ISINVIS` の不可視判定を `rogue_monsters.is_invisible()` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:WS_INVIS` の `ISINVIS` 付与を `rogue_monsters.make_invisible()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` の Medusa gaze gate を `rogue_monsters.medusa_gaze_active()` へ小分割
+- [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で hallucination 中は Medusa gaze を受けない
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で levitation 中は mean monster が起床しない
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` の深層 `ISHASTE` 付与を `rogue_monsters.apply_deep_haste()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
