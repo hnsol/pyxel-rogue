@@ -6133,6 +6133,22 @@ class RogueBaselineTest(unittest.TestCase):
         rng = SequenceRng([0])
         self.assertEqual(rogue_weapons.choose_fallpos((4, 4), 1, (5, 5), rng.rnd), ((5, 5), 2))
 
+    def test_rogue_544_fall_position_uses_rng_rnd_for_choice(self):
+        # Rogue 5.4.4 weapons.c:fallpos() uses rnd(++cnt), not randrange().
+        game = new_game(seed=498)
+        set_open_floor(game)
+        old_rnd = rogue.RNG.rnd
+        old_randrange = rogue.RNG.randrange
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
+            pos = game.fall_position(game.p.x + 2, game.p.y)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randrange = old_randrange
+
+        self.assertIsNotNone(pos)
+
     def test_rogue_544_weapons_helper_fall_result_matches_source_branches(self):
         # Rogue 5.4.4 weapons.c:fall() attaches on fallpos success, otherwise only pr prints vanish.
         import rogue_weapons

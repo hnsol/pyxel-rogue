@@ -172,7 +172,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1618"
+UI_BUILD = "260426_1625"
 
 # ===========================================================
 #  Font
@@ -2853,7 +2853,7 @@ class Game:
                 tile_name = "PASSAGE" if self.tm[yy][xx] == T_CORR else "FLOOR" if self.tm[yy][xx] == T_FLOOR else ""
                 if not rogue_weapons.is_fallpos_candidate((xx,yy), (self.p.x,self.p.y), tile_name):
                     continue
-                choice,cnt=rogue_weapons.choose_fallpos(choice,cnt,(xx,yy),RNG.randrange)
+                choice,cnt=rogue_weapons.choose_fallpos(choice,cnt,(xx,yy),RNG.rnd)
         return choice
 
     def drop_thrown(self,it,x,y,around=True):

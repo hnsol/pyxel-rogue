@@ -125,7 +125,7 @@
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の部位ごとの命中/ダメージ加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の defender `!ISRUN` 命中補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の weapon/hurl profile 選択を `rogue_fight.py` へ小分割
-- [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割
+- [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠で、weapon curse/enchant/初期個数乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `fight.c:str_plus[]` / `add_dam[]` 相当の Strength 補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Ice monster freeze `no_command += rnd(2)+2` を `rogue_fight.py` へ小分割
