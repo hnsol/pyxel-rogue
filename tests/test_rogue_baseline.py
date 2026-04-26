@@ -759,6 +759,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 18)
         self.assertIn("you are hit by the flame", game.msgs)
 
+    def test_rogue_544_monster_started_bolt_miss_does_not_runto_target(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() calls runto() on a monster miss only when start == &hero.
+        game = new_game(seed=226)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.tm[10][9] = rogue.T_VWALL
+        orc = monster_at(6, 10, sym="O", name="orc")
+        game.mons = [orc]
+        game.monster_save_throw = lambda which, monster: True
+
+        hit = game.fire_bolt_from(7, 10, 1, 0, "flame")
+
+        self.assertFalse(hit)
+        self.assertFalse(orc.running)
+        self.assertIn("the flame whizzes past the orc", game.msgs)
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

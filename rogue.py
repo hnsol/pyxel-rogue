@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_0906"
+UI_BUILD = "260427_0913"
 
 # ===========================================================
 #  Font
@@ -2648,6 +2648,7 @@ class Game:
         # Rogue 5.4.4 sticks.c:fire_bolt() hit_hero is true when start != &hero.
         x,y=start_x,start_y
         hit_hero=(start_x,start_y)!=(self.p.x,self.p.y)
+        hero_started=not hit_hero
         source_monster=self.mon_at(start_x,start_y) if hit_hero else None
         changed=False
         steps=0
@@ -2684,7 +2685,8 @@ class Game:
                     else:
                         self.hit_monster_with_bolt(target,name)
                     return True
-                self.runto(target)
+                if hero_started:
+                    self.runto(target)
                 self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
         return False
 
