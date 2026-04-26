@@ -65,6 +65,11 @@ def venus_flytrap_hit(vf_hit: int):
     return vf_hit, f"{vf_hit}x1"
 
 
+def venus_flytrap_miss_hp(player_hp: int, vf_hit: int) -> int:
+    """Rogue 5.4.4 fight.c:attack() Venus Flytrap miss damage."""
+    return player_hp - vf_hit
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0

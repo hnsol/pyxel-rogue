@@ -3414,6 +3414,13 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hp, 16)
 
+    def test_rogue_544_fight_helper_venus_flytrap_miss_subtracts_vf_hit(self):
+        # Rogue 5.4.4 fight.c:attack() applies vf_hit even on a Venus Flytrap miss.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.venus_flytrap_miss_hp(20, 4), 16)
+        self.assertEqual(rogue_fight.venus_flytrap_miss_hp(20, 0), 20)
+
     def test_rogue_544_venus_flytrap_hit_updates_next_damage_expr(self):
         # Rogue 5.4.4 fight.c:attack() sets monsters['F'-'A'].m_stats.s_dmg to "%dx1".
         game = new_game(seed=8)
