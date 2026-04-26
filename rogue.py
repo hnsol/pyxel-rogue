@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_0940"
+UI_BUILD = "260427_0945"
 
 # ===========================================================
 #  Font
@@ -2666,7 +2666,7 @@ class Game:
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True
                 self.msg("sticks.the_value_whizzes_by_you", value=name)
-            if self.bolt_bounces_at(x,y):
+            if rogue_sticks.bolt_should_bounce(self.bolt_bounces_at(x,y), (x,y)==(self.p.x,self.p.y)):
                 if not changed:
                     hit_hero=not hit_hero
                 changed=False

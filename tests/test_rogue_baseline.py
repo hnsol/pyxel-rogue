@@ -826,6 +826,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_sticks.bolt_death_cause(True, None), "bolt")
         self.assertEqual(rogue_sticks.bolt_death_cause(False, "dragon"), "dragon")
 
+    def test_rogue_544_sticks_helper_bolt_bounce_door_hero_exception(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() treats DOOR under hero as normal hit space.
+        import rogue_sticks
+
+        self.assertFalse(rogue_sticks.bolt_should_bounce(True, True))
+        self.assertTrue(rogue_sticks.bolt_should_bounce(True, False))
+        self.assertFalse(rogue_sticks.bolt_should_bounce(False, False))
+
     def test_rogue_544_cancelled_medusa_does_not_confuse_on_wake_monster(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates Medusa gaze with !ISCANC.
         game = new_game(seed=206)

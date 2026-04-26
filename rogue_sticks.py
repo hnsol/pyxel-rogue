@@ -104,6 +104,11 @@ def bolt_death_cause(hero_started: bool, source_monster_name: str | None) -> str
     return "bolt" if hero_started else source_monster_name
 
 
+def bolt_should_bounce(is_bounce_tile: bool, hero_at_pos: bool) -> bool:
+    """Rogue 5.4.4 sticks.c:fire_bolt() DOOR under hero exception."""
+    return is_bounce_tile and not hero_at_pos
+
+
 def init_materials(rng):
     """Rogue 5.4.4 init.c:init_materials()."""
     wood_used = [False] * len(WOODS)
