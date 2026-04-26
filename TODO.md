@@ -78,6 +78,7 @@
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠の呪い生成確率監査（weapon 10%、armor 20%、一部 ring 33%、aggravate/teleport 常時 cursed）
 - [x] Rogue 5.4.4 `things.c:new_thing()` / `pick_one()` 相当の food 90/10・カテゴリ重み・potion/weapon/armor 種類重み・weapon/armor enchant 分岐を helper 化
+- [x] Rogue 5.4.4 `new_level.c:new_level()` / `put_things()` 相当の `no_food` 強制 food、`MAXOBJ=9` × 36% 物資生成、Amulet 上昇中の物資生成停止を helper 化
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `pack_room()` 相当の scare monster scroll 拾得消滅と満杯時スタック拒否を helper 化
 - [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [x] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査

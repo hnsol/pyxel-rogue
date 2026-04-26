@@ -167,7 +167,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1244"
+UI_BUILD = "260426_1253"
 
 # ===========================================================
 #  Font
@@ -1044,8 +1044,8 @@ class DGen:
 def wchoice(tbl):
     return rogue_things.pick_one([(e["name"], e["prob"]) for e in tbl], RNG.rnd(sum(e["prob"] for e in tbl)))
 
-def make_item(depth):
-    cat=rogue_things.new_thing_category_roll(RNG.rnd)
+def make_item(depth, no_food=0):
+    cat=rogue_things.new_thing_category_roll(RNG.rnd, no_food)
     if cat=="potion": return Item(CAT_POT,wchoice(POTIONS))
     if cat=="scroll": return Item(CAT_SCR,wchoice(SCROLLS))
     if cat=="food": return Item(CAT_FOOD,rogue_things.new_thing_food_kind(RNG.rnd))
@@ -1226,6 +1226,7 @@ class Game:
         self.death_cause = ""
         self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
         self.max_depth = 0
+        self.no_food = 0
         self.wander_timer = 0
         self.wander_between = 0
         self.delayed_actions = rogue_daemons.DelayedActionTable()
@@ -1287,6 +1288,7 @@ class Game:
         self.p.depth += 1
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
         self.tm, self.rooms = DGen.gen(self.p.depth)
+        self.no_food = rogue_things.no_food_after_new_level(getattr(self, "no_food", 0))
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
@@ -1377,7 +1379,17 @@ class Game:
         if not spec:
             return
         if rogue_monsters.should_give_pack(depth, getattr(self, "max_depth", self.p.depth), spec.carry, RNG.rnd):
-            m.pack.append(make_item(depth))
+            m.pack.append(self.make_game_item(depth))
+
+    def make_game_item(self, depth):
+        # C: things.c:new_thing(); new_level.c tracks no_food globally.
+        before = getattr(self, "no_food", 0)
+        try:
+            item = make_item(depth, before)
+        except TypeError:
+            item = make_item(depth)
+        self.no_food = rogue_things.no_food_after_new_thing(item.cat, before)
+        return item
 
     def wanderer_floor_candidates(self):
         player_room=self.room_containing(self.p.x,self.p.y)
@@ -1394,6 +1406,8 @@ class Game:
     def _spawn_items(self):
         # C: new_level.c:put_things()
         d=self.p.depth
+        if not rogue_dungeon.should_put_things(self.p.has_amulet, d, getattr(self, "max_depth", d)):
+            return
         rooms=self.usable_rooms()
         if rogue_dungeon.should_place_treasure_room(RNG):
             self._spawn_treasure_room()
@@ -1404,12 +1418,12 @@ class Game:
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
                     g=Item(CAT_GOLD,0); g.qty=RNG.randint(1,10)*d; g.x,g.y=ix,iy
                     self.gitems.append(g); break
-        for _ in range(RNG.randint(2,4+d//3)):
+        for _ in range(rogue_dungeon.put_things_item_count(RNG)):
             rm=RNG.choice(rooms)
             for _ in range(20):
                 ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
-                    it=make_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
+                    it=self.make_game_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
 
     def _spawn_treasure_room(self, room=None):
         # Rogue 5.4.4 new_level.c:treas_room().
@@ -1421,7 +1435,7 @@ class Game:
             for _ in range(2 * rogue_dungeon.MAXTRIES):
                 ix,iy=self.random_room_tile(room,{T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy) and not self.mon_at(ix,iy):
-                    it=make_item(self.p.depth); it.x,it.y=ix,iy; self.gitems.append(it); break
+                    it=self.make_game_item(self.p.depth); it.x,it.y=ix,iy; self.gitems.append(it); break
         monster_depth=self.p.depth+1
         for _ in range(monster_count):
             for _ in range(rogue_dungeon.MAXTRIES):

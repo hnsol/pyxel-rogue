@@ -39,3 +39,13 @@ def new_thing_category_roll(rnd, no_food: int = 0) -> str:
     if no_food > 3:
         return "food"
     return new_thing_category(rnd(100), no_food)
+
+
+def no_food_after_new_level(no_food: int) -> int:
+    """Rogue 5.4.4 new_level.c:new_level() increments no_food before put_things()."""
+    return no_food + 1
+
+
+def no_food_after_new_thing(category: str, no_food: int) -> int:
+    """Rogue 5.4.4 things.c:new_thing() resets no_food only when FOOD is made."""
+    return 0 if category == "food" else no_food

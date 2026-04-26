@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import rogue_things
+
 WS_LIGHT = 0
 WS_INVIS = 1
 WS_ELECT = 2
@@ -68,13 +70,7 @@ WOODS = [
 
 def pick_stick_kind(rng):
     """Rogue 5.4.4 things.c:pick_one(ws_info, MAXSTICKS)."""
-    roll = rng.rnd(100)
-    acc = 0
-    for i, spec in enumerate(STICKS):
-        acc += spec.prob
-        if roll < acc:
-            return i
-    return 0
+    return rogue_things.pick_one([(spec.name, spec.prob) for spec in STICKS], rng.rnd(100))
 
 
 def initial_charges(kind, rng):

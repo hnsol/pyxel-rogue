@@ -3334,6 +3334,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [None])
 
+    def test_rogue544_put_things_uses_nine_36_percent_item_attempts(self):
+        # Rogue 5.4.4 rogue.h:MAXOBJ=9 and new_level.c:put_things() places when rnd(100)<36.
+        import rogue_dungeon
+
+        rng = SequenceRng([0, 35, 36, 99, 12, 60, 34, 35, 90])
+        self.assertEqual(rogue_dungeon.put_things_item_count(rng), 5)
+        self.assertEqual(rng.calls, [100] * 9)
+
+    def test_rogue544_put_things_skips_when_returning_up_with_amulet(self):
+        # Rogue 5.4.4 new_level.c:put_things() returns when amulet && level < max_level.
+        import rogue_dungeon
+
+        self.assertFalse(rogue_dungeon.should_put_things(True, 3, 4))
+        self.assertTrue(rogue_dungeon.should_put_things(True, 4, 4))
+        self.assertTrue(rogue_dungeon.should_put_things(False, 3, 4))
+
     def test_rogue_544_killed_monster_drops_pack_items_at_monster_position(self):
         # Rogue 5.4.4 fight.c:killed() calls remove_mon(..., TRUE), which falls t_pack items.
         game = new_game(seed=302)
@@ -4933,6 +4949,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(sum(i["prob"] for i in rogue.POTIONS), 100)
         self.assertEqual(sum(i["prob"] for i in rogue.WEAPONS), 100)
         self.assertEqual(sum(i["prob"] for i in rogue.ARMORS), 100)
+        self.assertEqual(sum(i["prob"] for i in rogue.RINGS), 100)
+        self.assertEqual(sum(i["prob"] for i in rogue.STICKS), 100)
 
     def test_rogue_544_generated_armor_is_unknown_until_worn(self):
         # Rogue 5.4.4 inv_name() hides armor enchant until ISKNOW; armor.c:wear() sets ISKNOW.
@@ -5817,6 +5835,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertEqual(rogue_things.new_thing_category_roll(rnd, no_food=0), "stick")
         self.assertEqual(calls, [100])
+
+    def test_rogue_544_things_helper_no_food_counter_matches_new_level_and_new_thing(self):
+        # Rogue 5.4.4 new_level.c:new_level() increments no_food; things.c:new_thing() resets it on FOOD.
+        import rogue_things
+
+        self.assertEqual(rogue_things.no_food_after_new_level(3), 4)
+        self.assertEqual(rogue_things.no_food_after_new_thing("food", 4), 0)
+        self.assertEqual(rogue_things.no_food_after_new_thing("scroll", 4), 4)
+
+    def test_rogue_544_game_no_food_counter_forces_food_generation(self):
+        # Rogue 5.4.4 things.c:new_thing() forces FOOD when no_food > 3 and then clears no_food.
+        game = new_game(seed=3302)
+        game.no_food = 4
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 96 if n == 100 else 1
+            item = game.make_game_item(game.p.depth)
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(item.cat, rogue.CAT_FOOD)
+        self.assertEqual(game.no_food, 0)
 
     def test_rogue_544_pack_helper_scare_scroll_found_flag_and_dust(self):
         # Rogue 5.4.4 pack.c:add_pack() sets ISFOUND, then dusts S_SCARE on pickup.

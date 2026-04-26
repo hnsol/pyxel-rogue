@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import rogue_things
+
 LEFT = 0
 RIGHT = 1
 
@@ -69,13 +71,7 @@ _ALWAYS_CURSED = {R_AGGR, R_TELEPORT}
 
 def pick_ring_kind(rng):
     """Rogue 5.4.4 things.c:pick_one(ring_info, MAXRINGS)."""
-    roll = rng.rnd(100)
-    acc = 0
-    for i, spec in enumerate(RINGS):
-        acc += spec.prob
-        if roll < acc:
-            return i
-    return 0
+    return rogue_things.pick_one([(spec.name, spec.prob) for spec in RINGS], rng.rnd(100))
 
 
 def make_ring(rng, cat="ring"):
