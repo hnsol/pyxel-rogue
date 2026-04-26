@@ -2286,6 +2286,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [8])
         self.assertEqual(game.p.no_command, 11)
 
+    def test_rogue_544_stomach_decrements_food_on_starvation_death_check(self):
+        # Rogue 5.4.4 daemons.c:stomach() uses food_left-- in the starvation death check.
+        player = rogue.Player()
+        player.food = -rogue.STARVETIME - 1
+        player.state = "weak"
+
+        msg = rogue.rogue_daemons.stomach_tick(
+            player,
+            SequenceRng([0]),
+            food_cost=1,
+            moretime=rogue.MORETIME,
+            starvetime=rogue.STARVETIME,
+        )
+
+        self.assertEqual(msg, "pyxel.starve_to_death")
+        self.assertEqual(player.food, -rogue.STARVETIME - 2)
+        self.assertEqual(player.hp, 0)
+
     def test_rogue_544_stomach_crossing_zero_does_not_faint_until_next_tick(self):
         # Rogue 5.4.4 daemons.c:stomach() only runs faint logic when food_left <= 0 at entry.
         game = new_game(seed=320)

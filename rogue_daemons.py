@@ -26,11 +26,12 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
     """Rogue 5.4.4 daemons.c:stomach()."""
     previous_state = player.state
     if player.food <= 0:
-        if player.food < -starvetime:
+        old_food = player.food
+        player.food -= 1
+        if old_food < -starvetime:
             player.hp = 0
             player.state = "faint"
             return "pyxel.starve_to_death"
-        player.food -= 1
         if player.no_command or rng.randrange(5) != 0:
             return None
         player.state = "faint"

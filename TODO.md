@@ -180,6 +180,7 @@
   - [x] `runners` を `start_daemon(AFTER)` へ接続
   - [x] `daemon.c` 準拠で delayed action を unique map ではなく共通スロット列として扱い、daemon/fuse 合計 `MAXDAEMONS=20`、同名 daemon/fuse の重複登録、`kill_daemon()` / `extinguish()` の先頭1件削除を再現
   - [x] `daemons.c:doctor()` / `stomach()` 相当の純ロジックを `rogue_daemons.py` へ小分割し、`Game` / `Player` 側から委譲
+  - [x] Rogue 5.4.4 `daemons.c:stomach()` 準拠で、餓死判定時の `food_left--` を helper に反映
   - [x] `daemons.c:swander()` / `rollwand()` 相当の wandering daemon ロジックを `rogue_daemons.py` へ小分割し、`Game` 側から委譲
   - [x] Rogue 5.4.4 `daemons.c:sight()` 準拠で、healing / extra healing / see invisible の blind 解除時に `sight` fuse を消す
   - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
