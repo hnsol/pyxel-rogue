@@ -29,6 +29,7 @@ import rogue_monsters
 import rogue_pack
 import rogue_rings
 import rogue_rooms
+import rogue_search
 import rogue_sticks
 import rogue_things
 import rogue_dungeon
@@ -168,7 +169,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1357"
+UI_BUILD = "260426_1428"
 
 # ===========================================================
 #  Font
@@ -1485,7 +1486,7 @@ class Game:
 
     def _secret_chance(self, denom):
         # Rogue 5.4.4 passages.c: rnd(10)+1 < level, then a per-feature rnd().
-        return rnd(10)+1 < self.p.depth and rnd(denom)==0
+        return rogue_search.secret_feature_hidden(self.p.depth, RNG, denom)
 
     def _hide_secret_features(self):
         for y in range(MAP_H):
@@ -1505,9 +1506,9 @@ class Game:
 
     def _spawn_traps(self):
         # Rogue 5.4.4 new_level.c: if rnd(10) < level, place rnd(level/4)+1 traps.
-        if rnd(10) >= self.p.depth:
+        n=rogue_dungeon.trap_count_for_level(self.p.depth, RNG)
+        if n <= 0:
             return
-        n=min(MAX_TRAPS,rnd(self.p.depth//4)+1)
         cands=[
             (x,y)
             for y,row in enumerate(self.tm)
@@ -1519,7 +1520,7 @@ class Game:
         ]
         RNG.shuffle(cands)
         for x,y in cands[:n]:
-            self.traps[(x,y)]=rnd(len(TRAPS))
+            self.traps[(x,y)]=rogue_dungeon.trap_kind(RNG)
 
     # ---------- Helpers ----------
     def mon_at(self,x,y):
@@ -2966,16 +2967,16 @@ class Game:
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
-        probinc=(3 if p.hallucinating>0 else 0)+(2 if p.blind>0 else 0)
+        probinc=rogue_search.search_probinc(p.hallucinating>0, p.blind>0)
         for dx,dy in dirs:
             nx,ny=p.x+dx,p.y+dy
             if 0<=nx<MAP_W and 0<=ny<MAP_H:
                 hidden=self.hidden_tiles.get((nx,ny))
-                if hidden==T_DOOR and rnd(5+probinc)==0:
+                if hidden==T_DOOR and rogue_search.reveals_secret_door(rnd(5+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
-                elif hidden==T_CORR and rnd(3+probinc)==0:
+                elif hidden==T_CORR and rogue_search.reveals_secret_passage(rnd(3+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
-                elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rnd(2+probinc)==0:
+                elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rogue_search.reveals_trap(rnd(2+probinc), probinc):
                     trap = self.traps[(nx,ny)]
                     found = self.reveal_trap_at(nx,ny) or found
                     if found:
@@ -3026,10 +3027,10 @@ class Game:
             self.msg("move.you_fell_into_a_trap")
             self.descend()
         elif name=="bear trap":
-            self.p.no_move+=BEARTIME
+            self.p.no_move=rogue_move.bear_trap_no_move(self.p.no_move, BEARTIME)
             self.msg("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
-            self.p.no_command+=SLEEPTIME
+            self.p.no_command=rogue_move.sleep_trap_no_command(self.p.no_command, SLEEPTIME)
             self.msg("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):
@@ -3051,9 +3052,12 @@ class Game:
                     self.death_cause="a poisoned dart killed you"
                     self.msg("move.a_poisoned_dart_killed_you")
                     return
-                if not rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR) and not self.save_vs_poison():
-                    if self.p.st>3:
-                        self.p.st-=1
+                poison_saved = self.save_vs_poison()
+                self.p.st = rogue_move.dart_poison_strength(
+                    self.p.st,
+                    poison_saved,
+                    rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR),
+                )
                 self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
                 self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")

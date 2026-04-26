@@ -2540,6 +2540,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(5, calls)
         self.assertNotIn(8, calls)
 
+    def test_rogue_544_search_helper_probinc_and_reveal_rolls_match_source(self):
+        # Rogue 5.4.4 command.c:search() uses ISHALU +3, ISBLIND +2 and door/trap/passage divisors.
+        import rogue_search
+
+        self.assertEqual(rogue_search.search_probinc(False, False), 0)
+        self.assertEqual(rogue_search.search_probinc(True, True), 5)
+        self.assertTrue(rogue_search.reveals_secret_door(0, 0))
+        self.assertFalse(rogue_search.reveals_secret_door(1, 0))
+        self.assertTrue(rogue_search.reveals_trap(0, 3))
+        self.assertFalse(rogue_search.reveals_trap(1, 3))
+        self.assertTrue(rogue_search.reveals_secret_passage(0, 2))
+        self.assertFalse(rogue_search.reveals_secret_passage(1, 2))
+
     def test_rogue_544_hallucination_randomizes_visible_items_stairs_and_monsters(self):
         # Rogue 5.4.4 misc.c:trip_ch() and daemons.c:visuals() use rnd_thing();
         # misc.c:look() displays visible monsters as rnd(26)+'A' while ISHALU.
@@ -6203,6 +6216,15 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.random.randrange = old_randrange
             rogue.random.shuffle = old_shuffle
 
+    def test_rogue544_new_level_trap_count_and_kind_helpers_match_source(self):
+        # Rogue 5.4.4 new_level.c:new_level() uses rnd(10)<level, rnd(level/4)+1, MAXTRAPS, NTRAPS.
+        import rogue_dungeon
+
+        self.assertEqual(rogue_dungeon.trap_count_for_level(1, SequenceRng([1])), 0)
+        self.assertEqual(rogue_dungeon.trap_count_for_level(1, SequenceRng([0, 0])), 1)
+        self.assertEqual(rogue_dungeon.trap_count_for_level(40, SequenceRng([0, 99])), 10)
+        self.assertEqual(rogue_dungeon.trap_kind(SequenceRng([7])), 7)
+
     def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
         game = new_game(seed=56)
         set_open_floor(game)
@@ -6226,6 +6248,14 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(game.tm[5][6], rogue.T_VOID)
         finally:
             rogue.random.randrange = old_randrange
+
+    def test_rogue544_passage_helper_secret_feature_gate_matches_source(self):
+        # Rogue 5.4.4 passages.c:door()/putpass() use rnd(10)+1<level and rnd(denom)==0.
+        import rogue_search
+
+        self.assertFalse(rogue_search.secret_feature_hidden(1, SequenceRng([0, 0]), 5))
+        self.assertTrue(rogue_search.secret_feature_hidden(2, SequenceRng([0, 0]), 5))
+        self.assertFalse(rogue_search.secret_feature_hidden(2, SequenceRng([0, 1]), 5))
 
     def test_search_reveals_hidden_door_passage_and_trap_with_rogue54_rates(self):
         game = new_game(seed=57)
@@ -6308,6 +6338,13 @@ class RogueBaselineTest(unittest.TestCase):
         game.trigger_trap(x, y)
 
         self.assertEqual(game.p.no_move, 4 + rogue.BEARTIME)
+
+    def test_rogue_544_move_helper_simple_trap_state_additions_match_source(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_BEAR/T_SLEEP add fixed constants.
+        import rogue_move
+
+        self.assertEqual(rogue_move.bear_trap_no_move(4, rogue.BEARTIME), 4 + rogue.BEARTIME)
+        self.assertEqual(rogue_move.sleep_trap_no_command(7, rogue.SLEEPTIME), 7 + rogue.SLEEPTIME)
 
     def test_rogue_544_arrow_trap_miss_drops_one_arrow_with_fallpos(self):
         # Rogue 5.4.4 move.c:T_ARROW uses weapons.c:fall()/fallpos() on a miss.
@@ -6447,6 +6484,15 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [True])
         self.assertEqual(game.p.st, 3)
+
+    def test_rogue_544_move_helper_dart_poison_strength_matches_source(self):
+        # Rogue 5.4.4 move.c:T_DART lowers strength only without sustain strength and failed poison save.
+        import rogue_move
+
+        self.assertEqual(rogue_move.dart_poison_strength(10, False, False), 9)
+        self.assertEqual(rogue_move.dart_poison_strength(10, True, False), 10)
+        self.assertEqual(rogue_move.dart_poison_strength(10, False, True), 10)
+        self.assertEqual(rogue_move.dart_poison_strength(3, False, False), 3)
 
     def test_rogue_544_mysterious_trap_only_rolls_color_for_color_messages(self):
         # Rogue 5.4.4 move.c:be_trapped() T_MYST rolls rnd(cNCOLORS) only in color message branches.

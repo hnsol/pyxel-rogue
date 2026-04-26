@@ -4,6 +4,8 @@ MAXTREAS = 10
 MAXTRIES = 10
 MAXOBJ = 9
 PUT_THINGS_PROB = 36
+MAXTRAPS = 10
+NTRAPS = 8
 
 
 def treasure_room_spots(inner_area):
@@ -44,3 +46,15 @@ def should_place_room_gold(rng, has_amulet: bool, level: int, max_level: int) ->
 def should_place_room_monster(rng, has_gold: bool) -> bool:
     """Rogue 5.4.4 rooms.c:do_rooms() room monster gate."""
     return rng.rnd(100) < (80 if has_gold else 25)
+
+
+def trap_count_for_level(level: int, rng) -> int:
+    """Rogue 5.4.4 new_level.c:new_level() trap count."""
+    if rng.rnd(10) >= level:
+        return 0
+    return min(MAXTRAPS, rng.rnd(level // 4) + 1)
+
+
+def trap_kind(rng) -> int:
+    """Rogue 5.4.4 new_level.c:new_level() trap kind roll."""
+    return rng.rnd(NTRAPS)

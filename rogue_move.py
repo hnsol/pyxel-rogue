@@ -34,6 +34,23 @@ def mysterious_trap_message(index: int):
     return MYSTERIOUS_TRAP_MESSAGES[index]
 
 
+def bear_trap_no_move(no_move: int, beartime: int) -> int:
+    """Rogue 5.4.4 move.c:be_trapped() T_BEAR branch."""
+    return no_move + beartime
+
+
+def sleep_trap_no_command(no_command: int, sleeptime: int) -> int:
+    """Rogue 5.4.4 move.c:be_trapped() T_SLEEP branch."""
+    return no_command + sleeptime
+
+
+def dart_poison_strength(strength: int, poison_saved: bool, sustain_strength: bool) -> int:
+    """Rogue 5.4.4 move.c:be_trapped() T_DART poison branch."""
+    if poison_saved or sustain_strength or strength <= 3:
+        return strength
+    return strength - 1
+
+
 def rndmove(origin, rnd, is_legal):
     """Rogue 5.4.4 move.c:rndmove() one-attempt confused move."""
     x, y = origin
