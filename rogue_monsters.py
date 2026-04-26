@@ -49,6 +49,17 @@ def medusa_gaze_active(monster) -> bool:
     return monster.sym == "M" and not is_cancelled(monster)
 
 
+def mean_wake_active(monster, stealth: bool, levitating: bool) -> bool:
+    """Rogue 5.4.4 monsters.c:wake_monster() ISMEAN wake gate before rnd(3)."""
+    return (
+        not getattr(monster, "running", False)
+        and getattr(monster, "mean", False)
+        and getattr(monster, "held", 0) <= 0
+        and not stealth
+        and not levitating
+    )
+
+
 def apply_deep_haste(monster, depth: int) -> None:
     """Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29."""
     if depth > 29:

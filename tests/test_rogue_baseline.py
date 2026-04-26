@@ -3950,6 +3950,15 @@ class RogueBaselineTest(unittest.TestCase):
         medusa.flags.add("cancel")
         self.assertFalse(rogue.rogue_monsters.medusa_gaze_active(medusa))
 
+    def test_rogue_544_monsters_helper_mean_wake_matches_wake_monster_gate(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() gates ISMEAN wake by ISRUN/ISHELD/stealth/ISLEVIT.
+        monster = monster_at(1, 1, "H", "hobgoblin", flags="mean")
+        self.assertTrue(rogue.rogue_monsters.mean_wake_active(monster, stealth=False, levitating=False))
+        self.assertFalse(rogue.rogue_monsters.mean_wake_active(monster, stealth=True, levitating=False))
+        self.assertFalse(rogue.rogue_monsters.mean_wake_active(monster, stealth=False, levitating=True))
+        monster.running = True
+        self.assertFalse(rogue.rogue_monsters.mean_wake_active(monster, stealth=False, levitating=False))
+
     def test_rogue_544_monsters_helper_apply_deep_haste_matches_new_monster(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
         monster = monster_at(1, 1, "O", "orc")
