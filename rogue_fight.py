@@ -59,6 +59,12 @@ def ice_freeze(no_command: int, bore_level: int, rnd):
     return no_command, should_message, no_command > bore_level
 
 
+def venus_flytrap_hit(vf_hit: int):
+    """Rogue 5.4.4 fight.c:attack() Venus Flytrap hold damage."""
+    vf_hit += 1
+    return vf_hit, f"{vf_hit}x1"
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0

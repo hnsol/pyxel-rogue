@@ -3428,6 +3428,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(flytrap.damage_expr, "1x1")
         self.assertEqual(game.p.hp, 19)
 
+    def test_rogue_544_fight_helper_venus_flytrap_hit_increments_vf_hit(self):
+        # Rogue 5.4.4 fight.c:attack() increments vf_hit and sets next F damage to "%dx1".
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.venus_flytrap_hit(3), (4, "4x1"))
+
     def test_rogue_544_killing_venus_flytrap_resets_hold_damage(self):
         # Rogue 5.4.4 fight.c:killed() clears ISHELD/vf_hit and restores F damage.
         game = new_game(seed=8)

@@ -116,6 +116,7 @@
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の weapon/hurl profile 選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:str_plus[]` / `add_dam[]` 相当の Strength 補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Ice monster freeze `no_command += rnd(2)+2` を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` 相当の Venus Flytrap `vf_hit` 加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Leprechaun purse 0 hit 消滅監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith レベルドレイン経験値監査（`e_levels[s_lvl-1]+1`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith level 1 drain 経験値監査（`--s_lvl==0`）
