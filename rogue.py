@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1810"
+UI_BUILD = "260426_1818"
 
 # ===========================================================
 #  Font
@@ -2437,8 +2437,6 @@ class Game:
         elif nm=="aggravate monsters":
             self.aggravate_monsters(); self.msg("scrolls.you_hear_a_high_pitched_humming_noise")
         elif nm=="scare monster":
-            for mo in self.mons:
-                if abs(mo.x-p.x)+abs(mo.y-p.y)<=6: mo.scared=RNG.randint(10,20)
             self.msg("scrolls.you_hear_maniacal_laughter_in_the_distance")
         elif nm=="sleep":
             rogue_scrolls.sleep_scroll(p, rnd, SLEEPTIME); self.dashing=False; self.msg("scrolls.you_fall_asleep")

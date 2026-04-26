@@ -1351,6 +1351,21 @@ class RogueBaselineTest(unittest.TestCase):
 
                 self.assertFalse(game.ident.sk[kind])
 
+    def test_rogue_544_reading_scare_monster_only_laughs(self):
+        # Rogue 5.4.4 scrolls.c:S_SCARE has no monster scare effect when read.
+        game = new_game(seed=335)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y)
+        game.mons = [monster]
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertEqual(monster.scared, 0)
+        self.assertIn("you hear maniacal laughter in the distance", game.msgs)
+
     def test_rogue_544_scroll_effects_use_original_messages(self):
         # Rogue 5.4.4 scrolls.c:read_scroll() messages for S_SLEEP/S_SCARE/S_REMOVE/S_AGGR/S_MAP.
         cases = [
