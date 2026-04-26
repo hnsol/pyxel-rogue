@@ -3780,9 +3780,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((weapon.hit_plus, weapon.dam_plus), (1, 1))
         self.assertEqual((inv[3].hit_plus, inv[3].dam_plus), (1, 0))
         self.assertEqual((inv[4].hit_plus, inv[4].dam_plus, inv[4].qty), (0, 0, 29))
+        self.assertTrue(all(it.known for it in inv[1:5]))
         self.assertEqual(armor.cat, rogue.CAT_ARM)
         self.assertEqual(armor.data["name"], "ring mail")
         self.assertEqual(armor.ench, 1)
+
+    def test_rogue_544_init_helpers_match_init_player(self):
+        # Rogue 5.4.4 init.c:init_player() uses rnd(15)+25 and add_pack order.
+        import rogue_init
+
+        self.assertEqual(rogue_init.initial_arrow_count(lambda n: 6), 31)
+        self.assertEqual(rogue_init.initial_pack_order("food", "armor", "mace", "bow", "arrows"),
+                         ["food", "armor", "mace", "bow", "arrows"])
 
     def test_v5_item_names_plural_food_and_armor_protection(self):
         game = new_game(seed=8)

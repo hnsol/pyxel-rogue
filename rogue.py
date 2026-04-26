@@ -40,6 +40,7 @@ import rogue_armor
 import rogue_chase
 import rogue_fight
 import rogue_food
+import rogue_init
 import rogue_levels
 import rogue_misc
 import rogue_move
@@ -174,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1212"
+UI_BUILD = "260427_1224"
 
 # ===========================================================
 #  Font
@@ -1073,10 +1074,10 @@ def make_item(depth, no_food=0):
 def start_inv():
     w=Item(CAT_WPN,0,hit_plus=1,dam_plus=1) # mace +1,+1
     a=Item(CAT_ARM,1,ench=1)        # ring mail +1
-    ar=Item(CAT_WPN,3,hit_plus=0,dam_plus=0,qty=RNG.rnd(15)+25)# arrows
+    ar=Item(CAT_WPN,3,hit_plus=0,dam_plus=0,qty=rogue_init.initial_arrow_count(RNG.rnd))# arrows
     b=Item(CAT_WPN,2,hit_plus=1,dam_plus=0) # bow +1,+0
     f=Item(CAT_FOOD,0)              # ration
-    return [f,a,w,b,ar],w,a
+    return rogue_init.initial_pack_order(f,a,w,b,ar),w,a
 
 
 # ===========================================================
