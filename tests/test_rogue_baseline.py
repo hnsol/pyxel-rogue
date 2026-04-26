@@ -5444,6 +5444,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.see_monsters, 0)
         self.assertEqual(game.fuses.remaining("turn_see"), 0)
 
+    def test_rogue_544_monster_detection_refuses_to_lengthen_existing_turn_see(self):
+        # Rogue 5.4.4 potions.c:P_MFIND always calls fuse(turn_see), not lengthen().
+        game = new_game(seed=493)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
+        first = rogue.Item(rogue.CAT_POT, potion_kind)
+        second = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.extend([first, second])
+
+        game.use_pot(first)
+        game.use_pot(second)
+
+        self.assertEqual(game.fuses.remaining("turn_see"), rogue.HUHDURATION)
+        self.assertEqual(game.p.see_monsters, rogue.HUHDURATION)
+
     def test_diag_assist_does_not_block_menu_vertical_navigation(self):
         game = new_game(seed=47)
         game.diag_assist = True

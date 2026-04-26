@@ -171,7 +171,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1514"
+UI_BUILD = "260426_1522"
 
 # ===========================================================
 #  Font
@@ -2199,11 +2199,10 @@ class Game:
                 self.msg("misc.welcome_to_level_level", level=p.level)
         elif nm=="monster detection":
             if p.see_monsters > 0:
-                self.fuses.lengthen("turn_see", HUHDURATION)
-                p.see_monsters += HUHDURATION
+                self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
             else:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
-                p.see_monsters = HUHDURATION
+            p.see_monsters = HUHDURATION
             if self.mons:
                 self.msg("pyxel.sense_monsters")
             else:

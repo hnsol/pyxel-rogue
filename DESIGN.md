@@ -281,6 +281,8 @@ daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()
 
 `daemons.c:sight()` は blind を解除するときに `extinguish(sight)` も行う。Pyxel 版でも `potions.c:P_HEALING`, `P_XHEAL`, `P_SEEINVIS` から `sight()` を通し、blind 解除後に古い `sight` fuse が残らないようにする。
 
+`potions.c:P_MFIND` は `do_pot()` 経由ではなく、使用ごとに `fuse(turn_see, TRUE, HUHDURATION, AFTER)` を追加する。再使用時も `lengthen()` せず、原作の delayed action スロット重複を保つ。
+
 Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
 
 ## アイテム識別
