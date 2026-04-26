@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1258"
+UI_BUILD = "260427_1306"
 
 # ===========================================================
 #  Font
@@ -493,7 +493,7 @@ BESTIARY = [
     MonsterSpec("L","leprechaun",3,8,"1x1",10,6,"steal_gold"),
     MonsterSpec("M","medusa",8,2,"3x4/3x4/2x5",200,18,f"{rogue_monsters.FLAG_CAN_CONFUSE},mean", carry=40),
     MonsterSpec("N","nymph",3,9,"0x0",37,9,"steal_item", carry=100),
-    MonsterSpec("O","orc",1,6,"1x8",5,5,"", carry=15),
+    MonsterSpec("O","orc",1,6,"1x8",5,5,"greed", carry=15),
     MonsterSpec("P","phantom",8,3,"4x4",120,15,rogue_monsters.FLAG_INVISIBLE),
     MonsterSpec("Q","quagga",3,3,"1x5/1x5",15,8,"mean"),
     MonsterSpec("R","rattlesnake",2,3,"1x6",9,4,"poison,mean"),
@@ -1853,7 +1853,7 @@ class Game:
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))
                 mn=TextCatalog.monster(self.lang,m.name)
                 self.msg("pyxel.monster_gaze_confused", monster=mn)
-        if "steal_gold" in m.flags and not m.running:
+        if "greed" in m.flags and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
 
     def wake_visible_monsters(self):
@@ -2034,7 +2034,7 @@ class Game:
 
     def find_dest(self,m):
         # C: chase.c:find_dest()
-        if "steal_gold" in m.flags and m.dest==DEST_GOLD:
+        if "greed" in m.flags and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:
                 return target

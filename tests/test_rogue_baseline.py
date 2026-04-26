@@ -3856,6 +3856,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue.Monster(1, 1, "H", "hobgoblin", 3, 1, 5, "1x8", 3, specs["H"].flags).mean)
         self.assertFalse(rogue.Monster(1, 1, "B", "bat", 1, 1, 3, "1x2", 1, specs["B"].flags).mean)
 
+    def test_rogue_544_monster_greed_flag_is_not_gold_steal(self):
+        # Rogue 5.4.4 extern.c:monsters[] uses ISGREED for orcs; Leprechauns steal purse in fight.c.
+        specs = {m.sym: m for m in rogue.BESTIARY}
+        self.assertIn("greed", specs["O"].flags)
+        self.assertNotIn("steal_gold", specs["O"].flags)
+        self.assertIn("steal_gold", specs["L"].flags)
+
     def test_rogue_544_monster_carry_table_and_give_pack_probability(self):
         # Rogue 5.4.4 extern.c:monsters[] m_carry and monsters.c:give_pack().
         specs = {m.sym: m for m in rogue.BESTIARY}
