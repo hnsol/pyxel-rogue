@@ -816,6 +816,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((dragon.x, dragon.y), (game.p.x + rogue.BOLT_LENGTH, game.p.y))
         self.assertIn("you are hit by the flame", game.msgs)
 
+    def test_rogue_544_dragon_breath_resets_quiet(self):
+        # Rogue 5.4.4 chase.c:do_chase() clears quiet after Dragon fire_bolt().
+        game = new_game(seed=225)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        game.p.quiet = 7
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [dragon]
+        game.save_vs_magic = lambda: True
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(game.p.quiet, 0)
+
     def test_rogue_544_cancelled_dragon_does_not_breathe_or_roll_dragonshot(self):
         # Rogue 5.4.4 chase.c:do_chase() gates Dragon breath with !ISCANC before rnd(DRAGONSHOT).
         game = new_game(seed=223)
