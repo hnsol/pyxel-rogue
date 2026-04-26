@@ -3764,23 +3764,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((player.hp, player.max_hp), (12, 12))
 
     def test_initial_inventory_baseline(self):
-        inv, weapon, armor = rogue.start_inv()
-        self.assertEqual(len(inv), 5)
-        self.assertIs(weapon, inv[0])
+        # Rogue 5.4.4 init.c:init_player() adds food, ring mail, mace, bow, arrows.
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 4
+            inv, weapon, armor = rogue.start_inv()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual([it.data["name"] for it in inv], [
+            "food ration", "ring mail", "mace", "short bow", "arrow"
+        ])
+        self.assertIs(weapon, inv[2])
         self.assertIs(armor, inv[1])
-        self.assertEqual(weapon.cat, rogue.CAT_WPN)
-        self.assertEqual(weapon.data["name"], "mace")
-        self.assertEqual(weapon.hit_plus, 1)
-        self.assertEqual(weapon.dam_plus, 1)
-        self.assertEqual(inv[2].data["name"], "arrow")
-        self.assertEqual(inv[2].hit_plus, 0)
-        self.assertEqual(inv[2].dam_plus, 0)
-        self.assertEqual(inv[2].qty, 25)
-        self.assertEqual(inv[3].data["name"], "short bow")
-        self.assertEqual(inv[3].hit_plus, 1)
-        self.assertEqual(inv[3].dam_plus, 0)
+        self.assertEqual((weapon.hit_plus, weapon.dam_plus), (1, 1))
+        self.assertEqual((inv[3].hit_plus, inv[3].dam_plus), (1, 0))
+        self.assertEqual((inv[4].hit_plus, inv[4].dam_plus, inv[4].qty), (0, 0, 29))
         self.assertEqual(armor.cat, rogue.CAT_ARM)
-        self.assertEqual(armor.data["name"], "leather armor")
+        self.assertEqual(armor.data["name"], "ring mail")
         self.assertEqual(armor.ench, 1)
 
     def test_v5_item_names_plural_food_and_armor_protection(self):

@@ -149,6 +149,7 @@
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の weapon/hurl profile 選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー素手ダメージを `"1x4"` に修正
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー初期 HP / max HP を 12 に修正
+- [x] Rogue 5.4.4 `init.c:init_player()` 準拠で、初期pack順・+1 ring mail・矢数 `rnd(15)+25` を修正
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠で、weapon curse/enchant/初期個数乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `fight.c:str_plus[]` / `add_dam[]` 相当の Strength 補正を `rogue_fight.py` へ小分割
