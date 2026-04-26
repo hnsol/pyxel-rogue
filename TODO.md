@@ -148,6 +148,8 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Ice monster freeze メッセージ再表示監査
 - [x] Rogue 5.4.4 `move.c:T_DART` 準拠の dart trap poison save 順序監査
 - [x] Rogue 5.4.4 `misc.c:add_str()` 準拠の poison potion Strength 下限監査
+- [x] Rogue 5.4.4 `potions.c:quaff()` / `misc.c:add_str()` 準拠の potion Strength / healing / extra healing helper 化
+- [x] Rogue 5.4.4 `potions.c:raise_level()` / `misc.c:check_level()` 準拠の経験値閾値・d10 HP 増加 helper 化
 - [x] 最小 baseline ロジックテスト整備
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充

@@ -1652,7 +1652,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.Player.EXP_T[11], 13000)
         self.assertTrue(game.ident.pk[kind])
         self.assertIn("you suddenly feel much more skillful", game.msgs)
+        self.assertIn("welcome to level 11", game.msgs)
         self.assertNotIn("You rise to level 11!", game.msgs)
+
+    def test_rogue_544_raise_level_potion_uses_check_level_d10_hp_gain(self):
+        # Rogue 5.4.4 potions.c:raise_level() calls misc.c:check_level(), which rolls delta d10 hp.
+        game = new_game(seed=326)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "raise level")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.p.level = 3
+        game.p.exp = 20
+        game.p.hp = 12
+        game.p.max_hp = 12
+        calls = []
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: calls.append((number, sides)) or 9
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(game.p.level, 4)
+        self.assertEqual(game.p.exp, 41)
+        self.assertEqual((game.p.hp, game.p.max_hp), (21, 21))
+        self.assertEqual(calls, [(1, 10)])
 
     def test_rogue_544_do_pot_does_not_forget_known_confusion_while_hallucinating(self):
         # Rogue 5.4.4 potions.c:do_pot() only assigns oi_know when it is not already known.
@@ -2758,6 +2782,50 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.randint = old_randint
 
         self.assertEqual(game.p.st, 3)
+
+    def test_rogue_544_potions_helper_strength_changes_match_misc_add_str(self):
+        # Rogue 5.4.4 misc.c:add_str()/chg_str() floor at 3, cap at 31, and track base max strength.
+        import rogue_potions
+
+        self.assertEqual(rogue_potions.add_str(4, -3), 3)
+        self.assertEqual(rogue_potions.add_str(30, 5), 31)
+        self.assertEqual(rogue_potions.gain_strength(31, 30), (31, 31))
+        self.assertEqual(rogue_potions.poison_strength(10, 2), 8)
+        self.assertEqual(rogue_potions.restore_strength(20, 18, 2), 20)
+        self.assertEqual(rogue_potions.restore_strength(11, 16, 2), 16)
+
+    def test_rogue_544_potions_helper_healing_matches_quaff(self):
+        # Rogue 5.4.4 potions.c:P_HEALING/P_XHEAL max_hp overflow rules.
+        import rogue_potions
+
+        self.assertEqual(rogue_potions.healing_hp(10, 16, 6), (16, 16))
+        self.assertEqual(rogue_potions.healing_hp(10, 16, 7), (17, 17))
+        self.assertEqual(rogue_potions.extra_healing_hp(16, 16, 2, 3), (17, 17))
+        self.assertEqual(rogue_potions.extra_healing_hp(16, 16, 2, 4), (18, 18))
+
+    def test_rogue_544_level_helper_check_level_matches_misc(self):
+        # Rogue 5.4.4 misc.c:check_level() rolls one d10 per gained level.
+        import rogue_levels
+
+        class Rng:
+            def __init__(self):
+                self.calls = []
+
+            def roll(self, number, sides):
+                self.calls.append((number, sides))
+                return 17
+
+        rng = Rng()
+        result = rogue_levels.check_level(1, 41, 12, 12, rogue.Player.EXP_T, rng)
+
+        self.assertEqual(result, (4, 29, 29, True))
+        self.assertEqual(rng.calls, [(3, 10)])
+
+    def test_rogue_544_level_helper_raise_level_exp_matches_potions(self):
+        # Rogue 5.4.4 potions.c:raise_level() sets exp to e_levels[level-1]+1.
+        import rogue_levels
+
+        self.assertEqual(rogue_levels.raise_level_exp(10, rogue.Player.EXP_T), 5201)
 
     def test_rogue_544_ring_maintain_armor_blocks_rust_and_adornment_stays_unidentified(self):
         # Rogue 5.4.4 move.c:rust_armor() checks R_SUSTARM; R_NOP has no wear-time effect.
@@ -4962,6 +5030,23 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
 
+    def test_rogue_544_extra_healing_rolls_level_d8(self):
+        # Rogue 5.4.4 potions.c:P_XHEAL uses roll(pstats.s_lvl, 8), not roll(1, 8) * level.
+        game = new_game(seed=396)
+        extra_healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "extra healing")
+        potion = rogue.Item(rogue.CAT_POT, extra_healing)
+        game.p.inv.append(potion)
+        game.p.level = 3
+        calls = []
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: calls.append((number, sides)) or 5
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [(3, 8)])
+
     def test_rogue_544_extra_healing_ends_hallucination(self):
         # Rogue 5.4.4 potions.c:P_XHEAL calls daemons.c:come_down().
         game = new_game(seed=394)
@@ -5007,6 +5092,23 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.blind, 0)
         self.assertIn("the veil of darkness lifts", game.msgs)
+
+    def test_rogue_544_healing_rolls_level_d4(self):
+        # Rogue 5.4.4 potions.c:P_HEALING uses roll(pstats.s_lvl, 4), not roll(1, 4) * level.
+        game = new_game(seed=397)
+        healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, healing)
+        game.p.inv.append(potion)
+        game.p.level = 3
+        calls = []
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: calls.append((number, sides)) or 5
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [(3, 4)])
 
     def test_random_weapon_generation_changes_hit_plus_only(self):
         old_randint = rogue.random.randint

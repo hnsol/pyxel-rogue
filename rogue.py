@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from rogue_rng import RogueRng
 import rogue_monsters
 import rogue_pack
+import rogue_potions
 import rogue_rings
 import rogue_rooms
 import rogue_search
@@ -37,6 +38,7 @@ import rogue_daemons
 import rogue_armor
 import rogue_chase
 import rogue_fight
+import rogue_levels
 import rogue_move
 import rogue_weapons
 from rogue_combat_text import (
@@ -169,7 +171,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1428"
+UI_BUILD = "260426_1444"
 
 # ===========================================================
 #  Font
@@ -627,10 +629,8 @@ class Player:
     def stuck(s, v):
         s.no_command = max(s.no_command, v)
     def lvlup(s):
-        if s.level>=len(s.EXP_T): return False
-        if s.exp>=s.EXP_T[s.level]:
-            s.level+=1; g=RNG.randint(3,8); s.max_hp+=g; s.hp+=g; return True
-        return False
+        s.level,s.hp,s.max_hp,changed=rogue_levels.check_level(s.level,s.exp,s.hp,s.max_hp,s.EXP_T,RNG)
+        return changed
     def hunger(s):
         amulet_eat = 1 if s.has_amulet else 0
         food_cost = 1 + rogue_rings.ring_eat(s.ring_l, RNG) + rogue_rings.ring_eat(s.ring_r, RNG) - amulet_eat
@@ -1763,7 +1763,7 @@ class Game:
             gold.qty = rogue_fight.leprechaun_kill_gold(self.p.depth, self.save_vs_magic(), goldcalc)
             m.pack.append(gold)
         if self.p.lvlup():
-            self.msg("pyxel.welcome_to_level", level=self.p.level)
+            self.msg("misc.welcome_to_level_level", level=self.p.level)
         self.remove_monster(m, was_kill=True)
         return mn
 
@@ -2123,22 +2123,14 @@ class Game:
         p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
             self.ident.pk[it.kind]=True
-            h=max(1,roll("1d4")*p.level)
-            p.hp += h
-            if p.hp > p.max_hp:
-                p.max_hp += 1
-                p.hp = p.max_hp
+            h=RNG.roll(p.level,4)
+            p.hp,p.max_hp=rogue_potions.healing_hp(p.hp,p.max_hp,h)
             self.sight()
             self.msg("potions.you_begin_to_feel_better")
         elif nm=="extra healing":
             self.ident.pk[it.kind]=True
-            h=max(1,roll("1d8")*p.level)
-            p.hp += h
-            if p.hp > p.max_hp:
-                if p.hp > p.max_hp + p.level + 1:
-                    p.max_hp += 1
-                p.max_hp += 1
-                p.hp = p.max_hp
+            h=RNG.roll(p.level,8)
+            p.hp,p.max_hp=rogue_potions.extra_healing_hp(p.hp,p.max_hp,p.level,h)
             self.sight()
             self.come_down()
             self.msg("potions.you_begin_to_feel_much_better")
@@ -2147,18 +2139,14 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.randint(1,3); p.st=max(3,p.st-l); self.msg("potions.you_feel_very_sick_now")
+                l=RNG.randint(1,3); p.st=rogue_potions.poison_strength(p.st,l); self.msg("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
-            self.ident.pk[it.kind]=True; p.st=min(p.st+1,31); p.max_st=max(p.max_st,p.st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
+            self.ident.pk[it.kind]=True; p.st,p.max_st=rogue_potions.gain_strength(p.st,p.max_st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
         elif nm=="restore strength":
             # Rogue 5.4.4 potions.c:P_RESTORE temporarily removes R_ADDSTR before restoring max_stats.s_str.
             addstr = sum(r.ench for r in (p.ring_l, p.ring_r) if rogue_rings.is_ring(r, rogue_rings.R_ADDSTR))
-            base_max = p.max_st - addstr
-            base_st = p.st - addstr
-            if base_st < base_max:
-                base_st = base_max
-            p.st = max(3, min(31, base_st + addstr))
+            p.st = rogue_potions.restore_strength(p.st, p.max_st, addstr)
             self.msg("potions.hey_this_tastes_great_it_make_you_feel_warm_all_over")
         elif nm=="confusion":
             if not self.ident.pk[it.kind]:
@@ -2208,8 +2196,10 @@ class Game:
                 self.msg("daemons.the_veil_of_darkness_lifts")
         elif nm=="raise level":
             self.ident.pk[it.kind]=True
-            p.exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)] + 1; p.lvlup()
+            p.exp=rogue_levels.raise_level_exp(p.level,p.EXP_T)
             self.msg("potions.you_suddenly_feel_much_more_skillful")
+            if p.lvlup():
+                self.msg("misc.welcome_to_level_level", level=p.level)
         elif nm=="monster detection":
             if p.see_monsters > 0:
                 self.fuses.lengthen("turn_see", HUHDURATION)
