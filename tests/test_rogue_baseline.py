@@ -3756,6 +3756,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(game.msgs[-1], "Welcome to the Dungeons of Doom!")
 
+    def test_rogue_544_player_initial_stats_use_init_stats(self):
+        # Rogue 5.4.4 extern.c:INIT_STATS is {16, 0, 1, 10, 12, "1x4", 12}.
+        player = rogue.Player()
+
+        self.assertEqual((player.st, player.exp, player.level, player.ac), (16, 0, 1, 10))
+        self.assertEqual((player.hp, player.max_hp), (12, 12))
+
     def test_initial_inventory_baseline(self):
         inv, weapon, armor = rogue.start_inv()
         self.assertEqual(len(inv), 5)
@@ -5822,7 +5829,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.roll = old_roll
 
-        self.assertEqual((game.p.hp, game.p.max_hp), (18, 18))
+        self.assertEqual((game.p.hp, game.p.max_hp), (14, 14))
 
     def test_rogue_544_extra_healing_small_overflow_raises_max_hp_by_one(self):
         # Rogue 5.4.4 potions.c:P_XHEAL skips the pre-increment unless overflow exceeds level + 1.
@@ -5839,7 +5846,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.roll = old_roll
 
-        self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
+        self.assertEqual((game.p.hp, game.p.max_hp), (13, 13))
 
     def test_rogue_544_extra_healing_rolls_level_d8(self):
         # Rogue 5.4.4 potions.c:P_XHEAL uses roll(pstats.s_lvl, 8), not roll(1, 8) * level.
@@ -5887,7 +5894,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.roll = old_roll
 
-        self.assertEqual((game.p.hp, game.p.max_hp), (17, 17))
+        self.assertEqual((game.p.hp, game.p.max_hp), (13, 13))
         self.assertIn("you begin to feel better", game.msgs)
         self.assertNotIn("You feel better. (+1)", game.msgs)
 

@@ -174,7 +174,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1154"
+UI_BUILD = "260427_1203"
 
 # ===========================================================
 #  Font
@@ -611,7 +611,7 @@ class Player:
     EXP_T=[0,10,20,40,80,160,320,640,1300,2600,5200,13000,26000,
            50000,100000,200000,400000,800000,2000000,4000000,8000000]
     def __init__(s):
-        s.x=s.y=0; s.hp=s.max_hp=16; s.st=s.max_st=16
+        s.x=s.y=0; s.hp=s.max_hp=12; s.st=s.max_st=16
         s.level=1; s.exp=0; s.gold=0; s.depth=0; s.food=HUNGERTIME
         s.state="normal"; s.ac=10; s.inv=[]; s.wpn=None; s.arm=None
         s.ring_l=None; s.ring_r=None
