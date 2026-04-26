@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1004"
+UI_BUILD = "260426_1008"
 
 # ===========================================================
 #  Font
@@ -1694,19 +1694,17 @@ class Game:
         damage = "1d2"
         if weap and weap.cat == CAT_WPN:
             data = weap.data
-            hplus += weap.hit_plus
-            dplus += weap.dam_plus
-            hplus += rogue_rings.weapon_hit_bonus(self.p, weap, thrown)
-            dplus += rogue_rings.weapon_damage_bonus(self.p, weap, thrown)
-            damage = data["damage"]
-            if thrown:
-                launcher = data.get("launcher")
-                if data.get("missile") and launcher is not None and self.p.wpn and self.p.wpn.kind == launcher:
-                    damage = data["hurl_damage"]
-                    hplus += self.p.wpn.hit_plus
-                    dplus += self.p.wpn.dam_plus
-                elif launcher is None:
-                    damage = data["hurl_damage"]
+            damage, hplus, dplus = rogue_fight.weapon_profile(
+                data,
+                weap.hit_plus,
+                weap.dam_plus,
+                thrown,
+                rogue_rings.weapon_hit_bonus(self.p, weap, thrown),
+                rogue_rings.weapon_damage_bonus(self.p, weap, thrown),
+                self.p.wpn.kind if self.p.wpn else None,
+                self.p.wpn.hit_plus if self.p.wpn else 0,
+                self.p.wpn.dam_plus if self.p.wpn else 0,
+            )
         return damage, hplus, dplus
 
     def roll_player_attack(self, m, weap=None, thrown=False):

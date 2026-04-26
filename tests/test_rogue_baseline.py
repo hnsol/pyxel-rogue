@@ -3343,6 +3343,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.hit_plus_vs_defender(0, defender_running=False), 4)
         self.assertEqual(rogue_fight.hit_plus_vs_defender(2, defender_running=True), 2)
 
+    def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
+        # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
+        import rogue_fight
+
+        damage, hplus, dplus = rogue_fight.weapon_profile(
+            weapon={"damage": "1d1", "hurl_damage": "2d3", "missile": True, "launcher": 2},
+            hit_plus=1,
+            dam_plus=2,
+            thrown=True,
+            ring_hit_bonus=0,
+            ring_damage_bonus=0,
+            launcher_kind=2,
+            launcher_hit_plus=3,
+            launcher_dam_plus=4,
+        )
+
+        self.assertEqual((damage, hplus, dplus), ("2d3", 4, 6))
+
     def test_rogue_544_fight_and_attack_stop_running_and_reset_quiet(self):
         # Rogue 5.4.4 fight.c:fight()/attack() clear count/running and set quiet = 0.
         game = new_game(seed=8)
