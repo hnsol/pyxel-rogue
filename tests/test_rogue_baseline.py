@@ -1938,6 +1938,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.held, 0)
         self.assertEqual(monster.dest, rogue.DEST_GOLD)
 
+    def test_rogue_544_chase_helper_diag_ok_checks_diagonal_side_steps(self):
+        # Rogue 5.4.4 chase.c:diag_ok() checks the two side squares for diagonal moves.
+        import rogue_chase
+
+        blocked = {(5, 4)}
+        step_calls = []
+
+        def step_ok(x, y):
+            step_calls.append((x, y))
+            return (x, y) not in blocked
+
+        self.assertFalse(rogue_chase.diag_ok(4, 4, 5, 5, rogue.in_play_area, step_ok))
+        self.assertEqual(step_calls, [(4, 5), (5, 4)])
+
+    def test_rogue_544_chase_helper_diag_ok_allows_orthogonal_without_step_check(self):
+        # Rogue 5.4.4 chase.c:diag_ok() returns TRUE for non-diagonal moves inside bounds.
+        import rogue_chase
+
+        step_calls = []
+
+        self.assertTrue(
+            rogue_chase.diag_ok(
+                4,
+                4,
+                4,
+                5,
+                rogue.in_play_area,
+                lambda x, y: step_calls.append((x, y)) or False,
+            )
+        )
+        self.assertEqual(step_calls, [])
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)

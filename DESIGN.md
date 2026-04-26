@@ -139,7 +139,7 @@ HP自然回復と空腹は Rogue 5.4.4 の `daemons.c` にある `doctor()` / `s
 
 ## モンスターAI
 
-モンスターAIは Rogue 5.4.4 の `monsters.c`, `chase.c`, `fight.c`, `move.c` を基準にする。単純な「視界内ならマンハッタン距離で近づく」処理は原作と大きく異なり、扉上のプレイヤーへ近づけない、Rattlesnake / Ice monster の特殊攻撃が弱すぎる、非起床モンスターまで常時接近する、といったズレを生むため採用しない。`chase.c:runners()` の `ISHELD` / `ISRUN` ゲートと飛行モンスターの追加移動、`chase.c:move_monst()` の速度ステップ実行、`chase.c:runto()` の追跡開始は `rogue_chase.py` の小 helper とし、`Game` 側はモンスター1体のターン処理、ヒーロー距離判定、追跡1ステップ処理を渡して委譲する。
+モンスターAIは Rogue 5.4.4 の `monsters.c`, `chase.c`, `fight.c`, `move.c` を基準にする。単純な「視界内ならマンハッタン距離で近づく」処理は原作と大きく異なり、扉上のプレイヤーへ近づけない、Rattlesnake / Ice monster の特殊攻撃が弱すぎる、非起床モンスターまで常時接近する、といったズレを生むため採用しない。`chase.c:runners()` の `ISHELD` / `ISRUN` ゲートと飛行モンスターの追加移動、`chase.c:move_monst()` の速度ステップ実行、`chase.c:runto()` の追跡開始、`chase.c:diag_ok()` の斜め移動可否は `rogue_chase.py` の小 helper とし、`Game` 側はモンスター1体のターン処理、ヒーロー距離判定、追跡1ステップ処理、地形判定を渡して委譲する。
 
 現行実装では `runto()` 相当で `Monster.running` を立て、running でないモンスターは基本的に移動しない。プレイヤーがモンスターを攻撃した場合や、視界に入った mean monster が `wake_monster()` 相当で起きた場合、`scroll of aggravate monsters` を読んだ場合に追跡を開始する。部屋所属は通常表示用の `room_at()` とは別にAI用所属を持ち、部屋床、部屋外周、扉、通路を区別する。扉上の actor は通路側として扱い、扉そのものを部屋出口としても扱えるようにして、扉上のプレイヤーやモンスターが追跡処理から孤立しないようにする。
 

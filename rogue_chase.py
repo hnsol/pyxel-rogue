@@ -35,3 +35,12 @@ def runto(monster, dest) -> None:
     monster.running = True
     monster.held = 0
     monster.dest = dest
+
+
+def diag_ok(sx, sy, ex, ey, in_bounds, step_ok) -> bool:
+    """Rogue 5.4.4 chase.c:diag_ok()."""
+    if not in_bounds(ex, ey):
+        return False
+    if sx == ex or sy == ey:
+        return True
+    return step_ok(sx, ey) and step_ok(ex, sy)

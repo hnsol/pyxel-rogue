@@ -161,7 +161,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0937"
+UI_BUILD = "260426_0939"
 
 # ===========================================================
 #  Font
@@ -1548,15 +1548,16 @@ class Game:
         return in_play_area(x,y) and self.tm[y][x] in WALKABLE
     def diag_ok(self,sx,sy,ex,ey):
         # C: chase.c:diag_ok()
-        if not in_play_area(ex,ey):
-            return False
-        if sx==ex or sy==ey:
-            return True
         return (
-            in_play_area(sx,sy)
+            rogue_chase.diag_ok(
+                sx,
+                sy,
+                ex,
+                ey,
+                in_play_area,
+                lambda x, y: in_play_area(x, y) and self.tm[y][x] in WALKABLE,
+            )
             and self.tm[ey][ex] in WALKABLE
-            and self.tm[ey][sx] in WALKABLE
-            and self.tm[sy][ex] in WALKABLE
         )
     def room_at(self,x,y):
         for r in self.rooms:
