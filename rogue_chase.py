@@ -64,13 +64,49 @@ def roomin(x, y, rooms):
     return None
 
 
-def see_monst(player_blind: bool, monster_invisible: bool, can_see_invisible: bool) -> bool:
+def see_monst(
+    player_blind: bool,
+    monster_invisible: bool,
+    can_see_invisible: bool,
+    lamp_visible: bool = True,
+    same_lit_room_visible: bool = True,
+) -> bool:
     """Rogue 5.4.4 chase.c:see_monst() sight gate."""
     if player_blind:
         return False
     if monster_invisible and not can_see_invisible:
         return False
-    return True
+    if lamp_visible:
+        return True
+    return same_lit_room_visible
+
+
+def within_lamp_distance(distance2: int, lampdist: int) -> bool:
+    """Rogue 5.4.4 chase.c:see_monst()/cansee() dist(...) < LAMPDIST."""
+    return distance2 < lampdist
+
+
+def lamp_diagonal_clear(hero_pos, target_pos, step_ok) -> bool:
+    """Rogue 5.4.4 chase.c:see_monst()/cansee() diagonal lamp sight gate."""
+    hx, hy = hero_pos
+    tx, ty = target_pos
+    if tx == hx or ty == hy:
+        return True
+    return step_ok((tx, hy)) or step_ok((hx, ty))
+
+
+def same_lit_room_visible(target_room, player_room, target_room_dark: bool) -> bool:
+    """Rogue 5.4.4 chase.c:cansee() same-room lit visibility gate."""
+    return target_room == player_room and not target_room_dark
+
+
+def cansee(not_blind: bool, lamp_visible: bool, room_visible: bool) -> bool:
+    """Rogue 5.4.4 chase.c:cansee() final visibility order."""
+    if not not_blind:
+        return False
+    if lamp_visible:
+        return True
+    return room_visible
 
 
 def find_dest(

@@ -1995,6 +1995,47 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_chase.see_monst(player_blind=False, monster_invisible=True, can_see_invisible=False))
         self.assertTrue(rogue_chase.see_monst(player_blind=False, monster_invisible=True, can_see_invisible=True))
 
+    def test_rogue_544_chase_helper_lamp_sees_by_squared_distance(self):
+        # Rogue 5.4.4 chase.c:see_monst()/cansee() use dist(...) < LAMPDIST.
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.within_lamp_distance(2, 3))
+        self.assertFalse(rogue_chase.within_lamp_distance(3, 3))
+
+    def test_rogue_544_chase_helper_lamp_diagonal_needs_one_side_step(self):
+        # Rogue 5.4.4 chase.c:see_monst()/cansee() block diagonal lamp sight only when both side cells are blocked.
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.lamp_diagonal_clear((5, 5), (6, 6), lambda pos: pos == (5, 6)))
+        self.assertFalse(rogue_chase.lamp_diagonal_clear((5, 5), (6, 6), lambda pos: False))
+        self.assertTrue(rogue_chase.lamp_diagonal_clear((5, 5), (5, 6), lambda pos: False))
+
+    def test_rogue_544_chase_helper_room_sight_requires_same_lit_room(self):
+        # Rogue 5.4.4 chase.c:cansee() outside lamp range requires roomin(tp) == proom and !ISDARK.
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.same_lit_room_visible("room", "room", False))
+        self.assertFalse(rogue_chase.same_lit_room_visible("room", "other", False))
+        self.assertFalse(rogue_chase.same_lit_room_visible("room", "room", True))
+
+    def test_rogue_544_chase_helper_cansee_order_matches_source(self):
+        # Rogue 5.4.4 chase.c:cansee() checks blind, lamp sight, then same lit room.
+        import rogue_chase
+
+        self.assertFalse(rogue_chase.cansee(False, True, False))
+        self.assertTrue(rogue_chase.cansee(True, True, False))
+        self.assertTrue(rogue_chase.cansee(True, False, True))
+        self.assertFalse(rogue_chase.cansee(True, False, False))
+
+    def test_rogue_544_chase_helper_see_monst_uses_lamp_then_room_when_supplied(self):
+        # Rogue 5.4.4 chase.c:see_monst() checks blind/invisible, then lamp sight, then same lit room.
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.see_monst(False, False, False, lamp_visible=True, same_lit_room_visible=False))
+        self.assertTrue(rogue_chase.see_monst(False, False, False, lamp_visible=False, same_lit_room_visible=True))
+        self.assertFalse(rogue_chase.see_monst(False, False, False, lamp_visible=False, same_lit_room_visible=False))
+        self.assertFalse(rogue_chase.see_monst(False, True, False, lamp_visible=True, same_lit_room_visible=True))
+
     def test_rogue_544_chase_helper_find_dest_skips_scare_and_claimed_items(self):
         # Rogue 5.4.4 chase.c:find_dest() skips S_SCARE and destinations already claimed by another monster.
         import rogue_chase

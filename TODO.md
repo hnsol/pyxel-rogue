@@ -101,7 +101,7 @@
 - [x] Rogue 5.4.4 `chase.c:diag_ok()` 相当の斜め移動可否を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:dist()` / `dist_cp()` 相当の二乗距離を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:roomin()` 相当の部屋矩形判定を `rogue_chase.py` へ小分割
-- [x] Rogue 5.4.4 `chase.c:see_monst()` 相当の盲目/不可視可視判定を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:see_monst()` / `cansee()` 相当の盲目/不可視、lamp距離、斜め遮蔽、同室照明ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 相当の carry 目的地選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 相当の Dragon flame gate / 最寄り出口 / greedy 目的地補正 / chasee room 選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
