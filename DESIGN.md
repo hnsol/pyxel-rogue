@@ -24,6 +24,8 @@ Pyxel 向けの差分は、表示、入力、移植UI、非ブロッキング演
 
 忠実度に関わる変更は、実装前に Rogue 5.4.4 の期待値テストを追加する。baseline テストは「壊れてほしくない現状」の保護に使い、原作と違う既知バグの正当化には使わない。実装コメントまたはテスト名から、参照した原作ファイル名・関数名・定数名を追えるようにする。
 
+補助参照として `vendor/rogue545p/` に Rogue 5.4.5p のコードを保持する。出典は http://yozvox.web.fc2.com/526F677565.html 。原則の準拠先は引き続き `vendor/rogue544/` だが、Rogue 5.4.4 の identify scroll は `extern.c:scr_info[]` で `identify potion` / `identify scroll` / `identify weapon` / `identify armor` / `identify ring, wand or staff` の5種類に分かれており、プレイ感の劣化として扱う。これを1種類へ戻す場合は、5.4.5p の `options.c:idscrl`、`extern.c:scr_info2[]`、`extern.c:set_scroll_2()` を比較参照し、Rogue 5.4.4 からの意図的差分としてこの文書へ記録してから実装する。
+
 ## RNG とコア分離の進め方
 
 Rogue 5.4.4 準拠作業の土台として、乱数入口は `rogue_rng.py` の `RogueRng` に集約する。`RogueRng.rnd(n)` は原作 `main.c:rnd(range)` 相当、`RogueRng.roll(number, sides)` は原作 `main.c:roll(number, sides)` 相当として扱う。Pyxel 版では現時点で C の `rand()` と seed 完全一致までは目標にしないが、ゲーム状態に影響する乱数呼び出しは `RNG` 経由にし、忠実度テストで差し替えや監査ができる形にする。
@@ -263,7 +265,7 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 現行 Pyxel 版は、Rogue 5.4.4 の以下の主要メカニクスを未実装または別設計のまま残している。いずれも「Pyxel版をクリアしたら Rogue 5.4.4 をクリアしたと言える」状態の成立に必要であり、忠実度修正の対象とする。実装時は各原作関数の期待値テストを先に追加してから接続する。
 
-巻物は `rogue.h:S_CONFUSE..S_PROTECT` / `MAXSCROLLS=18` / `scrolls.c:read_scroll()` / `extern.c:scr_info[]` を基準にする。Pyxel 版の `SCROLLS` は原作 18 種の順序と確率へ更新し、単一 identify は `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の 5 種へ分離した。`S_ID_*` は `scrolls.c:read_scroll()` の `id_type[]` と `wizard.c:set_know()` 相当に合わせ、対象カテゴリだけを正式鑑定する。現時点では携帯機UI向けの暫定として該当カテゴリの未鑑定品から自動選択するため、原作 `whatis(TRUE, type)` の対象選択プロンプトは後続の「鑑定・命名・発見リスト忠実度」で実装する。`S_CONFUSE` は `fight.c:attack()` の `CANHUH` 付与、`S_FDET` は `scrolls.c:S_FDET` の全食料一時表示、`S_PROTECT` は `scrolls.c:S_PROTECT` の防具呪い・錆び防止として接続する。
+巻物は `rogue.h:S_CONFUSE..S_PROTECT` / `MAXSCROLLS=18` / `scrolls.c:read_scroll()` / `extern.c:scr_info[]` を基準にする。Pyxel 版の `SCROLLS` は原作 18 種の順序と確率へ更新し、identify は Rogue 5.4.4 では `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の 5 種へ分離されている。今後はこの5種類仕様を劣化差分として扱い、5.4.5p の `idscrl` 実装をリファレンスに1種類化する方針を検討する。`S_ID_*` は `scrolls.c:read_scroll()` の `id_type[]` と `wizard.c:set_know()` 相当に合わせ、対象カテゴリだけを正式鑑定する。現時点では携帯機UI向けの暫定として該当カテゴリの未鑑定品から自動選択するため、原作 `whatis(TRUE, type)` の対象選択プロンプトは後続の「鑑定・命名・発見リスト忠実度」で実装する。`S_CONFUSE` は `fight.c:attack()` の `CANHUH` 付与、`S_FDET` は `scrolls.c:S_FDET` の全食料一時表示、`S_PROTECT` は `scrolls.c:S_PROTECT` の防具呪い・錆び防止として接続する。
 
 ポーションは `rogue.h:P_CONFUSE..P_LEVIT` / `MAXPOTIONS=14` / `potions.c:quaff()` / `extern.c:pot_info[]` を基準にする。現行 Pyxel 版は原作 14 種を実装済み。`P_LSD` は `ISHALU` 相当として `potions.c:do_pot()` / `daemons.c:come_down()` に合わせ、`misc.c:rnd_thing()` / `misc.c:look()` 相当の視覚混乱、`command.c:search()` の `probinc` 増加、invisible monster のランダム表示へ接続する。`P_LEVIT` は `ISLEVIT` 相当として罠・階段の発動条件と床上アイテム拾得を抑止し、`daemons.c:land()` 相当で解除する。
 
