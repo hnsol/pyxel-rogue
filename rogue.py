@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1942"
+UI_BUILD = "260426_1949"
 
 # ===========================================================
 #  Font
@@ -1374,13 +1374,12 @@ class Game:
         # C: monsters.c:new_monster()
         if depth is None:
             depth=self.p.depth
-        lev_add=max(0,depth-AMULET_LEVEL)
-        level=spec.level+lev_add
-        hp=max(1,RNG.roll(level,8))
+        level,hp,armor,exp=rogue_monsters.new_monster_stats(
+            spec.level,spec.armor,spec.exp,depth,AMULET_LEVEL,RNG.roll
+        )
         monster=Monster(
             x, y, spec.sym, spec.name, hp,
-            level, spec.armor-lev_add, spec.damage,
-            spec.exp+lev_add*10+rogue_monsters.exp_add(level,hp), spec.flags
+            level, armor, spec.damage, exp, spec.flags
         )
         if depth>29:
             monster.flags.add(rogue_monsters.FLAG_HASTE)
@@ -2522,13 +2521,13 @@ class Game:
 
     def set_monster_from_spec(self, m, spec):
         # Rogue 5.4.4 monsters.c:new_monster() rebuilds monster stats from monsters[].
-        lev_add=max(0,self.p.depth-AMULET_LEVEL)
-        level=spec.level+lev_add
+        level,hp,armor,exp=rogue_monsters.new_monster_stats(
+            spec.level,spec.armor,spec.exp,self.p.depth,AMULET_LEVEL,RNG.roll
+        )
         m.sym=spec.sym; m.name=spec.name
-        m.level=level; m.armor=spec.armor-lev_add
-        m.damage_expr=spec.damage; m.exp=spec.exp+lev_add*10
-        m.hp=m.max_hp=max(1,RNG.roll(level,8))
-        m.exp+=rogue_monsters.exp_add(level,m.max_hp)
+        m.level=level; m.armor=armor
+        m.damage_expr=spec.damage; m.exp=exp
+        m.hp=m.max_hp=hp
         m.flags=set(spec.flags.split(",")) if spec.flags else set()
         m.pack=[]
         m.held=m.scared=m.confused=0

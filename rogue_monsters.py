@@ -35,6 +35,16 @@ def exp_add(level: int, max_hp: int) -> int:
     return mod
 
 
+def new_monster_stats(base_level: int, base_armor: int, base_exp: int, depth: int, amulet_level: int, roll):
+    """Rogue 5.4.4 monsters.c:new_monster() stat rebuild."""
+    lev_add = max(0, depth - amulet_level)
+    level = base_level + lev_add
+    hp = max(1, roll(level, 8))
+    armor = base_armor - lev_add
+    exp = base_exp + lev_add * 10 + exp_add(level, hp)
+    return level, hp, armor, exp
+
+
 def initial_disguise(sym, random_thing):
     """Rogue 5.4.4 monsters.c:new_monster() sets Xeroc t_disguise = rnd_thing()."""
     return random_thing() if sym == "X" else sym

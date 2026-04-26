@@ -3057,6 +3057,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_monsters.exp_add(7, 17), 8)
         self.assertEqual(rogue_monsters.exp_add(10, 17), 40)
 
+    def test_rogue_544_monster_new_stats_helper_matches_new_monster(self):
+        # Rogue 5.4.4 monsters.c:new_monster() stat rebuild helper.
+        import rogue_monsters
+
+        calls = []
+        stats = rogue_monsters.new_monster_stats(
+            base_level=4,
+            base_armor=3,
+            base_exp=17,
+            depth=rogue.AMULET_LEVEL + 3,
+            amulet_level=rogue.AMULET_LEVEL,
+            roll=lambda n, sides: calls.append((n, sides)) or 17,
+        )
+
+        self.assertEqual(calls, [(7, 8)])
+        self.assertEqual(stats, (7, 17, 0, 17 + 30 + 8))
+
     def test_rogue_544_new_monster_hastes_after_level_29(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
         game = new_game(seed=308)
