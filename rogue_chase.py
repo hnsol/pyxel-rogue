@@ -71,3 +71,26 @@ def see_monst(player_blind: bool, monster_invisible: bool, can_see_invisible: bo
     if monster_invisible and not can_see_invisible:
         return False
     return True
+
+
+def find_dest(
+    carry_prob: int,
+    monster_room,
+    player_room,
+    can_see_monster: bool,
+    items,
+    claimed_dests,
+    room_of_item,
+    dest_of_item,
+    is_scare_scroll,
+    rnd,
+):
+    """Rogue 5.4.4 chase.c:find_dest(); None means hero."""
+    if carry_prob <= 0 or monster_room == player_room or can_see_monster:
+        return None
+    for item in items:
+        if is_scare_scroll(item):
+            continue
+        if room_of_item(item) == monster_room and rnd(100) < carry_prob and dest_of_item(item) not in claimed_dests:
+            return item
+    return None

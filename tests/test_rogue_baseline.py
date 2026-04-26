@@ -1995,6 +1995,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_chase.see_monst(player_blind=False, monster_invisible=True, can_see_invisible=False))
         self.assertTrue(rogue_chase.see_monst(player_blind=False, monster_invisible=True, can_see_invisible=True))
 
+    def test_rogue_544_chase_helper_find_dest_skips_scare_and_claimed_items(self):
+        # Rogue 5.4.4 chase.c:find_dest() skips S_SCARE and destinations already claimed by another monster.
+        import rogue_chase
+
+        scare = object()
+        claimed = object()
+        target = object()
+        rooms = {scare: "room", claimed: "room", target: "room"}
+        dests = {scare: (1, 1), claimed: (2, 2), target: (3, 3)}
+
+        self.assertIs(
+            rogue_chase.find_dest(
+                carry_prob=100,
+                monster_room="room",
+                player_room="other",
+                can_see_monster=False,
+                items=[scare, claimed, target],
+                claimed_dests={(2, 2)},
+                room_of_item=lambda item: rooms[item],
+                dest_of_item=lambda item: dests[item],
+                is_scare_scroll=lambda item: item is scare,
+                rnd=lambda n: 0,
+            ),
+            target,
+        )
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)

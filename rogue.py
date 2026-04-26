@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0947"
+UI_BUILD = "260426_0952"
 
 # ===========================================================
 #  Font
@@ -2012,6 +2012,22 @@ class Game:
             if target:
                 return target
             m.dest=DEST_PLAYER
+        spec = self.monster_spec_for_sym(m.sym)
+        carry_prob = spec.carry if spec else 0
+        target = rogue_chase.find_dest(
+            carry_prob,
+            self.room_for_ai(m.x, m.y),
+            self.room_for_ai(self.p.x, self.p.y, actor=True),
+            (m.x, m.y) in self.visible and self.can_see_monster(m),
+            self.gitems,
+            {mo.dest for mo in self.mons if mo is not m},
+            lambda item: self.room_for_ai(item.x, item.y),
+            lambda item: (item.x, item.y),
+            self.is_scare_monster,
+            RNG.rnd,
+        )
+        if target:
+            return (target.x, target.y)
         return (self.p.x,self.p.y)
 
     def collect_monster_dest(self,m,dest):
