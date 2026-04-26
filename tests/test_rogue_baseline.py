@@ -2065,6 +2065,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_chase.greedy_destination(True, "gold", (3, 4), "player"), (3, 4))
         self.assertEqual(rogue_chase.greedy_destination(False, "gold", None, "player"), "gold")
 
+    def test_rogue_544_chase_helper_destination_room_uses_proom_for_hero(self):
+        # Rogue 5.4.4 chase.c:do_chase() uses proom when t_dest == &hero, otherwise roomin(t_dest).
+        import rogue_chase
+
+        self.assertEqual(rogue_chase.destination_room(True, "player-room", "dest-room"), "player-room")
+        self.assertEqual(rogue_chase.destination_room(False, "player-room", "dest-room"), "dest-room")
+
     def test_rogue_544_doctor_increments_quiet_even_at_full_hp(self):
         # Rogue 5.4.4 daemons.c:doctor() increments quiet before checking whether HP can rise.
         game = new_game(seed=313)
@@ -5370,6 +5377,62 @@ class RogueBaselineTest(unittest.TestCase):
         rng = SequenceRng([])
         self.assertFalse(rogue_chase.should_random_move(0, "O", rng.rnd))
         self.assertEqual(rng.calls, [])
+
+    def test_rogue_544_chase_helper_confusion_clears_on_rnd20_zero(self):
+        # Rogue 5.4.4 chase.c:chase() clears ISHUH after random movement when rnd(20)==0.
+        import rogue_chase
+
+        rng = SequenceRng([0])
+        self.assertTrue(rogue_chase.confusion_clears_after_random_move(1, rng.rnd))
+        self.assertEqual(rng.calls, [20])
+
+        rng = SequenceRng([1])
+        self.assertFalse(rogue_chase.confusion_clears_after_random_move(1, rng.rnd))
+        self.assertEqual(rng.calls, [20])
+
+        rng = SequenceRng([])
+        self.assertFalse(rogue_chase.confusion_clears_after_random_move(0, rng.rnd))
+        self.assertEqual(rng.calls, [])
+
+    def test_rogue_544_chase_helper_choose_chase_step_matches_tie_roll(self):
+        # Rogue 5.4.4 chase.c:chase() replaces equal-distance candidates only when rnd(++plcnt)==0.
+        import rogue_chase
+
+        self.assertEqual(
+            rogue_chase.choose_chase_step((1, 1), 10, 1, (2, 2), 5, lambda n: 0),
+            ((2, 2), 5, 1),
+        )
+
+        rng = SequenceRng([1])
+        self.assertEqual(
+            rogue_chase.choose_chase_step((1, 1), 5, 1, (2, 2), 5, rng.rnd),
+            ((1, 1), 5, 2),
+        )
+        self.assertEqual(rng.calls, [2])
+
+        rng = SequenceRng([0])
+        self.assertEqual(
+            rogue_chase.choose_chase_step((1, 1), 5, 1, (2, 2), 5, rng.rnd),
+            ((2, 2), 5, 2),
+        )
+
+    def test_rogue_544_chase_helper_candidate_gate_blocks_diag_step_scare_and_xeroc(self):
+        # Rogue 5.4.4 chase.c:chase() skips bad diagonals, non-step cells, scare scrolls, and Xerocs.
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.is_chase_candidate(True, True, False, False))
+        self.assertFalse(rogue_chase.is_chase_candidate(False, True, False, False))
+        self.assertFalse(rogue_chase.is_chase_candidate(True, False, False, False))
+        self.assertFalse(rogue_chase.is_chase_candidate(True, True, True, False))
+        self.assertFalse(rogue_chase.is_chase_candidate(True, True, False, True))
+
+    def test_rogue_544_chase_helper_continues_unless_at_goal_or_hero(self):
+        # Rogue 5.4.4 chase.c:chase() returns curdist != 0 && !ce(ch_ret, hero).
+        import rogue_chase
+
+        self.assertTrue(rogue_chase.chase_continues(5, (4, 4), (1, 1)))
+        self.assertFalse(rogue_chase.chase_continues(0, (4, 4), (1, 1)))
+        self.assertFalse(rogue_chase.chase_continues(5, (1, 1), (1, 1)))
 
     def test_flying_monster_gets_extra_chase_move_at_distance(self):
         game = new_game(seed=505)

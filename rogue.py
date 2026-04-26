@@ -163,7 +163,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1115"
+UI_BUILD = "260426_1126"
 
 # ===========================================================
 #  Font
@@ -1948,7 +1948,11 @@ class Game:
         # C: chase.c:do_chase()
         dest=self.find_dest(m)
         rer=self.room_for_ai(m.x,m.y,actor=True)
-        ree=self.room_for_ai(dest[0],dest[1],actor=False)
+        ree=rogue_chase.destination_room(
+            dest == (self.p.x, self.p.y),
+            self.room_for_ai(self.p.x,self.p.y,actor=True),
+            self.room_for_ai(dest[0],dest[1],actor=False),
+        )
         chase_dest=dest
         if rer!=ree and hasattr(rer,"x"):
             chase_dest = rogue_chase.nearest_exit_to_dest(
@@ -2063,28 +2067,32 @@ class Game:
             if (nx,ny)==(px,py):
                 self.m_attack(m); return "attack"
             m.x,m.y=nx,ny
-            if m.confused>0 and rnd(20)==0: m.confused=0
+            if rogue_chase.confusion_clears_after_random_move(m.confused, rnd): m.confused=0
             return "move"
         cur=self.dist2((m.x,m.y),dest)
         best=(m.x,m.y); bestd=cur; ties=1
         for dx,dy in DIR8.values():
             nx,ny=m.x+dx,m.y+dy
-            if not self.diag_ok(m.x,m.y,nx,ny):
+            diagonal_ok=self.diag_ok(m.x,m.y,nx,ny)
+            if not diagonal_ok:
                 continue
             if (nx,ny)==(px,py):
                 if dest==(px,py):
                     self.m_attack(m); return "attack"
                 continue
-            if not self.can_monster_step(m,nx,ny):
+            gi=self.gi_at(nx,ny)
+            if not rogue_chase.is_chase_candidate(
+                diagonal_ok,
+                self.walkable(nx,ny) and not self.mon_at(nx,ny),
+                bool(gi and self.is_scare_monster(gi)),
+                False,
+            ):
                 continue
             d=self.dist2((nx,ny),dest)
-            if d<bestd:
-                best=(nx,ny); bestd=d; ties=1
-            elif d==bestd and best!=(m.x,m.y) and rnd(ties+1)==0:
-                best=(nx,ny); ties+=1
+            best,bestd,ties=rogue_chase.choose_chase_step(best,bestd,ties,(nx,ny),d,rnd)
         if best!=(m.x,m.y):
             m.x,m.y=best
-        return "move"
+        return "move" if rogue_chase.chase_continues(bestd, best, (px, py)) else "arrived"
 
     # ---------- Item effects ----------
     def use_pot(self,it):

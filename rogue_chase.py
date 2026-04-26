@@ -107,6 +107,32 @@ def should_random_move(confused: int, monster_sym: str, rnd) -> bool:
     return False
 
 
+def confusion_clears_after_random_move(confused: int, rnd) -> bool:
+    """Rogue 5.4.4 chase.c:chase() ISHUH clear chance after rndmove()."""
+    return confused > 0 and rnd(20) == 0
+
+
+def choose_chase_step(best, best_distance: int, tie_count: int, candidate, candidate_distance: int, rnd):
+    """Rogue 5.4.4 chase.c:chase() closest-step tie selection."""
+    if candidate_distance < best_distance:
+        return candidate, candidate_distance, 1
+    if candidate_distance == best_distance:
+        tie_count += 1
+        if rnd(tie_count) == 0:
+            return candidate, candidate_distance, tie_count
+    return best, best_distance, tie_count
+
+
+def is_chase_candidate(diagonal_ok: bool, step_ok: bool, scare_scroll: bool, xeroc: bool) -> bool:
+    """Rogue 5.4.4 chase.c:chase() candidate tile gate."""
+    return diagonal_ok and step_ok and not scare_scroll and not xeroc
+
+
+def chase_continues(current_distance: int, chosen_pos, hero_pos) -> bool:
+    """Rogue 5.4.4 chase.c:chase() return value."""
+    return current_distance != 0 and chosen_pos != hero_pos
+
+
 def dragon_breath_direction(monster_sym, monster_pos, hero_pos, distance2, bolt_length, cancelled, rnd, dragonshot=5):
     """Rogue 5.4.4 chase.c:do_chase() Dragon flame gate."""
     mx, my = monster_pos
@@ -143,3 +169,8 @@ def greedy_destination(is_greedy: bool, current_dest, gold_target, player_dest):
     if not is_greedy:
         return current_dest
     return gold_target if gold_target is not None else player_dest
+
+
+def destination_room(dest_is_hero: bool, player_room, dest_room):
+    """Rogue 5.4.4 chase.c:do_chase() chasee room selection."""
+    return player_room if dest_is_hero else dest_room
