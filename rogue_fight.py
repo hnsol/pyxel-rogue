@@ -109,6 +109,11 @@ def max_hp_drain(hp: int, max_hp: int, roll_fewer):
     return hp, max_hp, max_hp <= 0
 
 
+def drain_hits(monster_sym: str, rnd) -> bool:
+    """Rogue 5.4.4 fight.c:attack() Wraith/Vampire drain chance."""
+    return rnd(100) < (15 if monster_sym == "W" else 30)
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0

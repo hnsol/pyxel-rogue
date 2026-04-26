@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1052"
+UI_BUILD = "260426_1053"
 
 # ===========================================================
 #  Font
@@ -1878,7 +1878,7 @@ class Game:
                         self.msg("fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker")
                     elif poison_result == "sustained":
                         self.msg("fight.a_bite_momentarily_weakens_you")
-                if "drain_level" in m.flags and rnd(100)<15:
+                if "drain_level" in m.flags and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,
                         self.p.exp,
@@ -1892,7 +1892,7 @@ class Game:
                         self.death_cause = f"killed by a {m.name}"
                         return
                     self.msg("fight.you_suddenly_feel_weaker")
-                if "drain" in m.flags and rnd(100)<30:
+                if "drain" in m.flags and rogue_fight.drain_hits("V", rnd):
                     self.p.hp, self.p.max_hp, died = rogue_fight.max_hp_drain(
                         self.p.hp, self.p.max_hp, lambda: roll("1d3")
                     )

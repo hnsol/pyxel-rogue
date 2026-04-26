@@ -3138,6 +3138,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.max_hp_drain(10, 20, lambda: 3), (7, 17, False))
         self.assertEqual(rogue_fight.max_hp_drain(1, 2, lambda: 3), (1, -1, True))
 
+    def test_rogue_544_fight_helper_drain_chance_uses_monster_type_threshold(self):
+        # Rogue 5.4.4 fight.c:attack() uses 15% for Wraith, 30% for Vampire.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.drain_hits("W", lambda n: 14))
+        self.assertFalse(rogue_fight.drain_hits("W", lambda n: 15))
+        self.assertTrue(rogue_fight.drain_hits("V", lambda n: 29))
+        self.assertFalse(rogue_fight.drain_hits("V", lambda n: 30))
+
     def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
         # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
         game = new_game(seed=307)
