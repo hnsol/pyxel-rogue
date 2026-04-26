@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1911"
+UI_BUILD = "260426_1920"
 
 # ===========================================================
 #  Font
@@ -1457,7 +1457,7 @@ class Game:
                 mx,my=self.random_room_tile(room,{T_FLOOR,T_CORR})
                 if (self.tm[my][mx] in (T_FLOOR,T_CORR) and not self.gi_at(mx,my)
                         and not self.mon_at(mx,my) and (mx,my)!=(self.p.x,self.p.y)):
-                    spec=self.random_monster_spec(monster_depth)
+                    spec=self.monster_spec_for_sym(rogue_monsters.randmonster(monster_depth, RNG.rnd, wander=False))
                     monster=self.new_monster_from_spec(mx,my,spec,depth=monster_depth)
                     monster.mean=True
                     self.give_pack(monster,depth=monster_depth)

@@ -3803,18 +3803,22 @@ class RogueBaselineTest(unittest.TestCase):
         game.max_depth = 7
         room = game.rooms[0]
         positions = iter((x, game.p.y + 2) for x in range(2, 8))
-        spec = next(s for s in rogue.BESTIARY if s.sym == "C")
         pack_depths = []
         old_make_item = rogue.make_item
         old_random_room_tile = game.random_room_tile
         old_random_monster_spec = getattr(game, "random_monster_spec", None)
         old_give_pack = game.give_pack
         old_rnd = rogue.RNG.rnd
+        rnd_calls = []
         try:
-            rogue.RNG.rnd = lambda n: 0
+            def rnd(n):
+                rnd_calls.append(n)
+                return 8 if n == 10 else 0
+
+            rogue.RNG.rnd = rnd
             rogue.make_item = lambda depth: rogue.Item(rogue.CAT_FOOD, 0)
             game.random_room_tile = lambda room_arg, tiles: next(positions)
-            game.random_monster_spec = lambda depth: spec
+            game.random_monster_spec = lambda depth: (_ for _ in ()).throw(AssertionError("random_monster_spec used"))
             game.give_pack = lambda monster, depth=None: pack_depths.append(depth) or monster.pack.append(rogue.Item(rogue.CAT_FOOD, 0))
 
             game._spawn_treasure_room(room)
