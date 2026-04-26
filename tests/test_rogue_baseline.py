@@ -3048,6 +3048,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.hp, 17)
         self.assertEqual(monster.max_hp, 17)
 
+    def test_rogue_544_new_monster_hastes_after_level_29(self):
+        # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
+        game = new_game(seed=308)
+        set_open_floor(game)
+        spec = next(s for s in rogue.BESTIARY if s.sym == "C")
+        monster = game.new_monster_from_spec(game.p.x + 1, game.p.y, spec, depth=30)
+
+        self.assertIn(rogue.rogue_monsters.FLAG_HASTE, monster.flags)
+
     def test_rogue_544_levitation_blocks_stairs_pickup_and_traps(self):
         # Rogue 5.4.4 command.c:levit_check() blocks stairs and pickup;
         # move.c:be_trapped() returns before trap effects while ISLEVIT.

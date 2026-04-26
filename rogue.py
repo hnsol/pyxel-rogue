@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1930"
+UI_BUILD = "260426_1934"
 
 # ===========================================================
 #  Font
@@ -1381,6 +1381,8 @@ class Game:
             x, y, spec.sym, spec.name, hp,
             level, spec.armor-lev_add, spec.damage, spec.exp+lev_add*10, spec.flags
         )
+        if depth>29:
+            monster.flags.add(rogue_monsters.FLAG_HASTE)
         self.set_monster_disguise(monster,depth=depth)
         return monster
 
