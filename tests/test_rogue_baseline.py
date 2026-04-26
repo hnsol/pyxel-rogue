@@ -1529,6 +1529,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[other_scroll.kind])
         self.assertIn("this scroll is an identify potion scroll", game.msgs)
 
+    def test_rogue_544_identify_scroll_is_consumed_before_target_selection(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() calls leave_pack() before whatis().
+        game = new_game(seed=336)
+        pot = rogue.Item(rogue.CAT_POT, 0)
+        ident_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
+        ident_scroll = rogue.Item(rogue.CAT_SCR, ident_kind)
+        game.p.inv.extend([ident_scroll, pot])
+        game.ident.pk[pot.kind] = False
+
+        pending = game.use_scr(ident_scroll)
+
+        self.assertTrue(pending)
+        self.assertNotIn(ident_scroll, game.p.inv)
+        self.assertIn(pot, game.fitems)
+
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
         import rogue_rings

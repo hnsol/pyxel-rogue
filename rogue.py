@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1838"
+UI_BUILD = "260426_1847"
 
 # ===========================================================
 #  Font
@@ -2404,6 +2404,7 @@ class Game:
         elif nm.startswith("identify "):
             cats = self.identify_scroll_target_cats(nm)
             self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
+            p.rm_item(it)
             unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
             if unid:
                 # Interactive target selection (Rogue 5.4.4 wizard.c:whatis()).
