@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1224"
+UI_BUILD = "260427_1234"
 
 # ===========================================================
 #  Font
@@ -432,15 +432,15 @@ SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
 FOODS = [{"name":"food ration","nut":900},{"name":"slime-mold","nut":700}]
 
 WEAPONS = [
-    {"name":"mace","prob":11,"damage":"2d4","hurl_damage":"1d3","wield":True},
-    {"name":"long sword","prob":11,"damage":"3d4","hurl_damage":"1d2","wield":True},
-    {"name":"short bow","prob":12,"damage":"1d1","hurl_damage":"1d1","wield":True},
-    {"name":"arrow","prob":12,"damage":"1d1","hurl_damage":"2d3","wield":False,"stack":True,"missile":True,"launcher":2},
-    {"name":"dagger","prob":8,"damage":"1d6","hurl_damage":"1d4","wield":True,"missile":True},
-    {"name":"two-handed sword","prob":10,"damage":"4d4","hurl_damage":"1d2","wield":True},
-    {"name":"dart","prob":12,"damage":"1d1","hurl_damage":"1d3","wield":False,"stack":True,"missile":True},
-    {"name":"shuriken","prob":12,"damage":"1d2","hurl_damage":"2d4","wield":False,"stack":True,"missile":True},
-    {"name":"spear","prob":12,"damage":"2d3","hurl_damage":"1d6","wield":True,"missile":True},
+    {"name":"mace","prob":11,"damage":"2x4","hurl_damage":"1x3","wield":True},
+    {"name":"long sword","prob":11,"damage":"3x4","hurl_damage":"1x2","wield":True},
+    {"name":"short bow","prob":12,"damage":"1x1","hurl_damage":"1x1","wield":True},
+    {"name":"arrow","prob":12,"damage":"1x1","hurl_damage":"2x3","wield":False,"stack":True,"missile":True,"launcher":2},
+    {"name":"dagger","prob":8,"damage":"1x6","hurl_damage":"1x4","wield":True,"missile":True},
+    {"name":"two-handed sword","prob":10,"damage":"4x4","hurl_damage":"1x2","wield":True},
+    {"name":"dart","prob":12,"damage":"1x1","hurl_damage":"1x3","wield":False,"stack":True,"missile":True},
+    {"name":"shuriken","prob":12,"damage":"1x2","hurl_damage":"2x4","wield":False,"stack":True,"missile":True},
+    {"name":"spear","prob":12,"damage":"2x3","hurl_damage":"1x6","wield":True,"missile":True},
 ]
 
 STR_PLUS = rogue_fight.STR_PLUS

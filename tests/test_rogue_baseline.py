@@ -1950,12 +1950,12 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.ring_r = dam
 
         damage, hplus, dplus = game.player_weapon_profile(game.p.wpn, thrown=False)
-        self.assertEqual((damage, hplus, dplus), ("2d4", 3, 4))
+        self.assertEqual((damage, hplus, dplus), ("2x4", 3, 4))
 
         game.p.wpn = next(it for it in game.p.inv if it.cat == rogue.CAT_WPN and it.kind == 2)
         thrown = rogue.Item(rogue.CAT_WPN, 3, hit_plus=0, dam_plus=0)
         damage, hplus, dplus = game.player_weapon_profile(thrown, thrown=True)
-        self.assertEqual((damage, hplus, dplus), ("2d3", 1, 0))
+        self.assertEqual((damage, hplus, dplus), ("2x3", 1, 0))
 
         game.p.hp = 1
         game.p.max_hp = 10
@@ -4367,10 +4367,11 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.pack, [item])
 
     def test_rogue_544_weapon_table_audit_guards_init_dam_values(self):
-        self.assertEqual(rogue.WEAPONS[0]["damage"], "2d4")
-        self.assertEqual(rogue.WEAPONS[0]["hurl_damage"], "1d3")
-        self.assertEqual(rogue.WEAPONS[3]["damage"], "1d1")
-        self.assertEqual(rogue.WEAPONS[3]["hurl_damage"], "2d3")
+        # Rogue 5.4.4 weapons.c:init_dam[] stores "%dx%d" expressions.
+        self.assertEqual(rogue.WEAPONS[0]["damage"], "2x4")
+        self.assertEqual(rogue.WEAPONS[0]["hurl_damage"], "1x3")
+        self.assertEqual(rogue.WEAPONS[3]["damage"], "1x1")
+        self.assertEqual(rogue.WEAPONS[3]["hurl_damage"], "2x3")
         self.assertEqual(rogue.WEAPONS[3]["launcher"], 2)
         self.assertTrue(rogue.WEAPONS[3]["missile"])
 
@@ -4504,7 +4505,7 @@ class RogueBaselineTest(unittest.TestCase):
         import rogue_fight
 
         damage, hplus, dplus = rogue_fight.weapon_profile(
-            weapon={"damage": "1d1", "hurl_damage": "2d3", "missile": True, "launcher": 2},
+            weapon={"damage": "1x1", "hurl_damage": "2x3", "missile": True, "launcher": 2},
             hit_plus=1,
             dam_plus=2,
             thrown=True,
@@ -4515,7 +4516,7 @@ class RogueBaselineTest(unittest.TestCase):
             launcher_dam_plus=4,
         )
 
-        self.assertEqual((damage, hplus, dplus), ("2d3", 4, 6))
+        self.assertEqual((damage, hplus, dplus), ("2x3", 4, 6))
 
     def test_rogue_544_fight_helper_strength_tables_match_source(self):
         # Rogue 5.4.4 fight.c:str_plus/add_dam tables clamp by strength index.
