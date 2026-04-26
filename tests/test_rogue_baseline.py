@@ -1414,6 +1414,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("my, that was a yummy slime-mold", game.msgs)
         self.assertNotIn(slime, game.p.inv)
 
+    def test_rogue_544_food_helper_eat_matches_misc_c_branches(self):
+        # Rogue 5.4.4 misc.c:eat() food amount and ration/slime-mold outcome live in rogue_food.py.
+        import rogue_food
+
+        amount = lambda n: 0
+        awful = lambda n: 71
+        good = lambda n: 70
+
+        self.assertEqual(
+            rogue_food.eat_food(-5, 0, amount, awful, rogue.HUNGERTIME, rogue.STOMACHSIZE),
+            (rogue.HUNGERTIME - 200, "awful", 1),
+        )
+        self.assertEqual(
+            rogue_food.eat_food(rogue.STOMACHSIZE, 0, amount, good, rogue.HUNGERTIME, rogue.STOMACHSIZE),
+            (rogue.STOMACHSIZE, "good", 0),
+        )
+        self.assertEqual(
+            rogue_food.eat_food(100, 1, amount, awful, rogue.HUNGERTIME, rogue.STOMACHSIZE),
+            (100 + rogue.HUNGERTIME - 200, "slime-mold", 0),
+        )
+
     def test_rogue_544_ring_damage_hit_and_regeneration_effects(self):
         import rogue_rings
 

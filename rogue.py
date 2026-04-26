@@ -38,6 +38,7 @@ import rogue_daemons
 import rogue_armor
 import rogue_chase
 import rogue_fight
+import rogue_food
 import rogue_levels
 import rogue_move
 import rogue_weapons
@@ -171,7 +172,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1540"
+UI_BUILD = "260426_1548"
 
 # ===========================================================
 #  Font
@@ -2772,12 +2773,14 @@ class Game:
 
     def eat(self,it):
         # C: misc.c:eat()
-        self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+RNG.randrange(400))
+        self.p.food, outcome, exp_gain = rogue_food.eat_food(
+            self.p.food, it.kind, RNG.randrange, RNG.rnd, HUNGERTIME, STOMACHSIZE
+        )
         self.p.state="normal"
-        if it.kind == 1:
+        if outcome == "slime-mold":
             self.msg("misc.my_that_was_a_yummy_value", value="slime-mold")
-        elif RNG.rnd(100) > 70:
-            self.p.exp += 1
+        elif outcome == "awful":
+            self.p.exp += exp_gain
             self.msg("misc.value_this_food_tastes_awful", value="yuk")
             if self.p.lvlup():
                 self.msg("misc.welcome_to_level_level", level=self.p.level)
