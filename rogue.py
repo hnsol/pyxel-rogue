@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1825"
+UI_BUILD = "260426_1831"
 
 # ===========================================================
 #  Font
@@ -2441,7 +2441,7 @@ class Game:
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
             r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
-            if old_room is not self.room_at(p.x, p.y):
+            if rogue_scrolls.teleport_identifies(old_room, self.room_at(p.x, p.y)):
                 self.ident.sk[it.kind]=True
             self.finish_teleport()
         elif nm=="create monster":

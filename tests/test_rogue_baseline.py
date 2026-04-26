@@ -1111,6 +1111,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(seen, [first, second])
         self.assertEqual((first.held, second.scared), (0, 0))
 
+    def test_rogue_544_scrolls_helper_teleport_identifies_on_room_change(self):
+        # Rogue 5.4.4 scrolls.c:S_TELEP identifies only when cur_room changes.
+        import rogue_scrolls
+
+        room = object()
+        self.assertFalse(rogue_scrolls.teleport_identifies(room, room))
+        self.assertTrue(rogue_scrolls.teleport_identifies(room, object()))
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

@@ -92,3 +92,8 @@ def aggravate_monsters(monsters, runto) -> None:
         monster.held = 0
         monster.scared = 0
         runto(monster)
+
+
+def teleport_identifies(old_room, new_room) -> bool:
+    """Return Rogue 5.4.4 scrolls.c:S_TELEP identification result."""
+    return old_room is not new_room
