@@ -2515,6 +2515,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(fired, ["first"])
         self.assertFalse(daemons.running("second"))
 
+    def test_rogue_544_do_daemons_does_not_run_daemon_started_in_current_slot(self):
+        # Rogue 5.4.4 daemon.c:do_daemons() does not clear the current daemon slot before callback.
+        import rogue_daemons
+
+        daemons = rogue_daemons.DaemonList()
+        fired = []
+        daemons.start("first", rogue_daemons.BEFORE)
+        daemons.start("second", rogue_daemons.BEFORE)
+
+        def run(name):
+            fired.append(name)
+            if name == "first":
+                daemons.kill("first")
+                daemons.start("third", rogue_daemons.BEFORE)
+
+        daemons.tick_each(rogue_daemons.BEFORE, run)
+
+        self.assertEqual(fired, ["first", "second"])
+        self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["third", "second"])
+
     def test_rogue_544_fuse_table_keeps_duplicate_slots(self):
         # Rogue 5.4.4 daemon.c:fuse()/extinguish() use slots, not a unique map.
         import rogue_daemons

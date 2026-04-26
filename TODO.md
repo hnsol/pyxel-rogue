@@ -246,6 +246,7 @@
   - [x] `daemons.c:swander()` / `rollwand()` 相当の wandering daemon ロジックを `rogue_daemons.py` へ小分割し、`Game` 側から委譲
   - [x] Rogue 5.4.4 `daemons.c:sight()` 準拠で、healing / extra healing / see invisible の blind 解除時に `sight` fuse を消す
   - [x] Rogue 5.4.4 `daemon.c:do_daemons()` / `do_fuses()` 準拠で、daemon/fuse を due list 後処理ではなく slot順の即時dispatchへ寄せる
+  - [x] Rogue 5.4.4 `daemon.c:do_daemons()` 準拠で、daemon callback 中の kill/start が同じ tick で再実行されないことを固定
   - [x] Rogue 5.4.4 `daemon.c:do_fuses()` 準拠で、fuse 発火前に slot を空けて callback 中の再登録を可能にする
   - [x] Rogue 5.4.4 `daemon.c:d_slot()` 準拠で、daemon/fuse 登録時に先頭の空きスロットを再利用する
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の hungry_state 変化run停止と `misc.c:add_haste()` の nohaste 期間を helper 化
