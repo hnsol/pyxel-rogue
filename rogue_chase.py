@@ -18,7 +18,8 @@ def monster_turn(monster, move_monst, distance_to_hero) -> None:
     """Rogue 5.4.4 chase.c:runners() per-monster move plus ISFLY extra move."""
     if not getattr(monster, "alive", False) or not getattr(monster, "running", False):
         return
-    move_monst(monster)
+    if move_monst(monster) == -1:
+        return
     if getattr(monster, "alive", False) and "fly" in getattr(monster, "flags", set()) and distance_to_hero(monster) >= 3:
         move_monst(monster)
 
@@ -30,8 +31,9 @@ def move_monst(monster, do_chase, chase_steps_for_turn, finish_chase_turn) -> No
         return
     for _ in range(chase_steps_for_turn(monster)):
         if do_chase(monster) == -1:
-            return
+            return -1
     finish_chase_turn(monster)
+    return 0
 
 
 def runto(monster, dest) -> None:

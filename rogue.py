@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1058"
+UI_BUILD = "260427_1105"
 
 # ===========================================================
 #  Font
@@ -1968,7 +1968,7 @@ class Game:
 
     def move_monst(self,m):
         # C: chase.c:move_monst()
-        rogue_chase.move_monst(
+        return rogue_chase.move_monst(
             m,
             self.do_chase,
             rogue_monsters.chase_steps_for_turn,

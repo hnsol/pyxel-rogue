@@ -2505,6 +2505,18 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [monster, monster])
 
+    def test_rogue_544_chase_helper_monster_turn_stops_fly_repeat_after_minus_one(self):
+        # Rogue 5.4.4 chase.c:runners() continues when move_monst() returns -1.
+        import rogue_chase
+
+        monster = monster_at(9, 5, "K", "kestrel", flags="fly")
+        monster.running = True
+        calls = []
+
+        rogue_chase.monster_turn(monster, lambda m: calls.append(m) or -1, lambda m: 3)
+
+        self.assertEqual(calls, [monster])
+
     def test_rogue_544_chase_helper_move_monst_runs_steps_and_finishes_turn(self):
         # Rogue 5.4.4 chase.c:move_monst() runs chase steps, then toggles t_turn.
         import rogue_chase
