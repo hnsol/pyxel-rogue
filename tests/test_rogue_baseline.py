@@ -2916,6 +2916,26 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [1, 2])
 
+    def test_rogue_544_fight_helper_nymph_steal_uses_reservoir_selection(self):
+        # Rogue 5.4.4 fight.c:attack() excludes equipped items and uses rnd(++nobj)==0.
+        import rogue_fight
+
+        equipped = object()
+        first = object()
+        second = object()
+        calls = []
+
+        self.assertIs(
+            rogue_fight.magic_item_to_steal(
+                [equipped, first, second],
+                {equipped},
+                lambda item: item is not equipped,
+                lambda n: calls.append(n) or 0,
+            ),
+            second,
+        )
+        self.assertEqual(calls, [1, 2])
+
     def test_rogue_544_leprechaun_steals_gold_with_goldcalc(self):
         # Rogue 5.4.4 fight.c:attack() subtracts GOLDCALC once, plus four
         # more times on failed VS_MAGIC; rogue.h:GOLDCALC uses rnd(50+10*level)+2.

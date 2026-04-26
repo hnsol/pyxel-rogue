@@ -106,6 +106,7 @@
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）
+- [x] Rogue 5.4.4 `fight.c:attack()` 相当の Nymph 盗み対象選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Leprechaun purse 0 hit 消滅監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith レベルドレイン経験値監査（`e_levels[s_lvl-1]+1`）
