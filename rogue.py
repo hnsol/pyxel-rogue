@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1818"
+UI_BUILD = "260426_1825"
 
 # ===========================================================
 #  Font
@@ -1828,9 +1828,7 @@ class Game:
 
     def aggravate_monsters(self):
         # C: misc.c:aggravate()
-        for mo in self.mons:
-            mo.held=mo.scared=0
-            self.runto(mo)
+        rogue_scrolls.aggravate_monsters(self.mons, self.runto)
 
     def wake_monster(self,m):
         # C: monsters.c:wake_monster()

@@ -1096,6 +1096,21 @@ class RogueBaselineTest(unittest.TestCase):
             [((3, 4), rogue.T_DOOR), ((5, 6), rogue.T_CORR), ((7, 8), rogue.T_TRAP)],
         )
 
+    def test_rogue_544_scrolls_helper_aggravate_monsters_runs_all(self):
+        # Rogue 5.4.4 scrolls.c:S_AGGR calls misc.c:aggravate(), which runto()s all monsters.
+        import rogue_scrolls
+
+        first = monster_at(1, 1)
+        second = monster_at(2, 2)
+        first.held = 3
+        second.scared = 4
+        seen = []
+
+        rogue_scrolls.aggravate_monsters([first, second], seen.append)
+
+        self.assertEqual(seen, [first, second])
+        self.assertEqual((first.held, second.scared), (0, 0))
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

@@ -84,3 +84,11 @@ def magic_mapping_targets(hidden_tiles, traps, trap_tile):
     targets = list(hidden_tiles.items())
     targets.extend((pos, trap_tile) for pos in traps)
     return targets
+
+
+def aggravate_monsters(monsters, runto) -> None:
+    """Apply Rogue 5.4.4 scrolls.c:S_AGGR / misc.c:aggravate()."""
+    for monster in monsters:
+        monster.held = 0
+        monster.scared = 0
+        runto(monster)
