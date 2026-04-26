@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1701"
+UI_BUILD = "260426_1708"
 
 # ===========================================================
 #  Font
@@ -2428,8 +2428,8 @@ class Game:
                 self.msg("scrolls.your_color_glows_color2_for_a_moment", color=p.wpn.data["name"], color2="blue")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="enchant armor":
-            if p.arm:
-                p.arm.ench+=1; p.arm.cursed=False; p.recalc_ac(); self.msg("scrolls.your_armor_glows_color_for_a_moment", color="silver")
+            if rogue_scrolls.enchant_armor(p.arm):
+                p.recalc_ac(); self.msg("scrolls.your_armor_glows_color_for_a_moment", color="silver")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="remove curse":
             for i in (p.wpn,p.arm,p.ring_l,p.ring_r):

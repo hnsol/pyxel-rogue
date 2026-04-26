@@ -13,3 +13,12 @@ def enchant_weapon(weapon, rnd) -> bool:
         weapon.dam_plus += 1
     weapon.ench = weapon.hit_plus
     return True
+
+
+def enchant_armor(armor) -> bool:
+    """Apply Rogue 5.4.4 scrolls.c:S_ARMOR to the current armor."""
+    if armor is None:
+        return False
+    armor.ench += 1
+    armor.cursed = False
+    return True

@@ -1123,6 +1123,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("your armor glows silver for a moment", game.msgs)
         self.assertNotIn("Your armor glows!", game.msgs)
 
+    def test_rogue_544_scrolls_helper_enchant_armor_matches_s_armor(self):
+        # Rogue 5.4.4 scrolls.c:S_ARMOR decrements o_arm and clears ISCURSED.
+        import rogue_scrolls
+
+        armor = rogue.Item(rogue.CAT_ARM, 0, ench=2, cursed=True)
+        self.assertTrue(rogue_scrolls.enchant_armor(armor))
+        self.assertFalse(armor.cursed)
+        self.assertEqual(armor.ench, 3)
+        self.assertFalse(rogue_scrolls.enchant_armor(None))
+
     def test_rogue_544_teleport_scroll_identifies_only_when_room_changes(self):
         # Rogue 5.4.4 scrolls.c:S_TELEP calls wizard.c:teleport(), which emits no log
         # and clears ISHELD/vf_hit when teleporting away from a Venus Flytrap.
