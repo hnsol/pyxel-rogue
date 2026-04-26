@@ -1087,6 +1087,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(weapon.hit_plus, 1)
         self.assertEqual(weapon.dam_plus, 0)
 
+    def test_rogue_544_scrolls_helper_enchant_weapon_matches_s_ench(self):
+        # Rogue 5.4.4 scrolls.c:S_ENCH clears ISCURSED and increments one weapon plus.
+        import rogue_scrolls
+
+        weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=2, dam_plus=3, cursed=True)
+        self.assertTrue(rogue_scrolls.enchant_weapon(weapon, lambda n: 1))
+        self.assertFalse(weapon.cursed)
+        self.assertEqual((weapon.hit_plus, weapon.dam_plus), (2, 4))
+        self.assertFalse(rogue_scrolls.enchant_weapon(None, lambda n: 0))
+
     def test_rogue_544_enchant_armor_does_not_identify_on_read(self):
         # Rogue 5.4.4 scrolls.c:S_ARMOR enchants cur_armor but does not set scr_info[].oi_know.
         game = new_game(seed=323)

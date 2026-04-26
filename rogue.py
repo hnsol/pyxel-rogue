@@ -28,6 +28,7 @@ from rogue_rng import RogueRng
 import rogue_monsters
 import rogue_pack
 import rogue_potions
+import rogue_scrolls
 import rogue_rings
 import rogue_rooms
 import rogue_search
@@ -172,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1652"
+UI_BUILD = "260426_1701"
 
 # ===========================================================
 #  Font
@@ -2423,11 +2424,7 @@ class Game:
             else:
                 self.msg("pyxel.feel_vaguely_uneasy")
         elif nm=="enchant weapon":
-            if p.wpn:
-                p.wpn.cursed=False
-                if RNG.rnd(2)==0: p.wpn.hit_plus+=1
-                else: p.wpn.dam_plus+=1
-                p.wpn.ench=p.wpn.hit_plus
+            if rogue_scrolls.enchant_weapon(p.wpn, RNG.rnd):
                 self.msg("scrolls.your_color_glows_color2_for_a_moment", color=p.wpn.data["name"], color2="blue")
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="enchant armor":
