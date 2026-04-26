@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1408"
+UI_BUILD = "260427_1420"
 
 # ===========================================================
 #  Font
@@ -1845,8 +1845,7 @@ class Game:
         if (not m.running and m.mean and m.held<=0 and rnd(3)!=0
                 and not rogue_rings.is_wearing(self.p, rogue_rings.R_STEALTH)):
             self.runto(m)
-        if (m.sym=="M" and m.running and not self.p.blind and not m.found
-                and not rogue_monsters.is_cancelled(m)):
+        if (rogue_monsters.medusa_gaze_active(m) and m.running and not self.p.blind and not m.found):
             m.found=True
             if not self.save_vs_magic():
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))
@@ -2731,7 +2730,7 @@ class Game:
                 if target.sym=="F" and self.p.held_by is target:
                     self.p.held_by=None
                 if kind == rogue_sticks.WS_INVIS:
-                    target.flags.add(rogue_monsters.FLAG_INVISIBLE)
+                    rogue_monsters.make_invisible(target)
                 elif kind == rogue_sticks.WS_POLYMORPH:
                     self.polymorph_monster(target)
                     if rogue_sticks.polymorph_identifies((target.x,target.y) in self.visible, self.can_see_monster(target)):

@@ -124,6 +124,8 @@
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `rogue.h:ISFLY` の飛行判定を `rogue_monsters.is_flying()` へ小分割
 - [x] Rogue 5.4.4 `rogue.h:ISINVIS` の不可視判定を `rogue_monsters.is_invisible()` へ小分割
+- [x] Rogue 5.4.4 `sticks.c:WS_INVIS` の `ISINVIS` 付与を `rogue_monsters.make_invisible()` へ小分割
+- [x] Rogue 5.4.4 `monsters.c:wake_monster()` の Medusa gaze gate を `rogue_monsters.medusa_gaze_active()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` の深層 `ISHASTE` 付与を `rogue_monsters.apply_deep_haste()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`move_monst() == -1` 時は飛行追加移動をしない

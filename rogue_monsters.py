@@ -39,6 +39,16 @@ def is_invisible(monster) -> bool:
     return FLAG_INVISIBLE in monster.flags
 
 
+def make_invisible(monster) -> None:
+    """Rogue 5.4.4 sticks.c:WS_INVIS sets ISINVIS."""
+    monster.flags.add(FLAG_INVISIBLE)
+
+
+def medusa_gaze_active(monster) -> bool:
+    """Rogue 5.4.4 monsters.c:wake_monster() Medusa gaze gate."""
+    return monster.sym == "M" and not is_cancelled(monster)
+
+
 def apply_deep_haste(monster, depth: int) -> None:
     """Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29."""
     if depth > 29:

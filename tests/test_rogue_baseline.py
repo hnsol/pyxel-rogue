@@ -3901,6 +3901,21 @@ class RogueBaselineTest(unittest.TestCase):
         monster = monster_at(1, 1, "P", "phantom", flags="invis")
         self.assertTrue(rogue.rogue_monsters.is_invisible(monster))
 
+    def test_rogue_544_monsters_helper_make_invisible_matches_ws_invis(self):
+        # Rogue 5.4.4 sticks.c:WS_INVIS sets ISINVIS on the target monster.
+        monster = monster_at(1, 1, "O", "orc")
+        rogue.rogue_monsters.make_invisible(monster)
+        self.assertTrue(rogue.rogue_monsters.is_invisible(monster))
+
+    def test_rogue_544_monsters_helper_medusa_gaze_matches_wake_monster_gate(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() uses ch == 'M' and !ISCANC for Medusa gaze.
+        medusa = monster_at(1, 1, "M", "medusa")
+        orc = monster_at(1, 1, "O", "orc", flags="confuse")
+        self.assertTrue(rogue.rogue_monsters.medusa_gaze_active(medusa))
+        self.assertFalse(rogue.rogue_monsters.medusa_gaze_active(orc))
+        medusa.flags.add("cancel")
+        self.assertFalse(rogue.rogue_monsters.medusa_gaze_active(medusa))
+
     def test_rogue_544_monsters_helper_apply_deep_haste_matches_new_monster(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets ISHASTE when level > 29.
         monster = monster_at(1, 1, "O", "orc")
