@@ -3131,6 +3131,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 0)
         self.assertEqual(game.death_cause, "killed by a vampire")
 
+    def test_rogue_544_fight_helper_vampire_drain_subtracts_hp_and_max_hp(self):
+        # Rogue 5.4.4 fight.c:attack() Vampire drain subtracts roll(1,3) from hp and max_hp.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.max_hp_drain(10, 20, lambda: 3), (7, 17, False))
+        self.assertEqual(rogue_fight.max_hp_drain(1, 2, lambda: 3), (1, -1, True))
+
     def test_rogue_544_melee_attack_reveals_disguised_xeroc_without_damage(self):
         # Rogue 5.4.4 fight.c:attack() reveals disguised X and returns FALSE for non-thrown attacks.
         game = new_game(seed=307)

@@ -99,6 +99,16 @@ def wraith_drain(level: int, exp: int, hp: int, max_hp: int, exp_table, roll_few
     return level, exp, hp, max_hp, max_hp <= 0
 
 
+def max_hp_drain(hp: int, max_hp: int, roll_fewer):
+    """Rogue 5.4.4 fight.c:attack() Vampire max HP drain."""
+    fewer = roll_fewer()
+    hp -= fewer
+    max_hp -= fewer
+    if hp <= 0:
+        hp = 1
+    return hp, max_hp, max_hp <= 0
+
+
 def roll_damage_expr(expr: str, roll) -> int:
     """Rogue 5.4.4 fight.c:roll_em() damage expression roll."""
     total = 0
