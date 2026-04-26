@@ -1380,6 +1380,40 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.rnd = old_rnd
 
+    def test_rogue_544_eat_ration_can_taste_awful_and_add_exp(self):
+        # Rogue 5.4.4 misc.c:eat() gives food ration a rnd(100)>70 awful branch with +1 exp.
+        game = new_game(seed=203)
+        ration = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv.append(ration)
+        game.p.food = -5
+        game.p.exp = 0
+        old_randrange = rogue.RNG.randrange
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.randrange = lambda n: 0
+            rogue.RNG.rnd = lambda n: 71
+            game.eat(ration)
+        finally:
+            rogue.RNG.randrange = old_randrange
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.food, rogue.HUNGERTIME - 200)
+        self.assertEqual(game.p.state, "normal")
+        self.assertEqual(game.p.exp, 1)
+        self.assertIn("yuk, this food tastes awful", game.msgs)
+        self.assertNotIn(ration, game.p.inv)
+
+    def test_rogue_544_eat_slime_mold_uses_yummy_fruit_message(self):
+        # Rogue 5.4.4 misc.c:eat() uses "my, that was a yummy %s" for slime-mold.
+        game = new_game(seed=204)
+        slime = rogue.Item(rogue.CAT_FOOD, 1)
+        game.p.inv.append(slime)
+
+        game.eat(slime)
+
+        self.assertIn("my, that was a yummy slime-mold", game.msgs)
+        self.assertNotIn(slime, game.p.inv)
+
     def test_rogue_544_ring_damage_hit_and_regeneration_effects(self):
         import rogue_rings
 

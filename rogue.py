@@ -171,7 +171,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1531"
+UI_BUILD = "260426_1540"
 
 # ===========================================================
 #  Font
@@ -2774,7 +2774,16 @@ class Game:
         # C: misc.c:eat()
         self.p.food=min(STOMACHSIZE,max(self.p.food,0)+HUNGERTIME-200+RNG.randrange(400))
         self.p.state="normal"
-        self.msg("pyxel.eat_item_yum", item=it.data["name"]); self.p.rm_item(it)
+        if it.kind == 1:
+            self.msg("misc.my_that_was_a_yummy_value", value="slime-mold")
+        elif RNG.rnd(100) > 70:
+            self.p.exp += 1
+            self.msg("misc.value_this_food_tastes_awful", value="yuk")
+            if self.p.lvlup():
+                self.msg("misc.welcome_to_level_level", level=self.p.level)
+        else:
+            self.msg("misc.value_that_tasted_good", value="yum")
+        self.p.rm_item(it)
 
     def wield(self,it):
         # C: weapons.c:wield()
