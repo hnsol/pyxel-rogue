@@ -122,6 +122,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Wraith level drain を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Vampire max HP drain を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Wraith/Vampire drain 発動率を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:killed()` 相当の Venus Flytrap hold 解除を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Leprechaun purse 0 hit 消滅監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith レベルドレイン経験値監査（`e_levels[s_lvl-1]+1`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Wraith level 1 drain 経験値監査（`--s_lvl==0`）

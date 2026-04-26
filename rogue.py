@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1053"
+UI_BUILD = "260426_1055"
 
 # ===========================================================
 #  Font
@@ -1736,8 +1736,7 @@ class Game:
         mn = translated_name or TextCatalog.monster(self.lang,m.name)
         self.p.exp+=m.exp
         if self.p.held_by is m:
-            m.vf_hit=0
-            m.damage_expr="0x0"
+            m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_release()
             self.p.held_by=None
         if self.p.lvlup():
             self.msg("pyxel.welcome_to_level", level=self.p.level)

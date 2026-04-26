@@ -3486,6 +3486,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(flytrap.vf_hit, 0)
         self.assertEqual(flytrap.damage_expr, "0x0")
 
+    def test_rogue_544_fight_helper_venus_flytrap_release_resets_hold_damage(self):
+        # Rogue 5.4.4 fight.c:killed() clears vf_hit and restores F damage to "0x0".
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.venus_flytrap_release(), (0, "0x0"))
+
     def test_weapon_names_use_rogue_54_hit_and_damage_pluses(self):
         ident = rogue.IdentTable()
         mace = rogue.Item(rogue.CAT_WPN, 0, hit_plus=1, dam_plus=1)

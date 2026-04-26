@@ -70,6 +70,11 @@ def venus_flytrap_miss_hp(player_hp: int, vf_hit: int) -> int:
     return player_hp - vf_hit
 
 
+def venus_flytrap_release():
+    """Rogue 5.4.4 fight.c:killed() Venus Flytrap release."""
+    return 0, "0x0"
+
+
 def poison_bite_strength(strength: int, poison_saved: bool, sustain_strength: bool):
     """Rogue 5.4.4 fight.c:attack() Rattlesnake poison bite."""
     if poison_saved:
