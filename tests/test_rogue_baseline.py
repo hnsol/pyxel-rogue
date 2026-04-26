@@ -960,6 +960,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.confused, 0)
         self.assertFalse(medusa.found)
 
+    def test_rogue_544_levitation_prevents_mean_monster_wake(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() gates mean monster wake with !ISLEVIT.
+        game = new_game(seed=207)
+        set_open_floor(game)
+        game.p.levitating = 10
+        hobgoblin = monster_at(game.p.x + 1, game.p.y, "H", "hobgoblin", flags="mean")
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.wake_monster(hobgoblin)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(hobgoblin.running)
+
     def test_rogue_544_cancelled_monsters_do_not_use_special_attack_or_regen(self):
         # Rogue 5.4.4 fight.c:attack() special switch is gated by !ISCANC; regen uses the same cancelled state.
         game = new_game(seed=207)

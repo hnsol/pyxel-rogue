@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1420"
+UI_BUILD = "260427_1428"
 
 # ===========================================================
 #  Font
@@ -1842,7 +1842,7 @@ class Game:
         # C: monsters.c:wake_monster()
         if not m.alive:
             return
-        if (not m.running and m.mean and m.held<=0 and rnd(3)!=0
+        if (not m.running and m.mean and m.held<=0 and self.p.levitating <= 0 and rnd(3)!=0
                 and not rogue_rings.is_wearing(self.p, rogue_rings.R_STEALTH)):
             self.runto(m)
         if (rogue_monsters.medusa_gaze_active(m) and m.running and not self.p.blind and not m.found):
