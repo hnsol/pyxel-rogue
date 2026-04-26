@@ -41,6 +41,7 @@ import rogue_chase
 import rogue_fight
 import rogue_food
 import rogue_levels
+import rogue_misc
 import rogue_move
 import rogue_weapons
 from rogue_combat_text import (
@@ -173,7 +174,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1127"
+UI_BUILD = "260427_1144"
 
 # ===========================================================
 #  Font
@@ -2245,8 +2246,9 @@ class Game:
 
     def add_haste(self, potion=True):
         # Rogue 5.4.4 misc.c:add_haste() and daemons.c:nohaste().
-        if self.p.haste > 0:
-            self.p.no_command += rnd(8)
+        result = rogue_misc.add_haste_result(self.p.haste > 0, potion, rnd)
+        if not result.ok:
+            self.p.no_command += result.no_command_add
             self.p.haste = 0
             self.haste_half_turn = False
             self.fuses.extinguish("nohaste")
@@ -2255,9 +2257,8 @@ class Game:
         self.p.haste = 1
         self.haste_half_turn = False
         if potion:
-            duration = rnd(4) + 4
-            self.p.haste = duration
-            self.fuses.fuse("nohaste", duration, rogue_daemons.AFTER)
+            self.p.haste = result.duration
+            self.fuses.fuse("nohaste", result.duration, rogue_daemons.AFTER)
         return True
 
     def nohaste(self):
@@ -3273,9 +3274,12 @@ class Game:
 
     def run_stomach(self):
         # C: daemons.c:stomach()
+        old_state = self.p.state
         m=self.p.hunger()
         if m:
-            self.msg(m); self.dashing=False
+            self.msg(m)
+        if rogue_daemons.stomach_stops_running(old_state, self.p.state):
+            self.dashing=False
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
 

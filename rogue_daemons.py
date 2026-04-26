@@ -52,6 +52,11 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
     return None
 
 
+def stomach_stops_running(previous_state: str, current_state: str) -> bool:
+    """Rogue 5.4.4 daemons.c:stomach() hungry_state change gate."""
+    return previous_state != current_state
+
+
 def swander(actions) -> None:
     """Rogue 5.4.4 daemons.c:swander()."""
     actions.daemons.start("rollwand", BEFORE)

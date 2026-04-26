@@ -2904,6 +2904,11 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(player.state, "weak")
         self.assertEqual(player.no_command, 0)
 
+    def test_rogue_544_daemons_helper_stomach_stops_running_only_on_state_change(self):
+        # Rogue 5.4.4 daemons.c:stomach() clears running only when hungry_state changes.
+        self.assertTrue(rogue.rogue_daemons.stomach_stops_running("normal", "hungry"))
+        self.assertFalse(rogue.rogue_daemons.stomach_stops_running("hungry", "hungry"))
+
     def test_rogue_544_daemons_helper_stomach_uses_rnd_for_faint_gate(self):
         # Rogue 5.4.4 daemons.c:stomach() uses rnd(5), not a generic randrange().
         player = rogue.Player()
@@ -3060,6 +3065,26 @@ class RogueBaselineTest(unittest.TestCase):
         game.end_turn()
         self.assertEqual(game.turn, turn + 1)
         self.assertEqual(game.p.haste, 4)
+
+    def test_rogue_544_misc_helper_add_haste_potion_duration(self):
+        # Rogue 5.4.4 misc.c:add_haste(TRUE) uses rnd(4)+4 for nohaste.
+        import rogue_misc
+
+        result = rogue_misc.add_haste_result(False, True, lambda n: 1)
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.duration, 5)
+        self.assertEqual(result.no_command_add, 0)
+
+    def test_rogue_544_misc_helper_add_haste_second_use_faints(self):
+        # Rogue 5.4.4 misc.c:add_haste() adds rnd(8) no_command when already hasted.
+        import rogue_misc
+
+        result = rogue_misc.add_haste_result(True, True, lambda n: n - 1)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.duration, 0)
+        self.assertEqual(result.no_command_add, 7)
 
     def test_rogue_544_second_haste_self_faints_and_extinguishes_nohaste(self):
         # Rogue 5.4.4 misc.c:add_haste() clears ISHASTE, extinguishes nohaste, and adds rnd(8) no_command.
