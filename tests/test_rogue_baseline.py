@@ -1072,6 +1072,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [1, 2, 3])
         self.assertEqual(pick, (11, 9))
 
+    def test_rogue_544_scrolls_helper_food_detection_finds_food_positions(self):
+        # Rogue 5.4.4 scrolls.c:S_FDET marks FOOD objects on the level.
+        import rogue_scrolls
+
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        food.x, food.y = 3, 4
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = 5, 6
+
+        self.assertEqual(rogue_scrolls.food_detection_positions([food, potion], rogue.CAT_FOOD), [(3, 4)])
+        self.assertEqual(rogue_scrolls.food_detection_positions([potion], rogue.CAT_FOOD), [])
+
     def test_rogue_544_hold_monster_identifies_only_when_it_holds_running_monster(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets scr_info[S_HOLD].oi_know only when ch > 0.
         game = new_game(seed=321)

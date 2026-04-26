@@ -72,3 +72,8 @@ def choose_create_monster_pos(player, candidates, rnd):
         if rnd(count) == 0:
             pick = pos
     return pick
+
+
+def food_detection_positions(items, food_cat):
+    """Return Rogue 5.4.4 scrolls.c:S_FDET food object positions."""
+    return [(item.x, item.y) for item in items if item.cat == food_cat]

@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1752"
+UI_BUILD = "260426_1800"
 
 # ===========================================================
 #  Font
@@ -2491,12 +2491,11 @@ class Game:
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="food detection":
-            found=False
-            for gi in self.gitems:
-                if gi.cat==CAT_FOOD:
-                    self.visible.add((gi.x,gi.y))
-                    self.explored.add((gi.x,gi.y))
-                    found=True
+            positions = rogue_scrolls.food_detection_positions(self.gitems, CAT_FOOD)
+            for pos in positions:
+                self.visible.add(pos)
+                self.explored.add(pos)
+            found = bool(positions)
             if found:
                 self.ident.sk[it.kind]=True
                 self.msg("scrolls.your_nose_tingles_and_you_smell_food")
