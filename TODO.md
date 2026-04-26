@@ -208,6 +208,7 @@
   - [x] Rogue 5.4.4 `daemons.c:stomach()` 準拠で、faint 判定を `randrange(5)` ではなく `rnd(5)` に統一
   - [x] `daemons.c:swander()` / `rollwand()` 相当の wandering daemon ロジックを `rogue_daemons.py` へ小分割し、`Game` 側から委譲
   - [x] Rogue 5.4.4 `daemons.c:sight()` 準拠で、healing / extra healing / see invisible の blind 解除時に `sight` fuse を消す
+  - [x] Rogue 5.4.4 `daemon.c:do_daemons()` / `do_fuses()` 準拠で、daemon/fuse を due list 後処理ではなく slot順の即時dispatchへ寄せる
   - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）

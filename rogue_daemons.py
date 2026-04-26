@@ -113,6 +113,20 @@ class FuseList:
                     self._fuses.remove(fuse)
         return due
 
+    def tick_each(self, when: str, callback) -> None:
+        """Decrement fuses and run each expired action immediately."""
+        for fuse in list(self._fuses):
+            if fuse not in self._fuses:
+                continue
+            if fuse.get("kind") != "fuse" or fuse["when"] != when or fuse["time"] <= 0:
+                continue
+            fuse["time"] -= 1
+            if fuse["time"] == 0:
+                name = fuse["name"]
+                if fuse in self._fuses:
+                    self._fuses.remove(fuse)
+                callback(name)
+
     def _find(self, name: str) -> dict | None:
         for fuse in self._fuses:
             if fuse.get("kind") == "fuse" and fuse["name"] == name:
@@ -155,6 +169,14 @@ class DaemonList:
             for daemon in list(self._daemons)
             if daemon.get("kind") == "daemon" and daemon["when"] == when
         ]
+
+    def tick_each(self, when: str, callback) -> None:
+        """Run active daemons immediately in slot order."""
+        for daemon in list(self._daemons):
+            if daemon not in self._daemons:
+                continue
+            if daemon.get("kind") == "daemon" and daemon["when"] == when:
+                callback(daemon["name"])
 
 
 class DelayedActionTable:

@@ -2393,6 +2393,25 @@ class RogueBaselineTest(unittest.TestCase):
         daemons.kill("rollwand")
         self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["rollwand"])
 
+    def test_rogue_544_do_daemons_runs_each_daemon_immediately(self):
+        # Rogue 5.4.4 daemon.c:do_daemons() skips slots killed by an earlier daemon.
+        import rogue_daemons
+
+        daemons = rogue_daemons.DaemonList()
+        fired = []
+        daemons.start("first", rogue_daemons.AFTER)
+        daemons.start("second", rogue_daemons.AFTER)
+
+        def run(name):
+            fired.append(name)
+            if name == "first":
+                daemons.kill("second")
+
+        daemons.tick_each(rogue_daemons.AFTER, run)
+
+        self.assertEqual(fired, ["first"])
+        self.assertFalse(daemons.running("second"))
+
     def test_rogue_544_fuse_table_keeps_duplicate_slots(self):
         # Rogue 5.4.4 daemon.c:fuse()/extinguish() use slots, not a unique map.
         import rogue_daemons
@@ -2403,6 +2422,25 @@ class RogueBaselineTest(unittest.TestCase):
         fuses.extinguish("swander")
 
         self.assertEqual(fuses.tick(rogue_daemons.BEFORE), ["swander"])
+
+    def test_rogue_544_do_fuses_runs_each_fuse_immediately(self):
+        # Rogue 5.4.4 daemon.c:do_fuses() empties and calls each fuse immediately.
+        import rogue_daemons
+
+        fuses = rogue_daemons.FuseList()
+        fired = []
+        fuses.fuse("first", 1, rogue_daemons.AFTER)
+        fuses.fuse("second", 1, rogue_daemons.AFTER)
+
+        def run(name):
+            fired.append(name)
+            if name == "first":
+                fuses.extinguish("second")
+
+        fuses.tick_each(rogue_daemons.AFTER, run)
+
+        self.assertEqual(fired, ["first"])
+        self.assertEqual(fuses.remaining("second"), 0)
 
     def test_rogue_544_daemon_and_fuse_share_maxdaemon_slots(self):
         # Rogue 5.4.4 daemon.c stores daemons and fuses in one MAXDAEMONS d_list.

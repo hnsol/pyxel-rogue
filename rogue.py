@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1111"
+UI_BUILD = "260427_1127"
 
 # ===========================================================
 #  Font
@@ -3197,23 +3197,8 @@ class Game:
             if self.p.levitating==0:
                 self.msg("daemons.you_float_gently_to_the_ground")
         self.do_after_daemons()
-        due_fuses = self.fuses.tick(rogue_daemons.AFTER)
-        if "unconfuse" in due_fuses:
-            self.unconfuse()
-        if "sight" in due_fuses:
-            self.sight()
-        if "turn_see" in due_fuses:
-            self.p.see_monsters = 0
-        if "unsee" in due_fuses:
-            self.p.see_invisible = 0
-        if "come_down" in due_fuses:
-            self.come_down()
-        if "land" in due_fuses:
-            self.land()
-        if "nohaste" in due_fuses:
-            self.nohaste()
-        if "swander" in due_fuses:
-            self.swander()
+        due_fuses = []
+        self.fuses.tick_each(rogue_daemons.AFTER, lambda name: (due_fuses.append(name), self.run_fuse(name)))
         if "nohaste" not in due_fuses and self.p.haste>0:
             remaining = self.fuses.remaining("nohaste")
             if remaining:
@@ -3231,13 +3216,27 @@ class Game:
 
     def do_before_daemons(self):
         # Rogue 5.4.4 command.c calls do_daemons(BEFORE), then do_fuses(BEFORE).
-        for name in self.daemons.tick(rogue_daemons.BEFORE):
-            if name == "rollwand":
-                self.roll_wanderer()
-        due_fuses = self.fuses.tick(rogue_daemons.BEFORE)
-        if "swander" in due_fuses:
-            self.swander()
+        self.daemons.tick_each(rogue_daemons.BEFORE, self.run_daemon)
+        self.fuses.tick_each(rogue_daemons.BEFORE, self.run_fuse)
         self.wander_timer = self.fuses.remaining("swander")
+
+    def run_fuse(self, name):
+        if name == "unconfuse":
+            self.unconfuse()
+        elif name == "sight":
+            self.sight()
+        elif name == "turn_see":
+            self.p.see_monsters = 0
+        elif name == "unsee":
+            self.p.see_invisible = 0
+        elif name == "come_down":
+            self.come_down()
+        elif name == "land":
+            self.land()
+        elif name == "nohaste":
+            self.nohaste()
+        elif name == "swander":
+            self.swander()
 
     def swander(self):
         # C: daemons.c:swander()
@@ -3256,15 +3255,17 @@ class Game:
 
     def do_after_daemons(self):
         # Rogue 5.4.4 command.c calls do_daemons(AFTER) before do_fuses(AFTER).
-        for name in self.daemons.tick(rogue_daemons.AFTER):
-            if name == "rollwand":
-                self.roll_wanderer()
-            elif name == "doctor":
-                self.p.heal_tick()
-            elif name == "stomach":
-                self.run_stomach()
-            elif name == "runners":
-                self.run_runners()
+        self.daemons.tick_each(rogue_daemons.AFTER, self.run_daemon)
+
+    def run_daemon(self, name):
+        if name == "rollwand":
+            self.roll_wanderer()
+        elif name == "doctor":
+            self.p.heal_tick()
+        elif name == "stomach":
+            self.run_stomach()
+        elif name == "runners":
+            self.run_runners()
 
     def run_runners(self):
         # C: chase.c:runners()
