@@ -162,7 +162,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_0956"
+UI_BUILD = "260426_1001"
 
 # ===========================================================
 #  Font
@@ -368,12 +368,7 @@ def roll(s: str) -> int:
     n, d = s.split("d"); return RNG.roll(int(n), int(d))
 
 def roll_damage_expr(expr: str) -> int:
-    total = 0
-    for part in expr.split("/"):
-        sep = "x" if "x" in part else "d"
-        n, d = part.split(sep)
-        total += RNG.roll(int(n), int(d))
-    return total
+    return rogue_fight.roll_damage_expr(expr, RNG.roll)
 
 def rnd(n: int) -> int:
     return RNG.rnd(n)

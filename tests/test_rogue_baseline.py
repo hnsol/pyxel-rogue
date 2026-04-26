@@ -3277,6 +3277,18 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.randrange = old_randrange
 
+    def test_rogue_544_fight_helper_roll_damage_expr_sums_damage_parts(self):
+        # Rogue 5.4.4 fight.c:roll_em() parses each "%dx%d" damage part.
+        import rogue_fight
+
+        rolls = []
+
+        self.assertEqual(
+            rogue_fight.roll_damage_expr("1x2/1x5/1x5", lambda n, sides: rolls.append((n, sides)) or n * sides),
+            12,
+        )
+        self.assertEqual(rolls, [(1, 2), (1, 5), (1, 5)])
+
     def test_rogue_544_roll_em_swings_once_per_damage_part(self):
         # Rogue 5.4.4 fight.c:roll_em() calls swing() inside the damage-part loop.
         game = new_game(seed=8)
