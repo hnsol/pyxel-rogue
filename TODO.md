@@ -116,6 +116,7 @@
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`move_monst() == -1` 時は飛行追加移動をしない
 - [x] Rogue 5.4.4 `chase.c:move_monst()` 相当の速度ステップ実行を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:move_monst()` 準拠で、held gate は `runners()` 側に限定
 - [x] Rogue 5.4.4 `chase.c:runto()` 相当の追跡開始を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:diag_ok()` 相当の斜め移動可否を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:dist()` / `dist_cp()` 相当の二乗距離を `rogue_chase.py` へ小分割

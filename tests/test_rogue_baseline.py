@@ -2535,6 +2535,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [monster, monster])
         self.assertEqual(finished, [monster])
 
+    def test_rogue_544_chase_helper_move_monst_does_not_apply_held_gate(self):
+        # Rogue 5.4.4 chase.c:move_monst() does not check ISHELD; runners() owns that gate.
+        import rogue_chase
+
+        monster = monster_at(3, 1)
+        monster.held = 2
+        calls = []
+
+        rogue_chase.move_monst(
+            monster,
+            lambda m: calls.append(m) or 0,
+            lambda m: 1,
+            lambda m: None,
+        )
+
+        self.assertEqual(calls, [monster])
+        self.assertEqual(monster.held, 2)
+
     def test_rogue_544_chase_helper_runto_sets_running_and_clears_held(self):
         # Rogue 5.4.4 chase.c:runto() sets ISRUN, clears ISHELD, and sets destination.
         import rogue_chase
@@ -6560,7 +6578,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertNotEqual((monster.x, monster.y), (6, 5))
 
-    def test_held_monster_skips_turn_and_counts_down(self):
+    def test_held_monster_direct_turn_does_not_count_down_hold(self):
+        # Rogue 5.4.4 chase.c:move_monst() does not decrement ISHELD; runners() owns the held skip.
         game = new_game(seed=506)
         set_open_floor(game)
         game.p.x, game.p.y = 5, 5
@@ -6571,8 +6590,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.m_turn(monster)
 
-        self.assertEqual(monster.held, 1)
-        self.assertEqual((monster.x, monster.y), (7, 5))
+        self.assertEqual(monster.held, 2)
+        self.assertNotEqual((monster.x, monster.y), (7, 5))
 
     def test_wait_select_shortcuts_and_empty_action_search(self):
         game = new_game(seed=46)
