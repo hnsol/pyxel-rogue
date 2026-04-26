@@ -103,6 +103,10 @@
 - [x] Rogue 5.4.4 `chase.c:roomin()` 相当の部屋矩形判定を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:see_monst()` 相当の盲目/不可視可視判定を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 相当の carry 目的地選択を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲートを `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
+- [x] Rogue 5.4.4 `move.c:rust_armor()` 相当の錆び合法判定・保護分岐を `rogue_move.py` へ小分割
+- [x] Rogue 5.4.4 `move.c:be_trapped()` `T_MYST` 11択メッセージ表を `rogue_move.py` へ小分割
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）

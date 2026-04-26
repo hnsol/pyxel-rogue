@@ -5264,6 +5264,69 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=True, sustain_strength=False), (10, None))
         self.assertEqual(rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False), (3, "floor"))
 
+    def test_rogue_544_move_helper_can_rust_armor_matches_source_gate(self):
+        # Rogue 5.4.4 move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
+        import rogue_move
+
+        self.assertTrue(rogue_move.can_rust_armor(True, False, 8))
+        self.assertFalse(rogue_move.can_rust_armor(False, False, 8))
+        self.assertFalse(rogue_move.can_rust_armor(True, True, 8))
+        self.assertFalse(rogue_move.can_rust_armor(True, False, 9))
+
+    def test_rogue_544_move_helper_rust_armor_result_matches_source_branches(self):
+        # Rogue 5.4.4 move.c:rust_armor() preserves protected/sustain armor, otherwise increments o_arm.
+        import rogue_move
+
+        self.assertEqual(rogue_move.rust_armor_result(protected=True, sustain_armor=False), "vanish")
+        self.assertEqual(rogue_move.rust_armor_result(protected=False, sustain_armor=True), "vanish")
+        self.assertEqual(rogue_move.rust_armor_result(protected=False, sustain_armor=False), "weaken")
+
+    def test_rogue_544_move_helper_mysterious_trap_message_table_matches_source(self):
+        # Rogue 5.4.4 move.c:be_trapped() T_MYST switch has 11 fixed message cases.
+        import rogue_move
+
+        self.assertEqual(rogue_move.mysterious_trap_message(0), ("move.you_are_suddenly_in_a_parallel_dimension", None))
+        self.assertEqual(rogue_move.mysterious_trap_message(1), ("move.the_light_in_here_suddenly_seems_color", "color"))
+        self.assertEqual(rogue_move.mysterious_trap_message(6), ("move.value_sparks_dance_across_your_armor", "value"))
+        self.assertEqual(rogue_move.mysterious_trap_message(10), ("move.you_pack_turns_value", "value"))
+
+    def test_rogue_544_move_helper_rndmove_tries_one_random_square_only(self):
+        # Rogue 5.4.4 move.c:rndmove() rolls y then x once and stays put if that square is bad.
+        import rogue_move
+
+        rng = SequenceRng([0, 2])
+        self.assertEqual(
+            rogue_move.rndmove((10, 10), rng.rnd, lambda src, dst: False),
+            (10, 10),
+        )
+        self.assertEqual(rng.calls, [3, 3])
+
+        rng = SequenceRng([2, 0])
+        self.assertEqual(
+            rogue_move.rndmove((10, 10), rng.rnd, lambda src, dst: True),
+            (9, 11),
+        )
+
+    def test_rogue_544_chase_helper_random_move_gate_matches_source_order(self):
+        # Rogue 5.4.4 chase.c:chase() tests ISHUH, Phantom, then Bat random movement.
+        import rogue_chase
+
+        rng = SequenceRng([1])
+        self.assertTrue(rogue_chase.should_random_move(1, "O", rng.rnd))
+        self.assertEqual(rng.calls, [5])
+
+        rng = SequenceRng([0])
+        self.assertTrue(rogue_chase.should_random_move(0, "P", rng.rnd))
+        self.assertEqual(rng.calls, [5])
+
+        rng = SequenceRng([0])
+        self.assertTrue(rogue_chase.should_random_move(0, "B", rng.rnd))
+        self.assertEqual(rng.calls, [2])
+
+        rng = SequenceRng([])
+        self.assertFalse(rogue_chase.should_random_move(0, "O", rng.rnd))
+        self.assertEqual(rng.calls, [])
+
     def test_flying_monster_gets_extra_chase_move_at_distance(self):
         game = new_game(seed=505)
         set_open_floor(game)

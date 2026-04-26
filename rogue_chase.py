@@ -94,3 +94,14 @@ def find_dest(
         if room_of_item(item) == monster_room and rnd(100) < carry_prob and dest_of_item(item) not in claimed_dests:
             return item
     return None
+
+
+def should_random_move(confused: int, monster_sym: str, rnd) -> bool:
+    """Rogue 5.4.4 chase.c:chase() random movement gate."""
+    if confused > 0 and rnd(5) != 0:
+        return True
+    if monster_sym == "P" and rnd(5) == 0:
+        return True
+    if monster_sym == "B" and rnd(2) == 0:
+        return True
+    return False

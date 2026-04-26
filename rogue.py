@@ -32,6 +32,7 @@ import rogue_dungeon
 import rogue_daemons
 import rogue_chase
 import rogue_fight
+import rogue_move
 from rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
     MONSTER_MISS_MESSAGE_KEYS,
@@ -162,7 +163,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1055"
+UI_BUILD = "260426_1109"
 
 # ===========================================================
 #  Font
@@ -2025,16 +2026,13 @@ class Game:
             m.dest=DEST_PLAYER
 
     def random_monster_move(self,m):
-        # C: chase.c:rndmove()
-        dirs=list(DIR8.values())+[(0,0)]
-        RNG.shuffle(dirs)
-        for dx,dy in dirs:
-            nx,ny=m.x+dx,m.y+dy
-            if dx==dy==0:
-                return (m.x,m.y)
-            if self.can_monster_step(m,nx,ny) and self.diag_ok(m.x,m.y,nx,ny):
-                return (nx,ny)
-        return (m.x,m.y)
+        # C: move.c:rndmove()
+        return rogue_move.rndmove(
+            (m.x, m.y),
+            rnd,
+            lambda src, dst: self.can_monster_step(m, dst[0], dst[1])
+            and self.diag_ok(src[0], src[1], dst[0], dst[1]),
+        )
 
     def can_monster_step(self,m,x,y):
         if (x,y)==(self.p.x,self.p.y):
@@ -2059,7 +2057,7 @@ class Game:
                 m.x,m.y=nx,ny
             return
         if "regen" in m.flags and not rogue_monsters.is_cancelled(m) and m.hp<m.max_hp and RNG.random()<.3: m.hp+=1
-        if (m.confused>0 and rnd(5)!=0) or (m.sym=="P" and rnd(5)==0) or (m.sym=="B" and rnd(2)==0):
+        if rogue_chase.should_random_move(m.confused, m.sym, rnd):
             nx,ny=self.random_monster_move(m)
             if (nx,ny)==(px,py):
                 self.m_attack(m); return "attack"
@@ -3039,7 +3037,11 @@ class Game:
         arm=self.p.arm
         if not self.can_rust_armor(arm):
             return
-        if arm.protected or rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM):
+        result = rogue_move.rust_armor_result(
+            arm.protected,
+            rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM),
+        )
+        if result == "vanish":
             self.msg("move.the_rust_vanishes_instantly")
             return
         arm.ench-=1
@@ -3048,24 +3050,14 @@ class Game:
 
     def can_rust_armor(self, arm):
         # C: move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
-        return bool(arm and arm.cat==CAT_ARM and arm.data["name"]!="leather armor"
-                    and arm.data["ac"] - arm.ench < 9)
+        return bool(arm) and rogue_move.can_rust_armor(
+            arm.cat == CAT_ARM,
+            arm.data["name"] == "leather armor",
+            arm.data["ac"] - arm.ench,
+        )
 
     def mysterious_trap_msg(self):
-        msgs=[
-            ("move.you_are_suddenly_in_a_parallel_dimension",None),
-            ("move.the_light_in_here_suddenly_seems_color","color"),
-            ("move.you_feel_a_sting_in_the_side_of_your_neck",None),
-            ("move.multi_colored_lines_swirl_around_you_then_fade",None),
-            ("move.a_color_light_flashes_in_your_eyes","color"),
-            ("move.a_spike_shoots_past_your_ear",None),
-            ("move.value_sparks_dance_across_your_armor","value"),
-            ("move.you_suddenly_feel_very_thirsty",None),
-            ("move.you_feel_time_speed_up_suddenly",None),
-            ("move.time_now_seems_to_be_going_slower",None),
-            ("move.you_pack_turns_value","value"),
-        ]
-        key,arg=msgs[rnd(11)]
+        key,arg=rogue_move.mysterious_trap_message(rnd(11))
         kw={arg:RAINBOW[rnd(len(RAINBOW))]} if arg in ("color","value") else {}
         self.msg(key,**kw)
 
