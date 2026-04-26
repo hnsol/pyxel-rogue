@@ -2317,6 +2317,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(player.state, "weak")
         self.assertEqual(player.no_command, 0)
 
+    def test_rogue_544_daemons_helper_stomach_uses_rnd_for_faint_gate(self):
+        # Rogue 5.4.4 daemons.c:stomach() uses rnd(5), not a generic randrange().
+        player = rogue.Player()
+        player.food = 0
+        rng = SequenceRng([1])
+        rng.randrange = lambda n: (_ for _ in ()).throw(AssertionError("randrange used"))
+
+        msg = rogue.rogue_daemons.stomach_tick(
+            player,
+            rng,
+            food_cost=1,
+            moretime=rogue.MORETIME,
+            starvetime=rogue.STARVETIME,
+        )
+
+        self.assertIsNone(msg)
+        self.assertEqual(rng.calls, [5])
+
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
         game = new_game(seed=316)
@@ -2330,7 +2348,7 @@ class RogueBaselineTest(unittest.TestCase):
 
             def fake_rnd(n):
                 calls.append(n)
-                return 7
+                return 0 if n == 5 else 7
 
             rogue.RNG.rnd = fake_rnd
             game.run_stomach()
@@ -2338,7 +2356,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.randrange = old_randrange
             rogue.RNG.rnd = old_rnd
 
-        self.assertEqual(calls, [8])
+        self.assertEqual(calls, [5, 8])
         self.assertEqual(game.p.no_command, 11)
 
     def test_rogue_544_stomach_decrements_food_on_starvation_death_check(self):

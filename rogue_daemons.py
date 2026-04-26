@@ -32,7 +32,7 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
             player.hp = 0
             player.state = "faint"
             return "pyxel.starve_to_death"
-        if player.no_command or rng.randrange(5) != 0:
+        if player.no_command or rng.rnd(5) != 0:
             return None
         player.state = "faint"
         player.no_command += rng.rnd(8) + 4
