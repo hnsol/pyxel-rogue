@@ -74,6 +74,7 @@
   - [x] Rogue 5.4.4 `sticks.c:drain()` の HP半減/対象割りを `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_TELTO` の `hero + delta` 転移先計算を `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_LIGHT` 準拠で、既に明るい部屋でも room-lit branch にする
+  - [x] Rogue 5.4.4 `sticks.c:WS_LIGHT` の room/gone branch 判定を `rogue_sticks.py` へ小分割
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious

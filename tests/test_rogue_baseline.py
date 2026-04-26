@@ -363,6 +363,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("the room is lit", game.msgs)
         self.assertNotIn("the corridor glows and then fades", game.msgs)
 
+    def test_rogue_544_sticks_helper_light_uses_room_branch(self):
+        # Rogue 5.4.4 sticks.c:WS_LIGHT uses corridor branch only for ISGONE/no room.
+        import rogue_sticks
+
+        self.assertTrue(rogue_sticks.light_uses_room_branch(True))
+        self.assertFalse(rogue_sticks.light_uses_room_branch(False))
+
     def test_rogue_544_zap_invisibility_and_cancellation_monster_flags(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_INVIS sets ISINVIS; WS_CANCEL sets ISCANC and clears ISINVIS/CANHUH.
         import rogue_sticks

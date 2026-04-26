@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1043"
+UI_BUILD = "260427_1049"
 
 # ===========================================================
 #  Font
@@ -2707,12 +2707,12 @@ class Game:
         if kind == rogue_sticks.WS_LIGHT:
             self.ident.wk[kind]=True
             room=self.room_at(self.p.x,self.p.y) or self.room_containing(self.p.x,self.p.y)
-            if not (room and room.usable):
-                self.msg("sticks.the_corridor_glows_and_then_fades")
-            else:
+            if rogue_sticks.light_uses_room_branch(bool(room and room.usable)):
                 room.flags.discard(ROOM_DARK)
                 self.update_fov()
                 self.msg("sticks.the_room_is_lit")
+            else:
+                self.msg("sticks.the_corridor_glows_and_then_fades")
         elif kind == rogue_sticks.WS_NOP:
             pass
         elif kind == rogue_sticks.WS_DRAIN:
