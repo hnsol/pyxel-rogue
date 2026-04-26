@@ -5,10 +5,19 @@ FLAG_CANCELLED = "cancel"    # Rogue 5.4.4 ISCANC
 FLAG_HASTE = "haste"         # Rogue 5.4.4 ISHASTE
 FLAG_INVISIBLE = "invis"     # Rogue 5.4.4 ISINVIS
 FLAG_SLOW = "slow"           # Rogue 5.4.4 ISSLOW
+FLAG_MEAN = "mean"           # Rogue 5.4.4 ISMEAN
 
 LEVEL_MONSTERS = "KEBSHIROZLCQANYFTWPXUMVGJD"
 WANDER_MONSTERS = ("K", "E", "B", "S", "H", None, "R", "O", "Z", None, "C", "Q", "A",
                    None, "Y", None, "T", "W", "P", None, "U", "M", "V", "G", "J", None)
+
+
+def parse_flags(flags: str):
+    return set(flags.split(",")) if flags else set()
+
+
+def is_mean(flags) -> bool:
+    return FLAG_MEAN in flags
 
 
 def randmonster(level: int, rnd, wander: bool = False) -> str:

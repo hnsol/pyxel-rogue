@@ -3863,6 +3863,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("steal_gold", specs["O"].flags)
         self.assertIn("steal_gold", specs["L"].flags)
 
+    def test_rogue_544_monsters_helper_parse_flags_and_mean(self):
+        # Rogue 5.4.4 extern.c:monsters[] flags are rebuilt on new_monster().
+        self.assertEqual(rogue.rogue_monsters.parse_flags("fly,mean"), {"fly", "mean"})
+        self.assertEqual(rogue.rogue_monsters.parse_flags(""), set())
+        self.assertTrue(rogue.rogue_monsters.is_mean({"mean"}))
+        self.assertFalse(rogue.rogue_monsters.is_mean({"fly"}))
+
     def test_rogue_544_monster_carry_table_and_give_pack_probability(self):
         # Rogue 5.4.4 extern.c:monsters[] m_carry and monsters.c:give_pack().
         specs = {m.sym: m for m in rogue.BESTIARY}

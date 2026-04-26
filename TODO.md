@@ -114,6 +114,7 @@
 - [x] Rogue 5.4.4 `extern.c:monsters[]` 準拠で、`ISMEAN` 相当flagsをBESTIARYへ反映
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` 準拠で、polymorph 後の `ISMEAN` を新monster specから復元
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `chase.c:do_chase()` 準拠で、Orc `ISGREED` と Leprechaun 金盗みを分離
+- [x] Rogue 5.4.4 `extern.c:monsters[]` flags parsing を `rogue_monsters.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の起床済みモンスター実行ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除

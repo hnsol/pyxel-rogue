@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1306"
+UI_BUILD = "260427_1314"
 
 # ===========================================================
 #  Font
@@ -596,10 +596,10 @@ class Monster:
         s.disguise=sym
         s.hp=s.max_hp=hp
         s.level=level; s.armor=armor; s.damage_expr=damage_expr; s.exp=exp
-        s.flags=set(fl.split(",")) if fl else set()
+        s.flags=rogue_monsters.parse_flags(fl)
         s.held=s.scared=s.confused=0
         s.running=False; s.dest=DEST_PLAYER; s.turn=True
-        s.mean="mean" in s.flags; s.target=False; s.found=False; s.vf_hit=0
+        s.mean=rogue_monsters.is_mean(s.flags); s.target=False; s.found=False; s.vf_hit=0
         s.pack=[]
     @property
     def alive(s): return s.hp>0
@@ -2531,11 +2531,11 @@ class Game:
         m.level=level; m.armor=armor
         m.damage_expr=spec.damage; m.exp=exp
         m.hp=m.max_hp=hp
-        m.flags=set(spec.flags.split(",")) if spec.flags else set()
+        m.flags=rogue_monsters.parse_flags(spec.flags)
         m.pack=[]
         m.held=m.scared=m.confused=0
         m.running=False; m.dest=DEST_PLAYER; m.turn=True
-        m.mean="mean" in m.flags; m.target=False; m.found=False; m.vf_hit=0
+        m.mean=rogue_monsters.is_mean(m.flags); m.target=False; m.found=False; m.vf_hit=0
         self.set_monster_disguise(m)
         if self.p.depth>29:
             m.flags.add(rogue_monsters.FLAG_HASTE)
