@@ -20,6 +20,11 @@ def is_mean(flags) -> bool:
     return FLAG_MEAN in flags
 
 
+def force_mean(monster) -> None:
+    monster.flags.add(FLAG_MEAN)
+    monster.mean = True
+
+
 def randmonster(level: int, rnd, wander: bool = False) -> str:
     """Rogue 5.4.4 monsters.c:randmonster()."""
     table = WANDER_MONSTERS if wander else LEVEL_MONSTERS

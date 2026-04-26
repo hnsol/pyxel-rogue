@@ -3870,6 +3870,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue.rogue_monsters.is_mean({"mean"}))
         self.assertFalse(rogue.rogue_monsters.is_mean({"fly"}))
 
+    def test_rogue_544_monsters_helper_has_special_obeys_cancel(self):
+        # Rogue 5.4.4 fight.c:attack() gates specials with !ISCANC.
+        monster = monster_at(1, 1, flags="poison")
+        self.assertTrue(rogue.rogue_monsters.has_special(monster, "poison"))
+        monster.flags.add("cancel")
+        self.assertFalse(rogue.rogue_monsters.has_special(monster, "poison"))
+
+    def test_rogue_544_monsters_helper_force_mean_for_treasure_room(self):
+        # Rogue 5.4.4 new_level.c:treas_room() adds ISMEAN to room monsters.
+        monster = monster_at(1, 1, "B", "bat", flags="fly")
+
+        rogue.rogue_monsters.force_mean(monster)
+
+        self.assertTrue(monster.mean)
+        self.assertIn("mean", monster.flags)
+
     def test_rogue_544_monster_carry_table_and_give_pack_probability(self):
         # Rogue 5.4.4 extern.c:monsters[] m_carry and monsters.c:give_pack().
         specs = {m.sym: m for m in rogue.BESTIARY}

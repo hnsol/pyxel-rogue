@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1314"
+UI_BUILD = "260427_1333"
 
 # ===========================================================
 #  Font
@@ -1468,7 +1468,7 @@ class Game:
                         and not self.mon_at(mx,my) and (mx,my)!=(self.p.x,self.p.y)):
                     spec=self.monster_spec_for_sym(rogue_monsters.randmonster(monster_depth, RNG.rnd, wander=False))
                     monster=self.new_monster_from_spec(mx,my,spec,depth=monster_depth)
-                    monster.mean=True
+                    rogue_monsters.force_mean(monster)
                     self.give_pack(monster,depth=monster_depth)
                     self.mons.append(monster)
                     break
@@ -1892,16 +1892,16 @@ class Game:
             self.msg_text(self.monster_hit_message(mn))
             if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if not rogue_monsters.is_cancelled(m):
-                if "rust" in m.flags and self.can_rust_armor(self.p.arm):
+                if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
-                if "steal_gold" in m.flags:
+                if rogue_monsters.has_special(m, "steal_gold"):
                     old_gold = self.p.gold
                     loss=rogue_fight.leprechaun_gold_loss(self.p.depth, self.save_vs_magic(), goldcalc)
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
                         self.msg("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return
-                if "poison" in m.flags:
+                if rogue_monsters.has_special(m, "poison"):
                     self.p.st, poison_result = rogue_fight.poison_bite_strength(
                         self.p.st,
                         self.save_vs_poison(),
@@ -1911,7 +1911,7 @@ class Game:
                         self.msg("fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker")
                     elif poison_result == "sustained":
                         self.msg("fight.a_bite_momentarily_weakens_you")
-                if "drain_level" in m.flags and rogue_fight.drain_hits("W", rnd):
+                if rogue_monsters.has_special(m, "drain_level") and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,
                         self.p.exp,
@@ -1925,7 +1925,7 @@ class Game:
                         self.death_cause = f"killed by a {m.name}"
                         return
                     self.msg("fight.you_suddenly_feel_weaker")
-                if "drain" in m.flags and rogue_fight.drain_hits("V", rnd):
+                if rogue_monsters.has_special(m, "drain") and rogue_fight.drain_hits("V", rnd):
                     self.p.hp, self.p.max_hp, died = rogue_fight.max_hp_drain(
                         self.p.hp, self.p.max_hp, lambda: roll("1d3")
                     )
@@ -1934,9 +1934,9 @@ class Game:
                         self.death_cause = f"killed by a {m.name}"
                         return
                     self.msg("fight.you_suddenly_feel_weaker")
-                if "confuse" in m.flags and not self.save_vs_magic():
+                if rogue_monsters.has_special(m, "confuse") and not self.save_vs_magic():
                     self.p.confused=RNG.randint(10,20); self.msg("pyxel.feel_confused_bang")
-                if "freeze" in m.flags:
+                if rogue_monsters.has_special(m, "freeze"):
                     self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
                         self.p.no_command, BORE_LEVEL, rnd
                     )
@@ -1944,12 +1944,12 @@ class Game:
                         self.p.hp=0; self.death_cause="hypothermia"
                     if should_message:
                         self.msg("fight.you_are_frozen")
-                if "hold" in m.flags:
+                if rogue_monsters.has_special(m, "hold"):
                     m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_hit(m.vf_hit)
                     self.p.held_by=m
                     self.p.hp-=1
                     if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
-                if "steal_item" in m.flags:
+                if rogue_monsters.has_special(m, "steal_item"):
                     t=self.monster_has_magic_item_to_steal()
                     if t:
                         self.p.rm_item(t); self.msg("pyxel.she_stole_item", item=self.ident.name(t))
