@@ -173,7 +173,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260426_1847"
+UI_BUILD = "260426_1856"
 
 # ===========================================================
 #  Font
@@ -2450,10 +2450,9 @@ class Game:
             pick = rogue_scrolls.choose_create_monster_pos(p, candidates, RNG.rnd)
             if pick:
                 nx,ny=pick
-                cs=[b for b in BESTIARY if b.min_depth<=p.depth]
-                if cs:
-                    e=RNG.choice(cs)
-                    self.mons.append(self.new_monster_from_spec(nx,ny,e))
+                spec = self.monster_spec_for_sym(rogue_monsters.randmonster(p.depth, RNG.rnd, wander=False))
+                if spec:
+                    self.mons.append(self.new_monster_from_spec(nx,ny,spec))
                     if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
                         self.runto(self.mons[-1])
             else:

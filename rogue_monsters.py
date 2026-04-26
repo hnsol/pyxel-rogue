@@ -6,6 +6,24 @@ FLAG_HASTE = "haste"         # Rogue 5.4.4 ISHASTE
 FLAG_INVISIBLE = "invis"     # Rogue 5.4.4 ISINVIS
 FLAG_SLOW = "slow"           # Rogue 5.4.4 ISSLOW
 
+LEVEL_MONSTERS = "KEBSHIROZLCQANYFTWPXUMVGJD"
+WANDER_MONSTERS = ("K", "E", "B", "S", "H", None, "R", "O", "Z", None, "C", "Q", "A",
+                   None, "Y", None, "T", "W", "P", None, "U", "M", "V", "G", "J", None)
+
+
+def randmonster(level: int, rnd, wander: bool = False) -> str:
+    """Rogue 5.4.4 monsters.c:randmonster()."""
+    table = WANDER_MONSTERS if wander else LEVEL_MONSTERS
+    while True:
+        depth = level + (rnd(10) - 6)
+        if depth < 0:
+            depth = rnd(5)
+        if depth > 25:
+            depth = rnd(5) + 21
+        monster = table[depth]
+        if monster:
+            return monster
+
 
 def initial_disguise(sym, random_thing):
     """Rogue 5.4.4 monsters.c:new_monster() sets Xeroc t_disguise = rnd_thing()."""

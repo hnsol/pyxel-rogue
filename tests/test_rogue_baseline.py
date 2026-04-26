@@ -1366,6 +1366,43 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(test_rng.rnd_calls[:8], [1, 2, 3, 4, 5, 6, 7, 8])
         self.assertEqual([(mo.x, mo.y) for mo in game.mons], [(game.p.x + 1, game.p.y + 1)])
 
+    def test_rogue_544_create_monster_uses_randmonster_false_table(self):
+        # Rogue 5.4.4 scrolls.c:S_CREATE calls monsters.c:randmonster(FALSE).
+        class CreateMonsterRng:
+            def __init__(self):
+                self.rolls = iter([0, 0, 2])
+
+            def rnd(self, n):
+                return next(self.rolls)
+
+            def choice(self, seq):
+                raise AssertionError("choice used")
+
+            def roll(self, dice, sides):
+                return dice
+
+        game = new_game(seed=337)
+        set_open_floor(game)
+        game.p.depth = 1
+        px, py = game.p.x, game.p.y
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dx == 0 and dy == 0:
+                    continue
+                game.tm[py + dy][px + dx] = rogue.T_VOID
+        game.tm[py - 1][px - 1] = rogue.T_FLOOR
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "create monster")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        old_rng = rogue.RNG
+        rogue.RNG = CreateMonsterRng()
+        try:
+            game.use_scr(scroll)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual([mo.sym for mo in game.mons], ["B"])
+
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
         cases = [
