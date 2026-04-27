@@ -136,6 +136,7 @@
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で暗い部屋の Medusa gaze を `dist() < LAMPDIST` に限定する
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で Medusa gaze 成功時も `unconfuse` fuse を使う
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で levitation 中は mean monster が起床しない
+- [x] Rogue 5.4.4 `extern.c:monsters[]` 準拠で Medusa の melee `confuse` flag を外す
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` の深層 `ISHASTE` 付与を `rogue_monsters.apply_deep_haste()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`move_monst() == -1` 時は飛行追加移動をしない

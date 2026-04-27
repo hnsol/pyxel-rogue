@@ -4163,6 +4163,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue.Monster(1, 1, "H", "hobgoblin", 3, 1, 5, "1x8", 3, specs["H"].flags).mean)
         self.assertFalse(rogue.Monster(1, 1, "B", "bat", 1, 1, 3, "1x2", 1, specs["B"].flags).mean)
 
+    def test_rogue_544_medusa_table_has_no_melee_confuse_flag(self):
+        # Rogue 5.4.4 extern.c:monsters[] gives Medusa ISMEAN; gaze confusion lives in monsters.c:wake_monster().
+        specs = {m.sym: m for m in rogue.BESTIARY}
+        self.assertIn("mean", specs["M"].flags)
+        self.assertNotIn("confuse", specs["M"].flags)
+
     def test_rogue_544_monster_greed_flag_is_not_gold_steal(self):
         # Rogue 5.4.4 extern.c:monsters[] uses ISGREED for orcs; Leprechauns steal purse in fight.c.
         specs = {m.sym: m for m in rogue.BESTIARY}
