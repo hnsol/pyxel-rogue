@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1835"
+UI_BUILD = "260427_1847"
 
 # ===========================================================
 #  Font
@@ -2615,14 +2615,24 @@ class Game:
         return True
 
     def hit_monster_with_magic_missile(self,m):
+        self.p.quiet = 0
         self.runto(m)
         weapon_dam = self.p.wpn.dam_plus if self.p.wpn else 0
         dmg=rogue_sticks.magic_missile_damage(RNG.roll(1,4), weapon_dam, self.p.str_dam_plus())
         m.hp-=dmg
-        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_MISSILE), "magic missile", self.combat_monster_name(m)))
+        mn = self.combat_monster_name(m)
+        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_MISSILE), "magic missile", mn))
+        confused_by_hit = False
+        if self.p.can_confuse_monster:
+            self.p.can_confuse_monster = False
+            m.confused = 1
+            confused_by_hit = True
+            self.msg("fight.your_hands_stop_glowing_color", color="red")
         if not m.alive:
-            self.msg_text(self.defeated_message(self.combat_monster_name(m)))
+            self.msg_text(self.defeated_message(mn))
             self.award_monster_kill(m)
+        elif rogue_fight.confusion_message_allowed(confused_by_hit, self.p.blind > 0):
+            self.msg("fight.subject_appears_confused", subject=mn)
 
     def bolt_name(self, kind):
         if kind == rogue_sticks.WS_ELECT:

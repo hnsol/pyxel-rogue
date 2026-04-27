@@ -70,6 +70,7 @@
   - [x] magic missile / drain life / nothing の効果監査と接続
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `fight.c:roll_em()` 準拠で、現在武器の `o_dplus` を magic missile damage に加算
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `fight.c:roll_em()` の magic missile damage を `rogue_sticks.py` へ小分割
+  - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `weapons.c:hit_monster()` 準拠で、magic missile 命中時も `fight(..., thrown=TRUE)` の副作用を通す
   - [x] Rogue 5.4.4 `sticks.c:drain()` 準拠で、通路内 drain life 対象を隣接限定にしない
   - [x] Rogue 5.4.4 `sticks.c:drain()` の HP半減/対象割りを `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_TELTO` の `hero + delta` 転移先計算を `rogue_sticks.py` へ小分割

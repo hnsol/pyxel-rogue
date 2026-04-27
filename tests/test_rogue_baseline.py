@@ -621,6 +621,26 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(monster.hp, 11)
 
+    def test_rogue_544_magic_missile_hit_uses_fight_thrown_side_effects(self):
+        # Rogue 5.4.4 sticks.c:WS_MISSILE calls weapons.c:hit_monster() -> fight(..., thrown=TRUE).
+        game = new_game(seed=230)
+        set_open_floor(game)
+        game.p.quiet = 9
+        game.p.can_confuse_monster = True
+        monster = monster_at(game.p.x + 2, game.p.y, hp=20)
+        game.mons = [monster]
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 1
+            game.hit_monster_with_magic_missile(monster)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(game.p.quiet, 0)
+        self.assertFalse(game.p.can_confuse_monster)
+        self.assertEqual(monster.confused, 1)
+        self.assertTrue(monster.running)
+
     def test_rogue_544_sticks_helper_magic_missile_damage(self):
         # Rogue 5.4.4 sticks.c:WS_MISSILE uses 1x4 + o_dplus + cur_weapon o_dplus + strength damage.
         import rogue_sticks
