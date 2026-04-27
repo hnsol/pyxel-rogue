@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0126"
+UI_BUILD = "260428_0207"
 
 # ===========================================================
 #  Font
@@ -1736,6 +1736,8 @@ class Game:
             )
         elif weap is not None:
             damage = "0x0"
+            hplus = rogue_rings.weapon_hit_bonus(self.p, weap, thrown)
+            dplus = rogue_rings.weapon_damage_bonus(self.p, weap, thrown)
         return damage, hplus, dplus
 
     def roll_player_attack(self, m, weap=None, thrown=False):
@@ -2832,6 +2834,8 @@ class Game:
 
     def consume_pack_item(self,it):
         # C: pack.c:leave_pack(obj, FALSE, FALSE).
+        if it is self.p.wpn:
+            self.p.wpn = None
         is_mult = it.cat in (CAT_POT, CAT_SCR, CAT_FOOD)
         remaining_qty, _ = rogue_pack.leave_pack_counts(it.qty, is_mult, False)
         if remaining_qty:
@@ -3020,8 +3024,20 @@ class Game:
         if rogue_things.dropcheck_result(is_equipped, it.cursed) == "cursed":
             self.msg("things.you_cant_it_appears_to_be_cursed")
             return False
+        if it is p.arm:
+            self.waste_time()
+        if it is p.ring_l or it is p.ring_r:
+            self.remove_ring_item(it)
+        if it is p.wpn:
+            p.wpn = None
         if it.stackable and it.qty>1:
-            thrown=Item(it.cat,it.kind,cursed=it.cursed,qty=1,hit_plus=it.hit_plus,dam_plus=it.dam_plus); it.qty-=1
+            thrown=Item(it.cat,it.kind,ench=it.ench,cursed=it.cursed,qty=1,
+                        hit_plus=it.hit_plus,dam_plus=it.dam_plus,charges=it.charges,
+                        known=it.known)
+            thrown.o_flags = set(it.o_flags)
+            thrown.o_label = it.o_label
+            thrown.protected = it.protected
+            it.qty-=1
         else: p.rm_item(it); thrown=it
         tx,ty=p.x,p.y; path=[]
         for _ in range(max(MAP_W,MAP_H)):

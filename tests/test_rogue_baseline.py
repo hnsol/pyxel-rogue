@@ -4358,6 +4358,74 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("cursed", game.msgs[-1])
 
+    def test_rogue_544_throw_stack_copy_preserves_item_flags_and_label(self):
+        # Rogue 5.4.4 pack.c:leave_pack(newobj=TRUE) copies the object before setting o_count=1.
+        game = new_game(seed=5064)
+        set_open_floor(game)
+        arrows = rogue.Item(rogue.CAT_WPN, 3, qty=3, known=False)
+        arrows.o_label = "marked"
+        arrows.protected = True
+        game.p.inv.append(arrows)
+
+        game.throw(arrows, 1, 0)
+
+        thrown = game.throw_anim["outcome"]["item"]
+        self.assertIsNot(thrown, arrows)
+        self.assertEqual(arrows.qty, 2)
+        self.assertEqual(thrown.qty, 1)
+        self.assertFalse(thrown.known)
+        self.assertEqual(thrown.o_label, "marked")
+        self.assertTrue(thrown.protected)
+
+    def test_rogue_544_throw_wielded_weapon_stack_clears_current_weapon(self):
+        # Rogue 5.4.4 weapons.c:missile() calls dropcheck(obj), which clears cur_weapon before leave_pack().
+        game = new_game(seed=5065)
+        set_open_floor(game)
+        arrows = rogue.Item(rogue.CAT_WPN, 3, qty=3)
+        game.p.inv.append(arrows)
+        game.p.wpn = arrows
+
+        game.throw(arrows, 1, 0)
+
+        self.assertIsNone(game.p.wpn)
+        self.assertIn(arrows, game.p.inv)
+        self.assertEqual(arrows.qty, 2)
+
+    def test_rogue_544_throw_see_invisible_ring_extinguishes_unsee(self):
+        # Rogue 5.4.4 weapons.c:missile() calls things.c:dropcheck(); ring branch calls unsee()/extinguish().
+        import rogue_rings
+
+        game = new_game(seed=5059)
+        set_open_floor(game)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEEINVIS)
+        game.p.inv.append(ring)
+        game.p.ring_l = ring
+        game.p.see_invisible = 20
+        game.fuses.fuse("unsee", 20, rogue.rogue_daemons.AFTER)
+
+        game.throw(ring, 1, 0)
+
+        self.assertIsNone(game.p.ring_l)
+        self.assertEqual(game.p.see_invisible, 0)
+        self.assertEqual(game.fuses.remaining("unsee"), 0)
+
+    def test_rogue_544_throw_worn_armor_wastes_time_for_doctor(self):
+        # Rogue 5.4.4 weapons.c:missile() calls things.c:dropcheck(); armor branch calls waste_time().
+        game = new_game(seed=5060)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("stomach")
+        armor = game.p.arm
+        game.p.level = 1
+        game.p.hp = game.p.max_hp - 1
+        game.p.quiet = 19
+
+        game.throw(armor, 1, 0)
+
+        self.assertIsNone(game.p.arm)
+        self.assertEqual(game.p.hp, game.p.max_hp)
+        self.assertEqual(game.p.quiet, 0)
+
     def test_rogue_544_things_helper_dropcheck_result_matches_dropcheck_gate(self):
         # Rogue 5.4.4 things.c:dropcheck() only rejects current cursed equipment.
         self.assertEqual(rogue.rogue_things.dropcheck_result(is_current=False, is_cursed=True), "ok")
@@ -4467,6 +4535,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(food, game.p.inv)
         self.assertEqual(food.qty, 2)
 
+    def test_rogue_544_eating_wielded_food_stack_clears_current_weapon(self):
+        # Rogue 5.4.4 misc.c:eat() clears cur_weapon before leave_pack().
+        game = new_game(seed=5061)
+        food = rogue.Item(rogue.CAT_FOOD, 0, qty=2)
+        game.p.inv.append(food)
+        game.p.wpn = food
+
+        game.eat(food)
+
+        self.assertIsNone(game.p.wpn)
+        self.assertIn(food, game.p.inv)
+        self.assertEqual(food.qty, 1)
+
     def test_rogue_544_quaff_potion_stack_consumes_one(self):
         # Rogue 5.4.4 potions.c:quaff() calls pack.c:leave_pack(obj, FALSE, FALSE).
         kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
@@ -4479,6 +4560,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(potion, game.p.inv)
         self.assertEqual(potion.qty, 1)
 
+    def test_rogue_544_quaff_wielded_potion_stack_clears_current_weapon(self):
+        # Rogue 5.4.4 potions.c:quaff() clears cur_weapon before leave_pack().
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        game = new_game(seed=5062)
+        potion = rogue.Item(rogue.CAT_POT, kind, qty=2)
+        game.p.inv.append(potion)
+        game.p.wpn = potion
+
+        game.use_pot(potion)
+
+        self.assertIsNone(game.p.wpn)
+        self.assertIn(potion, game.p.inv)
+        self.assertEqual(potion.qty, 1)
+
     def test_rogue_544_read_scroll_stack_consumes_one(self):
         # Rogue 5.4.4 scrolls.c:read_scroll() calls pack.c:leave_pack(obj, FALSE, FALSE).
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse")
@@ -4488,6 +4583,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_scr(scroll)
 
+        self.assertIn(scroll, game.p.inv)
+        self.assertEqual(scroll.qty, 1)
+
+    def test_rogue_544_read_wielded_scroll_stack_clears_current_weapon(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() clears cur_weapon before leave_pack().
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse")
+        game = new_game(seed=5063)
+        scroll = rogue.Item(rogue.CAT_SCR, kind, qty=2)
+        game.p.inv.append(scroll)
+        game.p.wpn = scroll
+
+        game.use_scr(scroll)
+
+        self.assertIsNone(game.p.wpn)
         self.assertIn(scroll, game.p.inv)
         self.assertEqual(scroll.qty, 1)
 
@@ -5520,6 +5629,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(damage_expr, "0x0")
         self.assertEqual(hplus, 0)
         self.assertEqual(dplus, 0)
+
+    def test_rogue_544_wielded_non_weapon_gets_ring_hit_and_damage_bonus(self):
+        # Rogue 5.4.4 fight.c:roll_em() applies R_ADDHIT/R_ADDDAM when weap == cur_weapon.
+        import rogue_rings
+
+        game = new_game(seed=5066)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv.append(potion)
+        game.p.wpn = potion
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDHIT, ench=2)
+        game.p.ring_r = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDDAM, ench=3)
+
+        damage_expr, hplus, dplus = game.player_weapon_profile(potion, thrown=False)
+
+        self.assertEqual(damage_expr, "0x0")
+        self.assertEqual(hplus, 2)
+        self.assertEqual(dplus, 3)
 
     def test_rogue_544_fight_helper_roll_em_damage_adds_only_hit_parts(self):
         # Rogue 5.4.4 fight.c:roll_em() rolls damage only after each successful swing().

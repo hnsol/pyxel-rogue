@@ -193,6 +193,7 @@
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の部位ごとの命中/ダメージ加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の defender `!ISRUN` 命中補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の weapon/hurl profile 選択を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で、手持ち非武器にも `R_ADDHIT` / `R_ADDDAM` 補正を適用
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー素手ダメージを `"1x4"` に修正
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー初期 HP / max HP を 12 に修正
 - [x] Rogue 5.4.4 `init.c:init_player()` 準拠で、初期pack順・+1 ring mail・矢数 `rnd(15)+25` を修正
@@ -213,6 +214,8 @@
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `things.c:new_thing()` / `fight.c:roll_em()` 準拠で、非武器投擲の基礎 damage を `"0x0"` にする
+- [x] Rogue 5.4.4 `weapons.c:missile()` / `things.c:dropcheck()` 準拠で、装備品投擲時の armor waste_time / ring解除副作用 / cur_weapon解除を通す
+- [x] Rogue 5.4.4 `pack.c:leave_pack(newobj=TRUE)` 準拠で、stack投擲時の個体flags/labelを保持
 - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲命中時も monster confusion を消費する
 - [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、盲目中は投擲 monster confusion の appears-confused 表示を抑止する
 - [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、近接 appears-confused 表示を CANHUH 消費時かつ非盲目時に限定する
