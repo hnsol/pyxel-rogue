@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1905"
+UI_BUILD = "260427_1918"
 
 # ===========================================================
 #  Font
@@ -2615,6 +2615,7 @@ class Game:
     def hit_monster_with_magic_missile(self,m):
         self.p.quiet = 0
         self.runto(m)
+        self.reveal_xeroc_for_attack(m, thrown=True)
         weapon_dam = self.p.wpn.dam_plus if self.p.wpn else 0
         dmg=rogue_sticks.magic_missile_damage(RNG.roll(1,4), weapon_dam, self.p.str_dam_plus())
         m.hp-=dmg
@@ -2642,9 +2643,10 @@ class Game:
 
     def hit_monster_with_bolt(self, m, name):
         self.p.quiet = 0
+        self.runto(m)
+        self.reveal_xeroc_for_attack(m, thrown=True)
         dmg=RNG.roll(6,6)
         m.hp-=dmg
-        self.runto(m)
         mn = self.combat_monster_name(m)
         self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_FIRE), name, mn))
         self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)

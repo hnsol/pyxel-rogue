@@ -71,6 +71,7 @@
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `fight.c:roll_em()` 準拠で、現在武器の `o_dplus` を magic missile damage に加算
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `fight.c:roll_em()` の magic missile damage を `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `weapons.c:hit_monster()` 準拠で、magic missile 命中時も `fight(..., thrown=TRUE)` の副作用を通す
+  - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、magic missile 命中時も Xeroc 擬態を解除して攻撃を続ける
   - [x] Rogue 5.4.4 `sticks.c:drain()` 準拠で、通路内 drain life 対象を隣接限定にしない
   - [x] Rogue 5.4.4 `sticks.c:drain()` の HP半減/対象割りを `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_TELTO` の `hero + delta` 転移先計算を `rogue_sticks.py` へ小分割
@@ -150,6 +151,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、擬態中 Xeroc の saved monster miss は表示/追跡しない
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` 準拠で、hero 自身の反射 bolt 死亡原因を `bolt` にする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `weapons.c:hit_monster()` 準拠で、bolt 命中時も `fight(..., thrown=TRUE)` の副作用を通す
+- [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、bolt 命中時も Xeroc 擬態を解除して攻撃を続ける
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` saved monster miss の表示/追跡分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` の bolt 死亡原因分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` の DOOR 上 hero 反射例外を `rogue_sticks.py` へ小分割

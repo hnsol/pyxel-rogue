@@ -641,6 +641,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.confused, 1)
         self.assertTrue(monster.running)
 
+    def test_rogue_544_magic_missile_reveals_disguised_xeroc_and_continues_hit(self):
+        # Rogue 5.4.4 fight.c:fight(..., thrown=TRUE) reveals Xeroc but continues thrown attack.
+        game = new_game(seed=231)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 2, game.p.y, sym="X", name="xeroc", hp=40)
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 4
+            game.hit_monster_with_magic_missile(xeroc)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(xeroc.disguise, "X")
+        self.assertLess(xeroc.hp, 40)
+        self.assertIn("wait!  That's a xeroc!", game.msgs)
+
     def test_rogue_544_sticks_helper_magic_missile_damage(self):
         # Rogue 5.4.4 sticks.c:WS_MISSILE uses 1x4 + o_dplus + cur_weapon o_dplus + strength damage.
         import rogue_sticks
@@ -754,6 +772,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.p.can_confuse_monster)
         self.assertEqual(monster.confused, 1)
         self.assertTrue(monster.running)
+
+    def test_rogue_544_bolt_reveals_disguised_xeroc_and_continues_hit(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() hit_monster() uses fight(..., thrown=TRUE).
+        import rogue_sticks
+
+        game = new_game(seed=232)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 2, game.p.y, sym="X", name="xeroc", hp=40)
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+        game.monster_save_throw = lambda which, m: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 6
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_FIRE, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(xeroc.disguise, "X")
+        self.assertLess(xeroc.hp, 40)
+        self.assertIn("wait!  That's a xeroc!", game.msgs)
 
     def test_rogue_544_zap_bolt_saved_monster_takes_no_damage(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() leaves a saved monster unharmed and reports a miss.
