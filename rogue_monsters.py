@@ -60,6 +60,11 @@ def medusa_gaze_can_try(monster, blind: bool, hallucinating: bool) -> bool:
     )
 
 
+def medusa_gaze_visible(player_room_lit: bool, distance2: int, lampdist: int) -> bool:
+    """Rogue 5.4.4 monsters.c:wake_monster() lit room or lamp distance gate."""
+    return player_room_lit or distance2 < lampdist
+
+
 def mark_found(monster) -> None:
     """Rogue 5.4.4 ISFOUND for monsters."""
     monster.found = True

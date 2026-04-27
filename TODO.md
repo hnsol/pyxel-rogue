@@ -133,6 +133,7 @@
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` の Medusa `ISFOUND` 更新を `rogue_monsters.mark_found()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` の mean monster 起床 gate を `rogue_monsters.mean_wake_active()` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で hallucination 中は Medusa gaze を受けない
+- [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で暗い部屋の Medusa gaze を `dist() < LAMPDIST` に限定する
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で levitation 中は mean monster が起床しない
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` の深層 `ISHASTE` 付与を `rogue_monsters.apply_deep_haste()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除

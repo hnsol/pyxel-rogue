@@ -142,6 +142,7 @@ from rogue_timing import (
     HEALTIME,
     HUHDURATION,
     HUNGERTIME,
+    LAMPDIST,
     MAX_TRAPS,
     MORETIME,
     SEEDURATION,
@@ -175,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1943"
+UI_BUILD = "260427_1953"
 
 # ===========================================================
 #  Font
@@ -1847,7 +1848,13 @@ class Game:
                 self.p.levitating > 0,
         ) and rnd(3)!=0):
             self.runto(m)
-        if rogue_monsters.medusa_gaze_can_try(m, self.p.blind > 0, self.p.hallucinating > 0):
+        player_room = self.room_at(self.p.x, self.p.y)
+        medusa_visible = rogue_monsters.medusa_gaze_visible(
+            bool(player_room and not player_room.is_dark),
+            self.dist2((m.x, m.y), (self.p.x, self.p.y)),
+            LAMPDIST,
+        )
+        if medusa_visible and rogue_monsters.medusa_gaze_can_try(m, self.p.blind > 0, self.p.hallucinating > 0):
             rogue_monsters.mark_found(m)
             if not self.save_vs_magic():
                 self.p.confused=max(self.p.confused,RNG.randint(15,25))

@@ -1088,6 +1088,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.confused, 0)
         self.assertFalse(medusa.found)
 
+    def test_rogue_544_dark_room_medusa_gaze_requires_lamp_distance(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() requires dist() < LAMPDIST in a dark room.
+        game = new_game(seed=209)
+        set_open_floor(game)
+        dark = rogue.Room(1, 1, 12, 8, {rogue.ROOM_DARK})
+        game.rooms = [dark]
+        game.p.x, game.p.y = 5, 5
+        medusa = monster_at(game.p.x + 2, game.p.y, "M", "medusa", flags="confuse")
+        medusa.running = True
+        game.mons = [medusa]
+        old_save = game.save_vs_magic
+        try:
+            game.save_vs_magic = lambda: False
+            game.wake_monster(medusa)
+        finally:
+            game.save_vs_magic = old_save
+
+        self.assertEqual(game.p.confused, 0)
+        self.assertFalse(medusa.found)
+
     def test_rogue_544_levitation_prevents_mean_monster_wake(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates mean monster wake with !ISLEVIT.
         game = new_game(seed=207)
@@ -4190,6 +4210,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=False, hallucinating=True))
         medusa.found = True
         self.assertFalse(rogue.rogue_monsters.medusa_gaze_can_try(medusa, blind=False, hallucinating=False))
+
+    def test_rogue_544_monsters_helper_medusa_gaze_visibility_gate(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() requires lit proom or dist() < LAMPDIST.
+        self.assertTrue(rogue.rogue_monsters.medusa_gaze_visible(player_room_lit=True, distance2=99, lampdist=3))
+        self.assertTrue(rogue.rogue_monsters.medusa_gaze_visible(player_room_lit=False, distance2=2, lampdist=3))
+        self.assertFalse(rogue.rogue_monsters.medusa_gaze_visible(player_room_lit=False, distance2=3, lampdist=3))
 
     def test_rogue_544_monsters_helper_mark_medusa_gaze_found(self):
         # Rogue 5.4.4 monsters.c:wake_monster() sets ISFOUND before saving vs Medusa gaze.
