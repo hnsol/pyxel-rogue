@@ -89,6 +89,7 @@
 - [x] `scroll of scare monster` の床上効果（床に置いた巻物でモンスターが踏み込まない挙動）
 - [x] Rogue 5.4.4 `daemons.c:swander()` / `rollwand()` と `monsters.c:wanderer()` 準拠の wandering monster spawn
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
+- [x] Rogue 5.4.4 `armor.c:waste_time()` / `things.c:dropcheck()` 準拠で armor wear/take off/drop 中に daemon/fuse を進める
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠の呪い生成確率監査（weapon 10%、armor 20%、一部 ring 33%、aggravate/teleport 常時 cursed）
 - [x] Rogue 5.4.4 `things.c:new_thing()` / `pick_one()` 相当の food 90/10・カテゴリ重み・potion/weapon/armor 種類重み・weapon/armor enchant 分岐を helper 化
 - [x] Rogue 5.4.4 `new_level.c:new_level()` / `put_things()` 相当の `no_food` 強制 food、`MAXOBJ=9` × 36% 物資生成、Amulet 上昇中の物資生成停止を helper 化

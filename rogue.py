@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2024"
+UI_BUILD = "260427_2025"
 
 # ===========================================================
 #  Font
@@ -2824,6 +2824,7 @@ class Game:
             self.msg_text(msg)
             return
         it.known=True
+        self.waste_time()
         self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
 
     def put_on_ring(self,it):
@@ -2854,6 +2855,7 @@ class Game:
         # C: armor.c:take_off()
         if it is self.p.arm:
             if it.cursed: self.msg("pyxel.its_cursed"); return
+            self.waste_time()
             self.p.arm=None; self.p.recalc_ac()
         elif it is self.p.wpn:
             if it.cursed: self.msg("pyxel.its_cursed"); return
@@ -2868,10 +2870,18 @@ class Game:
         # C: things.c:drop()
         if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
             self.msg("pyxel.its_cursed"); return
+        if it is self.p.arm:
+            self.waste_time()
         if it is self.p.ring_l or it is self.p.ring_r:
             self.remove_ring_item(it)
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
         self.gitems.append(it); self.msg("pyxel.drop_item", item=self.ident.name(it))
+
+    def waste_time(self):
+        # C: armor.c:waste_time().
+        self.do_before_daemons()
+        self.do_after_daemons()
+        self.fuses.tick_each(rogue_daemons.AFTER, self.run_fuse)
 
     def is_scare_monster(self,it):
         return it.cat==CAT_SCR and SCROLLS[it.kind]["name"]=="scare monster"

@@ -3165,6 +3165,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, game.p.max_hp)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_taking_off_armor_wastes_time_for_doctor(self):
+        # Rogue 5.4.4 armor.c:take_off() goes through things.c:dropcheck() -> waste_time().
+        game = new_game(seed=5036)
+        game.daemons.kill("runners")
+        game.daemons.kill("stomach")
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv.append(armor)
+        game.p.arm = armor
+        game.p.level = 1
+        game.p.hp = game.p.max_hp - 1
+        game.p.quiet = 19
+
+        game.takeoff(armor)
+
+        self.assertIsNone(game.p.arm)
+        self.assertEqual(game.p.hp, game.p.max_hp)
+        self.assertEqual(game.p.quiet, 0)
+
     def test_rogue_544_doctor_high_level_heal_uses_rnd_level_minus_seven_plus_one(self):
         # Rogue 5.4.4 daemons.c:doctor() heals high-level players by rnd(lv - 7) + 1.
         game = new_game(seed=319)
