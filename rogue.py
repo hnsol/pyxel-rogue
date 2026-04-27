@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0216"
+UI_BUILD = "260428_0711"
 
 # ===========================================================
 #  Font
@@ -652,17 +652,18 @@ class Player:
         return rogue_fight.str_dam_plus(s.st)
     def inv_full(s): return len(s.inv)>=INV_MAX
     def add_item(s,it):
-        if not rogue_pack.pack_room_allows(len(s.inv), INV_MAX):
-            return False
         if it.stackable:
+            if it.cat != CAT_WPN and not rogue_pack.pack_room_allows(len(s.inv), INV_MAX):
+                return False
             for i in s.inv:
                 if i.cat==it.cat and i.kind==it.kind and (
                     it.cat != CAT_WPN or (it.group != 0 and i.group == it.group)
                 ) and (it.cat == CAT_WPN or i.plus_key()==it.plus_key()):
                     i.picked_up = i.picked_up or it.picked_up
                     i.qty+=it.qty; return True
-        if s.inv_full(): return False
-        s.inv.append(it); return True
+        if not rogue_pack.pack_room_allows(len(s.inv), INV_MAX):
+            return False
+        s.inv.insert(rogue_pack.add_pack_insert_index(s.inv, it), it); return True
     def rm_item(s,it):
         if it in s.inv: s.inv.remove(it)
         if s.wpn is it: s.wpn=None

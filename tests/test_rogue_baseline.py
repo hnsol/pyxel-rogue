@@ -6406,6 +6406,48 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(first.qty, 4)
         self.assertEqual(second.qty, 5)
 
+    def test_rogue_544_full_pack_can_stack_matching_weapon_group(self):
+        # Rogue 5.4.4 pack.c:add_pack() decrements inpack before pack_room() for matching o_group weapons.
+        game = new_game(seed=3306)
+        game.gitems = []
+        arrows = rogue.Item(rogue.CAT_WPN, 3, qty=4, group=7)
+        extra = rogue.Item(rogue.CAT_WPN, 3, qty=5, group=7)
+        game.p.inv = [arrows] + [
+            rogue.Item(rogue.CAT_POT, i % len(rogue.POTIONS)) for i in range(rogue.INV_MAX - 1)
+        ]
+
+        self.assertTrue(game.p.add_item(extra))
+
+        self.assertEqual(len(game.p.inv), rogue.INV_MAX)
+        self.assertEqual(arrows.qty, 9)
+
+    def test_rogue_544_add_pack_inserts_same_type_before_later_types(self):
+        # Rogue 5.4.4 pack.c:add_pack() inserts near the same o_type instead of always appending.
+        game = new_game(seed=3307)
+        game.gitems = []
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        new_potion = rogue.Item(rogue.CAT_POT, 1)
+        game.p.inv = [potion, armor]
+
+        self.assertTrue(game.p.add_item(new_potion))
+
+        self.assertEqual(game.p.inv, [potion, new_potion, armor])
+
+    def test_rogue_544_add_pack_inserts_new_weapon_group_after_existing_groups(self):
+        # Rogue 5.4.4 pack.c:add_pack() scans same o_group weapons before inserting a new group.
+        game = new_game(seed=3308)
+        game.gitems = []
+        first = rogue.Item(rogue.CAT_WPN, 3, qty=4, group=1)
+        second = rogue.Item(rogue.CAT_WPN, 3, qty=5, group=2)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        new_group = rogue.Item(rogue.CAT_WPN, 3, qty=6, group=3)
+        game.p.inv = [first, second, armor]
+
+        self.assertTrue(game.p.add_item(new_group))
+
+        self.assertEqual(game.p.inv, [first, second, new_group, armor])
+
     def test_rogue_544_leave_pack_stack_copy_preserves_scare_found_flag(self):
         # Rogue 5.4.4 pack.c:add_pack() sets ISFOUND, and leave_pack(newobj=TRUE) copies it.
         game = new_game(seed=3304)

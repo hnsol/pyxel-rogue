@@ -214,6 +214,7 @@
 - [x] Rogue 5.4.4 `pack.c:add_pack()` 準拠で potion/scroll/food を同種スタックし、満杯時はスタック前に拒否
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `leave_pack(newobj=TRUE)` 準拠で scare monster の `ISFOUND` 相当を stack 分割コピーへ保持
 - [x] Rogue 5.4.4 `weapons.c:init_weapon()` / `pack.c:add_pack()` 準拠で missile/dagger stack の `o_group` を分離
+- [x] Rogue 5.4.4 `pack.c:add_pack()` 準拠で matching weapon group は満杯packでも stack し、新規itemは同typeまとまりへ挿入
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `things.c:new_thing()` / `fight.c:roll_em()` 準拠で、非武器投擲の基礎 damage を `"0x0"` にする
