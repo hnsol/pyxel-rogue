@@ -484,6 +484,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.x, monster.y), (game.p.x + 1, game.p.y))
         self.assertTrue(monster.running)
 
+    def test_rogue_544_zap_teleport_target_does_not_clear_monster_hold(self):
+        # Rogue 5.4.4 sticks.c:WS_TELAWAY/WS_TELTO set ISRUN directly, not through chase.c:runto().
+        import rogue_sticks
+
+        game = new_game(seed=206)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 3, game.p.y, sym="H", name="hobgoblin")
+        monster.held = 4
+        game.mons = [monster]
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.choice = lambda seq: (game.p.x + 5, game.p.y + 4)
+            away = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_TELAWAY, charges=1)
+            game.zap_stick(away, 1, 0)
+        finally:
+            rogue.RNG.choice = old_choice
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+        self.assertEqual(monster.held, 4)
+
     def test_rogue_544_sticks_helper_teleport_to_position(self):
         # Rogue 5.4.4 sticks.c:WS_TELTO sets new_pos to hero + delta.
         import rogue_sticks
