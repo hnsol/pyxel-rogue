@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1857"
+UI_BUILD = "260427_1905"
 
 # ===========================================================
 #  Font
@@ -1786,13 +1786,11 @@ class Game:
         mn=self.combat_monster_name(m)
         hit,dmg=self.roll_player_attack(m,self.p.wpn,False)
         if hit:
-            confused_by_hit = False
             m.hp-=dmg
             self.msg_text(self.player_hit_message(mn))
-            if self.p.can_confuse_monster:
-                self.p.can_confuse_monster=False
+            self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
+            if confused_by_hit:
                 m.confused=1
-                confused_by_hit = True
                 self.msg("fight.your_hands_stop_glowing_color", color="red")
             if not m.alive:
                 self.msg_text(self.defeated_message(mn))
@@ -2622,11 +2620,9 @@ class Game:
         m.hp-=dmg
         mn = self.combat_monster_name(m)
         self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_MISSILE), "magic missile", mn))
-        confused_by_hit = False
-        if self.p.can_confuse_monster:
-            self.p.can_confuse_monster = False
+        self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
+        if confused_by_hit:
             m.confused = 1
-            confused_by_hit = True
             self.msg("fight.your_hands_stop_glowing_color", color="red")
         if not m.alive:
             self.msg_text(self.defeated_message(mn))
@@ -2651,11 +2647,9 @@ class Game:
         self.runto(m)
         mn = self.combat_monster_name(m)
         self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_FIRE), name, mn))
-        confused_by_hit = False
-        if self.p.can_confuse_monster:
-            self.p.can_confuse_monster = False
+        self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
+        if confused_by_hit:
             m.confused = 1
-            confused_by_hit = True
             self.msg("fight.your_hands_stop_glowing_color", color="red")
         if not m.alive:
             self.msg_text(self.defeated_message(mn))
@@ -2897,13 +2891,11 @@ class Game:
         mn = self.combat_monster_name(m)
         item = self.ident.name(thrown)
         if hit:
-            confused_by_hit = False
             m.hp -= dmg
             self.msg_text(self.thrown_hit_message(thrown, item, mn))
-            if self.p.can_confuse_monster:
-                self.p.can_confuse_monster = False
+            self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
+            if confused_by_hit:
                 m.confused = 1
-                confused_by_hit = True
                 self.msg("fight.your_hands_stop_glowing_color", color="red")
             if not m.alive:
                 self.msg_text(self.defeated_message(mn))

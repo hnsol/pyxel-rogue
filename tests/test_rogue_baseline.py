@@ -5017,6 +5017,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_fight.confusion_message_allowed(confused_by_hit=True, blind=True))
         self.assertFalse(rogue_fight.confusion_message_allowed(confused_by_hit=False, blind=False))
 
+    def test_rogue_544_fight_helper_confusion_hit_effect(self):
+        # Rogue 5.4.4 fight.c:fight() consumes CANHUH on a successful hit.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.confusion_hit_effect(True), (False, True))
+        self.assertEqual(rogue_fight.confusion_hit_effect(False), (False, False))
+
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
         import rogue_fight

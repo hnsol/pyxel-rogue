@@ -180,6 +180,13 @@ def confusion_message_allowed(confused_by_hit: bool, blind: bool) -> bool:
     return confused_by_hit and not blind
 
 
+def confusion_hit_effect(can_confuse_monster: bool):
+    """Rogue 5.4.4 fight.c:fight() consumes CANHUH on a successful hit."""
+    if can_confuse_monster:
+        return False, True
+    return False, False
+
+
 def weapon_profile(
     weapon,
     hit_plus: int,
