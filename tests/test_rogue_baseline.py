@@ -1645,7 +1645,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_scrolls.enchant_weapon(None, lambda n: 0))
 
     def test_rogue_544_enchant_armor_does_not_identify_on_read(self):
-        # Rogue 5.4.4 scrolls.c:S_ARMOR enchants cur_armor but does not set scr_info[].oi_know.
+        # Rogue 5.4.4 scrolls.c:S_ARMOR enchants cur_armor but has no no-armor message
+        # and does not set scr_info[].oi_know.
         game = new_game(seed=323)
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant armor")
         empty_scroll = rogue.Item(rogue.CAT_SCR, kind)
@@ -1655,7 +1656,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.use_scr(empty_scroll)
 
         self.assertFalse(game.ident.sk[kind])
-        self.assertIn("you feel a strange sense of loss", game.msgs)
+        self.assertNotIn("you feel a strange sense of loss", game.msgs)
 
         armor = rogue.Item(rogue.CAT_ARM, 0, ench=0, cursed=True)
         scroll = rogue.Item(rogue.CAT_SCR, kind)

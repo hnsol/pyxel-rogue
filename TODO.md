@@ -113,6 +113,7 @@
   - [x] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
   - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
   - [x] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll を分ける
+  - [x] Rogue 5.4.4 `scrolls.c:S_ARMOR` 準拠で、鎧なし enchant armor は strange sense of loss を出さない
 - [ ] 戦闘計算の精密化（元祖 d20 式の完全再現）
 - [x] Rogue 5.4.4 `fight.c:swing()` 相当の d20 命中判定を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:be_trapped()` / `fight.c:swing()` 準拠の arrow/dart trap 命中式監査（装備中 armor ではなく `pstats.s_arm` を使う）
