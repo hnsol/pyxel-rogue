@@ -4297,8 +4297,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertEqual(game.st, rogue.ST_PLAY)
 
-    def test_rogue_544_put_on_ring_rejects_non_ring_without_spending_turn(self):
-        # Rogue 5.4.4 rings.c:ring_on() rejects obj->o_type != RING and leaves after=FALSE.
+    def test_rogue_544_put_on_ring_rejects_non_ring_and_spends_turn(self):
+        # Rogue 5.4.4 rings.c:ring_on() rejects obj->o_type != RING without clearing after.
         game = new_game(seed=5042)
         game.p.ring_l = None
         armor = rogue.Item(rogue.CAT_ARM, 0)
@@ -4311,11 +4311,11 @@ class RogueBaselineTest(unittest.TestCase):
         game.item_confirm()
 
         self.assertIsNone(game.p.ring_l)
-        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.turn, turn + 1)
         self.assertIn("it would be difficult to wrap that around a finger", game.msgs)
 
-    def test_rogue_544_put_on_current_ring_is_noop_before_two_ring_check(self):
-        # Rogue 5.4.4 rings.c:ring_on() checks is_current(obj) before "wearing two".
+    def test_rogue_544_put_on_current_ring_uses_is_current_before_two_ring_check(self):
+        # Rogue 5.4.4 rings.c:ring_on() checks misc.c:is_current() before "wearing two".
         import rogue_rings
 
         game = new_game(seed=5043)
@@ -4328,17 +4328,16 @@ class RogueBaselineTest(unittest.TestCase):
         game.fitems = [left]
         game.icur = 0
         turn = game.turn
-        msg_count = len(game.msgs)
 
         game.item_confirm()
 
         self.assertIs(game.p.ring_l, left)
         self.assertIs(game.p.ring_r, right)
-        self.assertEqual(game.turn, turn)
-        self.assertEqual(len(game.msgs), msg_count)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("That's already in use", game.msgs)
 
-    def test_rogue_544_put_on_third_ring_does_not_spend_turn(self):
-        # Rogue 5.4.4 rings.c:ring_on() "wearing two" path leaves after=FALSE.
+    def test_rogue_544_put_on_third_ring_spends_turn(self):
+        # Rogue 5.4.4 rings.c:ring_on() "wearing two" path does not clear after.
         import rogue_rings
 
         game = new_game(seed=5044)
@@ -4357,7 +4356,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIs(game.p.ring_l, left)
         self.assertIs(game.p.ring_r, right)
-        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.turn, turn + 1)
         self.assertIn("You already have a ring on each hand.", game.msgs)
 
     def test_rogue_544_rings_helper_ring_on_result_matches_ring_on_gates(self):

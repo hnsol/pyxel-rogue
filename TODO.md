@@ -203,8 +203,8 @@
 - [x] Rogue 5.4.4 `weapons.c:wield()` 準拠で現在装備中 item の wield を no-op にする
 - [x] Rogue 5.4.4 `weapons.c:wield()` / `command.c:command()` 準拠で wield bad path はターン非消費
 - [x] Rogue 5.4.4 `weapons.c:wield()` の gate 判定を `rogue_weapons.py` へ小分割
-- [x] Rogue 5.4.4 `rings.c:ring_on()` / `command.c:command()` 準拠で ring 以外の put on を拒否しターン非消費
-- [x] Rogue 5.4.4 `rings.c:ring_on()` 準拠で現在装備中 ring の put on を no-op にする
+- [x] Rogue 5.4.4 `rings.c:ring_on()` / `command.c:command()` 準拠で ring put on bad path をターン消費にする
+- [x] Rogue 5.4.4 `rings.c:ring_on()` / `misc.c:is_current()` 準拠で現在装備中 ring の put on に in-use 表示を出す
 - [x] Rogue 5.4.4 `rings.c:ring_on()` の gate 判定を `rogue_rings.py` へ小分割
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `command.c:command()` 準拠で未装備 ring の take off を拒否しターン非消費
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `things.c:dropcheck()` 準拠で cursed ring take off 失敗時はターン非消費
