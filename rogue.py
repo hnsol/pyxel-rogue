@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1953"
+UI_BUILD = "260427_2002"
 
 # ===========================================================
 #  Font
@@ -1857,8 +1857,13 @@ class Game:
         if medusa_visible and rogue_monsters.medusa_gaze_can_try(m, self.p.blind > 0, self.p.hallucinating > 0):
             rogue_monsters.mark_found(m)
             if not self.save_vs_magic():
-                self.p.confused=max(self.p.confused,RNG.randint(15,25))
-                mn=TextCatalog.monster(self.lang,m.name)
+                duration = RNG.spread(HUHDURATION)
+                if self.p.confused > 0:
+                    self.fuses.lengthen("unconfuse", duration)
+                else:
+                    self.fuses.fuse("unconfuse", duration, rogue_daemons.AFTER)
+                self.p.confused += duration
+                mn=self.combat_monster_name(m)
                 self.msg("pyxel.monster_gaze_confused", monster=mn)
         if rogue_monsters.is_greedy(m) and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)

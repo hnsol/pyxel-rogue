@@ -1108,6 +1108,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.confused, 0)
         self.assertFalse(medusa.found)
 
+    def test_rogue_544_medusa_gaze_uses_unconfuse_fuse(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() uses fuse/lengthen(unconfuse, spread(HUHDURATION)).
+        game = new_game(seed=211)
+        set_open_floor(game)
+        medusa = monster_at(game.p.x + 1, game.p.y, "M", "medusa", flags="confuse")
+        medusa.running = True
+        game.mons = [medusa]
+        old_save = game.save_vs_magic
+        old_rnd = rogue.RNG.rnd
+        try:
+            game.save_vs_magic = lambda: False
+            rogue.RNG.rnd = lambda n: 1
+            game.wake_monster(medusa)
+        finally:
+            game.save_vs_magic = old_save
+            rogue.RNG.rnd = old_rnd
+
+        duration = rogue.HUHDURATION - rogue.HUHDURATION // 20 + 1
+        self.assertEqual(game.p.confused, duration)
+        self.assertEqual(game.fuses.remaining("unconfuse"), duration)
+        self.assertIn("the medusa's gaze has confused you", game.msgs)
+
     def test_rogue_544_levitation_prevents_mean_monster_wake(self):
         # Rogue 5.4.4 monsters.c:wake_monster() gates mean monster wake with !ISLEVIT.
         game = new_game(seed=207)
