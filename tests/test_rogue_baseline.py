@@ -4276,6 +4276,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertIn("it would be difficult to wrap that around a finger", game.msgs)
 
+    def test_rogue_544_put_on_current_ring_is_noop_before_two_ring_check(self):
+        # Rogue 5.4.4 rings.c:ring_on() checks is_current(obj) before "wearing two".
+        import rogue_rings
+
+        game = new_game(seed=5043)
+        left = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
+        right = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR)
+        game.p.inv.extend([left, right])
+        game.p.ring_l = left
+        game.p.ring_r = right
+        game.cact = "Put on"
+        game.fitems = [left]
+        game.icur = 0
+        turn = game.turn
+        msg_count = len(game.msgs)
+
+        game.item_confirm()
+
+        self.assertIs(game.p.ring_l, left)
+        self.assertIs(game.p.ring_r, right)
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(len(game.msgs), msg_count)
+
     def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
         # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().
         import rogue_weapons

@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2030"
+UI_BUILD = "260428_0001"
 
 # ===========================================================
 #  Font
@@ -2848,6 +2848,8 @@ class Game:
         # C: rings.c:ring_on()
         if it.cat != CAT_RING:
             self.msg("rings.it_would_be_difficult_to_wrap_that_around_a_finger")
+            return False
+        if it is self.p.ring_l or it is self.p.ring_r:
             return False
         if self.p.ring_l is not None and self.p.ring_r is not None:
             self.msg("pyxel.already_ring_each_hand")
