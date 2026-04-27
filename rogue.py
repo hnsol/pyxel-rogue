@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2025"
+UI_BUILD = "260427_2026"
 
 # ===========================================================
 #  Font
@@ -2822,6 +2822,9 @@ class Game:
                 + TextCatalog.msg(self.lang, "armor.you_ll_have_to_take_it_off_first")
             )
             self.msg_text(msg)
+            return
+        if it.cat != CAT_ARM:
+            self.msg("armor.you_cant_wear_that")
             return
         it.known=True
         self.waste_time()

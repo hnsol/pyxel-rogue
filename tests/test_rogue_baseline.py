@@ -4194,6 +4194,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.p.arm, current)
         self.assertIn("take it off first", game.msgs[-1])
 
+    def test_rogue_544_wear_rejects_non_armor_items(self):
+        # Rogue 5.4.4 armor.c:wear() rejects obj->o_type != ARMOR.
+        game = new_game(seed=5037)
+        game.p.arm = None
+        weapon = rogue.Item(rogue.CAT_WPN, 0)
+        game.p.inv.append(weapon)
+
+        game.wear(weapon)
+
+        self.assertIsNone(game.p.arm)
+        self.assertIn("you can't wear that", game.msgs)
+
     def test_rogue_544_monster_table_audit_guards_named_fields(self):
         specs = {m.sym: m for m in rogue.BESTIARY}
         self.assertEqual(
