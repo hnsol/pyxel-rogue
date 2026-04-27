@@ -6373,6 +6373,72 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.inv[0].qty, 1)
         self.assertIn("pack too full", game.msgs)
 
+    def test_rogue_544_add_pack_stacks_potions_and_scrolls(self):
+        # Rogue 5.4.4 pack.c:add_pack() stacks ISMULT potion/scroll/food items.
+        game = new_game(seed=3302)
+        game.gitems = []
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        scroll = rogue.Item(rogue.CAT_SCR, 0)
+        game.p.inv = [potion, scroll]
+        potion_floor = rogue.Item(rogue.CAT_POT, 0)
+        scroll_floor = rogue.Item(rogue.CAT_SCR, 0)
+
+        self.assertTrue(game.p.add_item(potion_floor))
+        self.assertTrue(game.p.add_item(scroll_floor))
+
+        self.assertEqual(game.p.inv, [potion, scroll])
+        self.assertEqual(potion.qty, 2)
+        self.assertEqual(scroll.qty, 2)
+
+    def test_rogue_544_add_pack_keeps_weapon_groups_separate(self):
+        # Rogue 5.4.4 weapons.c:init_weapon() assigns o_group, and pack.c:add_pack() only stacks matching groups.
+        game = new_game(seed=3303)
+        game.gitems = []
+        first = rogue.Item(rogue.CAT_WPN, 3, qty=4)
+        second = rogue.Item(rogue.CAT_WPN, 3, qty=5)
+        first.group = 1
+        second.group = 2
+        game.p.inv = [first]
+
+        self.assertTrue(game.p.add_item(second))
+
+        self.assertEqual(game.p.inv, [first, second])
+        self.assertEqual(first.qty, 4)
+        self.assertEqual(second.qty, 5)
+
+    def test_rogue_544_leave_pack_stack_copy_preserves_scare_found_flag(self):
+        # Rogue 5.4.4 pack.c:add_pack() sets ISFOUND, and leave_pack(newobj=TRUE) copies it.
+        game = new_game(seed=3304)
+        game.gitems = []
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind, qty=2)
+        scroll.picked_up = True
+        game.p.inv = [scroll]
+
+        self.assertTrue(game.drop(scroll))
+
+        dropped = game.gitems[-1]
+        self.assertEqual(dropped.cat, rogue.CAT_SCR)
+        self.assertTrue(dropped.picked_up)
+        self.assertEqual(scroll.qty, 1)
+
+    def test_rogue_544_add_pack_marks_stacked_scare_scroll_found(self):
+        # Rogue 5.4.4 pack.c:add_pack() sets ISFOUND on the resulting stack.
+        game = new_game(seed=3305)
+        game.gitems = []
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        held = rogue.Item(rogue.CAT_SCR, scare_kind)
+        floor_scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        floor_scroll.x, floor_scroll.y = game.p.x, game.p.y
+        game.p.inv = [held]
+        game.gitems = [floor_scroll]
+
+        game.do_pickup()
+
+        self.assertEqual(game.p.inv, [held])
+        self.assertEqual(held.qty, 2)
+        self.assertTrue(held.picked_up)
+
     def test_explored_items_remain_drawn_but_monsters_do_not(self):
         game = new_game(seed=34)
         calls = []

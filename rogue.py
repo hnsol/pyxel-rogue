@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0207"
+UI_BUILD = "260428_0216"
 
 # ===========================================================
 #  Font
@@ -546,9 +546,10 @@ FLAG_ISKNOW = "ISKNOW"
 
 class Item:
     _nid=0
-    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None,charges=0,known=True):
+    def __init__(s,cat,kind,ench=0,cursed=False,qty=1,hit_plus=None,dam_plus=None,charges=0,known=True,group=0):
         s.uid=Item._nid; Item._nid+=1
         s.cat=cat; s.kind=kind; s.cursed=cursed; s.qty=qty
+        s.group=group
         s.charges=charges
         s.o_flags: set = set()
         s.o_label: str | None = None
@@ -585,7 +586,7 @@ class Item:
         return {}
     @property
     def stackable(s):
-        return s.cat==CAT_FOOD or (s.cat==CAT_WPN and s.data.get("stack",False))
+        return s.cat in (CAT_POT, CAT_SCR, CAT_FOOD) or (s.cat==CAT_WPN and (s.data.get("stack",False) or s.data.get("name")=="dagger"))
     @property
     def sym(s): return ISYM.get(s.cat,"?")
     def plus_key(s):
@@ -655,7 +656,10 @@ class Player:
             return False
         if it.stackable:
             for i in s.inv:
-                if i.cat==it.cat and i.kind==it.kind and i.plus_key()==it.plus_key():
+                if i.cat==it.cat and i.kind==it.kind and (
+                    it.cat != CAT_WPN or (it.group != 0 and i.group == it.group)
+                ) and (it.cat == CAT_WPN or i.plus_key()==it.plus_key()):
+                    i.picked_up = i.picked_up or it.picked_up
                     i.qty+=it.qty; return True
         if s.inv_full(): return False
         s.inv.append(it); return True
@@ -1060,7 +1064,8 @@ def make_item(depth, no_food=0):
         r=RNG.rnd(100)
         hit_plus,cursed=rogue_weapons.new_thing_weapon_enchant(r,RNG.rnd)
         q=rogue_weapons.initial_weapon_count(WEAPONS[k]["name"], WEAPONS[k].get("stack", False), RNG.rnd)
-        return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q,known=False)
+        group=rogue_weapons.initial_weapon_group(WEAPONS[k]["name"], WEAPONS[k].get("stack", False))
+        return Item(CAT_WPN,k,hit_plus=hit_plus,dam_plus=0,cursed=cursed,qty=q,known=False,group=group)
     if cat=="armor":
         k=wchoice(ARMORS)
         r=RNG.rnd(100)
@@ -1075,7 +1080,7 @@ def make_item(depth, no_food=0):
 def start_inv():
     w=Item(CAT_WPN,0,hit_plus=1,dam_plus=1) # mace +1,+1
     a=Item(CAT_ARM,1,ench=1)        # ring mail +1
-    ar=Item(CAT_WPN,3,hit_plus=0,dam_plus=0,qty=rogue_init.initial_arrow_count(RNG.rnd))# arrows
+    ar=Item(CAT_WPN,3,hit_plus=0,dam_plus=0,qty=rogue_init.initial_arrow_count(RNG.rnd),group=rogue_weapons.initial_weapon_group(WEAPONS[3]["name"], WEAPONS[3].get("stack", False)))# arrows
     b=Item(CAT_WPN,2,hit_plus=1,dam_plus=0) # bow +1,+0
     f=Item(CAT_FOOD,0)              # ration
     return rogue_init.initial_pack_order(f,a,w,b,ar),w,a
@@ -2940,10 +2945,11 @@ class Game:
             it.qty = remaining_qty
             dropped = Item(it.cat, it.kind, ench=it.ench, cursed=it.cursed, qty=dropped_qty,
                            hit_plus=it.hit_plus, dam_plus=it.dam_plus, charges=it.charges,
-                           known=it.known)
+                           known=it.known, group=it.group)
             dropped.o_flags = set(it.o_flags)
             dropped.o_label = it.o_label
             dropped.protected = it.protected
+            dropped.picked_up = it.picked_up
         else:
             self.p.rm_item(it)
         dropped.x,dropped.y=self.p.x,self.p.y
@@ -3033,10 +3039,11 @@ class Game:
         if it.stackable and it.qty>1:
             thrown=Item(it.cat,it.kind,ench=it.ench,cursed=it.cursed,qty=1,
                         hit_plus=it.hit_plus,dam_plus=it.dam_plus,charges=it.charges,
-                        known=it.known)
+                        known=it.known,group=it.group)
             thrown.o_flags = set(it.o_flags)
             thrown.o_label = it.o_label
             thrown.protected = it.protected
+            thrown.picked_up = it.picked_up
             it.qty-=1
         else: p.rm_item(it); thrown=it
         tx,ty=p.x,p.y; path=[]
@@ -3298,12 +3305,14 @@ class Game:
                 self.ident.sk[gi.kind]=True
                 self.msg("pack.the_scroll_turns_to_dust_as_you_pick_it_up")
                 return True
+        was_picked_up = gi.picked_up
+        gi.picked_up=True
         if p.add_item(gi):
-            gi.picked_up=True
             if gi.cat==CAT_AMULET:
                 p.has_amulet=True
             self.gitems.remove(gi); self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
             return True
+        gi.picked_up = was_picked_up
         self.msg("pyxel.pack_too_full")
         return True
 

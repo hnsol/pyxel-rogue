@@ -13,6 +13,8 @@ INIT_DAM = [
     ("2x3", "1x6", None, ("missile",)),
 ]
 
+_GROUP = 2
+
 
 def apply_init_dam(weapon: dict, index: int) -> dict:
     """Apply Rogue 5.4.4 weapons.c:init_dam[] fields to a weapon row."""
@@ -26,6 +28,14 @@ def apply_init_dam(weapon: dict, index: int) -> dict:
     if "missile" in flags:
         weapon["missile"] = True
     return weapon
+
+
+def next_weapon_group() -> int:
+    """Rogue 5.4.4 weapons.c:init_weapon() static group++."""
+    global _GROUP
+    group = _GROUP
+    _GROUP += 1
+    return group
 
 
 def is_fallpos_candidate(pos, hero_pos, tile) -> bool:
@@ -55,6 +65,13 @@ def initial_weapon_count(weapon_name: str, is_many: bool, rnd) -> int:
     if is_many:
         return rnd(8) + 8
     return 1
+
+
+def initial_weapon_group(weapon_name: str, is_many: bool) -> int:
+    """Rogue 5.4.4 weapons.c:init_weapon() o_group assignment."""
+    if weapon_name == "dagger" or is_many:
+        return next_weapon_group()
+    return 0
 
 
 def new_thing_weapon_enchant(roll100: int, rnd):
