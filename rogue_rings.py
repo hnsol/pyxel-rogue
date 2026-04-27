@@ -183,6 +183,15 @@ def ring_on_result(item_is_ring: bool, is_current: bool, both_hands_full: bool) 
     return "put-on"
 
 
+def ring_off_result(is_wearing: bool, is_cursed: bool) -> str:
+    """Rogue 5.4.4 rings.c:ring_off() and things.c:dropcheck() gate result."""
+    if not is_wearing:
+        return "not-wearing"
+    if is_cursed:
+        return "cursed"
+    return "take-off"
+
+
 def remove_ring(player, ring):
     """Rogue 5.4.4 rings.c:ring_off() — remove ring; refuses if cursed."""
     hand = ring_slot_for(player, ring)

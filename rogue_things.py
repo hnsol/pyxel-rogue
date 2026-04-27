@@ -49,3 +49,12 @@ def no_food_after_new_level(no_food: int) -> int:
 def no_food_after_new_thing(category: str, no_food: int) -> int:
     """Rogue 5.4.4 things.c:new_thing() resets no_food only when FOOD is made."""
     return 0 if category == "food" else no_food
+
+
+def dropcheck_result(is_current: bool, is_cursed: bool) -> str:
+    """Rogue 5.4.4 things.c:dropcheck() gate result."""
+    if not is_current:
+        return "ok"
+    if is_cursed:
+        return "cursed"
+    return "unequip"

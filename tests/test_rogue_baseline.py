@@ -2316,8 +2316,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.see_invisible, 0)
         self.assertEqual(game.fuses.remaining("unsee"), 0)
 
-    def test_rogue_544_taking_off_unworn_ring_is_noop(self):
-        # Rogue 5.4.4 rings.c:ring_off() says "not wearing such a ring" and leaves after=FALSE.
+    def test_rogue_544_taking_off_unworn_ring_spends_turn(self):
+        # Rogue 5.4.4 rings.c:ring_off() says "not wearing such a ring" without clearing after.
         import rogue_rings
 
         game = new_game(seed=5045)
@@ -2332,11 +2332,11 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIsNone(game.p.ring_l)
         self.assertIsNone(game.p.ring_r)
-        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.turn, turn + 1)
         self.assertIn("not wearing such a ring", game.msgs)
 
-    def test_rogue_544_taking_off_cursed_ring_does_not_spend_turn(self):
-        # Rogue 5.4.4 rings.c:ring_off() uses dropcheck(); cursed failure does not consume after turn.
+    def test_rogue_544_taking_off_cursed_ring_spends_turn(self):
+        # Rogue 5.4.4 rings.c:ring_off() uses things.c:dropcheck(), which does not clear after.
         import rogue_rings
 
         game = new_game(seed=5046)
@@ -2351,7 +2351,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.item_confirm()
 
         self.assertIs(game.p.ring_l, ring)
-        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.turn, turn + 1)
         self.assertIn("appears to be cursed", game.msgs[-1])
 
     def test_rogue_544_potion_knowit_flags_follow_quaff_branches(self):
@@ -4259,6 +4259,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.p.arm)
         self.assertIn("you can't wear that", game.msgs)
 
+    def test_rogue_544_wear_rejects_non_armor_and_spends_turn_from_item_confirm(self):
+        # Rogue 5.4.4 armor.c:wear() does not clear after for obj->o_type != ARMOR.
+        game = new_game(seed=5047)
+        game.p.arm = None
+        weapon = rogue.Item(rogue.CAT_WPN, 0)
+        game.p.inv.append(weapon)
+        game.cact = "Wear"
+        game.fitems = [weapon]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIsNone(game.p.arm)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you can't wear that", game.msgs)
+
+    def test_rogue_544_armor_helper_wear_result_matches_wear_gates(self):
+        # Rogue 5.4.4 armor.c:wear() only clears after when already wearing armor.
+        self.assertEqual(rogue.rogue_armor.wear_result(has_current_armor=True, item_is_armor=True), "already-wearing")
+        self.assertEqual(rogue.rogue_armor.wear_result(has_current_armor=False, item_is_armor=False), "not-armor")
+        self.assertEqual(rogue.rogue_armor.wear_result(has_current_armor=False, item_is_armor=True), "wear")
+
     def test_rogue_544_wield_rejects_armor(self):
         # Rogue 5.4.4 weapons.c:wield() rejects obj->o_type == ARMOR.
         game = new_game(seed=5038)
@@ -4295,6 +4318,108 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, turn)
         self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_rogue_544_wield_cursed_current_weapon_failure_spends_turn(self):
+        # Rogue 5.4.4 weapons.c:wield() dropcheck(cur_weapon) failure does not clear after.
+        game = new_game(seed=5048)
+        current = game.p.wpn
+        current.cursed = True
+        replacement = rogue.Item(rogue.CAT_WPN, 1)
+        game.p.inv.append(replacement)
+        game.cact = "Wield"
+        game.fitems = [replacement]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIs(game.p.wpn, current)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("cursed", game.msgs[-1])
+
+    def test_rogue_544_throw_cursed_equipped_ring_failure_spends_turn(self):
+        # Rogue 5.4.4 weapons.c:missile() calls things.c:dropcheck(obj) before is_current(obj).
+        import rogue_rings
+
+        game = new_game(seed=5049)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN, cursed=True)
+        game.p.inv.append(ring)
+        game.p.ring_l = ring
+        game.cact = "Throw"
+        game.throw_dir = (1, 0)
+        game.fitems = [ring]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIs(game.p.ring_l, ring)
+        self.assertIn(ring, game.p.inv)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("cursed", game.msgs[-1])
+
+    def test_rogue_544_things_helper_dropcheck_result_matches_dropcheck_gate(self):
+        # Rogue 5.4.4 things.c:dropcheck() only rejects current cursed equipment.
+        self.assertEqual(rogue.rogue_things.dropcheck_result(is_current=False, is_cursed=True), "ok")
+        self.assertEqual(rogue.rogue_things.dropcheck_result(is_current=True, is_cursed=True), "cursed")
+        self.assertEqual(rogue.rogue_things.dropcheck_result(is_current=True, is_cursed=False), "unequip")
+
+    def test_rogue_544_drop_on_occupied_floor_is_rejected_without_turn(self):
+        # Rogue 5.4.4 things.c:drop() clears after when chat(hero) is not FLOOR/PASSAGE.
+        game = new_game(seed=5050)
+        set_open_floor(game)
+        carried = rogue.Item(rogue.CAT_FOOD, 0)
+        floor_item = rogue.Item(rogue.CAT_POT, 0)
+        floor_item.x, floor_item.y = game.p.x, game.p.y
+        game.p.inv.append(carried)
+        game.gitems.append(floor_item)
+        game.cact = "Drop"
+        game.fitems = [carried]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIn(carried, game.p.inv)
+        self.assertEqual(game.gitems.count(floor_item), 1)
+        self.assertEqual(game.turn, turn)
+        self.assertIn("there is something there already", game.msgs[-1])
+
+    def test_rogue_544_drop_on_stairs_is_rejected_without_turn(self):
+        # Rogue 5.4.4 things.c:drop() only allows FLOOR/PASSAGE under the hero.
+        game = new_game(seed=5051)
+        set_open_floor(game)
+        carried = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv.append(carried)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.cact = "Drop"
+        game.fitems = [carried]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIn(carried, game.p.inv)
+        self.assertEqual(game.turn, turn)
+        self.assertIn("there is something there already", game.msgs[-1])
+
+    def test_rogue_544_drop_cursed_current_weapon_failure_spends_turn(self):
+        # Rogue 5.4.4 things.c:drop() uses dropcheck(); cursed failure does not clear after.
+        game = new_game(seed=5052)
+        set_open_floor(game)
+        weapon = game.p.wpn
+        weapon.cursed = True
+        game.cact = "Drop"
+        game.fitems = [weapon]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIs(game.p.wpn, weapon)
+        self.assertIn(weapon, game.p.inv)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you can't.  It appears to be cursed", game.msgs[-1])
 
     def test_rogue_544_put_on_ring_rejects_non_ring_and_spends_turn(self):
         # Rogue 5.4.4 rings.c:ring_on() rejects obj->o_type != RING without clearing after.
@@ -4366,6 +4491,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=True, both_hands_full=True), "current")
         self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=False, both_hands_full=True), "full")
         self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=False, both_hands_full=False), "put-on")
+
+    def test_rogue_544_rings_helper_ring_off_result_matches_ring_off_gates(self):
+        # Rogue 5.4.4 rings.c:ring_off() and things.c:dropcheck() gate unworn/cursed rings.
+        import rogue_rings
+
+        self.assertEqual(rogue_rings.ring_off_result(is_wearing=False, is_cursed=False), "not-wearing")
+        self.assertEqual(rogue_rings.ring_off_result(is_wearing=True, is_cursed=True), "cursed")
+        self.assertEqual(rogue_rings.ring_off_result(is_wearing=True, is_cursed=False), "take-off")
 
     def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
         # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().

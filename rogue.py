@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0006"
+UI_BUILD = "260428_0044"
 
 # ===========================================================
 #  Font
@@ -2817,8 +2817,8 @@ class Game:
             it is self.p.wpn,
         )
         if result == "cursed":
-            self.msg("pyxel.cant_let_go")
-            return False
+            self.msg("things.you_cant_it_appears_to_be_cursed")
+            return True
         if result == "armor":
             self.msg("weapons.you_cant_wield_armor")
             return False
@@ -2830,16 +2830,17 @@ class Game:
 
     def wear(self,it):
         # C: armor.c:wear()
-        if self.p.arm:
+        result = rogue_armor.wear_result(self.p.arm is not None, it.cat == CAT_ARM)
+        if result == "already-wearing":
             msg = (
                 TextCatalog.msg(self.lang, "armor.you_are_already_wearing_some")
                 + TextCatalog.msg(self.lang, "armor.you_ll_have_to_take_it_off_first")
             )
             self.msg_text(msg)
             return False
-        if it.cat != CAT_ARM:
+        if result == "not-armor":
             self.msg("armor.you_cant_wear_that")
-            return False
+            return True
         it.known=True
         self.waste_time()
         self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
@@ -2892,25 +2893,34 @@ class Game:
             if it.cursed: self.msg("pyxel.its_cursed"); return
             self.p.wpn=None
         elif it is self.p.ring_l or it is self.p.ring_r:
-            if not self.remove_ring_item(it):
+            result = rogue_rings.ring_off_result(True, it.cursed)
+            if result == "cursed":
                 self.msg("pyxel.cant_appears_cursed")
-                return False
+                return True
+            if not self.remove_ring_item(it):
+                return True
         elif it.cat == CAT_RING:
-            self.msg("rings.not_wearing_such_a_ring")
-            return False
+            result = rogue_rings.ring_off_result(False, it.cursed)
+            if result == "not-wearing":
+                self.msg("rings.not_wearing_such_a_ring")
+                return True
         self.msg("pyxel.remove_item", item=self.ident.name(it))
         return True
 
     def drop(self,it):
         # C: things.c:drop()
+        if self.tm[self.p.y][self.p.x] not in (T_FLOOR, T_CORR) or self.gi_at(self.p.x, self.p.y):
+            self.msg("things.there_is_something_there_already")
+            return False
         if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
-            self.msg("pyxel.its_cursed"); return
+            self.msg("things.you_cant_it_appears_to_be_cursed"); return True
         if it is self.p.arm:
             self.waste_time()
         if it is self.p.ring_l or it is self.p.ring_r:
             self.remove_ring_item(it)
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
         self.gitems.append(it); self.msg("pyxel.drop_item", item=self.ident.name(it))
+        return True
 
     def waste_time(self):
         # C: armor.c:waste_time().
@@ -2980,7 +2990,10 @@ class Game:
     def throw(self,it,dx,dy):
         # C: weapons.c:missile()
         p=self.p
-        if it is p.wpn and it.cursed: self.msg("pyxel.cant_let_go_short"); return False
+        is_equipped = it is p.wpn or it is p.arm or it is p.ring_l or it is p.ring_r
+        if rogue_things.dropcheck_result(is_equipped, it.cursed) == "cursed":
+            self.msg("things.you_cant_it_appears_to_be_cursed")
+            return False
         if it.stackable and it.qty>1:
             thrown=Item(it.cat,it.kind,cursed=it.cursed,qty=1,hit_plus=it.hit_plus,dam_plus=it.dam_plus); it.qty-=1
         else: p.rm_item(it); thrown=it
@@ -3596,7 +3609,10 @@ class Game:
             if self.takeoff(it) is False:
                 self.close_menu()
                 return
-        elif a=="Drop":  self.drop(it)
+        elif a=="Drop":
+            if self.drop(it) is False:
+                self.close_menu()
+                return
         self.close_menu(); self.end_turn()
 
     def dir_confirm(self,dx,dy):
