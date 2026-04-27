@@ -125,7 +125,7 @@
   "fight.thrown_weapon_hits": "the {item} hits {target}",
   "fight.thrown_weapon_misses": "the {item} misses {target}",
   "fight.wait_that_s_a_xeroc": "wait!  That's a xeroc!",
-  "fight.you_are_frozen": "you are frozen",
+  "fight.you_are_frozen": "you are frozen by {subject}",
   "fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker": "you feel a bite in your leg and now feel weaker",
   "fight.you_have": "you have ",
   "fight.you_have_defeated_target": "you have defeated {target}",

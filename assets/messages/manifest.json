@@ -908,8 +908,10 @@
   },
   "fight.you_are_frozen": {
     "source": "fight.c:202",
-    "params": [],
-    "ja_status": "matched",
+    "params": [
+      "subject"
+    ],
+    "ja_status": "manual",
     "origin": "addmsg()",
     "ja_source": "mesg_J:203"
   },

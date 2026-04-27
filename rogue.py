@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2011"
+UI_BUILD = "260427_2022"
 
 # ===========================================================
 #  Font
@@ -1959,7 +1959,7 @@ class Game:
                     if hypothermia:
                         self.p.hp=0; self.death_cause="hypothermia"
                     if should_message:
-                        self.msg("fight.you_are_frozen")
+                        self.msg("fight.you_are_frozen", subject=self.combat_monster_name(m))
                 if rogue_monsters.has_special(m, "hold"):
                     m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_hit(m.vf_hit)
                     self.p.held_by=m

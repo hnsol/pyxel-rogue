@@ -125,7 +125,7 @@
   "fight.thrown_weapon_hits": "{item}が{target}に命中した。",
   "fight.thrown_weapon_misses": "{item}は{target}に命中しなかった。",
   "fight.wait_that_s_a_xeroc": "おっと、こいつは物まねの怪物だ！",
-  "fight.you_are_frozen": "体が凍りついて、動けない！",
+  "fight.you_are_frozen": "{subject}に凍りつかされ、動けない！",
   "fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker": "足を噛まれ、力が抜けていく。",
   "fight.you_have": "あなたは",
   "fight.you_have_defeated_target": "{target}を倒した",

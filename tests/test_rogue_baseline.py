@@ -7164,7 +7164,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.m_attack(monster)
 
         self.assertGreaterEqual(game.p.no_command, 2)
-        self.assertIn("you are frozen", game.msgs)
+        self.assertIn("you are frozen by the ice monster", game.msgs)
 
     def test_rogue_544_ice_monster_hit_has_no_hit_message(self):
         # Rogue 5.4.4 fight.c:attack() skips hit() when mp->t_type == 'I'.
@@ -7177,7 +7177,18 @@ class RogueBaselineTest(unittest.TestCase):
         game.m_attack(monster)
 
         self.assertNotIn("ice hit", game.msgs)
-        self.assertIn("you are frozen", game.msgs)
+        self.assertIn("you are frozen by the ice monster", game.msgs)
+
+    def test_rogue_544_ice_monster_freeze_message_names_attacker(self):
+        # Rogue 5.4.4 fight.c:attack() non-terse text appends "by the %s".
+        game = new_game(seed=5032)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        game.roll_monster_attack = lambda m: (True, 0)
+
+        game.m_attack(monster)
+
+        self.assertIn("you are frozen by the ice monster", game.msgs)
 
     def test_rogue_544_fight_helper_ice_freeze_adds_duration_and_reports_initial_freeze(self):
         # Rogue 5.4.4 fight.c:attack() adds rnd(2)+2; message only when no_command was zero.

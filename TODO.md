@@ -179,6 +179,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Ice monster miss は miss message を出さない
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Ice monster hit は通常 hit message を出さない
 - [x] Rogue 5.4.4 `fight.c:attack()` の Ice monster hit/miss message gate を `rogue_fight.monster_attack_message_allowed()` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Ice monster freeze 表示に攻撃者名を含める
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で Dragon breath 後に `quiet` をリセットする
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で、攻撃側の偽装 Xeroc も非盲目時に reveal する
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
