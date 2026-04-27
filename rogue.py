@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0001"
+UI_BUILD = "260428_0002"
 
 # ===========================================================
 #  Font
@@ -2846,12 +2846,17 @@ class Game:
 
     def put_on_ring(self,it):
         # C: rings.c:ring_on()
-        if it.cat != CAT_RING:
+        result = rogue_rings.ring_on_result(
+            it.cat == CAT_RING,
+            it is self.p.ring_l or it is self.p.ring_r,
+            self.p.ring_l is not None and self.p.ring_r is not None,
+        )
+        if result == "not-ring":
             self.msg("rings.it_would_be_difficult_to_wrap_that_around_a_finger")
             return False
-        if it is self.p.ring_l or it is self.p.ring_r:
+        if result == "current":
             return False
-        if self.p.ring_l is not None and self.p.ring_r is not None:
+        if result == "full":
             self.msg("pyxel.already_ring_each_hand")
             return False
         if rogue_rings.put_on_ring(self.p,it):

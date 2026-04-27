@@ -4299,6 +4299,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertEqual(len(game.msgs), msg_count)
 
+    def test_rogue_544_put_on_third_ring_does_not_spend_turn(self):
+        # Rogue 5.4.4 rings.c:ring_on() "wearing two" path leaves after=FALSE.
+        import rogue_rings
+
+        game = new_game(seed=5044)
+        left = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
+        right = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR)
+        third = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        game.p.inv.extend([left, right, third])
+        game.p.ring_l = left
+        game.p.ring_r = right
+        game.cact = "Put on"
+        game.fitems = [third]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIs(game.p.ring_l, left)
+        self.assertIs(game.p.ring_r, right)
+        self.assertEqual(game.turn, turn)
+        self.assertIn("You already have a ring on each hand.", game.msgs)
+
+    def test_rogue_544_rings_helper_ring_on_result_matches_ring_on_gates(self):
+        # Rogue 5.4.4 rings.c:ring_on() gates non-ring, current ring, and wearing-two.
+        import rogue_rings
+
+        self.assertEqual(rogue_rings.ring_on_result(item_is_ring=False, is_current=False, both_hands_full=False), "not-ring")
+        self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=True, both_hands_full=True), "current")
+        self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=False, both_hands_full=True), "full")
+        self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=False, both_hands_full=False), "put-on")
+
     def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
         # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().
         import rogue_weapons

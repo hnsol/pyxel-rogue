@@ -172,6 +172,17 @@ def put_on_ring(player, ring, hand=None):
     return True
 
 
+def ring_on_result(item_is_ring: bool, is_current: bool, both_hands_full: bool) -> str:
+    """Rogue 5.4.4 rings.c:ring_on() gate result."""
+    if not item_is_ring:
+        return "not-ring"
+    if is_current:
+        return "current"
+    if both_hands_full:
+        return "full"
+    return "put-on"
+
+
 def remove_ring(player, ring):
     """Rogue 5.4.4 rings.c:ring_off() — remove ring; refuses if cursed."""
     hand = ring_slot_for(player, ring)
