@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2029"
+UI_BUILD = "260427_2030"
 
 # ===========================================================
 #  Font
@@ -2846,9 +2846,12 @@ class Game:
 
     def put_on_ring(self,it):
         # C: rings.c:ring_on()
+        if it.cat != CAT_RING:
+            self.msg("rings.it_would_be_difficult_to_wrap_that_around_a_finger")
+            return False
         if self.p.ring_l is not None and self.p.ring_r is not None:
             self.msg("pyxel.already_ring_each_hand")
-            return
+            return False
         if rogue_rings.put_on_ring(self.p,it):
             self.p.recalc_ac()
             if it.kind == rogue_rings.R_AGGR:
@@ -2857,6 +2860,8 @@ class Game:
                            rogue_rings.R_ADDHIT, rogue_rings.R_ADDDAM):
                 self.ident.rk[it.kind]=True
             self.msg("pyxel.now_wearing_item", item=self.ident.name(it))
+            return True
+        return False
 
     def remove_ring_item(self,it):
         # C: things.c:dropcheck() ring branch.
@@ -3570,7 +3575,10 @@ class Game:
             if self.wear(it) is False:
                 self.close_menu()
                 return
-        elif a=="Put on": self.put_on_ring(it)
+        elif a=="Put on":
+            if self.put_on_ring(it) is False:
+                self.close_menu()
+                return
         elif a=="Take off": self.takeoff(it)
         elif a=="Drop":  self.drop(it)
         self.close_menu(); self.end_turn()

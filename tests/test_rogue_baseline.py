@@ -4259,6 +4259,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertEqual(game.st, rogue.ST_PLAY)
 
+    def test_rogue_544_put_on_ring_rejects_non_ring_without_spending_turn(self):
+        # Rogue 5.4.4 rings.c:ring_on() rejects obj->o_type != RING and leaves after=FALSE.
+        game = new_game(seed=5042)
+        game.p.ring_l = None
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv.append(armor)
+        game.cact = "Put on"
+        game.fitems = [armor]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIsNone(game.p.ring_l)
+        self.assertEqual(game.turn, turn)
+        self.assertIn("it would be difficult to wrap that around a finger", game.msgs)
+
     def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
         # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().
         import rogue_weapons
