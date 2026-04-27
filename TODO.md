@@ -208,8 +208,11 @@
 - [x] Rogue 5.4.4 `rings.c:ring_on()` の gate 判定を `rogue_rings.py` へ小分割
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `command.c:command()` 準拠で未装備 ring の take off を拒否しターン消費
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `things.c:dropcheck()` 準拠で cursed ring take off 失敗時はターン消費
+- [x] Rogue 5.4.4 `things.c:drop()` 準拠で Amulet drop 時に所持フラグを解除
+- [x] Rogue 5.4.4 `pack.c:leave_pack()` 準拠で food/potion/scroll stack の drop/eat/quaff/read は1個だけ消費
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
+- [x] Rogue 5.4.4 `things.c:new_thing()` / `fight.c:roll_em()` 準拠で、非武器投擲の基礎 damage を `"0x0"` にする
 - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲命中時も monster confusion を消費する
 - [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、盲目中は投擲 monster confusion の appears-confused 表示を抑止する
 - [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、近接 appears-confused 表示を CANHUH 消費時かつ非盲目時に限定する

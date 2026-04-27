@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0044"
+UI_BUILD = "260428_0126"
 
 # ===========================================================
 #  Font
@@ -1734,6 +1734,8 @@ class Game:
                 self.p.wpn.hit_plus if self.p.wpn else 0,
                 self.p.wpn.dam_plus if self.p.wpn else 0,
             )
+        elif weap is not None:
+            damage = "0x0"
         return damage, hplus, dplus
 
     def roll_player_attack(self, m, weap=None, thrown=False):
@@ -2261,7 +2263,7 @@ class Game:
                 self.fuses.fuse("land", duration, rogue_daemons.AFTER)
             p.levitating += duration
             self.msg("potions.you_start_to_float_in_the_air")
-        p.rm_item(it)
+        self.consume_pack_item(it)
 
     def add_haste(self, potion=True):
         # Rogue 5.4.4 misc.c:add_haste() and daemons.c:nohaste().
@@ -2430,7 +2432,7 @@ class Game:
         elif nm.startswith("identify "):
             cats = self.identify_scroll_target_cats(nm)
             self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
-            p.rm_item(it)
+            self.consume_pack_item(it)
             unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
             if unid:
                 # Interactive target selection (Rogue 5.4.4 wizard.c:whatis()).
@@ -2516,7 +2518,7 @@ class Game:
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="blank paper": self.msg("pyxel.scroll_is_blank")
-        p.rm_item(it)
+        self.consume_pack_item(it)
 
     def first_zap_target(self, dx, dy):
         x,y=self.p.x,self.p.y
@@ -2807,7 +2809,7 @@ class Game:
                 self.msg("misc.welcome_to_level_level", level=self.p.level)
         else:
             self.msg("misc.value_that_tasted_good", value="yum")
-        self.p.rm_item(it)
+        self.consume_pack_item(it)
 
     def wield(self,it):
         # C: weapons.c:wield()
@@ -2827,6 +2829,15 @@ class Game:
             return False
         self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
         return True
+
+    def consume_pack_item(self,it):
+        # C: pack.c:leave_pack(obj, FALSE, FALSE).
+        is_mult = it.cat in (CAT_POT, CAT_SCR, CAT_FOOD)
+        remaining_qty, _ = rogue_pack.leave_pack_counts(it.qty, is_mult, False)
+        if remaining_qty:
+            it.qty = remaining_qty
+        else:
+            self.p.rm_item(it)
 
     def wear(self,it):
         # C: armor.c:wear()
@@ -2918,8 +2929,23 @@ class Game:
             self.waste_time()
         if it is self.p.ring_l or it is self.p.ring_r:
             self.remove_ring_item(it)
-        self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
-        self.gitems.append(it); self.msg("pyxel.drop_item", item=self.ident.name(it))
+        is_mult = it.cat in (CAT_POT, CAT_SCR, CAT_FOOD)
+        remaining_qty, dropped_qty = rogue_pack.leave_pack_counts(it.qty, is_mult, not is_mult)
+        dropped = it
+        if remaining_qty:
+            it.qty = remaining_qty
+            dropped = Item(it.cat, it.kind, ench=it.ench, cursed=it.cursed, qty=dropped_qty,
+                           hit_plus=it.hit_plus, dam_plus=it.dam_plus, charges=it.charges,
+                           known=it.known)
+            dropped.o_flags = set(it.o_flags)
+            dropped.o_label = it.o_label
+            dropped.protected = it.protected
+        else:
+            self.p.rm_item(it)
+        dropped.x,dropped.y=self.p.x,self.p.y
+        if dropped.cat == CAT_AMULET:
+            self.p.has_amulet = False
+        self.gitems.append(dropped); self.msg("pyxel.drop_item", item=self.ident.name(dropped))
         return True
 
     def waste_time(self):

@@ -4421,6 +4421,82 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("you can't.  It appears to be cursed", game.msgs[-1])
 
+    def test_rogue_544_drop_amulet_clears_amulet_flag(self):
+        # Rogue 5.4.4 things.c:drop() sets amulet = FALSE when dropping AMULET.
+        game = new_game(seed=5054)
+        set_open_floor(game)
+        amulet = rogue.Item(rogue.CAT_AMULET, 0)
+        game.p.inv.append(amulet)
+        game.p.has_amulet = True
+        game.cact = "Drop"
+        game.fitems = [amulet]
+        game.icur = 0
+
+        game.item_confirm()
+
+        self.assertFalse(game.p.has_amulet)
+        self.assertNotIn(amulet, game.p.inv)
+        self.assertIn(amulet, game.gitems)
+
+    def test_rogue_544_drop_food_stack_leaves_rest_in_pack(self):
+        # Rogue 5.4.4 things.c:drop() calls pack.c:leave_pack(..., all=!ISMULT), so FOOD drops one.
+        game = new_game(seed=5055)
+        set_open_floor(game)
+        food = rogue.Item(rogue.CAT_FOOD, 0, qty=3)
+        game.p.inv.append(food)
+        game.cact = "Drop"
+        game.fitems = [food]
+        game.icur = 0
+
+        game.item_confirm()
+
+        self.assertIn(food, game.p.inv)
+        self.assertEqual(food.qty, 2)
+        dropped = [item for item in game.gitems if item.cat == rogue.CAT_FOOD and item.kind == 0]
+        self.assertEqual(len(dropped), 1)
+        self.assertEqual(dropped[0].qty, 1)
+
+    def test_rogue_544_eat_food_stack_consumes_one(self):
+        # Rogue 5.4.4 misc.c:eat() calls pack.c:leave_pack(obj, FALSE, FALSE).
+        game = new_game(seed=5056)
+        food = rogue.Item(rogue.CAT_FOOD, 0, qty=3)
+        game.p.inv.append(food)
+
+        game.eat(food)
+
+        self.assertIn(food, game.p.inv)
+        self.assertEqual(food.qty, 2)
+
+    def test_rogue_544_quaff_potion_stack_consumes_one(self):
+        # Rogue 5.4.4 potions.c:quaff() calls pack.c:leave_pack(obj, FALSE, FALSE).
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        game = new_game(seed=5057)
+        potion = rogue.Item(rogue.CAT_POT, kind, qty=2)
+        game.p.inv.append(potion)
+
+        game.use_pot(potion)
+
+        self.assertIn(potion, game.p.inv)
+        self.assertEqual(potion.qty, 1)
+
+    def test_rogue_544_read_scroll_stack_consumes_one(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() calls pack.c:leave_pack(obj, FALSE, FALSE).
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse")
+        game = new_game(seed=5058)
+        scroll = rogue.Item(rogue.CAT_SCR, kind, qty=2)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertIn(scroll, game.p.inv)
+        self.assertEqual(scroll.qty, 1)
+
+    def test_rogue_544_pack_helper_leave_pack_counts_split_mult_items(self):
+        # Rogue 5.4.4 pack.c:leave_pack() splits one object only for count > 1 && !all.
+        self.assertEqual(rogue.rogue_pack.leave_pack_counts(3, is_mult=True, all_items=False), (2, 1))
+        self.assertEqual(rogue.rogue_pack.leave_pack_counts(3, is_mult=True, all_items=True), (0, 3))
+        self.assertEqual(rogue.rogue_pack.leave_pack_counts(1, is_mult=True, all_items=False), (0, 1))
+
     def test_rogue_544_put_on_ring_rejects_non_ring_and_spends_turn(self):
         # Rogue 5.4.4 rings.c:ring_on() rejects obj->o_type != RING without clearing after.
         game = new_game(seed=5042)
@@ -5431,6 +5507,17 @@ class RogueBaselineTest(unittest.TestCase):
         damage_expr, hplus, dplus = game.player_weapon_profile(None, False)
 
         self.assertEqual(damage_expr, "1x4")
+        self.assertEqual(hplus, 0)
+        self.assertEqual(dplus, 0)
+
+    def test_rogue_544_non_weapon_throw_uses_new_thing_zero_damage(self):
+        # Rogue 5.4.4 things.c:new_thing() initializes non-weapons with o_damage/o_hurldmg = "0x0".
+        game = new_game(seed=5053)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+
+        damage_expr, hplus, dplus = game.player_weapon_profile(potion, thrown=True)
+
+        self.assertEqual(damage_expr, "0x0")
         self.assertEqual(hplus, 0)
         self.assertEqual(dplus, 0)
 
