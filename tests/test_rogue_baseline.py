@@ -6264,6 +6264,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.confused, 1)
         self.assertNotIn("the hobgoblin appears confused", game.msgs)
 
+    def test_rogue_544_thrown_existing_confusion_does_not_print_appears_confused(self):
+        # Rogue 5.4.4 fight.c:fight() prints appears confused only when CANHUH was consumed.
+        game = new_game(seed=376)
+        set_open_floor(game)
+        arrow = rogue.Item(rogue.CAT_WPN, 3, qty=1)
+        monster = monster_at(game.p.x + 2, game.p.y, name="hobgoblin", hp=10, exp=0)
+        monster.confused = 2
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        game.resolve_throw_anim({"outcome": {"kind": "monster", "monster": monster, "item": arrow, "x": monster.x, "y": monster.y}})
+
+        self.assertNotIn("the hobgoblin appears confused", game.msgs)
+
     def test_rogue_544_throw_motion_finishes_before_monster_turn(self):
         # Rogue 5.4.4 command.c:t calls weapons.c:missile()/do_motion() before after-turn monsters.
         game = new_game(seed=371)
