@@ -2335,6 +2335,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertIn("not wearing such a ring", game.msgs)
 
+    def test_rogue_544_taking_off_cursed_ring_does_not_spend_turn(self):
+        # Rogue 5.4.4 rings.c:ring_off() uses dropcheck(); cursed failure does not consume after turn.
+        import rogue_rings
+
+        game = new_game(seed=5046)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN, cursed=True)
+        game.p.inv.append(ring)
+        game.p.ring_l = ring
+        game.cact = "Take off"
+        game.fitems = [ring]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIs(game.p.ring_l, ring)
+        self.assertEqual(game.turn, turn)
+        self.assertIn("appears to be cursed", game.msgs[-1])
+
     def test_rogue_544_potion_knowit_flags_follow_quaff_branches(self):
         # Rogue 5.4.4 potions.c:quaff()/do_pot(): P_SEEINVIS knowit=FALSE,
         # P_MFIND does not set oi_know, while P_HASTE sets pot_info[].oi_know.

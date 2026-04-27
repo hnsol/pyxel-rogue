@@ -207,6 +207,7 @@
 - [x] Rogue 5.4.4 `rings.c:ring_on()` 準拠で現在装備中 ring の put on を no-op にする
 - [x] Rogue 5.4.4 `rings.c:ring_on()` の gate 判定を `rogue_rings.py` へ小分割
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `command.c:command()` 準拠で未装備 ring の take off を拒否しターン非消費
+- [x] Rogue 5.4.4 `rings.c:ring_off()` / `things.c:dropcheck()` 準拠で cursed ring take off 失敗時はターン非消費
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲命中時も monster confusion を消費する

@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0003"
+UI_BUILD = "260428_0004"
 
 # ===========================================================
 #  Font
@@ -2892,7 +2892,7 @@ class Game:
         elif it is self.p.ring_l or it is self.p.ring_r:
             if not self.remove_ring_item(it):
                 self.msg("pyxel.cant_appears_cursed")
-                return
+                return False
         elif it.cat == CAT_RING:
             self.msg("rings.not_wearing_such_a_ring")
             return False
