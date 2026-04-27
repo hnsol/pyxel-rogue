@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0005"
+UI_BUILD = "260428_0006"
 
 # ===========================================================
 #  Font
@@ -2823,6 +2823,7 @@ class Game:
             self.msg("weapons.you_cant_wield_armor")
             return False
         if result == "current":
+            self.msg_text("That's already in use")
             return False
         self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
         return True

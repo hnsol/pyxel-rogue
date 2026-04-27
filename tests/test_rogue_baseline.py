@@ -4271,16 +4271,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.p.wpn, current)
         self.assertIn("you can't wield armor", game.msgs)
 
-    def test_rogue_544_wield_current_weapon_is_noop(self):
+    def test_rogue_544_wield_current_weapon_uses_is_current_message(self):
         # Rogue 5.4.4 weapons.c:wield() sends is_current(obj) to the no-action path.
         game = new_game(seed=5039)
         current = game.p.wpn
-        msg_count = len(game.msgs)
 
         game.wield(current)
 
         self.assertIs(game.p.wpn, current)
-        self.assertEqual(len(game.msgs), msg_count)
+        self.assertIn("That's already in use", game.msgs)
 
     def test_rogue_544_wield_rejects_do_not_spend_turn_from_item_confirm(self):
         # Rogue 5.4.4 weapons.c:wield() bad path sets after=FALSE.
