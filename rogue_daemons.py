@@ -64,7 +64,6 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
     if player.food < 2 * moretime and old_food >= 2 * moretime:
         player.state = "hungry"
         return "pyxel.feel_hungry" if previous_state != "hungry" else None
-    player.state = "normal"
     return None
 
 

@@ -3319,6 +3319,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(player.state, "weak")
         self.assertEqual(player.no_command, 0)
 
+    def test_rogue_544_daemons_helper_stomach_does_not_reset_state_without_threshold_cross(self):
+        # Rogue 5.4.4 daemons.c:stomach() only changes hungry_state when crossing thresholds.
+        player = rogue.Player()
+        player.food = rogue.MORETIME + 10
+        player.state = "hungry"
+
+        msg = rogue.rogue_daemons.stomach_tick(
+            player,
+            SequenceRng([]),
+            food_cost=0,
+            moretime=rogue.MORETIME,
+            starvetime=rogue.STARVETIME,
+        )
+
+        self.assertIsNone(msg)
+        self.assertEqual(player.food, rogue.MORETIME + 10)
+        self.assertEqual(player.state, "hungry")
+
     def test_rogue_544_daemons_helper_stomach_stops_running_only_on_state_change(self):
         # Rogue 5.4.4 daemons.c:stomach() clears running only when hungry_state changes.
         self.assertTrue(rogue.rogue_daemons.stomach_stops_running("normal", "hungry"))
@@ -3396,6 +3414,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.food, 0)
         self.assertEqual(game.p.state, "weak")
         self.assertEqual(game.p.no_command, 0)
+
+    def test_rogue_544_run_stomach_does_not_reset_state_without_threshold_cross(self):
+        # Rogue 5.4.4 daemons.c:stomach() leaves hungry_state unchanged without a threshold crossing.
+        game = new_game(seed=5611)
+        game.p.food = rogue.MORETIME + 10
+        game.p.state = "hungry"
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_DIGEST)
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.run_stomach()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.state, "hungry")
 
     def test_rogue_544_no_command_recovery_message_when_counter_reaches_zero(self):
         # Rogue 5.4.4 command.c:command() prints "you can move again" when --no_command reaches 0.
@@ -3480,6 +3513,26 @@ class RogueBaselineTest(unittest.TestCase):
         game.end_turn()
         self.assertEqual(game.turn, turn + 1)
         self.assertEqual(game.p.haste, 4)
+
+    def test_rogue_544_haste_self_does_not_spend_after_turn_from_item_confirm(self):
+        # Rogue 5.4.4 potions.c:P_HASTE sets after=FALSE before add_haste(TRUE).
+        game = new_game(seed=313)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "haste self")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+        game.cact = "Quaff"
+        game.fitems = [potion]
+        game.icur = 0
+        old_rnd = rogue.RNG.rnd
+        turn = game.turn
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.item_confirm()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.turn, turn)
+        self.assertFalse(game.haste_half_turn)
 
     def test_rogue_544_misc_helper_add_haste_potion_duration(self):
         # Rogue 5.4.4 misc.c:add_haste(TRUE) uses rnd(4)+4 for nohaste.
@@ -7294,6 +7347,17 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hallucinating, 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
+
+    def test_rogue_544_come_down_blind_suppresses_boring_message(self):
+        # Rogue 5.4.4 daemons.c:come_down() returns before msg() while ISBLIND.
+        game = new_game(seed=399)
+        game.p.hallucinating = 10
+        game.p.blind = 10
+
+        game.come_down()
+
+        self.assertEqual(game.p.hallucinating, 0)
+        self.assertNotIn("Everything looks SO boring now.", game.msgs)
 
     def test_rogue_544_healing_can_raise_max_hp_by_one(self):
         # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp, then uses a plain msg.

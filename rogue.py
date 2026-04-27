@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0713"
+UI_BUILD = "260428_0741"
 
 # ===========================================================
 #  Font
@@ -2217,6 +2217,8 @@ class Game:
             self.ident.pk[it.kind]=True
             if self.add_haste(True):
                 self.msg("potions.you_feel_yourself_moving_much_faster")
+            self.consume_pack_item(it)
+            return False
         elif nm=="see invisible":
             duration = RNG.spread(SEEDURATION)
             if p.see_invisible > 0:
@@ -2272,6 +2274,7 @@ class Game:
             p.levitating += duration
             self.msg("potions.you_start_to_float_in_the_air")
         self.consume_pack_item(it)
+        return True
 
     def add_haste(self, potion=True):
         # Rogue 5.4.4 misc.c:add_haste() and daemons.c:nohaste().
@@ -2301,6 +2304,8 @@ class Game:
         if self.p.hallucinating <= 0:
             return
         self.p.hallucinating = 0
+        if self.p.blind > 0:
+            return
         self.msg("daemons.everything_looks_so_boring_now")
 
     def land(self):
@@ -3640,7 +3645,10 @@ class Game:
             self.msg("pyxel.it_is_item", item=self.ident.name(it))
             self.close_menu(); self.end_turn()
             return
-        if a=="Quaff":   self.use_pot(it)
+        if a=="Quaff":
+            if self.use_pot(it) is False:
+                self.close_menu()
+                return
         elif a=="Read":
             if self.use_scr(it):
                 return  # use_scr set up next picker state; don't close yet.
