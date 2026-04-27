@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0711"
+UI_BUILD = "260428_0713"
 
 # ===========================================================
 #  Font
@@ -2973,7 +2973,7 @@ class Game:
         for yy in range(y-1,y+2):
             for xx in range(x-1,x+2):
                 if not (0<=xx<MAP_W and 0<=yy<MAP_H): continue
-                if self.mon_at(xx,yy) or self.gi_at(xx,yy): continue
+                if self.gi_at(xx,yy): continue
                 tile_name = "PASSAGE" if self.tm[yy][xx] == T_CORR else "FLOOR" if self.tm[yy][xx] == T_FLOOR else ""
                 if not rogue_weapons.is_fallpos_candidate((xx,yy), (self.p.x,self.p.y), tile_name):
                     continue

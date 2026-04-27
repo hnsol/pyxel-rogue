@@ -8329,6 +8329,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIsNotNone(pos)
 
+    def test_rogue_544_fall_position_allows_monster_square_candidate(self):
+        # Rogue 5.4.4 weapons.c:fallpos() checks chat() terrain and only skips the hero, not p_monst.
+        game = new_game(seed=5608)
+        px, py = game.p.x, game.p.y
+        game.mons = [rogue.Monster(px + 2, py, "B", "bat", 1, 1, 8, "1x2", 1, "")]
+
+        for yy in range(py - 1, py + 2):
+            for xx in range(px + 1, px + 4):
+                if 0 <= xx < rogue.MAP_W and 0 <= yy < rogue.MAP_H:
+                    game.tm[yy][xx] = rogue.T_HWALL
+        game.tm[py][px + 2] = rogue.T_FLOOR
+
+        self.assertEqual(game.fall_position(px + 2, py), (px + 2, py))
+
     def test_rogue_544_weapons_helper_fall_result_matches_source_branches(self):
         # Rogue 5.4.4 weapons.c:fall() attaches on fallpos success, otherwise only pr prints vanish.
         import rogue_weapons
