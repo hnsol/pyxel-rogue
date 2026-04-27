@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2028"
+UI_BUILD = "260427_2029"
 
 # ===========================================================
 #  Font
@@ -2818,13 +2818,14 @@ class Game:
         )
         if result == "cursed":
             self.msg("pyxel.cant_let_go")
-            return
+            return False
         if result == "armor":
             self.msg("weapons.you_cant_wield_armor")
-            return
+            return False
         if result == "current":
-            return
+            return False
         self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
+        return True
 
     def wear(self,it):
         # C: armor.c:wear()
@@ -2834,13 +2835,14 @@ class Game:
                 + TextCatalog.msg(self.lang, "armor.you_ll_have_to_take_it_off_first")
             )
             self.msg_text(msg)
-            return
+            return False
         if it.cat != CAT_ARM:
             self.msg("armor.you_cant_wear_that")
-            return
+            return False
         it.known=True
         self.waste_time()
         self.p.arm=it; self.p.recalc_ac(); self.msg("pyxel.put_on_item", item=self.ident.name(it))
+        return True
 
     def put_on_ring(self,it):
         # C: rings.c:ring_on()
@@ -3560,8 +3562,14 @@ class Game:
             if self.use_scr(it):
                 return  # use_scr set up next picker state; don't close yet.
         elif a=="Eat":   self.eat(it)
-        elif a=="Wield": self.wield(it)
-        elif a=="Wear":  self.wear(it)
+        elif a=="Wield":
+            if self.wield(it) is False:
+                self.close_menu()
+                return
+        elif a=="Wear":
+            if self.wear(it) is False:
+                self.close_menu()
+                return
         elif a=="Put on": self.put_on_ring(it)
         elif a=="Take off": self.takeoff(it)
         elif a=="Drop":  self.drop(it)

@@ -4194,6 +4194,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.p.arm, current)
         self.assertIn("take it off first", game.msgs[-1])
 
+    def test_rogue_544_wear_reject_does_not_spend_turn_from_item_confirm(self):
+        # Rogue 5.4.4 armor.c:wear() sets after=FALSE when cur_armor != NULL.
+        game = new_game(seed=5040)
+        replacement = rogue.Item(rogue.CAT_ARM, 1)
+        game.p.inv.append(replacement)
+        game.cact = "Wear"
+        game.fitems = [replacement]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
     def test_rogue_544_wear_rejects_non_armor_items(self):
         # Rogue 5.4.4 armor.c:wear() rejects obj->o_type != ARMOR.
         game = new_game(seed=5037)
@@ -4228,6 +4243,21 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIs(game.p.wpn, current)
         self.assertEqual(len(game.msgs), msg_count)
+
+    def test_rogue_544_wield_rejects_do_not_spend_turn_from_item_confirm(self):
+        # Rogue 5.4.4 weapons.c:wield() bad path sets after=FALSE.
+        game = new_game(seed=5041)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv.append(armor)
+        game.cact = "Wield"
+        game.fitems = [armor]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(game.st, rogue.ST_PLAY)
 
     def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
         # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().
