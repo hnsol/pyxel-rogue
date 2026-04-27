@@ -188,6 +188,7 @@
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲命中時も monster confusion を消費する
 - [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、盲目中は投擲 monster confusion の appears-confused 表示を抑止する
+- [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、近接 appears-confused 表示を CANHUH 消費時かつ非盲目時に限定する
 - [x] Rogue 5.4.4 `things.c:new_thing()` 準拠で、weapon curse/enchant/初期個数乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `fight.c:str_plus[]` / `add_dam[]` 相当の Strength 補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Ice monster freeze `no_command += rnd(2)+2` を `rogue_fight.py` へ小分割

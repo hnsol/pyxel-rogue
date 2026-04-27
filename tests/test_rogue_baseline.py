@@ -1190,6 +1190,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.p.can_confuse_monster)
         self.assertEqual(monster.confused, 0)
 
+    def test_rogue_544_melee_existing_confusion_does_not_print_appears_confused(self):
+        # Rogue 5.4.4 fight.c:fight() prints appears confused only when CANHUH was consumed.
+        game = new_game(seed=313)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=-100, exp=0)
+        monster.confused = 2
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+
+        game.p_attack(monster)
+
+        self.assertNotIn("the hobgoblin appears confused", game.msgs)
+
+    def test_rogue_544_blind_melee_confusion_hit_suppresses_appears_confused(self):
+        # Rogue 5.4.4 fight.c:fight() gates the appears-confused message with !ISBLIND.
+        game = new_game(seed=314)
+        set_open_floor(game)
+        game.p.blind = 5
+        game.p.can_confuse_monster = True
+        monster = monster_at(game.p.x + 1, game.p.y, hp=20, armor=-100, exp=0)
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+
+        game.p_attack(monster)
+
+        self.assertFalse(game.p.can_confuse_monster)
+        self.assertEqual(monster.confused, 1)
+        self.assertNotIn("the hobgoblin appears confused", game.msgs)
+
     def test_rogue_544_scroll_food_detection_reveals_food_and_identifies_only_when_food_exists(self):
         # Rogue 5.4.4 scrolls.c:S_FDET shows lvl_obj FOOD and sets
         # scr_info[S_FDET].oi_know only if at least one food exists.
