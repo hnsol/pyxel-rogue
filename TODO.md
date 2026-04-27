@@ -256,6 +256,7 @@
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_MFIND` 準拠で、再使用時も `turn_see` は `lengthen()` せず重複 `fuse()` にする
+  - [x] Rogue 5.4.4 `rings.c:ring_on()` / `potions.c:P_SEEINVIS` / `things.c:dropcheck()` 準拠で、see invisible ring と `unsee` fuse の連携を修正
   - [x] `swander / rollwand` を初回 `fuse(AFTER)`、以後 `start_daemon(BEFORE)` / `fuse(BEFORE)` へ接続
   - [x] Rogue 5.4.4 `main.c` / `new_level.c` 準拠で、階層移動時に wandering daemon/fuse 状態をリセットしない
   - [x] `doctor / stomach` を `start_daemon(AFTER)` へ接続

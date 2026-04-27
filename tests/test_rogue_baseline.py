@@ -2280,6 +2280,42 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("You can see invisible monsters.", game.msgs)
         self.assertNotIn(potion, game.p.inv)
 
+    def test_rogue_544_see_invisible_potion_while_wearing_ring_does_not_start_unsee(self):
+        # Rogue 5.4.4 rings.c:ring_on() sets CANSEE; potions.c:do_pot(P_SEEINVIS) then lengthens no fuse.
+        import rogue_rings
+
+        game = new_game(seed=5034)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEEINVIS)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 7
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.p.see_invisible, 0)
+        self.assertEqual(game.fuses.remaining("unsee"), 0)
+
+    def test_rogue_544_taking_off_see_invisible_ring_extinguishes_unsee(self):
+        # Rogue 5.4.4 things.c:dropcheck() calls unsee(); extinguish(unsee) for R_SEEINVIS.
+        import rogue_rings
+
+        game = new_game(seed=5035)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEEINVIS)
+        game.p.inv.append(ring)
+        game.p.ring_l = ring
+        game.p.see_invisible = 20
+        game.fuses.fuse("unsee", 20, rogue.rogue_daemons.AFTER)
+
+        game.takeoff(ring)
+
+        self.assertEqual(game.p.see_invisible, 0)
+        self.assertEqual(game.fuses.remaining("unsee"), 0)
+
     def test_rogue_544_potion_knowit_flags_follow_quaff_branches(self):
         # Rogue 5.4.4 potions.c:quaff()/do_pot(): P_SEEINVIS knowit=FALSE,
         # P_MFIND does not set oi_know, while P_HASTE sets pot_info[].oi_know.

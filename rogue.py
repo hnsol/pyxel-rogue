@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2023"
+UI_BUILD = "260427_2024"
 
 # ===========================================================
 #  Font
@@ -2211,9 +2211,12 @@ class Game:
             duration = RNG.spread(SEEDURATION)
             if p.see_invisible > 0:
                 self.fuses.lengthen("unsee", duration)
+                p.see_invisible += duration
+            elif rogue_rings.is_wearing(p, rogue_rings.R_SEEINVIS):
+                self.fuses.lengthen("unsee", duration)
             else:
                 self.fuses.fuse("unsee", duration, rogue_daemons.AFTER)
-            p.see_invisible += duration
+                p.see_invisible += duration
             self.msg("potions.this_potion_tastes_like_item_juice", item="slime-mold")
             self.sight()
         elif nm=="raise level":
@@ -2837,6 +2840,16 @@ class Game:
                 self.ident.rk[it.kind]=True
             self.msg("pyxel.now_wearing_item", item=self.ident.name(it))
 
+    def remove_ring_item(self,it):
+        # C: things.c:dropcheck() ring branch.
+        if not rogue_rings.remove_ring(self.p,it):
+            return False
+        if it.kind == rogue_rings.R_SEEINVIS:
+            self.p.see_invisible = 0
+            self.fuses.extinguish("unsee")
+        self.p.recalc_ac()
+        return True
+
     def takeoff(self,it):
         # C: armor.c:take_off()
         if it is self.p.arm:
@@ -2846,16 +2859,17 @@ class Game:
             if it.cursed: self.msg("pyxel.its_cursed"); return
             self.p.wpn=None
         elif it is self.p.ring_l or it is self.p.ring_r:
-            if not rogue_rings.remove_ring(self.p,it):
+            if not self.remove_ring_item(it):
                 self.msg("pyxel.cant_appears_cursed")
                 return
-            self.p.recalc_ac()
         self.msg("pyxel.remove_item", item=self.ident.name(it))
 
     def drop(self,it):
         # C: things.c:drop()
         if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
             self.msg("pyxel.its_cursed"); return
+        if it is self.p.ring_l or it is self.p.ring_r:
+            self.remove_ring_item(it)
         self.p.rm_item(it); it.x,it.y=self.p.x,self.p.y
         self.gitems.append(it); self.msg("pyxel.drop_item", item=self.ident.name(it))
 
