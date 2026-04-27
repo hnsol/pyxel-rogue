@@ -4206,6 +4206,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.p.arm)
         self.assertIn("you can't wear that", game.msgs)
 
+    def test_rogue_544_wield_rejects_armor(self):
+        # Rogue 5.4.4 weapons.c:wield() rejects obj->o_type == ARMOR.
+        game = new_game(seed=5038)
+        current = game.p.wpn
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv.append(armor)
+
+        game.wield(armor)
+
+        self.assertIs(game.p.wpn, current)
+        self.assertIn("you can't wield armor", game.msgs)
+
+    def test_rogue_544_wield_current_weapon_is_noop(self):
+        # Rogue 5.4.4 weapons.c:wield() sends is_current(obj) to the no-action path.
+        game = new_game(seed=5039)
+        current = game.p.wpn
+        msg_count = len(game.msgs)
+
+        game.wield(current)
+
+        self.assertIs(game.p.wpn, current)
+        self.assertEqual(len(game.msgs), msg_count)
+
     def test_rogue_544_monster_table_audit_guards_named_fields(self):
         specs = {m.sym: m for m in rogue.BESTIARY}
         self.assertEqual(

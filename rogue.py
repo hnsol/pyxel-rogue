@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2026"
+UI_BUILD = "260427_2027"
 
 # ===========================================================
 #  Font
@@ -2812,6 +2812,11 @@ class Game:
     def wield(self,it):
         # C: weapons.c:wield()
         if self.p.wpn and self.p.wpn.cursed: self.msg("pyxel.cant_let_go"); return
+        if it.cat == CAT_ARM:
+            self.msg("weapons.you_cant_wield_armor")
+            return
+        if it is self.p.wpn:
+            return
         self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
 
     def wear(self,it):
