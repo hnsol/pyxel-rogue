@@ -4325,6 +4325,21 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(calls, [1, 2])
 
+    def test_rogue_544_nymph_steal_message_matches_fight_c(self):
+        # Rogue 5.4.4 fight.c:attack() prints "she stole %s!" after leave_pack().
+        game = new_game(seed=306)
+        set_open_floor(game)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        nymph = monster_at(game.p.x + 1, game.p.y, "N", "nymph", damage="1x1", flags="steal_item")
+        game.mons = [nymph]
+        game.swing_hits = lambda at_lvl, op_arm, wplus: True
+
+        game.m_attack(nymph)
+
+        self.assertIn("she stole purple potion!", game.msgs)
+        self.assertNotIn("She stole your purple potion!", game.msgs)
+
     def test_rogue_544_rattlesnake_poison_reports_weakened_at_strength_floor(self):
         # Rogue 5.4.4 fight.c:attack() calls chg_str(-1), which clamps at 3, then still prints weakened text.
         import rogue_fight

@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1935"
+UI_BUILD = "260427_1943"
 
 # ===========================================================
 #  Font
@@ -1956,7 +1956,7 @@ class Game:
                 if rogue_monsters.has_special(m, "steal_item"):
                     t=self.monster_has_magic_item_to_steal()
                     if t:
-                        self.p.rm_item(t); self.msg("pyxel.she_stole_item", item=self.ident.name(t))
+                        self.p.rm_item(t); self.msg("fight.she_stole_target", target=self.ident.name(t))
                         self.remove_monster(m); return
         else:
             if m.sym == "F" and m.vf_hit > 0:

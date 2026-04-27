@@ -165,6 +165,7 @@
 - [x] モンスター `ISHASTE` / `ISSLOW` / `ISCANC` 相当の状態土台（速度行動頻度、Medusa視線・特殊攻撃・再生抑止）
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Nymph 盗み対象選択監査（装備品除外 + `rnd(++nobj)==0`）
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Nymph 盗み対象選択を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Nymph 盗み表示を `she stole %s!` にする
 - [x] Rogue 5.4.4 `fight.c:attack()` / `misc.c:chg_str()` 準拠で Strength 下限3の poison bite も弱化結果にする
 - [x] Rogue 5.4.4 `fight.c:attack()` / `potions.c:is_magic()` 準拠で Nymph は非魔法武器/防具を盗まない
 - [x] Rogue 5.4.4 `potions.c:is_magic()` を `rogue_potions.is_magic_item()` へ小分割
