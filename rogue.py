@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0002"
+UI_BUILD = "260428_0003"
 
 # ===========================================================
 #  Font
@@ -2893,7 +2893,11 @@ class Game:
             if not self.remove_ring_item(it):
                 self.msg("pyxel.cant_appears_cursed")
                 return
+        elif it.cat == CAT_RING:
+            self.msg("rings.not_wearing_such_a_ring")
+            return False
         self.msg("pyxel.remove_item", item=self.ident.name(it))
+        return True
 
     def drop(self,it):
         # C: things.c:drop()
@@ -3586,7 +3590,10 @@ class Game:
             if self.put_on_ring(it) is False:
                 self.close_menu()
                 return
-        elif a=="Take off": self.takeoff(it)
+        elif a=="Take off":
+            if self.takeoff(it) is False:
+                self.close_menu()
+                return
         elif a=="Drop":  self.drop(it)
         self.close_menu(); self.end_turn()
 

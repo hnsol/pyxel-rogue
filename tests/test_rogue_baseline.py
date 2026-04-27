@@ -2316,6 +2316,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.see_invisible, 0)
         self.assertEqual(game.fuses.remaining("unsee"), 0)
 
+    def test_rogue_544_taking_off_unworn_ring_is_noop(self):
+        # Rogue 5.4.4 rings.c:ring_off() says "not wearing such a ring" and leaves after=FALSE.
+        import rogue_rings
+
+        game = new_game(seed=5045)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        game.p.inv.append(ring)
+        game.cact = "Take off"
+        game.fitems = [ring]
+        game.icur = 0
+        turn = game.turn
+
+        game.item_confirm()
+
+        self.assertIsNone(game.p.ring_l)
+        self.assertIsNone(game.p.ring_r)
+        self.assertEqual(game.turn, turn)
+        self.assertIn("not wearing such a ring", game.msgs)
+
     def test_rogue_544_potion_knowit_flags_follow_quaff_branches(self):
         # Rogue 5.4.4 potions.c:quaff()/do_pot(): P_SEEINVIS knowit=FALSE,
         # P_MFIND does not set oi_know, while P_HASTE sets pot_info[].oi_know.
