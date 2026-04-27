@@ -64,3 +64,14 @@ def new_thing_weapon_enchant(roll100: int, rnd):
     if roll100 < 15:
         return rnd(3) + 1, False
     return 0, False
+
+
+def wield_result(current_cursed: bool, item_is_armor: bool, is_current: bool) -> str:
+    """Rogue 5.4.4 weapons.c:wield() gate result."""
+    if current_cursed:
+        return "cursed"
+    if item_is_armor:
+        return "armor"
+    if is_current:
+        return "current"
+    return "wield"

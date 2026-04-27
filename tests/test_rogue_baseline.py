@@ -4229,6 +4229,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.p.wpn, current)
         self.assertEqual(len(game.msgs), msg_count)
 
+    def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
+        # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().
+        import rogue_weapons
+
+        self.assertEqual(rogue_weapons.wield_result(current_cursed=True, item_is_armor=False, is_current=False), "cursed")
+        self.assertEqual(rogue_weapons.wield_result(current_cursed=False, item_is_armor=True, is_current=False), "armor")
+        self.assertEqual(rogue_weapons.wield_result(current_cursed=False, item_is_armor=False, is_current=True), "current")
+        self.assertEqual(rogue_weapons.wield_result(current_cursed=False, item_is_armor=False, is_current=False), "wield")
+
     def test_rogue_544_monster_table_audit_guards_named_fields(self):
         specs = {m.sym: m for m in rogue.BESTIARY}
         self.assertEqual(

@@ -200,6 +200,7 @@
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` を `rogue_weapons.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:wield()` 準拠で armor の wield を拒否
 - [x] Rogue 5.4.4 `weapons.c:wield()` 準拠で現在装備中 item の wield を no-op にする
+- [x] Rogue 5.4.4 `weapons.c:wield()` の gate 判定を `rogue_weapons.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲命中時も monster confusion を消費する
