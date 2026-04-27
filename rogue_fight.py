@@ -175,6 +175,11 @@ def monster_attack_message_allowed(monster_sym: str) -> bool:
     return monster_sym != "I"
 
 
+def confusion_message_allowed(confused_by_hit: bool, blind: bool) -> bool:
+    """Rogue 5.4.4 fight.c:fight() prints confusion only for CANHUH hits while not blind."""
+    return confused_by_hit and not blind
+
+
 def weapon_profile(
     weapon,
     hit_plus: int,

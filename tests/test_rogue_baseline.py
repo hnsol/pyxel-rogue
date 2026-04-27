@@ -4963,6 +4963,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_fight.monster_attack_message_allowed("I"))
         self.assertTrue(rogue_fight.monster_attack_message_allowed("R"))
 
+    def test_rogue_544_fight_helper_confusion_message_requires_canhuh_hit_and_sight(self):
+        # Rogue 5.4.4 fight.c:fight() uses did_hit && !ISBLIND for the appears-confused message.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.confusion_message_allowed(confused_by_hit=True, blind=False))
+        self.assertFalse(rogue_fight.confusion_message_allowed(confused_by_hit=True, blind=True))
+        self.assertFalse(rogue_fight.confusion_message_allowed(confused_by_hit=False, blind=False))
+
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
         import rogue_fight
