@@ -4169,6 +4169,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("mean", specs["M"].flags)
         self.assertNotIn("confuse", specs["M"].flags)
 
+    def test_rogue_544_monster_attack_has_no_melee_confuse_special(self):
+        # Rogue 5.4.4 fight.c:attack() has no CANHUH melee branch for monsters.
+        game = new_game(seed=5033)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "O", "orc", 1, 8, 5, "1x1", 1, "confuse")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.save_vs_magic = lambda: False
+
+        game.m_attack(monster)
+
+        self.assertEqual(game.p.confused, 0)
+        self.assertNotIn("You feel confused!", game.msgs)
+
     def test_rogue_544_monster_greed_flag_is_not_gold_steal(self):
         # Rogue 5.4.4 extern.c:monsters[] uses ISGREED for orcs; Leprechauns steal purse in fight.c.
         specs = {m.sym: m for m in rogue.BESTIARY}

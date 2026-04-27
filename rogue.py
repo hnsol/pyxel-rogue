@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_2022"
+UI_BUILD = "260427_2023"
 
 # ===========================================================
 #  Font
@@ -1950,8 +1950,6 @@ class Game:
                         self.death_cause = f"killed by a {m.name}"
                         return
                     self.msg("fight.you_suddenly_feel_weaker")
-                if rogue_monsters.has_special(m, "confuse") and not self.save_vs_magic():
-                    self.p.confused=RNG.randint(10,20); self.msg("pyxel.feel_confused_bang")
                 if rogue_monsters.has_special(m, "freeze"):
                     self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
                         self.p.no_command, BORE_LEVEL, rnd
