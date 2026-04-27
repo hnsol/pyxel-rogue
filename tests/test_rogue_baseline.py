@@ -772,6 +772,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.p.can_confuse_monster)
         self.assertEqual(monster.confused, 1)
         self.assertTrue(monster.running)
+        self.assertIn("the bolt hits the hobgoblin", game.msgs)
 
     def test_rogue_544_bolt_reveals_disguised_xeroc_and_continues_hit(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() hit_monster() uses fight(..., thrown=TRUE).

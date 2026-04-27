@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1918"
+UI_BUILD = "260427_1927"
 
 # ===========================================================
 #  Font
@@ -2648,7 +2648,7 @@ class Game:
         dmg=RNG.roll(6,6)
         m.hp-=dmg
         mn = self.combat_monster_name(m)
-        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_FIRE), name, mn))
+        self.msg_text(self.thrown_hit_message(Item(CAT_WPN, 0), name, mn))
         self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
         if confused_by_hit:
             m.confused = 1

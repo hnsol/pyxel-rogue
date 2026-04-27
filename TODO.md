@@ -152,6 +152,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` 準拠で、hero 自身の反射 bolt 死亡原因を `bolt` にする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `weapons.c:hit_monster()` 準拠で、bolt 命中時も `fight(..., thrown=TRUE)` の副作用を通す
 - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、bolt 命中時も Xeroc 擬態を解除して攻撃を続ける
+- [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `fight.c:thunk()` 準拠で、bolt 命中表示を weapon missile 扱いにする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` saved monster miss の表示/追跡分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` の bolt 死亡原因分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` の DOOR 上 hero 反射例外を `rogue_sticks.py` へ小分割
