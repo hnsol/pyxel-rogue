@@ -5065,6 +5065,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.confusion_hit_effect(True), (False, True))
         self.assertEqual(rogue_fight.confusion_hit_effect(False), (False, False))
 
+    def test_rogue_544_fight_helper_thrown_message_weapon_gate(self):
+        # Rogue 5.4.4 fight.c:thunk()/bounce() use "the item" only for WEAPON objects.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.thrown_message_uses_weapon_name(rogue.CAT_WPN))
+        self.assertFalse(rogue_fight.thrown_message_uses_weapon_name(rogue.CAT_STICK))
+
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
         import rogue_fight

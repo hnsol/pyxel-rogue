@@ -187,6 +187,11 @@ def confusion_hit_effect(can_confuse_monster: bool):
     return False, False
 
 
+def thrown_message_uses_weapon_name(item_category) -> bool:
+    """Rogue 5.4.4 fight.c:thunk()/bounce() checks o_type == WEAPON."""
+    return item_category == "wpn"
+
+
 def weapon_profile(
     weapon,
     hit_plus: int,

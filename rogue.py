@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1927"
+UI_BUILD = "260427_1935"
 
 # ===========================================================
 #  Font
@@ -1665,12 +1665,12 @@ class Game:
         return TextCatalog.msg(self.lang,"fight.defeated_target",target=target)
 
     def thrown_hit_message(self,it,item,target):
-        if it.cat==CAT_WPN:
+        if rogue_fight.thrown_message_uses_weapon_name(it.cat):
             return TextCatalog.msg(self.lang,"fight.thrown_weapon_hits",item=item,target=target)
         return TextCatalog.msg(self.lang,"fight.you_hit_target",target=target)
 
     def thrown_miss_message(self,it,item,target):
-        if it.cat==CAT_WPN:
+        if rogue_fight.thrown_message_uses_weapon_name(it.cat):
             return TextCatalog.msg(self.lang,"fight.thrown_weapon_misses",item=item,target=target)
         return TextCatalog.msg(self.lang,"fight.you_missed_target",target=target)
 
