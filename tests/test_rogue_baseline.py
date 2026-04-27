@@ -734,6 +734,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game = new_game(seed=218)
         set_open_floor(game)
+        game.p.quiet = 9
+        game.p.can_confuse_monster = True
         monster = monster_at(game.p.x + 2, game.p.y, hp=40)
         game.mons = [monster]
         game.monster_save_throw = lambda which, m: False
@@ -748,6 +750,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(stick.charges, 0)
         self.assertTrue(game.ident.wk[rogue_sticks.WS_ELECT])
         self.assertEqual(monster.hp, 22)
+        self.assertEqual(game.p.quiet, 0)
+        self.assertFalse(game.p.can_confuse_monster)
+        self.assertEqual(monster.confused, 1)
         self.assertTrue(monster.running)
 
     def test_rogue_544_zap_bolt_saved_monster_takes_no_damage(self):

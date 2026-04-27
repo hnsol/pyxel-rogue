@@ -175,7 +175,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260427_1847"
+UI_BUILD = "260427_1857"
 
 # ===========================================================
 #  Font
@@ -2645,13 +2645,23 @@ class Game:
         return (not in_play_area(x, y)) or self.tm[y][x] in (T_VOID, T_HWALL, T_VWALL, T_DOOR)
 
     def hit_monster_with_bolt(self, m, name):
+        self.p.quiet = 0
         dmg=RNG.roll(6,6)
         m.hp-=dmg
         self.runto(m)
-        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_FIRE), name, self.combat_monster_name(m)))
+        mn = self.combat_monster_name(m)
+        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_FIRE), name, mn))
+        confused_by_hit = False
+        if self.p.can_confuse_monster:
+            self.p.can_confuse_monster = False
+            m.confused = 1
+            confused_by_hit = True
+            self.msg("fight.your_hands_stop_glowing_color", color="red")
         if not m.alive:
-            self.msg_text(self.defeated_message(self.combat_monster_name(m)))
+            self.msg_text(self.defeated_message(mn))
             self.award_monster_kill(m)
+        elif rogue_fight.confusion_message_allowed(confused_by_hit, self.p.blind > 0):
+            self.msg("fight.subject_appears_confused", subject=mn)
 
     def fire_bolt(self, dx, dy, name):
         # Rogue 5.4.4 sticks.c:fire_bolt() bounces from walls/doors and uses 6x6 damage.

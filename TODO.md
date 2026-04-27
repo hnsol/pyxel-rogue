@@ -149,6 +149,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、saved monster miss の `runto()` は hero 発射時だけにする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、擬態中 Xeroc の saved monster miss は表示/追跡しない
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` 準拠で、hero 自身の反射 bolt 死亡原因を `bolt` にする
+- [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `weapons.c:hit_monster()` 準拠で、bolt 命中時も `fight(..., thrown=TRUE)` の副作用を通す
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` saved monster miss の表示/追跡分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` の bolt 死亡原因分岐を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` の DOOR 上 hero 反射例外を `rogue_sticks.py` へ小分割
