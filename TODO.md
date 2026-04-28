@@ -268,7 +268,11 @@
 - [x] Rogue 5.4.4 `fight.c:set_mname()` 準拠で、hallucination 中の monster 名をランダム monster 名へ寄せる
 - [x] Rogue 5.4.4 `fight.c:set_mname()` 相当の monster 名選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:hit()` / `miss()` 相当の combat message 選択を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:hit()` / `miss()` 準拠で combat message 選択を `rnd(4)` 固定にする
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で、見えていない Ice monster freeze も `by the something` にする
+- [x] Rogue 5.4.4 `fight.c:prname()` 相当の combatant 名整形を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` の player 防御 AC 分岐を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:thunk()` / `bounce()` の投擲表示分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:T_DART` 準拠の dart trap poison save 順序監査
 - [x] Rogue 5.4.4 `misc.c:add_str()` 準拠の poison potion Strength 下限監査
 - [x] Rogue 5.4.4 `potions.c:quaff()` / `misc.c:add_str()` 準拠の potion Strength / healing / extra healing helper 化

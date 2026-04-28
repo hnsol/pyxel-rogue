@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1654"
+UI_BUILD = "260428_1700"
 
 # ===========================================================
 #  Font
@@ -644,8 +644,8 @@ class Player:
     def heal_tick(s):
         rogue_daemons.doctor_tick(s, RNG, rogue_rings.regeneration_count(s))
     def recalc_ac(s):
-        s.ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else 10
-        s.ac -= rogue_rings.protection_bonus(s)
+        armor_ac = (s.arm.data["ac"]-s.arm.ench) if s.arm else None
+        s.ac = rogue_fight.player_defense_armor(10, armor_ac, rogue_rings.protection_bonus(s))
     def str_hit_plus(s):
         return rogue_fight.str_hit_plus(s.st)
     def str_dam_plus(s):
@@ -1677,8 +1677,8 @@ class Game:
         )
         if self.lang==LANG_EN and (name != "something" or article_for_something):
             name=f"the {name}"
-        if self.lang==LANG_EN and upper:
-            name=name[:1].upper()+name[1:]
+        if self.lang==LANG_EN:
+            name=rogue_fight.prname(name, upper)
         return name
 
     def combat_message(self,keys,**kw):
@@ -1701,14 +1701,12 @@ class Game:
         return TextCatalog.msg(self.lang,"fight.defeated_target",target=target)
 
     def thrown_hit_message(self,it,item,target):
-        if rogue_fight.thrown_message_uses_weapon_name(it.cat):
-            return TextCatalog.msg(self.lang,"fight.thrown_weapon_hits",item=item,target=target)
-        return TextCatalog.msg(self.lang,"fight.you_hit_target",target=target)
+        key = rogue_fight.thrown_message_key(it.cat, hit=True)
+        return TextCatalog.msg(self.lang,key,item=item,target=target)
 
     def thrown_miss_message(self,it,item,target):
-        if rogue_fight.thrown_message_uses_weapon_name(it.cat):
-            return TextCatalog.msg(self.lang,"fight.thrown_weapon_misses",item=item,target=target)
-        return TextCatalog.msg(self.lang,"fight.you_missed_target",target=target)
+        key = rogue_fight.thrown_message_key(it.cat, hit=False)
+        return TextCatalog.msg(self.lang,key,item=item,target=target)
 
     # ---------- Camera ----------
     def update_cam(self):

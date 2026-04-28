@@ -36,7 +36,21 @@ def set_mname(visible: bool, detected: bool, hallucinating: bool, real_name: str
 
 def combat_message_key(keys, rnd):
     """Rogue 5.4.4 fight.c:hit()/miss() h_names/m_names family choice."""
-    return keys[rnd(len(keys))]
+    return keys[rnd(4)]
+
+
+def prname(name: str | None, upper: bool = False) -> str:
+    """Rogue 5.4.4 fight.c:prname()."""
+    text = "you" if name is None else name
+    if upper:
+        return text[:1].upper() + text[1:]
+    return text
+
+
+def player_defense_armor(base_ac: int, armor_ac: int | None, protection_bonus: int) -> int:
+    """Rogue 5.4.4 fight.c:roll_em() player def_arm branch."""
+    def_arm = base_ac if armor_ac is None else armor_ac
+    return def_arm - protection_bonus
 
 
 def magic_item_to_steal(inventory, equipped_items, is_magic_item, rnd):
@@ -204,6 +218,13 @@ def confusion_hit_effect(can_confuse_monster: bool):
 def thrown_message_uses_weapon_name(item_category) -> bool:
     """Rogue 5.4.4 fight.c:thunk()/bounce() checks o_type == WEAPON."""
     return item_category == "wpn"
+
+
+def thrown_message_key(item_category, hit: bool) -> str:
+    """Rogue 5.4.4 fight.c:thunk()/bounce() message branch."""
+    if thrown_message_uses_weapon_name(item_category):
+        return "fight.thrown_weapon_hits" if hit else "fight.thrown_weapon_misses"
+    return "fight.you_hit_target" if hit else "fight.you_missed_target"
 
 
 def weapon_profile(

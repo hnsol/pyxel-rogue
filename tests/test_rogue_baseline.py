@@ -6118,6 +6118,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(key, "hit2")
         self.assertEqual(calls, [4])
 
+    def test_rogue_544_fight_helper_combat_message_key_does_not_depend_on_tuple_length(self):
+        # Rogue 5.4.4 fight.c:hit()/miss() uses rnd(4), not the Python tuple length.
+        import rogue_fight
+
+        calls = []
+        key = rogue_fight.combat_message_key(
+            ("hit0", "hit1", "hit2", "hit3", "extra"),
+            lambda n: calls.append(n) or 3,
+        )
+
+        self.assertEqual(key, "hit3")
+        self.assertEqual(calls, [4])
+
+    def test_rogue_544_fight_helper_prname_formats_player_and_monster_names(self):
+        # Rogue 5.4.4 fight.c:prname() uses "you" for NULL and uppercases the first character when requested.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.prname(None, upper=False), "you")
+        self.assertEqual(rogue_fight.prname(None, upper=True), "You")
+        self.assertEqual(rogue_fight.prname("the rattlesnake", upper=True), "The rattlesnake")
+
+    def test_rogue_544_fight_helper_player_defense_armor_matches_roll_em(self):
+        # Rogue 5.4.4 fight.c:roll_em() uses current armor o_arm, then subtracts protection rings.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.player_defense_armor(10, armor_ac=None, protection_bonus=0), 10)
+        self.assertEqual(rogue_fight.player_defense_armor(10, armor_ac=4, protection_bonus=2), 2)
+
     def test_rogue_544_fight_helper_player_defender_running_ignores_no_move(self):
         # Rogue 5.4.4 no_command clears ISRUN; move.c:T_BEAR no_move does not.
         import rogue_fight
@@ -6153,6 +6181,15 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(rogue_fight.thrown_message_uses_weapon_name(rogue.CAT_WPN))
         self.assertFalse(rogue_fight.thrown_message_uses_weapon_name(rogue.CAT_STICK))
+
+    def test_rogue_544_fight_helper_thrown_message_key_matches_thunk_bounce(self):
+        # Rogue 5.4.4 fight.c:thunk()/bounce() split WEAPON and non-WEAPON messages.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_WPN, hit=True), "fight.thrown_weapon_hits")
+        self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_WPN, hit=False), "fight.thrown_weapon_misses")
+        self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_STICK, hit=True), "fight.you_hit_target")
+        self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_STICK, hit=False), "fight.you_missed_target")
 
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
