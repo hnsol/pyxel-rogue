@@ -3554,6 +3554,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster.running)
         self.assertEqual(monster.dest, (24, 4))
 
+    def test_rogue_544_do_chase_preserves_existing_hero_destination_for_carry_monster(self):
+        # Rogue 5.4.4 chase.c:do_chase() uses existing t_dest; it does not call find_dest() every turn.
+        game = new_game(seed=516)
+        set_two_room_floor(game)
+        monster = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = rogue.DEST_PLAYER
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = 24, 4
+        game.mons = [monster]
+        game.gitems = [item]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.do_chase(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+
     def test_rogue_544_do_chase_collects_reached_item_destination(self):
         # Rogue 5.4.4 chase.c:do_chase() moves reached lvl_obj into the monster pack.
         game = new_game(seed=510)

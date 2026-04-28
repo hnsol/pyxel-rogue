@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0755"
+UI_BUILD = "260429_0811"
 
 # ===========================================================
 #  Font
@@ -2066,7 +2066,7 @@ class Game:
 
     def do_chase(self,m):
         # C: chase.c:do_chase()
-        dest=self.find_dest(m)
+        dest=self.current_chase_dest(m)
         rer=self.room_for_ai(m.x,m.y,actor=True)
         ree=rogue_chase.destination_room(
             dest == (self.p.x, self.p.y),
@@ -2093,6 +2093,20 @@ class Game:
         if m.dest!=DEST_PLAYER and (m.x,m.y)==dest:
             self.collect_monster_dest(m,dest)
         return 0
+
+    def current_chase_dest(self,m):
+        # C: chase.c:do_chase() uses the existing t_dest; find_dest() is called by runto()/relocate().
+        if isinstance(m.dest, tuple):
+            if self.gi_at(*m.dest):
+                return m.dest
+            m.dest=DEST_PLAYER
+        if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
+            target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
+            if target != DEST_PLAYER:
+                m.dest=target
+                return target
+            m.dest=DEST_PLAYER
+        return (self.p.x,self.p.y)
 
     def try_dragon_breath(self,m):
         # C: chase.c:do_chase() Dragon flame bolt gate.
