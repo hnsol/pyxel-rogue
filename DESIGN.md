@@ -281,6 +281,8 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 `potions.c:P_SEEINVIS` は `do_pot(P_SEEINVIS, FALSE)` のため正式識別せず、既に `CANSEE` の場合は `lengthen(unsee, t)` だけを試みる。Pyxel 版では see invisible ring による `CANSEE` と potion の残り期間を分け、ring-only 状態で quaff した場合は potion duration を増やさない分岐を `rogue_potions.see_invisible_duration()` で固定する。
 
+`potions.c:P_TFIND` は `lvl_obj != NULL` のブロック内で床上アイテムと monster pack を走査するため、床上オブジェクトが無い階では monster pack の魔法アイテムも感知しない。Pyxel 版ではこの走査ゲートを `rogue_potions.magic_detection_can_scan()` で固定する。
+
 treasure room（俗称モンスターハウス）は `new_level.c:138, 180-231` の `treas_room()` を基準にする。`put_things()` で 1/20 の階に発生し、通常物資は `MAXOBJ=9` 回の `rnd(100)<36` 試行で配置し、Amulet 所持後に上階へ戻る場合は `level < max_level` で新規物資を置かない。通常部屋の gold とモンスターは `rooms.c:do_rooms()` を基準にし、gold は各部屋 `rnd(2)==0` かつ Amulet 上昇中ではない場合に `GOLDCALC` で配置し、部屋モンスターは gold あり80%、なし25%で発生する。gone room は `rnd(4)` 回の重複あり選択、dark/maze は `rnd(10)<level-1` と `rnd(15)==0` を `rogue_rooms.py` へ分離する。treasure room は `MINTREAS=2` / `MAXTREAS=10` 個のアイテムを埋めたうえで、次階層相当のモンスターを `ISMEAN` 付きで多数配置する。部屋内モンスターは `give_pack()` で持ち物も持つ。Pyxel 版では `rogue_dungeon.py` に treasure room の発生ゲート、`MINTREAS` / `MAXTREAS` / `MAXTRIES`、通常物資試行、Amulet 上昇中ゲート、個数計算を分離し、`Game` 側は配置と既存 `make_item()` / `Monster` 生成の接続だけを担当する。
 
 `give_pack` は Rogue 5.4.4 `monsters.c:give_pack()` と `extern.c:monsters[]` の `m_carry` を基準にする。Pyxel版では `MonsterSpec.carry` に A-Z の値を持たせ、通常モンスター生成時に `level >= max_level && rnd(100) < m_carry` 相当を `rogue_monsters.should_give_pack()` へ小分割し、`make_item()` を `Monster.pack` に保持し、`fight.c:remove_mon(..., TRUE)` 相当として倒した時に床へ落とす。Leprechaun は `fight.c:killed()` に合わせ、`level >= max_level` で死亡時に `GOLDCALC` gold を pack へ追加し、`save(VS_MAGIC)` 成功時はさらに4回分を足してから床へ落とす。wandering monster は原作 `monsters.c:wanderer()` と同じく `give_pack()` を呼ばない。treasure room 内モンスターは `treas_room()` の一時的な `level++` 相当により、次階層 depth で `give_pack()` を呼ぶ。
@@ -295,7 +297,7 @@ daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()
 
 `daemons.c:unsee()` は invisible monster の画面復元後に `CANSEE` を解除する。Pyxel 版では描画を次フレームの視界更新へ委ね、ゲーム状態としての see invisible potion 期間だけを `rogue_daemons.unsee_state()` で解除する。see invisible ring は別条件として扱うため、potion fuse 終了後も ring 装備中なら不可視視認は残る。
 
-`potions.c:turn_see()` は `turn_off` で `SEEMONST` を解除し、それ以外では付与する。Pyxel 版では一時表示の残り期間を `see_monsters` に保持し、ON/OFF の状態変更は `rogue_potions.turn_see_state()` へ寄せる。`P_MFIND` は `do_pot()` 経由ではなく、使用ごとに `fuse(turn_see, TRUE, HUHDURATION, AFTER)` を追加する。再使用時も `lengthen()` せず、原作の delayed action スロット重複を保つ。
+`potions.c:turn_see()` は `turn_off` で `SEEMONST` を解除し、それ以外では付与する。Pyxel 版では一時表示の残り期間を `see_monsters` に保持し、ON/OFF の状態変更は `rogue_potions.turn_see_state()` へ寄せる。`turn_see(FALSE)` の戻り値は、`see_monst()` でまだ見えていなかった monster を一時表示したかどうかなので、`P_MFIND` の感知メッセージは `rogue_potions.turn_see_adds_new()` で判定する。`P_MFIND` は `do_pot()` 経由ではなく、使用ごとに `fuse(turn_see, TRUE, HUHDURATION, AFTER)` を追加する。再使用時も `lengthen()` せず、原作の delayed action スロット重複を保つ。
 
 Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
 

@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2200"
+UI_BUILD = "260428_2217"
 
 # ===========================================================
 #  Font
@@ -2288,22 +2288,26 @@ class Game:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
             else:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
+            add_new = rogue_potions.turn_see_adds_new(
+                self.can_see_monster(m) for m in self.mons
+            )
             p.see_monsters = rogue_potions.turn_see_state(False, HUHDURATION)
-            if self.mons:
+            if add_new:
                 self.msg("pyxel.sense_monsters")
             else:
                 self.msg("potions.you_have_a_item_feeling_for_a_moment_then_it_passes",
                          item="normal" if p.hallucinating > 0 else "strange")
         elif nm=="magic detection":
             found = False
-            for i in self.gitems:
-                if self.is_magic_item(i):
-                    found = True
-                    self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
-            for mo in self.mons:
-                if any(self.is_magic_item(i) for i in mo.pack):
-                    found = True
-                    self.visible.add((mo.x,mo.y)); self.explored.add((mo.x,mo.y))
+            if rogue_potions.magic_detection_can_scan(bool(self.gitems)):
+                for i in self.gitems:
+                    if self.is_magic_item(i):
+                        found = True
+                        self.visible.add((i.x,i.y)); self.explored.add((i.x,i.y))
+                for mo in self.mons:
+                    if any(self.is_magic_item(i) for i in mo.pack):
+                        found = True
+                        self.visible.add((mo.x,mo.y)); self.explored.add((mo.x,mo.y))
             if found:
                 self.ident.pk[it.kind]=True
                 self.msg("pyxel.sense_magic")

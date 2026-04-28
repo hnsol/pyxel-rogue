@@ -2592,6 +2592,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
         self.assertNotIn("You sense monsters.", game.msgs)
 
+    def test_rogue_544_monster_detection_visible_monsters_use_feeling_message(self):
+        # Rogue 5.4.4 potions.c:turn_see(FALSE) reports add_new only for monsters not already see_monst().
+        game = new_game(seed=320)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        monster = monster_at(game.p.x + 1, game.p.y, "O", "orc")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        game.use_pot(potion)
+
+        self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
+        self.assertNotIn("You sense monsters.", game.msgs)
+
     def test_rogue_544_magic_detection_sees_monster_pack_magic(self):
         # Rogue 5.4.4 potions.c:P_TFIND scans mlist t_pack with is_magic().
         import rogue_rings
@@ -2616,6 +2632,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((monster.x, monster.y), game.visible)
         self.assertIn((monster.x, monster.y), game.explored)
         self.assertNotIn((food.x, food.y), game.visible)
+
+    def test_rogue_544_magic_detection_skips_monster_pack_when_no_level_objects(self):
+        # Rogue 5.4.4 potions.c:P_TFIND scans monster packs only inside the lvl_obj != NULL block.
+        import rogue_rings
+
+        game = new_game(seed=323)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "magic detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        monster = monster_at(game.p.x + 4, game.p.y)
+        monster.pack = [rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)]
+        game.p.inv.append(potion)
+        game.gitems = []
+        game.mons = [monster]
+        game.visible = set()
+        game.explored = set()
+
+        game.use_pot(potion)
+
+        self.assertFalse(game.ident.pk[kind])
+        self.assertNotIn((monster.x, monster.y), game.visible)
+        self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
 
     def test_rogue_544_magic_detection_without_magic_uses_feeling_message(self):
         # Rogue 5.4.4 potions.c:P_TFIND uses choose_str("normal", "strange") when no magic is found.
@@ -4458,6 +4496,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_potions.turn_see_state(True, rogue.HUHDURATION), 0)
         self.assertEqual(rogue_potions.turn_see_state(False, rogue.HUHDURATION), rogue.HUHDURATION)
+        self.assertTrue(rogue_potions.turn_see_adds_new([False]))
+        self.assertFalse(rogue_potions.turn_see_adds_new([True]))
+        self.assertFalse(rogue_potions.turn_see_adds_new([]))
 
     def test_rogue_544_potions_helper_do_pot_state_matches_source(self):
         # Rogue 5.4.4 potions.c:do_pot() sets oi_know from knowit and fuses or lengthens by flag state.
@@ -4468,6 +4509,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_potions.do_pot_known(True, False))
         self.assertEqual(rogue_potions.do_pot_fuse_action(False), "fuse")
         self.assertEqual(rogue_potions.do_pot_fuse_action(True), "lengthen")
+        self.assertFalse(rogue_potions.magic_detection_can_scan(False))
+        self.assertTrue(rogue_potions.magic_detection_can_scan(True))
 
     def test_rogue_544_potions_helper_see_invisible_duration_matches_source(self):
         # Rogue 5.4.4 potions.c:P_SEEINVIS do_pot() lengthens existing CANSEE but ring-only CANSEE has no potion fuse.

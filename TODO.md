@@ -293,6 +293,7 @@
 - [x] Rogue 5.4.4 `misc.c:add_str()` 準拠の poison potion Strength 下限監査
 - [x] Rogue 5.4.4 `potions.c:quaff()` / `misc.c:add_str()` 準拠の potion Strength / healing / extra healing helper 化
 - [x] Rogue 5.4.4 `potions.c:do_pot()` の識別・fuse/lengthen 分岐を `rogue_potions.py` へ小分割
+- [x] Rogue 5.4.4 `potions.c:P_TFIND` の `lvl_obj != NULL` 走査ゲートを `rogue_potions.py` へ小分割
 - [x] Rogue 5.4.4 `potions.c:raise_level()` / `misc.c:check_level()` 準拠の経験値閾値・d10 HP 増加 helper 化
 - [x] Rogue 5.4.4 `misc.c:eat()` 準拠で、ration の good/awful 分岐と slime-mold 文言を `rogue_food.py` へ小分割して接続
 - [x] 最小 baseline ロジックテスト整備
@@ -321,6 +322,7 @@
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:turn_see()` の `SEEMONST` ON/OFF を `rogue_potions.py` へ小分割
+  - [x] Rogue 5.4.4 `potions.c:turn_see(FALSE)` の新規 monster 感知判定を `rogue_potions.py` へ小分割
   - [x] Rogue 5.4.4 `potions.c:P_MFIND` 準拠で、再使用時も `turn_see` は `lengthen()` せず重複 `fuse()` にする
   - [x] Rogue 5.4.4 `rings.c:ring_on()` / `potions.c:P_SEEINVIS` / `things.c:dropcheck()` 準拠で、see invisible ring と `unsee` fuse の連携を修正
   - [x] `swander / rollwand` を初回 `fuse(AFTER)`、以後 `start_daemon(BEFORE)` / `fuse(BEFORE)` へ接続

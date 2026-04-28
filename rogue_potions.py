@@ -63,6 +63,11 @@ def turn_see_state(turn_off: bool, duration: int) -> int:
     return 0 if turn_off else duration
 
 
+def turn_see_adds_new(can_see_monsters) -> bool:
+    """Rogue 5.4.4 potions.c:turn_see(FALSE) add_new result."""
+    return any(not can_see for can_see in can_see_monsters)
+
+
 def do_pot_known(already_known: bool, knowit: bool) -> bool:
     """Rogue 5.4.4 potions.c:do_pot() oi_know update."""
     return already_known or knowit
@@ -80,3 +85,8 @@ def see_invisible_duration(current: int, duration: int, wearing_ring: bool) -> i
     if wearing_ring:
         return current
     return duration
+
+
+def magic_detection_can_scan(has_level_objects: bool) -> bool:
+    """Rogue 5.4.4 potions.c:P_TFIND lvl_obj != NULL gate."""
+    return bool(has_level_objects)
