@@ -3682,6 +3682,30 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.rogue_daemons.stomach_hunger_state(rogue.MORETIME + 10, rogue.MORETIME + 9, rogue.MORETIME)
         )
 
+    def test_rogue_544_daemons_helper_unconfuse_message_value_matches_source(self):
+        # Rogue 5.4.4 daemons.c:unconfuse() chooses "trippy" while hallucinating.
+        self.assertEqual(rogue.rogue_daemons.unconfuse_message_value(hallucinating=True), "trippy")
+        self.assertEqual(rogue.rogue_daemons.unconfuse_message_value(hallucinating=False), "confused")
+
+    def test_rogue_544_daemons_helper_sight_result_matches_blind_gate_and_message(self):
+        # Rogue 5.4.4 daemons.c:sight() only acts while ISBLIND and chooses LSD text while hallucinating.
+        self.assertEqual(
+            rogue.rogue_daemons.sight_result(blind=True, hallucinating=True),
+            "daemons.far_out_everything_is_all_cosmic_again",
+        )
+        self.assertEqual(
+            rogue.rogue_daemons.sight_result(blind=True, hallucinating=False),
+            "daemons.the_veil_of_darkness_lifts",
+        )
+        self.assertIsNone(rogue.rogue_daemons.sight_result(blind=False, hallucinating=False))
+
+    def test_rogue_544_daemons_helper_nohaste_state_matches_source(self):
+        # Rogue 5.4.4 daemons.c:nohaste() clears ISHASTE and reports slowing down.
+        self.assertEqual(
+            rogue.rogue_daemons.nohaste_state(),
+            (0, False, "daemons.you_feel_yourself_slowing_down"),
+        )
+
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
         game = new_game(seed=316)

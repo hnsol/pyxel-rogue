@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2007"
+UI_BUILD = "260428_2101"
 
 # ===========================================================
 #  Font
@@ -2339,9 +2339,8 @@ class Game:
 
     def nohaste(self):
         # C: daemons.c:nohaste()
-        self.p.haste = 0
-        self.haste_half_turn = False
-        self.msg("daemons.you_feel_yourself_slowing_down")
+        self.p.haste, self.haste_half_turn, message_key = rogue_daemons.nohaste_state()
+        self.msg(message_key)
 
     def come_down(self):
         # C: daemons.c:come_down()
@@ -2360,16 +2359,20 @@ class Game:
     def unconfuse(self):
         # C: daemons.c:unconfuse()
         self.p.confused = 0
-        self.msg("daemons.you_feel_less_value_now", value="trippy" if self.p.hallucinating > 0 else "confused")
+        self.msg(
+            "daemons.you_feel_less_value_now",
+            value=rogue_daemons.unconfuse_message_value(self.p.hallucinating > 0),
+        )
 
     def sight(self):
         # C: daemons.c:sight()
-        if self.p.blind <= 0:
+        message_key = rogue_daemons.sight_result(self.p.blind > 0, self.p.hallucinating > 0)
+        if message_key is None:
             return
         self.fuses.extinguish("sight")
         self.p.blind = 0
         self.update_fov()
-        self.msg("daemons.far_out_everything_is_all_cosmic_again" if self.p.hallucinating > 0 else "daemons.the_veil_of_darkness_lifts")
+        self.msg(message_key)
 
     def is_magic_item(self, it):
         # Rogue 5.4.4 potions.c:is_magic().

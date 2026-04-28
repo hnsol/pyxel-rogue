@@ -108,6 +108,25 @@ def stomach_hunger_state(old_food: int, food: int, moretime: int) -> str | None:
     return None
 
 
+def unconfuse_message_value(hallucinating: bool) -> str:
+    """Rogue 5.4.4 daemons.c:unconfuse() choose_str value."""
+    return "trippy" if hallucinating else "confused"
+
+
+def sight_result(blind: bool, hallucinating: bool) -> str | None:
+    """Rogue 5.4.4 daemons.c:sight() blind gate and message branch."""
+    if not blind:
+        return None
+    if hallucinating:
+        return "daemons.far_out_everything_is_all_cosmic_again"
+    return "daemons.the_veil_of_darkness_lifts"
+
+
+def nohaste_state():
+    """Rogue 5.4.4 daemons.c:nohaste() effect."""
+    return 0, False, "daemons.you_feel_yourself_slowing_down"
+
+
 def swander(actions) -> None:
     """Rogue 5.4.4 daemons.c:swander()."""
     actions.daemons.start("rollwand", BEFORE)
