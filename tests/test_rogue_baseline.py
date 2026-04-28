@@ -1902,6 +1902,7 @@ class RogueBaselineTest(unittest.TestCase):
         cands = game.wanderer_floor_candidates()
 
         self.assertIn((22, 4), cands)
+        self.assertNotIn((20, 1), cands)
         self.assertNotIn((12, 12), cands)
 
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
@@ -3200,6 +3201,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(dest, (25, 4))
         self.assertEqual(second.dest, (25, 4))
 
+    def test_rogue_544_game_find_dest_ignores_room_gold_for_carry_monsters(self):
+        # Rogue 5.4.4 chase.c:find_dest() scans lvl_obj; room gold is not a carried object target.
+        game = new_game(seed=514)
+        set_two_room_floor(game)
+        gold = rogue.Item(rogue.CAT_GOLD, 0)
+        gold.x, gold.y = 24, 4
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = 25, 4
+        monster = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        game.mons = [monster]
+        game.gitems = [gold, potion]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            dest = game.find_dest(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(dest, (25, 4))
+        self.assertEqual(monster.dest, (25, 4))
+
     def test_rogue_544_aggravate_uses_runto_find_dest_for_carry_monster(self):
         # Rogue 5.4.4 misc.c:aggravate() calls chase.c:runto(), which sets t_dest = find_dest().
         game = new_game(seed=512)
@@ -3241,6 +3263,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(item, game.gitems)
         self.assertIn(item, monster.pack)
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+
+    def test_rogue_544_do_chase_greedy_gold_destination_is_not_collected(self):
+        # Rogue 5.4.4 monsters.c:wake_monster() uses room gold as t_dest; chase.c:do_chase() does not attach it to t_pack.
+        game = new_game(seed=513)
+        set_two_room_floor(game)
+        monster = monster_at(23, 4, "O", "orc", hp=10, armor=100, exp=5, flags="greed")
+        monster.running = True
+        monster.dest = (24, 4)
+        gold = rogue.Item(rogue.CAT_GOLD, 0)
+        gold.x, gold.y = 24, 4
+        game.mons = [monster]
+        game.gitems = [gold]
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (24, 4))
+        self.assertIn(gold, game.gitems)
+        self.assertNotIn(gold, monster.pack)
+        self.assertFalse(monster.running)
+        self.assertEqual(monster.dest, (24, 4))
 
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.

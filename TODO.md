@@ -88,7 +88,7 @@
 - [x] Rogue 5.4.4 `pick_up()` 準拠の拾得基礎（自動拾得、金直接加算、満杯文言、scare monster 再拾得消滅）
 - [x] `scroll of scare monster` の床上効果（床に置いた巻物でモンスターが踏み込まない挙動）
 - [x] Rogue 5.4.4 `daemons.c:swander()` / `rollwand()` と `monsters.c:wanderer()` 準拠の wandering monster spawn
-- [x] Rogue 5.4.4 `monsters.c:wanderer()` / `rooms.c:find_floor()` 準拠で wandering monster 候補を部屋内床に限定
+- [x] Rogue 5.4.4 `monsters.c:wanderer()` / `rooms.c:find_floor()` / `rnd_pos()` 準拠で wandering monster 候補を部屋内床に限定
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
 - [x] Rogue 5.4.4 `armor.c:wear()` / `command.c:command()` 準拠で armor wear 拒否時はターン非消費
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠で armor 以外の wear を拒否
@@ -156,6 +156,8 @@
 - [x] Rogue 5.4.4 `chase.c:see_monst()` / `cansee()` 相当の盲目/不可視、lamp距離、斜め遮蔽、同室照明ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 相当の carry 目的地選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runto()` / `find_dest()` / `do_chase()` 準拠で、carry monster の item 目的地保持と到達時 pack 移動を接続
+- [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、carry monster の item 目的地から room gold を除外
+- [x] Rogue 5.4.4 `monsters.c:wake_monster()` / `chase.c:do_chase()` 準拠で、greedy monster の gold 目的地は拾得せず守備地点として停止
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 相当の Dragon flame gate / 最寄り出口 / greedy 目的地補正 / chasee room 選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、door 上の hero は bolt 反射ではなく命中判定にする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、saved monster miss の `runto()` は hero 発射時だけにする

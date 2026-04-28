@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1242"
+UI_BUILD = "260428_1450"
 
 # ===========================================================
 #  Font
@@ -1420,7 +1420,7 @@ class Game:
             (x,y)
             for y,row in enumerate(self.tm)
             for x,tile in enumerate(row)
-            if (room := self.room_containing(x,y)) is not None
+            if (room := self.room_at(x,y)) is not None
             if tile in (T_FLOOR,T_CORR)
             and (x,y)!=(self.p.x,self.p.y)
             and not self.mon_at(x,y)
@@ -2082,7 +2082,7 @@ class Game:
             self.room_for_ai(m.x, m.y),
             self.room_for_ai(self.p.x, self.p.y, actor=True),
             (m.x, m.y) in self.visible and self.can_see_monster(m),
-            self.gitems,
+            [item for item in self.gitems if item.cat!=CAT_GOLD],
             {mo.dest for mo in self.mons if mo is not m},
             lambda item: self.room_for_ai(item.x, item.y),
             lambda item: (item.x, item.y),
@@ -2097,11 +2097,13 @@ class Game:
 
     def collect_monster_dest(self,m,dest):
         gi=self.gi_at(*dest)
-        if gi:
+        if gi and gi.cat!=CAT_GOLD:
             self.gitems.remove(gi)
-            if gi.cat!=CAT_GOLD:
-                m.pack.append(gi)
-        self.find_dest(m)
+            m.pack.append(gi)
+            self.find_dest(m)
+            return
+        if m.sym!="F":
+            m.running=False
 
     def random_monster_move(self,m):
         # C: move.c:rndmove()
