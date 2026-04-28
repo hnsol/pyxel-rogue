@@ -6105,6 +6105,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.hit_plus_vs_defender(0, defender_running=False), 4)
         self.assertEqual(rogue_fight.hit_plus_vs_defender(2, defender_running=True), 2)
 
+    def test_rogue_544_fight_helper_combat_message_key_uses_rnd_family_size(self):
+        # Rogue 5.4.4 fight.c:hit()/miss() chooses one of four h_names/m_names with rnd(4).
+        import rogue_fight
+
+        calls = []
+        key = rogue_fight.combat_message_key(
+            ("hit0", "hit1", "hit2", "hit3"),
+            lambda n: calls.append(n) or 2,
+        )
+
+        self.assertEqual(key, "hit2")
+        self.assertEqual(calls, [4])
+
     def test_rogue_544_fight_helper_player_defender_running_ignores_no_move(self):
         # Rogue 5.4.4 no_command clears ISRUN; move.c:T_BEAR no_move does not.
         import rogue_fight
@@ -8340,6 +8353,18 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("The dragon hit you", game.msgs)
         self.assertNotIn("The hobgoblin hit you", game.msgs)
+
+    def test_rogue_544_unseen_ice_freeze_message_keeps_the_prefix(self):
+        # Rogue 5.4.4 fight.c:attack() appends " by the %s" even when set_mname() returns "something".
+        game = new_game(seed=5035)
+        set_open_floor(game)
+        game.p.blind = 1
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        game.roll_monster_attack = lambda m: (True, 0)
+
+        game.m_attack(monster)
+
+        self.assertIn("you are frozen by the something", game.msgs)
 
     def test_rogue_544_fight_helper_ice_freeze_adds_duration_and_reports_initial_freeze(self):
         # Rogue 5.4.4 fight.c:attack() adds rnd(2)+2; message only when no_command was zero.

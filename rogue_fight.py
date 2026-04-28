@@ -34,6 +34,11 @@ def set_mname(visible: bool, detected: bool, hallucinating: bool, real_name: str
     return real_name
 
 
+def combat_message_key(keys, rnd):
+    """Rogue 5.4.4 fight.c:hit()/miss() h_names/m_names family choice."""
+    return keys[rnd(len(keys))]
+
+
 def magic_item_to_steal(inventory, equipped_items, is_magic_item, rnd):
     """Rogue 5.4.4 fight.c:attack() Nymph steal selection."""
     steal = None

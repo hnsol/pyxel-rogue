@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1632"
+UI_BUILD = "260428_1654"
 
 # ===========================================================
 #  Font
@@ -1663,7 +1663,7 @@ class Game:
     def msg_text(self,t):
         self._append_msg(t)
 
-    def combat_monster_name(self,m,upper=False):
+    def combat_monster_name(self,m,upper=False, article_for_something=False):
         def random_monster_name():
             spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
             return TextCatalog.monster(self.lang, spec.name if spec else m.name)
@@ -1675,14 +1675,14 @@ class Game:
             random_monster_name,
             "something" if self.lang == LANG_EN else "何者か",
         )
-        if self.lang==LANG_EN and name != "something":
+        if self.lang==LANG_EN and (name != "something" or article_for_something):
             name=f"the {name}"
         if self.lang==LANG_EN and upper:
             name=name[:1].upper()+name[1:]
         return name
 
     def combat_message(self,keys,**kw):
-        return TextCatalog.msg(self.lang,keys[RNG.rnd(len(keys))],**kw)
+        return TextCatalog.msg(self.lang,rogue_fight.combat_message_key(keys, RNG.rnd),**kw)
 
     # Rogue 5.4.4 fight.c:hit()/miss() message families.
     def player_hit_message(self,target):
@@ -2001,7 +2001,7 @@ class Game:
                     if hypothermia:
                         self.p.hp=0; self.death_cause="hypothermia"
                     if should_message:
-                        self.msg("fight.you_are_frozen", subject=self.combat_monster_name(m))
+                        self.msg("fight.you_are_frozen", subject=self.combat_monster_name(m, article_for_something=True))
                 if rogue_monsters.has_special(m, "hold"):
                     m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_hit(m.vf_hit)
                     self.p.held_by=m
