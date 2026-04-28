@@ -3502,6 +3502,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item, monster.pack)
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
 
+    def test_rogue_544_do_chase_keeps_running_after_collecting_item_when_new_dest_differs(self):
+        # Rogue 5.4.4 chase.c:do_chase() stops only if relocate() leaves the monster on the new t_dest.
+        game = new_game(seed=515)
+        set_two_room_floor(game)
+        monster = monster_at(23, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (24, 4)
+        first = rogue.Item(rogue.CAT_POT, 0)
+        first.x, first.y = 24, 4
+        second = rogue.Item(rogue.CAT_POT, 1)
+        second.x, second.y = 26, 4
+        game.mons = [monster]
+        game.gitems = [first, second]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.do_chase(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual((monster.x, monster.y), (24, 4))
+        self.assertIn(first, monster.pack)
+        self.assertEqual(monster.dest, (26, 4))
+        self.assertTrue(monster.running)
+
     def test_rogue_544_do_chase_greedy_gold_destination_is_not_collected(self):
         # Rogue 5.4.4 monsters.c:wake_monster() uses room gold as t_dest; chase.c:do_chase() does not attach it to t_pack.
         game = new_game(seed=513)
@@ -9065,6 +9090,38 @@ class RogueBaselineTest(unittest.TestCase):
             rogue_move.rndmove((10, 10), rng.rnd, lambda src, dst: True),
             (9, 11),
         )
+
+    def test_rogue_544_move_helper_confused_player_random_gate_uses_rnd5(self):
+        # Rogue 5.4.4 move.c:do_move() gates player rndmove() with rnd(5) != 0.
+        import rogue_move
+
+        calls = []
+        self.assertFalse(rogue_move.confused_player_uses_random_move(False, lambda n: calls.append(n) or 1))
+        self.assertEqual(calls, [])
+        self.assertFalse(rogue_move.confused_player_uses_random_move(True, lambda n: calls.append(n) or 0))
+        self.assertTrue(rogue_move.confused_player_uses_random_move(True, lambda n: calls.append(n) or 1))
+        self.assertEqual(calls, [5, 5])
+
+    def test_rogue_544_player_confused_move_uses_input_direction_when_rnd5_zero(self):
+        # Rogue 5.4.4 move.c:do_move() only calls rndmove() when ISHUH && rnd(5) != 0.
+        game = new_game(seed=516)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 10
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.choice = lambda seq: -1
+            game.try_move(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
+        self.assertEqual((game.p.x, game.p.y), (11, 10))
 
     def test_rogue_544_chase_helper_random_move_gate_matches_source_order(self):
         # Rogue 5.4.4 chase.c:chase() tests ISHUH, Phantom, then Bat random movement.

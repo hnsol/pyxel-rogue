@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2351"
+UI_BUILD = "260428_2356"
 
 # ===========================================================
 #  Font
@@ -3178,8 +3178,17 @@ class Game:
             self.msg("move.you_are_still_stuck_in_the_bear_trap")
             self.end_turn()
             return True
-        if p.confused>0:
-            dx,dy = RNG.choice([-1,0,1]), RNG.choice([-1,0,1])
+        if rogue_move.confused_player_uses_random_move(p.confused > 0, rnd):
+            nx, ny = rogue_move.rndmove(
+                (p.x, p.y),
+                rnd,
+                lambda src, dst: self.diag_ok(src[0], src[1], dst[0], dst[1])
+                and (dst == src or self.walkable(dst[0], dst[1]) or self.mon_at(dst[0], dst[1])),
+            )
+            if (nx, ny) == (p.x, p.y):
+                self.dashing = False
+                return False
+            dx, dy = nx - p.x, ny - p.y
         if dx or dy:
             p.facing=(dx,dy)
         nx, ny = p.x+dx, p.y+dy

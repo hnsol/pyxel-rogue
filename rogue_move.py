@@ -51,6 +51,11 @@ def dart_poison_strength(strength: int, poison_saved: bool, sustain_strength: bo
     return strength - 1
 
 
+def confused_player_uses_random_move(confused: bool, rnd) -> bool:
+    """Rogue 5.4.4 move.c:do_move() ISHUH random movement gate."""
+    return confused and rnd(5) != 0
+
+
 def rndmove(origin, rnd, is_legal):
     """Rogue 5.4.4 move.c:rndmove() one-attempt confused move."""
     x, y = origin
