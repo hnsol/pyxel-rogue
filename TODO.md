@@ -119,6 +119,7 @@
 - [x] Rogue 5.4.4 `fight.c:swing()` 相当の d20 命中判定を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:be_trapped()` / `fight.c:swing()` 準拠の arrow/dart trap 命中式監査（装備中 armor ではなく `pstats.s_arm` を使う）
 - [x] モンスター running / 起床の基礎（視界内 mean monster、攻撃時 `runto()`、aggravate）
+- [x] Rogue 5.4.4 `monsters.c:new_monster()` 準拠で、`R_AGGR` 装備中の新規 monster を `runto()`
 - [x] Rogue 5.4.4 `extern.c:monsters[]` 準拠で、`ISMEAN` 相当flagsをBESTIARYへ反映
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` 準拠で、polymorph 後の `ISMEAN` を新monster specから復元
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `chase.c:do_chase()` 準拠で、Orc `ISGREED` と Leprechaun 金盗みを分離
@@ -280,7 +281,7 @@
   - 1/20 の階で発生。`MINTREAS=2` / `MAXTREAS=10` のアイテムと、次階層相当のモンスター群を `ISMEAN` 付きで配置。部屋内モンスターには `give_pack()` も呼ぶ。
 - [x] **モンスター持ち物 `m_carry`**（`monsters.c:217-222 give_pack()`、`extern.c:monsters[]` の `m_carry`）
   - `level >= max_level && rnd(100) < m_carry` でモンスターに `new_thing()` を持たせ、倒した時にドロップさせる。
-- [ ] **daemon / fuse 期間管理インフラ**（`daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()`）
+- [x] **daemon / fuse 期間管理インフラ**（`daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()/extinguish()`）
   - `doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` などを個別タイマーではなく統一インフラで扱い、`potion of haste self` 等の残ターン管理を Rogue 5.4.4 準拠にする。
   - [x] `rogue_daemons.py` に `fuse` / `lengthen` / `extinguish` / `do_fuses(AFTER)` 相当を分離し、`potion of haste self` の `nohaste` と二重使用時の失神へ接続
   - [x] `see invisible` potion の `unsee` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
@@ -308,7 +309,7 @@
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の hungry_state 変化run停止と `misc.c:add_haste()` の nohaste 期間を helper 化
   - [x] Rogue 5.4.4 `daemons.c:come_down()` 準拠で、blind 中は hallucination 解除後の再表示メッセージを抑止
   - [x] Rogue 5.4.4 `potions.c:P_HASTE` 準拠で、haste self quaff は `after=FALSE` として after-turn を進めない
-  - [ ] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
+  - [x] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
 ## Phase 5: 移植性・UI基盤（優先度: 中）
 

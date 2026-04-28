@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1450"
+UI_BUILD = "260428_1456"
 
 # ===========================================================
 #  Font
@@ -1390,6 +1390,8 @@ class Game:
         )
         rogue_monsters.apply_deep_haste(monster, depth)
         self.set_monster_disguise(monster,depth=depth)
+        if rogue_rings.is_wearing(self.p, rogue_rings.R_AGGR):
+            self.runto(monster)
         return monster
 
     def set_monster_disguise(self,m,depth=None):
@@ -2498,8 +2500,6 @@ class Game:
                 spec = self.monster_spec_for_sym(rogue_monsters.randmonster(p.depth, RNG.rnd, wander=False))
                 if spec:
                     self.mons.append(self.new_monster_from_spec(nx,ny,spec))
-                    if rogue_rings.is_wearing(p, rogue_rings.R_AGGR):
-                        self.runto(self.mons[-1])
             else:
                 self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":

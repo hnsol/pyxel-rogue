@@ -4049,6 +4049,19 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn(rogue.rogue_monsters.FLAG_HASTE, monster.flags)
 
+    def test_rogue_544_new_monster_runs_when_aggravate_ring_worn(self):
+        # Rogue 5.4.4 monsters.c:new_monster() calls runto() when ISWEARING(R_AGGR).
+        import rogue_rings
+
+        game = new_game(seed=310)
+        set_open_floor(game)
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_AGGR)
+        spec = next(s for s in rogue.BESTIARY if s.sym == "C")
+        monster = game.new_monster_from_spec(game.p.x + 1, game.p.y, spec)
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+
     def test_rogue_544_levitation_blocks_stairs_pickup_and_traps(self):
         # Rogue 5.4.4 command.c:levit_check() blocks stairs and pickup;
         # move.c:be_trapped() returns before trap effects while ISLEVIT.
