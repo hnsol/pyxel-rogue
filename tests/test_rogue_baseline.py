@@ -5701,6 +5701,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(hplus, 2)
         self.assertEqual(dplus, 3)
 
+    def test_rogue_544_thrown_current_weapon_gets_ring_hit_and_damage_bonus(self):
+        # Rogue 5.4.4 fight.c:roll_em() applies cur_weapon ring bonuses before hurl handling.
+        import rogue_rings
+
+        game = new_game(seed=5067)
+        dagger = rogue.Item(rogue.CAT_WPN, next(i for i, w in enumerate(rogue.WEAPONS) if w["name"] == "dagger"))
+        game.p.wpn = dagger
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDHIT, ench=2)
+        game.p.ring_r = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDDAM, ench=3)
+
+        damage_expr, hplus, dplus = game.player_weapon_profile(dagger, thrown=True)
+
+        self.assertEqual(damage_expr, dagger.data["hurl_damage"])
+        self.assertEqual(hplus, dagger.hit_plus + 2)
+        self.assertEqual(dplus, dagger.dam_plus + 3)
+
     def test_rogue_544_fight_helper_roll_em_damage_adds_only_hit_parts(self):
         # Rogue 5.4.4 fight.c:roll_em() rolls damage only after each successful swing().
         import rogue_fight

@@ -229,8 +229,8 @@ def protection_bonus(player):
 
 
 def weapon_hit_bonus(player, weapon, thrown=False):
-    """Return R_ADDHIT bonus for wielded (non-thrown) weapon."""
-    if thrown or weapon is not player.wpn:
+    """Return R_ADDHIT bonus when fight.c:roll_em() sees weap == cur_weapon."""
+    if weapon is not player.wpn:
         return 0
     total = 0
     for ring in (player.ring_l, player.ring_r):
@@ -240,8 +240,8 @@ def weapon_hit_bonus(player, weapon, thrown=False):
 
 
 def weapon_damage_bonus(player, weapon, thrown=False):
-    """Return R_ADDDAM bonus for wielded (non-thrown) weapon."""
-    if thrown or weapon is not player.wpn:
+    """Return R_ADDDAM bonus when fight.c:roll_em() sees weap == cur_weapon."""
+    if weapon is not player.wpn:
         return 0
     total = 0
     for ring in (player.ring_l, player.ring_r):

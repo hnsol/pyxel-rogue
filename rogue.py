@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0852"
+UI_BUILD = "260428_0922"
 
 # ===========================================================
 #  Font

@@ -195,6 +195,7 @@
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の defender `!ISRUN` 命中補正を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の weapon/hurl profile 選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で、手持ち非武器にも `R_ADDHIT` / `R_ADDDAM` 補正を適用
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で、投げた current weapon にも `R_ADDHIT` / `R_ADDDAM` 補正を適用
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー素手ダメージを `"1x4"` に修正
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー初期 HP / max HP を 12 に修正
 - [x] Rogue 5.4.4 `init.c:init_player()` 準拠で、初期pack順・+1 ring mail・矢数 `rnd(15)+25` を修正
