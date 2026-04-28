@@ -78,6 +78,11 @@ def do_pot_fuse_action(active: bool) -> str:
     return "lengthen" if active else "fuse"
 
 
+def call_it_guess_after_use(known: bool, guess):
+    """Rogue 5.4.4 misc.c:call_it() clears oi_guess only when oi_know."""
+    return None if known else guess
+
+
 def see_invisible_duration(current: int, duration: int, wearing_ring: bool) -> int:
     """Rogue 5.4.4 potions.c:P_SEEINVIS CANSEE duration effect."""
     if current > 0:

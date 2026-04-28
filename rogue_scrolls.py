@@ -97,6 +97,11 @@ def teleport_identifies(old_room, new_room) -> bool:
     return old_room is not new_room
 
 
+def call_it_guess_after_read(known: bool, guess):
+    """Rogue 5.4.4 misc.c:call_it() clears oi_guess only when oi_know."""
+    return None if known else guess
+
+
 def identify_target_cats(name: str, cats) -> tuple:
     """Return Rogue 5.4.4 scrolls.c:S_ID_* id_type[] category targets."""
     if name == "identify potion":

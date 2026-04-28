@@ -114,6 +114,7 @@
   - [x] `wizard.c:whatis()/set_know()` 準拠の対象選択式 identify 実装（`item_confirm()` に "Identify" ブランチ）
   - [x] ring の `ring_num()` と stick の `charge_str()` は種類判明だけでなく個体 `ISKNOW` 後に表示する
   - [x] `command.c:call()` / `misc.c:call_it()` 相当の命名機能（`c` キー）— potion / scroll / ring / stick の `oi_guess` を設定
+  - [x] Rogue 5.4.4 `scrolls.c:read_scroll()` / `misc.c:call_it()` 準拠で、判明した scroll の仮名を使用後にクリア
   - [x] `things.c:print_disc()` 相当の discovered list（`D` キー）— `oi_know`/`oi_guess` 一覧表示
   - [x] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
   - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
@@ -295,6 +296,7 @@
 - [x] Rogue 5.4.4 `potions.c:do_pot()` の識別・fuse/lengthen 分岐を `rogue_potions.py` へ小分割
 - [x] Rogue 5.4.4 `potions.c:P_TFIND` の `lvl_obj != NULL` 走査ゲートを `rogue_potions.py` へ小分割
 - [x] Rogue 5.4.4 `potions.c:raise_level()` / `misc.c:check_level()` 準拠の経験値閾値・d10 HP 増加 helper 化
+- [x] Rogue 5.4.4 `potions.c:quaff()` / `misc.c:call_it()` 準拠で、判明した potion の仮名を使用後にクリア
 - [x] Rogue 5.4.4 `misc.c:eat()` 準拠で、ration の good/awful 分岐と slime-mold 文言を `rogue_food.py` へ小分割して接続
 - [x] 最小 baseline ロジックテスト整備
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加
@@ -318,6 +320,7 @@
   - [x] `see invisible` potion の `unsee` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_SEEINVIS` の potion duration と ring-only `CANSEE` 分岐を `rogue_potions.py` へ小分割
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `potions.c:P_LSD` 準拠で、`turn_see(FALSE)` 時に monster detection 表示を維持
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続

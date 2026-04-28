@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2217"
+UI_BUILD = "260428_2243"
 
 # ===========================================================
 #  Font
@@ -2245,7 +2245,7 @@ class Game:
                 self.fuses.lengthen("come_down", duration)
             else:
                 if p.see_monsters > 0:
-                    p.see_monsters = rogue_potions.turn_see_state(True, HUHDURATION)
+                    p.see_monsters = rogue_potions.turn_see_state(False, p.see_monsters)
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
@@ -2262,6 +2262,9 @@ class Game:
             self.ident.pk[it.kind]=True
             if self.add_haste(True):
                 self.msg("potions.you_feel_yourself_moving_much_faster")
+            self.ident.pg[it.kind] = rogue_potions.call_it_guess_after_use(
+                self.ident.pk[it.kind], self.ident.pg[it.kind]
+            )
             self.consume_pack_item(it)
             return False
         elif nm=="see invisible":
@@ -2323,6 +2326,9 @@ class Game:
                 self.fuses.fuse("land", duration, rogue_daemons.AFTER)
             p.levitating += duration
             self.msg("potions.you_start_to_float_in_the_air")
+        self.ident.pg[it.kind] = rogue_potions.call_it_guess_after_use(
+            self.ident.pk[it.kind], self.ident.pg[it.kind]
+        )
         self.consume_pack_item(it)
         return True
 
@@ -2504,6 +2510,9 @@ class Game:
             unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
             if unid:
                 # Interactive target selection (Rogue 5.4.4 wizard.c:whatis()).
+                self.ident.sg[it.kind] = rogue_scrolls.call_it_guess_after_read(
+                    self.ident.sk[it.kind], self.ident.sg[it.kind]
+                )
                 self.fitems=unid; self.icur=0; self.cact="Identify"; self.st=ST_ITEM
                 return True  # Caller must NOT call close_menu()/end_turn() yet.
             else:
@@ -2583,6 +2592,9 @@ class Game:
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="blank paper": self.msg("pyxel.scroll_is_blank")
+        self.ident.sg[it.kind] = rogue_scrolls.call_it_guess_after_read(
+            self.ident.sk[it.kind], self.ident.sg[it.kind]
+        )
         self.consume_pack_item(it)
 
     def first_zap_target(self, dx, dy):

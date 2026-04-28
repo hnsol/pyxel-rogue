@@ -1510,6 +1510,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.sk[kind])
         self.assertIn("your nose tingles", game.msgs)
 
+    def test_rogue_544_read_scroll_clears_guess_when_scroll_becomes_known(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() calls misc.c:call_it(), which clears oi_guess if oi_know.
+        game = new_game(seed=3141)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "magic mapping")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        game.ident.sk[kind] = False
+        game.ident.sg[kind] = "old guess"
+
+        game.use_scr(scroll)
+
+        self.assertTrue(game.ident.sk[kind])
+        self.assertIsNone(game.ident.sg[kind])
+
+    def test_rogue_544_read_scroll_preserves_guess_when_scroll_remains_unknown(self):
+        # Rogue 5.4.4 misc.c:call_it() leaves an existing oi_guess when oi_know is false.
+        game = new_game(seed=3142)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "monster confusion")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+        game.ident.sk[kind] = False
+        game.ident.sg[kind] = "old guess"
+
+        game.use_scr(scroll)
+
+        self.assertFalse(game.ident.sk[kind])
+        self.assertEqual(game.ident.sg[kind], "old guess")
+
     def test_rogue_544_scroll_protect_armor_marks_armor_protected_and_blocks_rust(self):
         # Rogue 5.4.4 scrolls.c:S_PROTECT sets ISPROT but does not set scr_info[].oi_know;
         # move.c:rust_armor() then prints the instant-vanish rust message and does not lower armor.
@@ -1665,6 +1693,8 @@ class RogueBaselineTest(unittest.TestCase):
         room = object()
         self.assertFalse(rogue_scrolls.teleport_identifies(room, room))
         self.assertTrue(rogue_scrolls.teleport_identifies(room, object()))
+        self.assertIsNone(rogue_scrolls.call_it_guess_after_read(True, "old"))
+        self.assertEqual(rogue_scrolls.call_it_guess_after_read(False, "old"), "old")
 
     def test_rogue_544_scrolls_helper_identify_target_cats_matches_id_type(self):
         # Rogue 5.4.4 scrolls.c:S_ID_* uses id_type[] for whatis(TRUE, ...).
@@ -2523,6 +2553,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.ident.pk[see])
         self.assertFalse(game.ident.pk[mfind])
         self.assertTrue(game.ident.pk[haste])
+
+    def test_rogue_544_quaff_clears_guess_when_potion_becomes_known(self):
+        # Rogue 5.4.4 potions.c:quaff() calls misc.c:call_it(), which clears oi_guess if oi_know.
+        game = new_game(seed=3181)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.ident.pk[kind] = False
+        game.ident.pg[kind] = "old guess"
+
+        game.use_pot(potion)
+
+        self.assertTrue(game.ident.pk[kind])
+        self.assertIsNone(game.ident.pg[kind])
+
+    def test_rogue_544_quaff_preserves_guess_when_potion_remains_unknown(self):
+        # Rogue 5.4.4 misc.c:call_it() leaves an existing oi_guess when oi_know is false.
+        game = new_game(seed=3182)
+        set_open_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        game.ident.pk[kind] = False
+        game.ident.pg[kind] = "old guess"
+
+        game.use_pot(potion)
+
+        self.assertFalse(game.ident.pk[kind])
+        self.assertEqual(game.ident.pg[kind], "old guess")
 
     def test_rogue_544_restore_strength_potion_does_not_identify_on_quaff(self):
         # Rogue 5.4.4 potions.c:P_RESTORE restores strength but does not set pot_info[].oi_know.
@@ -4069,8 +4129,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.fuses.remaining("come_down"), 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
 
-    def test_rogue_544_hallucination_turns_off_detect_monster_display(self):
-        # Rogue 5.4.4 potions.c:P_LSD calls turn_see(FALSE) when SEEMONST is active.
+    def test_rogue_544_hallucination_preserves_detect_monster_display(self):
+        # Rogue 5.4.4 potions.c:P_LSD calls turn_see(FALSE), which keeps SEEMONST on.
         game = new_game(seed=216)
         potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
         potion = rogue.Item(rogue.CAT_POT, potion_kind)
@@ -4080,7 +4140,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_pot(potion)
 
-        self.assertEqual(game.p.see_monsters, 0)
+        self.assertEqual(game.p.see_monsters, rogue.HUHDURATION)
+        self.assertEqual(game.fuses.remaining("turn_see"), rogue.HUHDURATION)
 
     def test_rogue_544_potion_hallucination_lengthens_come_down_fuse(self):
         # Rogue 5.4.4 potions.c:do_pot(P_LSD) lengthens come_down when ISHALU is already set.
@@ -4496,6 +4557,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_potions.turn_see_state(True, rogue.HUHDURATION), 0)
         self.assertEqual(rogue_potions.turn_see_state(False, rogue.HUHDURATION), rogue.HUHDURATION)
+        self.assertEqual(rogue_potions.turn_see_state(False, 7), 7)
         self.assertTrue(rogue_potions.turn_see_adds_new([False]))
         self.assertFalse(rogue_potions.turn_see_adds_new([True]))
         self.assertFalse(rogue_potions.turn_see_adds_new([]))
@@ -4509,6 +4571,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_potions.do_pot_known(True, False))
         self.assertEqual(rogue_potions.do_pot_fuse_action(False), "fuse")
         self.assertEqual(rogue_potions.do_pot_fuse_action(True), "lengthen")
+        self.assertIsNone(rogue_potions.call_it_guess_after_use(True, "old"))
+        self.assertEqual(rogue_potions.call_it_guess_after_use(False, "old"), "old")
         self.assertFalse(rogue_potions.magic_detection_can_scan(False))
         self.assertTrue(rogue_potions.magic_detection_can_scan(True))
 
