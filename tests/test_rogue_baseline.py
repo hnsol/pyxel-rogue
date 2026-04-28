@@ -8770,6 +8770,23 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.x, game.p.y), (px + 1, py))
 
+    def test_rogue_544_dash_look_ignores_unseen_diagonal_trap_behind_hidden_passage(self):
+        # Rogue 5.4.4 misc.c:look() applies F_PASS/diagonal gates before door_stop checks.
+        game = new_game(seed=464)
+        game.rooms = []
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 10, 10
+        game.tm[10][10] = rogue.T_CORR
+        game.tm[11][10] = rogue.T_CORR
+        game.tm[9][10] = rogue.T_VOID
+        game.hidden_tiles[(10, 9)] = rogue.T_CORR
+        game.tm[10][11] = rogue.T_VOID
+        game.tm[9][11] = rogue.T_TRAP
+        game.update_fov()
+        game.dash_steps = 1
+
+        self.assertFalse(game.dash_look_stop(1, 0))
+
     def test_rogue_544_dash_stops_at_door_until_run_button_released(self):
         # Rogue 5.4.4 misc.c:look() clears running at a door_stop DOOR.
         game = new_game(seed=461)

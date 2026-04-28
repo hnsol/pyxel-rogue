@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0732"
+UI_BUILD = "260429_0735"
 
 # ===========================================================
 #  Font
@@ -3646,6 +3646,15 @@ class Game:
                 if self.dash_look_ignore(dx,dy,ox,oy): continue
                 x,y=px+ox,py+oy
                 if not(0<=x<MAP_W and 0<=y<MAP_H): continue
+                if not rogue_vision.look_cell_visible(
+                    self.tm[py][px],
+                    self.tm[y][x],
+                    ox,
+                    oy,
+                    self.tm[y][px],
+                    self.tm[py][x],
+                ):
+                    continue
                 if (x,y) in self.visible and (self.gi_at(x,y) or self.mon_at(x,y)):
                     return True
                 tile=self.tm[y][x]
