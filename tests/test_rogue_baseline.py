@@ -7140,6 +7140,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((7, 7), game.visible)
         self.assertNotIn((11, 9), game.visible)
 
+    def test_rogue_544_corridor_look_blocks_diagonal_behind_hidden_passage(self):
+        # Rogue 5.4.4 misc.c:look() skips blank cells and blocks diagonal passage sight
+        # when both orthogonal side cells fail io.c:step_ok().
+        game = new_game(seed=141)
+        game.rooms = []
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 10, 10
+        game.tm[10][10] = rogue.T_CORR
+        game.tm[9][10] = rogue.T_VOID
+        game.hidden_tiles[(10, 9)] = rogue.T_CORR
+        game.tm[10][11] = rogue.T_VOID
+        game.tm[9][11] = rogue.T_CORR
+
+        game.update_fov()
+
+        self.assertIn((10, 10), game.visible)
+        self.assertNotIn((10, 9), game.visible)
+        self.assertNotIn((11, 9), game.visible)
+
     def test_rogue544_lit_room_does_not_reveal_corridor_beyond_far_door(self):
         # Rogue 5.4.4 rooms.c:enter_room() lights only the room's own cells.
         # Corridor tiles beyond a door become visible only when the player is

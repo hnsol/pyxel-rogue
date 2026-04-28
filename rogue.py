@@ -34,6 +34,7 @@ import rogue_rooms
 import rogue_search
 import rogue_sticks
 import rogue_things
+import rogue_vision
 import rogue_dungeon
 import rogue_daemons
 import rogue_armor
@@ -176,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0727"
+UI_BUILD = "260429_0732"
 
 # ===========================================================
 #  Font
@@ -1745,7 +1746,20 @@ class Game:
         for dy in range(-1,2):
             for dx in range(-1,2):
                 nx,ny=px+dx,py+dy
-                if 0<=nx<MAP_W and 0<=ny<MAP_H: self.visible.add((nx,ny))
+                if not (0<=nx<MAP_W and 0<=ny<MAP_H):
+                    continue
+                if dx == 0 and dy == 0:
+                    self.visible.add((nx,ny))
+                    continue
+                if rogue_vision.look_cell_visible(
+                    self.tm[py][px],
+                    self.tm[ny][nx],
+                    dx,
+                    dy,
+                    self.tm[ny][px],
+                    self.tm[py][nx],
+                ):
+                    self.visible.add((nx,ny))
         self.explored |= self.visible
 
     # ---------- Combat ----------
