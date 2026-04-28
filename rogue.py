@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2126"
+UI_BUILD = "260428_2142"
 
 # ===========================================================
 #  Font
@@ -2244,7 +2244,7 @@ class Game:
                 self.fuses.lengthen("come_down", duration)
             else:
                 if p.see_monsters > 0:
-                    p.see_monsters = 0
+                    p.see_monsters = rogue_potions.turn_see_state(True, HUHDURATION)
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
@@ -2286,7 +2286,7 @@ class Game:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
             else:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
-            p.see_monsters = HUHDURATION
+            p.see_monsters = rogue_potions.turn_see_state(False, HUHDURATION)
             if self.mons:
                 self.msg("pyxel.sense_monsters")
             else:
@@ -3449,9 +3449,9 @@ class Game:
         elif name == "sight":
             self.sight()
         elif name == "turn_see":
-            self.p.see_monsters = 0
+            self.p.see_monsters = rogue_potions.turn_see_state(True, HUHDURATION)
         elif name == "unsee":
-            self.p.see_invisible = 0
+            self.p.see_invisible = rogue_daemons.unsee_state()
         elif name == "come_down":
             self.come_down()
         elif name == "land":

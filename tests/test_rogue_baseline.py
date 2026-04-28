@@ -3699,6 +3699,10 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertIsNone(rogue.rogue_daemons.sight_result(blind=False, hallucinating=False))
 
+    def test_rogue_544_daemons_helper_unsee_state_clears_cansee(self):
+        # Rogue 5.4.4 daemons.c:unsee() clears CANSEE after repainting visible invisible monsters.
+        self.assertEqual(rogue.rogue_daemons.unsee_state(), 0)
+
     def test_rogue_544_daemons_helper_nohaste_state_matches_source(self):
         # Rogue 5.4.4 daemons.c:nohaste() clears ISHASTE and reports slowing down.
         self.assertEqual(
@@ -4447,6 +4451,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_potions.healing_hp(10, 16, 7), (17, 17))
         self.assertEqual(rogue_potions.extra_healing_hp(16, 16, 2, 3), (17, 17))
         self.assertEqual(rogue_potions.extra_healing_hp(16, 16, 2, 4), (18, 18))
+
+    def test_rogue_544_potions_helper_turn_see_state_matches_source(self):
+        # Rogue 5.4.4 potions.c:turn_see(TRUE) clears SEEMONST; turn_see(FALSE) sets it.
+        import rogue_potions
+
+        self.assertEqual(rogue_potions.turn_see_state(True, rogue.HUHDURATION), 0)
+        self.assertEqual(rogue_potions.turn_see_state(False, rogue.HUHDURATION), rogue.HUHDURATION)
 
     def test_rogue_544_level_helper_check_level_matches_misc(self):
         # Rogue 5.4.4 misc.c:check_level() rolls one d10 per gained level.

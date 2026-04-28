@@ -122,6 +122,11 @@ def sight_result(blind: bool, hallucinating: bool) -> str | None:
     return "daemons.the_veil_of_darkness_lifts"
 
 
+def unsee_state() -> int:
+    """Rogue 5.4.4 daemons.c:unsee() clears CANSEE."""
+    return 0
+
+
 def nohaste_state():
     """Rogue 5.4.4 daemons.c:nohaste() effect."""
     return 0, False, "daemons.you_feel_yourself_slowing_down"

@@ -56,3 +56,8 @@ def extra_healing_hp(hp: int, max_hp: int, level: int, amount: int) -> tuple[int
         max_hp += 1
         hp = max_hp
     return hp, max_hp
+
+
+def turn_see_state(turn_off: bool, duration: int) -> int:
+    """Rogue 5.4.4 potions.c:turn_see() toggles SEEMONST."""
+    return 0 if turn_off else duration

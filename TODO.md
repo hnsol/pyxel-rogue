@@ -318,6 +318,7 @@
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `potions.c:turn_see()` の `SEEMONST` ON/OFF を `rogue_potions.py` へ小分割
   - [x] Rogue 5.4.4 `potions.c:P_MFIND` 準拠で、再使用時も `turn_see` は `lengthen()` せず重複 `fuse()` にする
   - [x] Rogue 5.4.4 `rings.c:ring_on()` / `potions.c:P_SEEINVIS` / `things.c:dropcheck()` 準拠で、see invisible ring と `unsee` fuse の連携を修正
   - [x] `swander / rollwand` を初回 `fuse(AFTER)`、以後 `start_daemon(BEFORE)` / `fuse(BEFORE)` へ接続
@@ -340,6 +341,7 @@
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の faint duration `rnd(8)+4` を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の starvation post-decrement / food subtraction / threshold 分岐を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:unconfuse()` / `sight()` / `nohaste()` の文言・状態分岐を `rogue_daemons.py` へ小分割
+  - [x] Rogue 5.4.4 `daemons.c:unsee()` の `CANSEE` 解除を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:come_down()` / `land()` の文言・状態分岐を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:come_down()` 準拠で、blind 中は hallucination 解除後の再表示メッセージを抑止
   - [x] Rogue 5.4.4 `potions.c:P_HASTE` 準拠で、haste self quaff は `after=FALSE` として after-turn を進めない
