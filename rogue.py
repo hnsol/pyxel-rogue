@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0841"
+UI_BUILD = "260429_0858"
 
 # ===========================================================
 #  Font
@@ -1643,6 +1643,10 @@ class Game:
                 if 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x]==T_DOOR:
                     exits.append((x,y))
         return list(dict.fromkeys(exits))
+    def passage_exits(self,passage):
+        if not (isinstance(passage, tuple) and len(passage) == 2 and passage[0] == "passage"):
+            return []
+        return [pos for pos in passage[1] if self.tm[pos[1]][pos[0]] == T_DOOR]
     def dist2(self,a,b):
         # C: chase.c:dist()
         return rogue_chase.dist_points(a, b)
@@ -2079,12 +2083,12 @@ class Game:
             and self.room_for_ai(m.x,m.y,actor=False) == ree
         )
         if rer!=ree and not door_same_room:
-            if hasattr(rer,"x"):
-                chase_dest = rogue_chase.nearest_exit_to_dest(
-                    self.room_exits(rer),
-                    dest,
-                    self.dist2,
-                ) or chase_dest
+            exits = self.room_exits(rer) if hasattr(rer,"x") else self.passage_exits(rer)
+            chase_dest = rogue_chase.nearest_exit_to_dest(
+                exits,
+                dest,
+                self.dist2,
+            ) or chase_dest
         elif self.try_dragon_breath(m):
             return 0
         orig_pos=(m.x,m.y)

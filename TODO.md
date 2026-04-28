@@ -167,6 +167,7 @@
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、carry monster の item 目的地から room gold を除外
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` を毎ターン `find_dest()` で再選択しない
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Venus Flytrap は追跡継続時に `relocate()` しない
+- [x] Rogue 5.4.4 `chase.c:do_chase()` / `passages.c:numpass()` 準拠で、passage 内 chaser は nearest passage exit へ向かう
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` / `chase.c:do_chase()` 準拠で、greedy monster の gold 目的地は拾得せず守備地点として停止
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 相当の Dragon flame gate / 最寄り出口 / greedy 目的地補正 / chasee room 選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、door 上の hero は bolt 反射ではなく命中判定にする

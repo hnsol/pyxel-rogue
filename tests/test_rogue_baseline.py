@@ -3655,6 +3655,34 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((flytrap.x, flytrap.y), (game.p.x + 3, game.p.y))
 
+    def test_rogue_544_do_chase_passage_chaser_aims_at_nearest_passage_exit(self):
+        # Rogue 5.4.4 chase.c:do_chase() uses passages[F_PNUM].r_exit when chaser is in a passage.
+        game = new_game(seed=519)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room = rogue.Room(20, 5, 8, 8)
+        game.rooms = [room]
+        for y in range(room.y, room.y + room.h):
+            for x in range(room.x, room.x + room.w):
+                game.tm[y][x] = rogue.T_FLOOR
+        for x in range(5, 16):
+            game.tm[10][x] = rogue.T_CORR
+        game.tm[10][5] = rogue.T_DOOR
+        game.tm[10][15] = rogue.T_DOOR
+        game.p.x, game.p.y = 23, 8
+        monster = monster_at(10, 10, "H", "hobgoblin", hp=10)
+        monster.running = True
+        monster.dest = rogue.DEST_PLAYER
+        game.mons = [monster]
+        chased = []
+        old_chase = game.chase
+        try:
+            game.chase = lambda m, dest: chased.append(dest) or "move"
+            game.do_chase(monster)
+        finally:
+            game.chase = old_chase
+
+        self.assertEqual(chased, [(15, 10)])
+
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
         import rogue_chase
