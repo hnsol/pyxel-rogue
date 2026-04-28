@@ -61,3 +61,22 @@ def extra_healing_hp(hp: int, max_hp: int, level: int, amount: int) -> tuple[int
 def turn_see_state(turn_off: bool, duration: int) -> int:
     """Rogue 5.4.4 potions.c:turn_see() toggles SEEMONST."""
     return 0 if turn_off else duration
+
+
+def do_pot_known(already_known: bool, knowit: bool) -> bool:
+    """Rogue 5.4.4 potions.c:do_pot() oi_know update."""
+    return already_known or knowit
+
+
+def do_pot_fuse_action(active: bool) -> str:
+    """Rogue 5.4.4 potions.c:do_pot() fuse vs lengthen branch."""
+    return "lengthen" if active else "fuse"
+
+
+def see_invisible_duration(current: int, duration: int, wearing_ring: bool) -> int:
+    """Rogue 5.4.4 potions.c:P_SEEINVIS CANSEE duration effect."""
+    if current > 0:
+        return current + duration
+    if wearing_ring:
+        return current
+    return duration

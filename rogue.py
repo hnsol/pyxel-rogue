@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2142"
+UI_BUILD = "260428_2200"
 
 # ===========================================================
 #  Font
@@ -2228,19 +2228,20 @@ class Game:
             p.st = rogue_potions.restore_strength(p.st, p.max_st, addstr)
             self.msg("potions.hey_this_tastes_great_it_make_you_feel_warm_all_over")
         elif nm=="confusion":
-            if not self.ident.pk[it.kind]:
-                self.ident.pk[it.kind]=p.hallucinating <= 0
+            self.ident.pk[it.kind] = rogue_potions.do_pot_known(
+                self.ident.pk[it.kind], p.hallucinating <= 0
+            )
             duration = RNG.spread(HUHDURATION)
-            if p.confused > 0:
+            if rogue_potions.do_pot_fuse_action(p.confused > 0) == "lengthen":
                 self.fuses.lengthen("unconfuse", duration)
             else:
                 self.fuses.fuse("unconfuse", duration, rogue_daemons.AFTER)
             p.confused += duration
             self.msg("potions.what_a_tripy_feeling" if p.hallucinating > 0 else "potions.wait_what_s_going_on_here_huh_what_who")
         elif nm=="hallucination":
-            self.ident.pk[it.kind]=True
+            self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], True)
             duration = RNG.spread(SEEDURATION)
-            if p.hallucinating > 0:
+            if rogue_potions.do_pot_fuse_action(p.hallucinating > 0) == "lengthen":
                 self.fuses.lengthen("come_down", duration)
             else:
                 if p.see_monsters > 0:
@@ -2249,9 +2250,9 @@ class Game:
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
         elif nm=="blindness":
-            self.ident.pk[it.kind]=True
+            self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], True)
             duration = RNG.spread(SEEDURATION)
-            if p.blind > 0:
+            if rogue_potions.do_pot_fuse_action(p.blind > 0) == "lengthen":
                 self.fuses.lengthen("sight", duration)
             else:
                 self.fuses.fuse("sight", duration, rogue_daemons.AFTER)
@@ -2264,15 +2265,16 @@ class Game:
             self.consume_pack_item(it)
             return False
         elif nm=="see invisible":
+            self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], False)
             duration = RNG.spread(SEEDURATION)
-            if p.see_invisible > 0:
-                self.fuses.lengthen("unsee", duration)
-                p.see_invisible += duration
-            elif rogue_rings.is_wearing(p, rogue_rings.R_SEEINVIS):
+            wearing_see_invis = rogue_rings.is_wearing(p, rogue_rings.R_SEEINVIS)
+            if rogue_potions.do_pot_fuse_action(p.see_invisible > 0 or wearing_see_invis) == "lengthen":
                 self.fuses.lengthen("unsee", duration)
             else:
                 self.fuses.fuse("unsee", duration, rogue_daemons.AFTER)
-                p.see_invisible += duration
+            p.see_invisible = rogue_potions.see_invisible_duration(
+                p.see_invisible, duration, wearing_see_invis
+            )
             self.msg("potions.this_potion_tastes_like_item_juice", item="slime-mold")
             self.sight()
         elif nm=="raise level":
@@ -2309,9 +2311,9 @@ class Game:
                 self.msg("potions.you_have_a_item_feeling_for_a_moment_then_it_passes",
                          item="normal" if p.hallucinating > 0 else "strange")
         elif nm=="levitation":
-            self.ident.pk[it.kind]=True
+            self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], True)
             duration = RNG.spread(HEALTIME)
-            if p.levitating > 0:
+            if rogue_potions.do_pot_fuse_action(p.levitating > 0) == "lengthen":
                 self.fuses.lengthen("land", duration)
             else:
                 self.fuses.fuse("land", duration, rogue_daemons.AFTER)

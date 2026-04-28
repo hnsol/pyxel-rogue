@@ -292,6 +292,7 @@
 - [x] Rogue 5.4.4 `move.c:T_DART` 準拠の dart trap poison save 順序監査
 - [x] Rogue 5.4.4 `misc.c:add_str()` 準拠の poison potion Strength 下限監査
 - [x] Rogue 5.4.4 `potions.c:quaff()` / `misc.c:add_str()` 準拠の potion Strength / healing / extra healing helper 化
+- [x] Rogue 5.4.4 `potions.c:do_pot()` の識別・fuse/lengthen 分岐を `rogue_potions.py` へ小分割
 - [x] Rogue 5.4.4 `potions.c:raise_level()` / `misc.c:check_level()` 準拠の経験値閾値・d10 HP 増加 helper 化
 - [x] Rogue 5.4.4 `misc.c:eat()` 準拠で、ration の good/awful 分岐と slime-mold 文言を `rogue_food.py` へ小分割して接続
 - [x] 最小 baseline ロジックテスト整備
@@ -314,6 +315,7 @@
   - `doctor / stomach / runners / swander / rollwand / sight / unsee / unconfuse / unblind / unhaste / unring / land / nohaste` などを個別タイマーではなく統一インフラで扱い、`potion of haste self` 等の残ターン管理を Rogue 5.4.4 準拠にする。
   - [x] `rogue_daemons.py` に `fuse` / `lengthen` / `extinguish` / `do_fuses(AFTER)` 相当を分離し、`potion of haste self` の `nohaste` と二重使用時の失神へ接続
   - [x] `see invisible` potion の `unsee` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `potions.c:P_SEEINVIS` の potion duration と ring-only `CANSEE` 分岐を `rogue_potions.py` へ小分割
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続

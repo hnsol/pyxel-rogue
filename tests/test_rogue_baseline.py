@@ -4459,6 +4459,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_potions.turn_see_state(True, rogue.HUHDURATION), 0)
         self.assertEqual(rogue_potions.turn_see_state(False, rogue.HUHDURATION), rogue.HUHDURATION)
 
+    def test_rogue_544_potions_helper_do_pot_state_matches_source(self):
+        # Rogue 5.4.4 potions.c:do_pot() sets oi_know from knowit and fuses or lengthens by flag state.
+        import rogue_potions
+
+        self.assertFalse(rogue_potions.do_pot_known(False, False))
+        self.assertTrue(rogue_potions.do_pot_known(False, True))
+        self.assertTrue(rogue_potions.do_pot_known(True, False))
+        self.assertEqual(rogue_potions.do_pot_fuse_action(False), "fuse")
+        self.assertEqual(rogue_potions.do_pot_fuse_action(True), "lengthen")
+
+    def test_rogue_544_potions_helper_see_invisible_duration_matches_source(self):
+        # Rogue 5.4.4 potions.c:P_SEEINVIS do_pot() lengthens existing CANSEE but ring-only CANSEE has no potion fuse.
+        import rogue_potions
+
+        self.assertEqual(rogue_potions.see_invisible_duration(0, 10, wearing_ring=False), 10)
+        self.assertEqual(rogue_potions.see_invisible_duration(5, 10, wearing_ring=False), 15)
+        self.assertEqual(rogue_potions.see_invisible_duration(0, 10, wearing_ring=True), 0)
+        self.assertEqual(rogue_potions.see_invisible_duration(5, 10, wearing_ring=True), 15)
+
     def test_rogue_544_level_helper_check_level_matches_misc(self):
         # Rogue 5.4.4 misc.c:check_level() rolls one d10 per gained level.
         import rogue_levels
