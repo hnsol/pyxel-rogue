@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1700"
+UI_BUILD = "260428_1704"
 
 # ===========================================================
 #  Font
@@ -597,7 +597,7 @@ class Monster:
         s.x,s.y,s.sym,s.name=x,y,sym,name
         s.disguise=sym
         s.hp=s.max_hp=hp
-        s.level=level; s.armor=armor; s.damage_expr=damage_expr; s.exp=exp
+        s.level=level; s.armor=armor; s.damage_expr=damage_expr; s.exp=exp; s.strength=10
         s.flags=rogue_monsters.parse_flags(fl)
         s.held=s.scared=s.confused=0
         s.running=False; s.dest=DEST_PLAYER; s.turn=True
@@ -1752,11 +1752,11 @@ class Game:
         return rogue_fight.swing(at_lvl, op_arm, wplus, RNG.rnd)
 
     def player_weapon_profile(self, weap=None, thrown=False):
-        hplus = dplus = 0
-        damage = "1x4"
-        if weap and weap.cat == CAT_WPN:
+        if weap is None:
+            return rogue_fight.bare_attack_profile("1x4")
+        if weap.cat == CAT_WPN:
             data = weap.data
-            damage, hplus, dplus = rogue_fight.weapon_profile(
+            return rogue_fight.weapon_profile(
                 data,
                 weap.hit_plus,
                 weap.dam_plus,
@@ -1767,34 +1767,34 @@ class Game:
                 self.p.wpn.hit_plus if self.p.wpn else 0,
                 self.p.wpn.dam_plus if self.p.wpn else 0,
             )
-        elif weap is not None:
-            damage = "0x0"
-            hplus = rogue_rings.weapon_hit_bonus(self.p, weap, thrown)
-            dplus = rogue_rings.weapon_damage_bonus(self.p, weap, thrown)
-        return damage, hplus, dplus
+        return rogue_fight.non_weapon_profile(
+            rogue_rings.weapon_hit_bonus(self.p, weap, thrown),
+            rogue_rings.weapon_damage_bonus(self.p, weap, thrown),
+        )
 
     def roll_player_attack(self, m, weap=None, thrown=False):
         # C: fight.c:roll_em()
         damage_expr, hplus, dplus = self.player_weapon_profile(weap, thrown)
-        hplus = rogue_fight.hit_plus_vs_defender(hplus, m.running)
-        hplus += self.p.str_hit_plus()
+        hplus = rogue_fight.attack_hit_plus(hplus, m.running, self.p.st)
         return rogue_fight.roll_em_damage(
             damage_expr,
             lambda: self.swing_hits(self.p.level, m.armor, hplus),
             roll_damage_expr,
             dplus,
-            self.p.str_dam_plus(),
+            rogue_fight.attack_damage_plus(0, self.p.st),
         )
 
     def roll_monster_attack(self, m):
         # C: fight.c:roll_em()
-        hplus = rogue_fight.hit_plus_vs_defender(0, rogue_fight.player_defender_running(self.p.no_command))
+        hplus = rogue_fight.attack_hit_plus(
+            0, rogue_fight.player_defender_running(self.p.no_command), m.strength
+        )
         return rogue_fight.roll_em_damage(
             m.damage_expr,
             lambda: self.swing_hits(m.level, self.p.ac, hplus),
             roll_damage_expr,
             0,
-            0,
+            rogue_fight.attack_damage_plus(0, m.strength),
         )
 
     def award_monster_kill(self, m, translated_name=None):

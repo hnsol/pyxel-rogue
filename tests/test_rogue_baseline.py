@@ -5984,6 +5984,15 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(rolls, [(1, 2), (1, 5), (1, 5)])
 
+    def test_rogue_544_fight_helper_roll_damage_expr_requires_x_separator(self):
+        # Rogue 5.4.4 fight.c:roll_em() searches for 'x'; dice-style 'd' is not a combat damage separator.
+        import rogue_fight
+
+        rolls = []
+
+        self.assertEqual(rogue_fight.roll_damage_expr("1d4", lambda n, sides: rolls.append((n, sides)) or 4), 0)
+        self.assertEqual(rolls, [])
+
     def test_rogue_544_roll_em_swings_once_per_damage_part(self):
         # Rogue 5.4.4 fight.c:roll_em() calls swing() inside the damage-part loop.
         game = new_game(seed=8)
@@ -6008,6 +6017,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(hplus, 0)
         self.assertEqual(dplus, 0)
 
+    def test_rogue_544_fight_helper_bare_attack_profile_matches_roll_em_null_weapon(self):
+        # Rogue 5.4.4 fight.c:roll_em() uses attacker s_dmg and zero pluses when weap == NULL.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.bare_attack_profile("1x4"), ("1x4", 0, 0))
+
     def test_rogue_544_non_weapon_throw_uses_new_thing_zero_damage(self):
         # Rogue 5.4.4 things.c:new_thing() initializes non-weapons with o_damage/o_hurldmg = "0x0".
         game = new_game(seed=5053)
@@ -6018,6 +6033,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(damage_expr, "0x0")
         self.assertEqual(hplus, 0)
         self.assertEqual(dplus, 0)
+
+    def test_rogue_544_fight_helper_non_weapon_profile_keeps_current_item_ring_bonus(self):
+        # Rogue 5.4.4 fight.c:roll_em() still applies current-weapon rings before using o_damage "0x0".
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.non_weapon_profile(2, 3), ("0x0", 2, 3))
 
     def test_rogue_544_wielded_non_weapon_gets_ring_hit_and_damage_bonus(self):
         # Rogue 5.4.4 fight.c:roll_em() applies R_ADDHIT/R_ADDDAM when weap == cur_weapon.
@@ -6070,6 +6091,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(hit)
         self.assertEqual(damage, 7)
         self.assertEqual(rolls, ["1x4"])
+
+    def test_rogue_544_fight_helper_roll_em_part_damage_clamps_negative(self):
+        # Rogue 5.4.4 fight.c:roll_em() subtracts max(0, dplus + proll + add_dam[s_str]).
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.roll_em_part_damage(1, dplus=-8, add_dam=2), 0)
+        self.assertEqual(rogue_fight.roll_em_part_damage(4, dplus=1, add_dam=2), 7)
+
+    def test_rogue_544_fight_helper_attack_pluses_include_strength_tables(self):
+        # Rogue 5.4.4 fight.c:roll_em() adds str_plus/add_dam after defender !ISRUN and base dplus.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.attack_hit_plus(1, defender_running=False, strength=18), 6)
+        self.assertEqual(rogue_fight.attack_damage_plus(2, strength=18), 4)
+
+    def test_rogue_544_monsters_default_to_strength_10_for_roll_em(self):
+        # Rogue 5.4.4 extern.c:monsters[] uses XX=10 for monster s_str, giving no str_plus/add_dam.
+        monster = monster_at(1, 1)
+
+        self.assertEqual(monster.strength, 10)
 
     def test_rogue_544_roll_em_gives_monster_plus_four_when_player_cannot_act(self):
         # Rogue 5.4.4 command.c clears player ISRUN during no_command;

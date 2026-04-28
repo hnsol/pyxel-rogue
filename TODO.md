@@ -204,9 +204,14 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Leprechaun 金額減算回数を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` / `chase.c:move_monst()` 準拠で、Leprechaun/Nymph 消滅時は `-1` を返して追加行動を止める
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当のダメージ式ロールを `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で combat damage string を `x` 区切り専用にする
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の部位ごとの命中/ダメージ加算を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の部位ダメージ下限0を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の defender `!ISRUN` 命中補正を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の Strength 命中/ダメージ加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の weapon/hurl profile 選択を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の bare / non-weapon profile を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `extern.c:monsters[]` 準拠で monster `s_str=10` を保持
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で、手持ち非武器にも `R_ADDHIT` / `R_ADDDAM` 補正を適用
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で、投げた current weapon にも `R_ADDHIT` / `R_ADDDAM` 補正を適用
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー素手ダメージを `"1x4"` に修正
