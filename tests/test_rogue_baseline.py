@@ -713,6 +713,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertIn("the missle vanishes with a puff of smoke", game.msgs)
 
+    def test_rogue_544_zap_magic_missile_stops_at_door_before_target(self):
+        # Rogue 5.4.4 weapons.c:do_motion() stops WS_MISSILE on DOOR before moat().
+        import rogue_sticks
+
+        game = new_game(seed=212)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_DOOR
+        monster = monster_at(px + 2, py, hp=10)
+        game.mons = [monster]
+        game.monster_save_throw = lambda which, m: False
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_MISSILE, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertEqual(monster.hp, 10)
+        self.assertFalse(monster.running)
+        self.assertIn("the missle vanishes with a puff of smoke", game.msgs)
+
     def test_rogue_544_zap_drain_halves_player_hp_and_spreads_damage(self):
         # Rogue 5.4.4 sticks.c:drain() halves current HP, then divides that HP among monsters in the room.
         import rogue_sticks

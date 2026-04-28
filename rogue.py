@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0010"
+UI_BUILD = "260429_0012"
 
 # ===========================================================
 #  Font
@@ -2614,7 +2614,7 @@ class Game:
         )
         self.consume_pack_item(it)
 
-    def first_zap_target(self, dx, dy):
+    def first_zap_target(self, dx, dy, stop_at_door=False):
         x,y=self.p.x,self.p.y
         for _ in range(max(MAP_W,MAP_H)):
             nx,ny=x+dx,y+dy
@@ -2623,6 +2623,8 @@ class Game:
             m=self.mon_at(nx,ny)
             if m:
                 return m
+            if stop_at_door and self.tm[ny][nx] == T_DOOR:
+                return None
             if not self.walkable(nx,ny):
                 return None
             x,y=nx,ny
@@ -2857,7 +2859,7 @@ class Game:
                 return True
         elif kind == rogue_sticks.WS_MISSILE:
             self.ident.wk[kind]=True
-            target=self.first_zap_target(dx,dy)
+            target=self.first_zap_target(dx,dy,stop_at_door=True)
             if target and not self.monster_save_throw(VS_MAGIC,target):
                 self.hit_monster_with_magic_missile(target)
             else:
