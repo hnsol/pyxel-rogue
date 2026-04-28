@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0028"
+UI_BUILD = "260429_0032"
 
 # ===========================================================
 #  Font
@@ -703,7 +703,7 @@ class IdentTable:
             if s.pg[it.kind] is not None:
                 g=s.pg[it.kind]
                 col=s.pcol[it.kind]
-                return f"{col} potion called {g}" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬（{g}）"
+                return f"potion called {g}({col})" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬（{g}）"
             col=s.pcol[it.kind]
             return f"{col} potion" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬"
         if it.cat==CAT_SCR:
@@ -747,7 +747,7 @@ class IdentTable:
                 return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}の指輪{num}"
             if s.rg[it.kind] is not None:
                 g=s.rg[it.kind]; stone=s.rstones[it.kind]
-                return f"{stone} ring called {g}" if lang==LANG_EN else f"{stone}の指輪（{g}）"
+                return f"ring called {g}({stone})" if lang==LANG_EN else f"{stone}の指輪（{g}）"
             stone=s.rstones[it.kind]
             return f"{stone} ring" if lang==LANG_EN else f"{stone}の指輪"
         if it.cat==CAT_STICK:
@@ -760,7 +760,7 @@ class IdentTable:
                 return f"{typ} of {nm}{charges}({made})" if lang==LANG_EN else f"{nm}の{typ}{charges}({made})"
             if s.wg[it.kind] is not None:
                 g=s.wg[it.kind]
-                return f"{made} {typ} called {g}" if lang==LANG_EN else f"{made}{typ}（{g}）"
+                return f"{typ} called {g}({made})" if lang==LANG_EN else f"{made}{typ}（{g}）"
             return f"{made} {typ}"
         if it.cat==CAT_AMULET:
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])

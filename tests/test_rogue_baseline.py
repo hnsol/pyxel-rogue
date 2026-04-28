@@ -1379,6 +1379,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_sticks.charge_str(stick), " [7 charges]")
         self.assertEqual(rogue_sticks.charge_str(stick, terse=True), " [7]")
 
+    def test_rogue_544_nameit_guess_order_for_potion_ring_and_stick(self):
+        # Rogue 5.4.4 things.c:nameit() formats guesses as "type called guess(material)".
+        import rogue_rings
+        import rogue_sticks
+
+        ident = rogue.IdentTable()
+        ident.pcol[0] = "red"
+        ident.pg[0] = "heal"
+        self.assertEqual(ident.name(rogue.Item(rogue.CAT_POT, 0), rogue.LANG_EN), "potion called heal(red)")
+
+        ident.rstones[rogue_rings.R_PROTECT] = "agate"
+        ident.rg[rogue_rings.R_PROTECT] = "guard"
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
+        self.assertEqual(ident.name(ring, rogue.LANG_EN), "ring called guard(agate)")
+
+        ident.wtypes[rogue_sticks.WS_LIGHT] = "wand"
+        ident.wmades[rogue_sticks.WS_LIGHT] = "copper"
+        ident.wg[rogue_sticks.WS_LIGHT] = "zap"
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT)
+        self.assertEqual(ident.name(stick, rogue.LANG_EN), "wand called zap(copper)")
+
     def test_rogue_544_potion_table_order_and_probabilities(self):
         # Rogue 5.4.4 rogue.h:P_* / MAXPOTIONS and extern.c:pot_info[].
         self.assertEqual([p["name"] for p in rogue.POTIONS], [
