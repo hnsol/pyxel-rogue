@@ -1808,6 +1808,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(weapon.hit_plus, 1)
         self.assertEqual(weapon.dam_plus, 0)
 
+    def test_rogue_544_wielded_enchant_weapon_scroll_clears_current_before_effect(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() clears cur_weapon before S_ENCH.
+        game = new_game(seed=325)
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "enchant weapon")
+        scroll = rogue.Item(rogue.CAT_SCR, kind, qty=2)
+        game.p.inv.append(scroll)
+        game.p.wpn = scroll
+
+        game.use_scr(scroll)
+
+        self.assertIsNone(game.p.wpn)
+        self.assertIn(scroll, game.p.inv)
+        self.assertEqual(scroll.qty, 1)
+        self.assertEqual(scroll.hit_plus, 0)
+        self.assertEqual(scroll.dam_plus, 0)
+        self.assertIn("you feel a strange sense of loss", game.msgs)
+
     def test_rogue_544_scrolls_helper_enchant_weapon_matches_s_ench(self):
         # Rogue 5.4.4 scrolls.c:S_ENCH clears ISCURSED and increments one weapon plus.
         import rogue_scrolls
@@ -5119,6 +5136,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.p.has_amulet)
         self.assertNotIn(amulet, game.p.inv)
         self.assertIn(amulet, game.gitems)
+
+    def test_rogue_544_drop_current_weapon_clears_cur_weapon(self):
+        # Rogue 5.4.4 things.c:drop() calls dropcheck(), which clears cur_weapon.
+        game = new_game(seed=5065)
+        set_open_floor(game)
+        weapon = game.p.wpn
+        game.cact = "Drop"
+        game.fitems = [weapon]
+        game.icur = 0
+
+        game.item_confirm()
+
+        self.assertIsNone(game.p.wpn)
+        self.assertNotIn(weapon, game.p.inv)
+        self.assertIn(weapon, game.gitems)
+
+    def test_rogue_544_drop_current_armor_clears_cur_armor_and_recalculates_ac(self):
+        # Rogue 5.4.4 things.c:dropcheck() armor branch calls waste_time() and clears cur_armor.
+        game = new_game(seed=5066)
+        set_open_floor(game)
+        armor = game.p.arm
+        self.assertIsNotNone(armor)
+        game.cact = "Drop"
+        game.fitems = [armor]
+        game.icur = 0
+
+        game.item_confirm()
+
+        self.assertIsNone(game.p.arm)
+        self.assertEqual(game.p.ac, 10)
+        self.assertNotIn(armor, game.p.inv)
+        self.assertIn(armor, game.gitems)
 
     def test_rogue_544_drop_food_stack_leaves_rest_in_pack(self):
         # Rogue 5.4.4 things.c:drop() calls pack.c:leave_pack(..., all=!ISMULT), so FOOD drops one.

@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2329"
+UI_BUILD = "260428_2338"
 
 # ===========================================================
 #  Font
@@ -2505,7 +2505,10 @@ class Game:
         if it.cat != CAT_SCR:
             self.msg("scrolls.there_is_nothing_on_it_to_read")
             return
-        p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
+        p=self.p
+        if it is p.wpn:
+            p.wpn = None
+        nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             rogue_scrolls.monster_confusion(p)
             self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
