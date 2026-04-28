@@ -1369,6 +1369,16 @@ class RogueBaselineTest(unittest.TestCase):
         stick.known = True
         self.assertEqual(ident.name(stick), "wand of light [12 charges](copper)")
 
+    def test_rogue_544_sticks_helper_charge_str_matches_isknow_and_terse(self):
+        # Rogue 5.4.4 sticks.c:charge_str() checks ISKNOW internally and has a terse branch.
+        import rogue_sticks
+
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=7, known=False)
+        self.assertEqual(rogue_sticks.charge_str(stick), "")
+        stick.known = True
+        self.assertEqual(rogue_sticks.charge_str(stick), " [7 charges]")
+        self.assertEqual(rogue_sticks.charge_str(stick, terse=True), " [7]")
+
     def test_rogue_544_potion_table_order_and_probabilities(self):
         # Rogue 5.4.4 rogue.h:P_* / MAXPOTIONS and extern.c:pot_info[].
         self.assertEqual([p["name"] for p in rogue.POTIONS], [
@@ -6525,6 +6535,24 @@ class RogueBaselineTest(unittest.TestCase):
         damage_expr, hplus, dplus = game.player_weapon_profile(potion, thrown=False)
 
         self.assertEqual(damage_expr, "0x0")
+        self.assertEqual(hplus, 2)
+        self.assertEqual(dplus, 3)
+
+    def test_rogue_544_wielded_stick_uses_fix_stick_damage_profile(self):
+        # Rogue 5.4.4 sticks.c:fix_stick() gives staff "2x3" and wand "1x1" o_damage.
+        import rogue_rings
+        import rogue_sticks
+
+        game = new_game(seed=5067)
+        staff = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT)
+        game.ident.wtypes[rogue_sticks.WS_LIGHT] = "staff"
+        game.p.wpn = staff
+        game.p.ring_l = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDHIT, ench=2)
+        game.p.ring_r = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDDAM, ench=3)
+
+        damage_expr, hplus, dplus = game.player_weapon_profile(staff, thrown=False)
+
+        self.assertEqual(damage_expr, "2x3")
         self.assertEqual(hplus, 2)
         self.assertEqual(dplus, 3)
 

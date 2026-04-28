@@ -162,6 +162,11 @@ def init_materials(rng):
     return types, made
 
 
-def charge_str(stick):
+def charge_str(stick, terse=False):
+    """Rogue 5.4.4 sticks.c:charge_str()."""
+    if not getattr(stick, "known", True):
+        return ""
     charges = getattr(stick, "charges", None)
-    return "" if charges is None else f" [{charges} charges]"
+    if charges is None:
+        return ""
+    return f" [{charges}]" if terse else f" [{charges} charges]"

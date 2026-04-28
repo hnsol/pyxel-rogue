@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0012"
+UI_BUILD = "260429_0028"
 
 # ===========================================================
 #  Font
@@ -1768,6 +1768,13 @@ class Game:
                 self.p.wpn.kind if self.p.wpn else None,
                 self.p.wpn.hit_plus if self.p.wpn else 0,
                 self.p.wpn.dam_plus if self.p.wpn else 0,
+            )
+        if weap.cat == CAT_STICK:
+            damage, _ = rogue_sticks.stick_damage(self.ident.wtypes[weap.kind])
+            return (
+                damage,
+                rogue_rings.weapon_hit_bonus(self.p, weap, thrown),
+                rogue_rings.weapon_damage_bonus(self.p, weap, thrown),
             )
         return rogue_fight.non_weapon_profile(
             rogue_rings.weapon_hit_bonus(self.p, weap, thrown),
