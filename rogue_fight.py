@@ -188,8 +188,26 @@ def roll_damage_expr(expr: str, roll) -> int:
         if "x" not in part:
             break
         n, sides = part.split("x", 1)
-        total += roll(int(n), int(sides))
+        total += roll(_atoi_prefix(n), _atoi_prefix(sides))
     return total
+
+
+def _atoi_prefix(text: str) -> int:
+    """Small atoi() subset for Rogue 5.4.4 combat damage strings."""
+    text = text.lstrip()
+    sign = 1
+    if text.startswith(("+", "-")):
+        if text[0] == "-":
+            sign = -1
+        text = text[1:]
+    value = 0
+    found = False
+    for char in text:
+        if not char.isdigit():
+            break
+        found = True
+        value = value * 10 + ord(char) - ord("0")
+    return sign * value if found else 0
 
 
 def roll_em_damage(damage_expr: str, swing, roll_part, dplus: int, add_dam: int):

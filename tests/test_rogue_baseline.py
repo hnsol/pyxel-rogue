@@ -6629,6 +6629,40 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(damage, 1)
         self.assertEqual(swings, [True])
 
+    def test_rogue_544_fight_helper_damage_expr_uses_atoi_prefixes(self):
+        # Rogue 5.4.4 fight.c:roll_em() parses ndice/nsides with atoi(), then searches for '/'.
+        import rogue_fight
+
+        rolls = []
+
+        self.assertEqual(
+            rogue_fight.roll_damage_expr(
+                "1x4junk/2x3more",
+                lambda n, sides: rolls.append((n, sides)) or n * sides,
+            ),
+            10,
+        )
+        self.assertEqual(rolls, [(1, 4), (2, 3)])
+
+    def test_rogue_544_fight_helper_roll_em_damage_uses_atoi_prefixes(self):
+        # Rogue 5.4.4 fight.c:roll_em() lets atoi("4junk") mean 4 before the next '/'.
+        import rogue_fight
+
+        rolls = []
+        hit, damage = rogue_fight.roll_em_damage(
+            "1x4junk/1x2",
+            swing=lambda: True,
+            roll_part=lambda part: rogue_fight.roll_damage_expr(
+                part, lambda n, sides: rolls.append((n, sides)) or n * sides
+            ),
+            dplus=0,
+            add_dam=0,
+        )
+
+        self.assertTrue(hit)
+        self.assertEqual(damage, 6)
+        self.assertEqual(rolls, [(1, 4), (1, 2)])
+
     def test_rogue_544_fight_helper_roll_em_part_damage_clamps_negative(self):
         # Rogue 5.4.4 fight.c:roll_em() subtracts max(0, dplus + proll + add_dam[s_str]).
         import rogue_fight
