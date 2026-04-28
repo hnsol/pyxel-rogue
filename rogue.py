@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1713"
+UI_BUILD = "260428_1733"
 
 # ===========================================================
 #  Font
@@ -1819,8 +1819,7 @@ class Game:
 
     def p_attack(self, m):
         # C: fight.c:fight()
-        self.dashing = False
-        self.p.quiet = 0
+        self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
         self.runto(m)
         if self.reveal_xeroc_for_attack(m, thrown=False):
             return
@@ -1842,11 +1841,13 @@ class Game:
 
     def reveal_xeroc_for_attack(self,m,thrown=False):
         # Rogue 5.4.4 fight.c:attack() reveals a disguised Xeroc; melee returns FALSE.
-        if not rogue_monsters.is_disguised_xeroc(m) or self.p.blind>0:
+        if not rogue_fight.attack_reveals_disguised_xeroc(
+            rogue_monsters.is_disguised_xeroc(m), self.p.blind > 0
+        ):
             return False
         rogue_monsters.reveal_disguise(m)
         self.msg("fight.heavy_that_s_a_nasty_critter" if self.p.hallucinating>0 else "fight.wait_that_s_a_xeroc")
-        return not thrown
+        return rogue_fight.revealed_xeroc_stops_attack(thrown)
 
     def monster_has_magic_item_to_steal(self):
         return rogue_fight.magic_item_to_steal(
@@ -1858,7 +1859,7 @@ class Game:
 
     def remove_monster(self,m,was_kill=False):
         # C: fight.c:remove_mon()
-        if was_kill:
+        if rogue_fight.remove_monster_pack_should_fall(was_kill):
             for item in list(getattr(m, "pack", [])):
                 pos=(m.x,m.y) if self.walkable(m.x,m.y) and not self.gi_at(m.x,m.y) else self.fall_position(m.x,m.y)
                 if pos:
@@ -1936,9 +1937,10 @@ class Game:
 
     def m_attack(self,m):
         # C: fight.c:attack()
-        self.dashing = False
-        self.p.quiet = 0
-        if rogue_monsters.is_disguised_xeroc(m) and self.p.blind <= 0:
+        self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
+        if rogue_fight.attack_reveals_disguised_xeroc(
+            rogue_monsters.is_disguised_xeroc(m), self.p.blind > 0
+        ):
             rogue_monsters.reveal_disguise(m)
         mn=self.combat_monster_name(m,upper=True)
         hit,dmg=self.roll_monster_attack(m)
@@ -1951,7 +1953,7 @@ class Game:
                 if not self.death_cause:
                     self.death_cause=f"killed by a {m.name}"
                 return
-            if not rogue_monsters.is_cancelled(m):
+            if rogue_fight.attack_specials_allowed(rogue_monsters.is_cancelled(m)):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
                 if rogue_monsters.has_special(m, "steal_gold"):
@@ -1961,7 +1963,7 @@ class Game:
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
                         self.msg("fight.your_purse_feels_lighter")
-                    self.remove_monster(m); return -1
+                    self.remove_monster(m); return rogue_fight.attack_result(monster_removed=True)
                 if rogue_monsters.has_special(m, "poison"):
                     self.p.st, poison_result = rogue_fight.poison_bite_strength(
                         self.p.st,
@@ -2011,7 +2013,7 @@ class Game:
                     t=self.monster_has_magic_item_to_steal()
                     if t:
                         self.p.rm_item(t); self.msg("fight.she_stole_target", target=self.ident.name(t))
-                        self.remove_monster(m); return -1
+                        self.remove_monster(m); return rogue_fight.attack_result(monster_removed=True)
         else:
             if m.sym == "F" and m.vf_hit > 0:
                 self.p.hp = rogue_fight.venus_flytrap_miss_hp(self.p.hp, m.vf_hit)

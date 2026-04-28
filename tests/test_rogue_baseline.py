@@ -6209,6 +6209,48 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_fight.monster_attack_message_allowed("I"))
         self.assertTrue(rogue_fight.monster_attack_message_allowed("R"))
 
+    def test_rogue_544_fight_helper_attack_activity_reset_matches_source(self):
+        # Rogue 5.4.4 fight.c:fight()/attack() clear running/count and set quiet = 0.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.attack_activity_state(), (False, 0))
+
+    def test_rogue_544_fight_helper_attack_special_gate_matches_iscanc(self):
+        # Rogue 5.4.4 fight.c:attack() runs the special switch only when !ISCANC.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.attack_specials_allowed(cancelled=False))
+        self.assertFalse(rogue_fight.attack_specials_allowed(cancelled=True))
+
+    def test_rogue_544_fight_helper_attack_result_matches_removed_monster(self):
+        # Rogue 5.4.4 fight.c:attack() returns -1 when remove_mon() sets mp = NULL.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.attack_result(monster_removed=True), -1)
+        self.assertEqual(rogue_fight.attack_result(monster_removed=False), 0)
+
+    def test_rogue_544_fight_helper_remove_mon_pack_falls_only_on_kill(self):
+        # Rogue 5.4.4 fight.c:remove_mon() falls t_pack only when waskill is TRUE.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.remove_monster_pack_should_fall(was_kill=True))
+        self.assertFalse(rogue_fight.remove_monster_pack_should_fall(was_kill=False))
+
+    def test_rogue_544_fight_helper_attack_reveals_disguised_xeroc_when_not_blind(self):
+        # Rogue 5.4.4 fight.c:fight()/attack() reveal X when t_disguise != 'X' and !ISBLIND.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.attack_reveals_disguised_xeroc(disguised=True, blind=False))
+        self.assertFalse(rogue_fight.attack_reveals_disguised_xeroc(disguised=True, blind=True))
+        self.assertFalse(rogue_fight.attack_reveals_disguised_xeroc(disguised=False, blind=False))
+
+    def test_rogue_544_fight_helper_revealed_xeroc_stops_only_melee(self):
+        # Rogue 5.4.4 fight.c:fight() returns FALSE after Xeroc reveal only when !thrown.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.revealed_xeroc_stops_attack(thrown=False))
+        self.assertFalse(rogue_fight.revealed_xeroc_stops_attack(thrown=True))
+
     def test_rogue_544_fight_helper_confusion_message_requires_canhuh_hit_and_sight(self):
         # Rogue 5.4.4 fight.c:fight() uses did_hit && !ISBLIND for the appears-confused message.
         import rogue_fight

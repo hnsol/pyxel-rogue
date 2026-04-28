@@ -218,6 +218,10 @@
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で、投げた current weapon にも `R_ADDHIT` / `R_ADDDAM` 補正を適用
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー素手ダメージを `"1x4"` に修正
 - [x] Rogue 5.4.4 `extern.c:INIT_STATS` 準拠で、プレイヤー初期 HP / max HP を 12 に修正
+- [x] Rogue 5.4.4 `fight.c:fight()` / `attack()` 相当の攻撃開始 activity reset を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` 相当の `!ISCANC` special gate と `remove_mon()` 後 return を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:remove_mon()` 相当の monster pack fall/discard 分岐を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:fight()` / `attack()` 相当の Xeroc reveal gate と melee stop 分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `init.c:init_player()` 準拠で、初期pack順・+1 ring mail・矢数 `rnd(15)+25` を修正
 - [x] Rogue 5.4.4 `init.c:init_player()` の初期pack生成を `rogue_init.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` 準拠で、武器ダメージ表を `%dx%d` 表記へ統一

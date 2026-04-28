@@ -233,6 +233,36 @@ def monster_attack_message_allowed(monster_sym: str) -> bool:
     return monster_sym != "I"
 
 
+def attack_activity_state():
+    """Rogue 5.4.4 fight.c:fight()/attack() running/count/quiet reset."""
+    return False, 0
+
+
+def attack_specials_allowed(cancelled: bool) -> bool:
+    """Rogue 5.4.4 fight.c:attack() !ISCANC special switch gate."""
+    return not cancelled
+
+
+def attack_result(monster_removed: bool) -> int:
+    """Rogue 5.4.4 fight.c:attack() return value after remove_mon()."""
+    return -1 if monster_removed else 0
+
+
+def remove_monster_pack_should_fall(was_kill: bool) -> bool:
+    """Rogue 5.4.4 fight.c:remove_mon() t_pack fall/discard branch."""
+    return was_kill
+
+
+def attack_reveals_disguised_xeroc(disguised: bool, blind: bool) -> bool:
+    """Rogue 5.4.4 fight.c:fight()/attack() Xeroc reveal gate."""
+    return disguised and not blind
+
+
+def revealed_xeroc_stops_attack(thrown: bool) -> bool:
+    """Rogue 5.4.4 fight.c:fight() stops revealed Xeroc melee only."""
+    return not thrown
+
+
 def confusion_message_allowed(confused_by_hit: bool, blind: bool) -> bool:
     """Rogue 5.4.4 fight.c:fight() prints confusion only for CANHUH hits while not blind."""
     return confused_by_hit and not blind
