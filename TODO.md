@@ -73,6 +73,8 @@
   - [x] Rogue 5.4.4 `sticks.c:WS_MISSILE` / `weapons.c:hit_monster()` 準拠で、magic missile 命中時も `fight(..., thrown=TRUE)` の副作用を通す
   - [x] Rogue 5.4.4 `fight.c:fight(..., thrown=TRUE)` 準拠で、magic missile 命中時も Xeroc 擬態を解除して攻撃を続ける
   - [x] Rogue 5.4.4 `sticks.c:drain()` 準拠で、通路内 drain life 対象を隣接限定にしない
+  - [x] Rogue 5.4.4 `sticks.c:drain()` / `chase.c:roomin()` 準拠で、別 passage の drain life 対象を除外
+  - [x] Rogue 5.4.4 `sticks.c:drain()` 準拠で、door 上 hero の drain life は room と passage の両方を対象にする
   - [x] Rogue 5.4.4 `sticks.c:drain()` の HP半減/対象割りを `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_TELTO` の `hero + delta` 転移先計算を `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:WS_TELAWAY` / `WS_TELTO` 準拠で、teleport target は held を解除せず `ISRUN` / hero destination だけを設定する

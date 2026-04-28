@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1503"
+UI_BUILD = "260428_1530"
 
 # ===========================================================
 #  Font
@@ -1600,12 +1600,28 @@ class Game:
     def room_containing(self,x,y):
         # C: chase.c:roomin()
         return rogue_chase.roomin(x, y, self.rooms)
+    def passage_component(self,x,y):
+        # C: passages.c:numpass() / chase.c:roomin() passage identity.
+        if not (0<=x<MAP_W and 0<=y<MAP_H) or self.tm[y][x] not in (T_CORR,T_DOOR):
+            return None
+        seen=set()
+        stack=[(x,y)]
+        while stack:
+            cx,cy=stack.pop()
+            if (cx,cy) in seen:
+                continue
+            if not (0<=cx<MAP_W and 0<=cy<MAP_H) or self.tm[cy][cx] not in (T_CORR,T_DOOR):
+                continue
+            seen.add((cx,cy))
+            for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
+                stack.append((cx+dx,cy+dy))
+        return ("passage", frozenset(seen))
     def room_for_ai(self,x,y,actor=False):
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return None
         tile=self.tm[y][x]
         if tile==T_CORR or (actor and tile==T_DOOR):
-            return "corridor"
+            return self.passage_component(x,y) or "corridor"
         if tile==T_DOOR:
             return self.room_near_door(x,y) or "corridor"
         return self.room_containing(x,y)
@@ -2625,8 +2641,17 @@ class Game:
         m.vf_hit=0
 
     def drain_targets(self):
-        proom=self.room_for_ai(self.p.x,self.p.y,actor=True)
-        return [m for m in self.mons if m.alive and self.same_ai_room(self.room_for_ai(m.x,m.y,actor=True),proom)]
+        # C: sticks.c:drain() uses proom, plus corp when hero stands on a door.
+        proom=self.room_for_ai(self.p.x,self.p.y,actor=False)
+        corp=self.passage_component(self.p.x,self.p.y) if self.tm[self.p.y][self.p.x]==T_DOOR else None
+        targets=[]
+        for m in self.mons:
+            if not m.alive:
+                continue
+            mroom=self.room_for_ai(m.x,m.y,actor=True)
+            if self.same_ai_room(mroom,proom) or (corp is not None and self.same_ai_room(mroom,corp)):
+                targets.append(m)
+        return targets
 
     def drain_life(self):
         if self.p.hp < 2:

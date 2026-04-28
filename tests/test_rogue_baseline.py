@@ -727,9 +727,9 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=209)
         set_open_floor(game)
         game.p.hp = 12
-        game.tm[game.p.y][game.p.x] = rogue.T_CORR
+        for x in range(game.p.x, game.p.x + 5):
+            game.tm[game.p.y][x] = rogue.T_CORR
         monster = monster_at(game.p.x + 4, game.p.y, hp=10)
-        game.tm[monster.y][monster.x] = rogue.T_CORR
         game.mons = [monster]
         stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
 
@@ -737,6 +737,59 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hp, 6)
         self.assertEqual(monster.hp, 4)
+
+    def test_rogue_544_zap_drain_in_passage_skips_different_passage(self):
+        # Rogue 5.4.4 sticks.c:drain() compares roomin()/F_PNUM passage identity.
+        import rogue_sticks
+
+        game = new_game(seed=210)
+        set_open_floor(game)
+        game.p.hp = 12
+        for x in range(game.p.x, game.p.x + 5):
+            game.tm[game.p.y][x] = rogue.T_CORR
+        other_x = game.p.x + 8
+        game.tm[game.p.y][other_x] = rogue.T_CORR
+        same = monster_at(game.p.x + 4, game.p.y, hp=10)
+        other = monster_at(other_x, game.p.y, hp=10)
+        game.mons = [same, other]
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(game.p.hp, 6)
+        self.assertEqual(same.hp, 4)
+        self.assertEqual(other.hp, 10)
+
+    def test_rogue_544_zap_drain_on_door_targets_room_and_passage(self):
+        # Rogue 5.4.4 sticks.c:drain() uses proom plus corp when hero stands on DOOR.
+        import rogue_sticks
+
+        game = new_game(seed=211)
+        set_open_floor(game)
+        room = rogue.Room(10, 8, 8, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.p.x, game.p.y = room.x, room.y + 2
+        game.tm[game.p.y][game.p.x] = rogue.T_DOOR
+        for x in range(game.p.x - 3, game.p.x):
+            game.tm[game.p.y][x] = rogue.T_CORR
+        game.tm[game.p.y][game.p.x - 6] = rogue.T_CORR
+        room_monster = monster_at(game.p.x + 1, game.p.y, hp=10)
+        passage_monster = monster_at(game.p.x - 3, game.p.y, hp=10)
+        other_passage_monster = monster_at(game.p.x - 6, game.p.y, hp=10)
+        game.mons = [room_monster, passage_monster, other_passage_monster]
+        game.p.hp = 12
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(game.p.hp, 6)
+        self.assertEqual(room_monster.hp, 7)
+        self.assertEqual(passage_monster.hp, 7)
+        self.assertEqual(other_passage_monster.hp, 10)
 
     def test_rogue_544_sticks_helper_drain_life_split(self):
         # Rogue 5.4.4 sticks.c:drain() halves HP first, then divides remaining HP by target count.
