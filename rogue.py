@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1219"
+UI_BUILD = "260428_1222"
 
 # ===========================================================
 #  Font
@@ -1929,7 +1929,7 @@ class Game:
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
                         self.msg("fight.your_purse_feels_lighter")
-                    self.remove_monster(m); return
+                    self.remove_monster(m); return -1
                 if rogue_monsters.has_special(m, "poison"):
                     self.p.st, poison_result = rogue_fight.poison_bite_strength(
                         self.p.st,
@@ -1980,7 +1980,7 @@ class Game:
                     t=self.monster_has_magic_item_to_steal()
                     if t:
                         self.p.rm_item(t); self.msg("fight.she_stole_target", target=self.ident.name(t))
-                        self.remove_monster(m); return
+                        self.remove_monster(m); return -1
         else:
             if m.sym == "F" and m.vf_hit > 0:
                 self.p.hp = rogue_fight.venus_flytrap_miss_hp(self.p.hp, m.vf_hit)
@@ -2025,7 +2025,7 @@ class Game:
             return 0
         moved_or_attack=self.chase(m,chase_dest)
         if moved_or_attack=="attack":
-            return 0
+            return -1 if m not in self.mons else 0
         if m.dest!=DEST_PLAYER and (m.x,m.y)==dest:
             self.collect_monster_dest(m,dest)
         return 0
