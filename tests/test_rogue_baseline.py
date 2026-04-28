@@ -3652,6 +3652,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.rogue_daemons.stomach_faint_duration(lambda n: calls.append(n) or 7), 11)
         self.assertEqual(calls, [8])
 
+    def test_rogue_544_daemons_helper_stomach_starvation_tick_matches_postdecrement(self):
+        # Rogue 5.4.4 daemons.c:stomach() checks food_left-- < -STARVETIME.
+        self.assertEqual(
+            rogue.rogue_daemons.stomach_starvation_tick(-rogue.STARVETIME - 1, rogue.STARVETIME),
+            (-rogue.STARVETIME - 2, True),
+        )
+        self.assertEqual(
+            rogue.rogue_daemons.stomach_starvation_tick(-rogue.STARVETIME, rogue.STARVETIME),
+            (-rogue.STARVETIME - 1, False),
+        )
+
+    def test_rogue_544_daemons_helper_stomach_digest_tick_subtracts_food_cost(self):
+        # Rogue 5.4.4 daemons.c:stomach() subtracts ring_eat + ring_eat + 1 - amulet.
+        self.assertEqual(rogue.rogue_daemons.stomach_digest_tick(100, 3), 97)
+        self.assertEqual(rogue.rogue_daemons.stomach_digest_tick(1, 2), -1)
+
+    def test_rogue_544_daemons_helper_stomach_hunger_state_uses_crossed_thresholds(self):
+        # Rogue 5.4.4 daemons.c:stomach() uses oldfood/new food threshold crossings.
+        self.assertEqual(
+            rogue.rogue_daemons.stomach_hunger_state(rogue.MORETIME, rogue.MORETIME - 1, rogue.MORETIME),
+            "weak",
+        )
+        self.assertEqual(
+            rogue.rogue_daemons.stomach_hunger_state(2 * rogue.MORETIME, 2 * rogue.MORETIME - 1, rogue.MORETIME),
+            "hungry",
+        )
+        self.assertIsNone(
+            rogue.rogue_daemons.stomach_hunger_state(rogue.MORETIME + 10, rogue.MORETIME + 9, rogue.MORETIME)
+        )
+
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
         game = new_game(seed=316)

@@ -52,9 +52,8 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
     """Rogue 5.4.4 daemons.c:stomach()."""
     previous_state = player.state
     if player.food <= 0:
-        old_food = player.food
-        player.food -= 1
-        if old_food < -starvetime:
+        player.food, starved = stomach_starvation_tick(player.food, starvetime)
+        if starved:
             player.hp = 0
             player.state = "faint"
             return "pyxel.starve_to_death"
@@ -65,13 +64,14 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
         return "pyxel.faint_from_lack_of_food"
 
     old_food = player.food
-    player.food -= food_cost
+    player.food = stomach_digest_tick(player.food, food_cost)
     if player.food <= 0:
         return None
-    if player.food < moretime and old_food >= moretime:
+    new_state = stomach_hunger_state(old_food, player.food, moretime)
+    if new_state == "weak":
         player.state = "weak"
         return "pyxel.are_weak" if previous_state != "weak" else None
-    if player.food < 2 * moretime and old_food >= 2 * moretime:
+    if new_state == "hungry":
         player.state = "hungry"
         return "pyxel.feel_hungry" if previous_state != "hungry" else None
     return None
@@ -85,6 +85,27 @@ def stomach_stops_running(previous_state: str, current_state: str) -> bool:
 def stomach_faint_duration(rnd) -> int:
     """Rogue 5.4.4 daemons.c:stomach() faint no_command duration."""
     return rnd(8) + 4
+
+
+def stomach_starvation_tick(food: int, starvetime: int):
+    """Rogue 5.4.4 daemons.c:stomach() food_left-- starvation check."""
+    old_food = food
+    food -= 1
+    return food, old_food < -starvetime
+
+
+def stomach_digest_tick(food: int, food_cost: int) -> int:
+    """Rogue 5.4.4 daemons.c:stomach() normal food_left subtraction."""
+    return food - food_cost
+
+
+def stomach_hunger_state(old_food: int, food: int, moretime: int) -> str | None:
+    """Rogue 5.4.4 daemons.c:stomach() weak/hungry threshold branch."""
+    if food < moretime and old_food >= moretime:
+        return "weak"
+    if food < 2 * moretime and old_food >= 2 * moretime:
+        return "hungry"
+    return None
 
 
 def swander(actions) -> None:
