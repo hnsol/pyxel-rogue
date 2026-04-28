@@ -3897,6 +3897,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.rogue_daemons.stomach_digest_tick(100, 3), 97)
         self.assertEqual(rogue.rogue_daemons.stomach_digest_tick(1, 2), -1)
 
+    def test_rogue_544_daemons_helper_stomach_threshold_check_after_digest_even_below_zero(self):
+        # Rogue 5.4.4 daemons.c:stomach() checks MORETIME thresholds after food_left subtraction.
+        player = rogue.Player()
+        player.food = rogue.MORETIME
+        player.state = "normal"
+
+        msg = rogue.rogue_daemons.stomach_tick(
+            player,
+            SequenceRng([]),
+            food_cost=rogue.MORETIME + 1,
+            moretime=rogue.MORETIME,
+            starvetime=rogue.STARVETIME,
+        )
+
+        self.assertEqual(player.food, -1)
+        self.assertEqual(player.state, "weak")
+        self.assertEqual(msg, "pyxel.are_weak")
+
     def test_rogue_544_daemons_helper_stomach_hunger_state_uses_crossed_thresholds(self):
         # Rogue 5.4.4 daemons.c:stomach() uses oldfood/new food threshold crossings.
         self.assertEqual(

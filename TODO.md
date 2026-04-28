@@ -333,6 +333,7 @@
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:turn_see()` の `SEEMONST` ON/OFF を `rogue_potions.py` へ小分割
   - [x] Rogue 5.4.4 `potions.c:turn_see(FALSE)` の新規 monster 感知判定を `rogue_potions.py` へ小分割
+  - [x] Rogue 5.4.4 `daemons.c:stomach()` 準拠で、通常消化後に food が 0 以下になっても MORETIME 閾値判定を通す
   - [x] Rogue 5.4.4 `potions.c:P_MFIND` 準拠で、再使用時も `turn_see` は `lengthen()` せず重複 `fuse()` にする
   - [x] Rogue 5.4.4 `rings.c:ring_on()` / `potions.c:P_SEEINVIS` / `things.c:dropcheck()` 準拠で、see invisible ring と `unsee` fuse の連携を修正
   - [x] `swander / rollwand` を初回 `fuse(AFTER)`、以後 `start_daemon(BEFORE)` / `fuse(BEFORE)` へ接続

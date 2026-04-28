@@ -65,8 +65,6 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
 
     old_food = player.food
     player.food = stomach_digest_tick(player.food, food_cost)
-    if player.food <= 0:
-        return None
     new_state = stomach_hunger_state(old_food, player.food, moretime)
     if new_state == "weak":
         player.state = "weak"
