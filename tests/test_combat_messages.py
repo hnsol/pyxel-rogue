@@ -59,7 +59,7 @@ class CombatMessageTests(unittest.TestCase):
 
         self.assertFalse(monster.alive)
         self.assertEqual(game.p.exp, 3)
-        self.assertIn("Defeated the hobgoblin", game.msgs)
+        self.assertIn("you have defeated the hobgoblin", game.msgs)
         self.assertFalse(any("exp" in msg.lower() for msg in game.msgs))
 
     def test_japanese_combat_message_keys_are_available(self):

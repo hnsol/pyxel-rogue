@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1704"
+UI_BUILD = "260428_1713"
 
 # ===========================================================
 #  Font
@@ -1698,7 +1698,8 @@ class Game:
         return self.combat_message(MONSTER_MISS_MESSAGE_KEYS,subject=subject)
 
     def defeated_message(self,target):
-        return TextCatalog.msg(self.lang,"fight.defeated_target",target=target)
+        key = rogue_fight.killed_message_key(pr=True, has_hit=False, terse=False)
+        return TextCatalog.msg(self.lang,key,target=target)
 
     def thrown_hit_message(self,it,item,target):
         key = rogue_fight.thrown_message_key(it.cat, hit=True)
@@ -1800,11 +1801,13 @@ class Game:
     def award_monster_kill(self, m, translated_name=None):
         # C: fight.c:killed()
         mn = translated_name or TextCatalog.monster(self.lang,m.name)
-        self.p.exp+=m.exp
+        self.p.exp = rogue_fight.killed_experience(self.p.exp, m.exp)
         if self.p.held_by is m:
             m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_release()
             self.p.held_by=None
-        if m.sym == "L" and self.p.depth >= getattr(self, "max_depth", self.p.depth):
+        if m.sym == "L" and rogue_fight.leprechaun_kill_gold_allowed(
+            self.p.depth, getattr(self, "max_depth", self.p.depth), True
+        ):
             gold = Item(CAT_GOLD, 0)
             first_gold = goldcalc(self.p.depth)
             gold.qty = rogue_fight.leprechaun_kill_gold_after_first(first_gold, self.p.depth, self.save_vs_magic(), goldcalc)
@@ -1965,10 +1968,9 @@ class Game:
                         self.save_vs_poison(),
                         rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR),
                     )
-                    if poison_result == "weakened":
-                        self.msg("fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker")
-                    elif poison_result == "sustained":
-                        self.msg("fight.a_bite_momentarily_weakens_you")
+                    poison_msg = rogue_fight.poison_bite_message_key(poison_result, terse=False)
+                    if poison_msg:
+                        self.msg(poison_msg)
                 if rogue_monsters.has_special(m, "drain_level") and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,

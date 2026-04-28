@@ -100,6 +100,11 @@ def leprechaun_kill_gold_after_first(first_value: int, level: int, magic_saved: 
     return value
 
 
+def leprechaun_kill_gold_allowed(level: int, max_level: int, has_fallpos: bool) -> bool:
+    """Rogue 5.4.4 fight.c:killed() Leprechaun gold creation gate."""
+    return has_fallpos and level >= max_level
+
+
 def ice_freeze(no_command: int, bore_level: int, rnd):
     """Rogue 5.4.4 fight.c:attack() Ice monster freeze."""
     should_message = no_command <= 0
@@ -132,6 +137,15 @@ def poison_bite_strength(strength: int, poison_saved: bool, sustain_strength: bo
     if strength <= 3:
         return strength, "weakened"
     return strength - 1, "weakened"
+
+
+def poison_bite_message_key(result: str | None, terse: bool) -> str | None:
+    """Rogue 5.4.4 fight.c:attack() Rattlesnake poison message branch."""
+    if result == "weakened":
+        return "fight.a_bite_has_weakened_you" if terse else "fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker"
+    if result == "sustained":
+        return "fight.bite_has_no_effect" if terse else "fight.a_bite_momentarily_weakens_you"
+    return None
 
 
 def wraith_drain(level: int, exp: int, hp: int, max_hp: int, exp_table, roll_fewer):
@@ -241,6 +255,22 @@ def thrown_message_key(item_category, hit: bool) -> str:
     if thrown_message_uses_weapon_name(item_category):
         return "fight.thrown_weapon_hits" if hit else "fight.thrown_weapon_misses"
     return "fight.you_hit_target" if hit else "fight.you_missed_target"
+
+
+def killed_message_key(pr: bool, has_hit: bool, terse: bool) -> str | None:
+    """Rogue 5.4.4 fight.c:killed() defeated message branch."""
+    if not pr:
+        return None
+    if has_hit:
+        return "fight.defeated_target"
+    if terse:
+        return "fight.defeated_target"
+    return "fight.you_have_defeated_target"
+
+
+def killed_experience(player_exp: int, monster_exp: int) -> int:
+    """Rogue 5.4.4 fight.c:killed() pstats.s_exp += monster exp."""
+    return player_exp + monster_exp
 
 
 def bare_attack_profile(damage_expr: str):

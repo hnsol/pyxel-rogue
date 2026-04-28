@@ -5443,6 +5443,14 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(rolls, [3, 3, 3, 3])
 
+    def test_rogue_544_fight_helper_leprechaun_kill_gold_gate_requires_max_depth_and_fallpos(self):
+        # Rogue 5.4.4 fight.c:killed() requires fallpos(...) and level >= max_level before attaching gold.
+        import rogue_fight
+
+        self.assertTrue(rogue_fight.leprechaun_kill_gold_allowed(level=7, max_level=7, has_fallpos=True))
+        self.assertFalse(rogue_fight.leprechaun_kill_gold_allowed(level=6, max_level=7, has_fallpos=True))
+        self.assertFalse(rogue_fight.leprechaun_kill_gold_allowed(level=7, max_level=7, has_fallpos=False))
+
     def test_rogue_544_killed_leprechaun_drops_gold_at_max_depth(self):
         # Rogue 5.4.4 fight.c:killed() attaches Leprechaun gold to t_pack before remove_mon(..., TRUE).
         game = new_game(seed=3011)
@@ -6232,6 +6240,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_STICK, hit=True), "fight.you_hit_target")
         self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_STICK, hit=False), "fight.you_missed_target")
 
+    def test_rogue_544_fight_helper_killed_message_key_matches_normal_non_terse(self):
+        # Rogue 5.4.4 fight.c:killed() prints "you have defeated" for normal non-terse kills.
+        import rogue_fight
+
+        self.assertEqual(
+            rogue_fight.killed_message_key(pr=True, has_hit=False, terse=False),
+            "fight.you_have_defeated_target",
+        )
+
+    def test_rogue_544_fight_helper_killed_exp_adds_monster_exp(self):
+        # Rogue 5.4.4 fight.c:killed() does pstats.s_exp += tp->t_stats.s_exp.
+        import rogue_fight
+
+        self.assertEqual(rogue_fight.killed_experience(20, 55), 75)
+
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
         import rogue_fight
@@ -6277,6 +6300,18 @@ class RogueBaselineTest(unittest.TestCase):
         game.m_attack(monster)
         self.assertFalse(game.dashing)
         self.assertEqual(game.p.quiet, 0)
+
+    def test_rogue_544_player_kill_message_uses_you_have_defeated(self):
+        # Rogue 5.4.4 fight.c:killed() uses "you have defeated" after a normal non-terse player hit.
+        game = new_game(seed=5036)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "H", "hobgoblin", hp=1)
+        game.mons = [monster]
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        game.p_attack(monster)
+
+        self.assertIn("you have defeated the hobgoblin", game.msgs)
 
     def test_rogue_544_venus_flytrap_miss_still_deals_vf_hit(self):
         # Rogue 5.4.4 fight.c:attack() subtracts vf_hit when an F misses.
@@ -8513,6 +8548,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=True), (10, "sustained"))
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=True, sustain_strength=False), (10, None))
         self.assertEqual(rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False), (3, "weakened"))
+
+    def test_rogue_544_fight_helper_poison_bite_message_key_matches_attack_non_terse(self):
+        # Rogue 5.4.4 fight.c:attack() has distinct non-terse messages for weakened and sustained poison bites.
+        import rogue_fight
+
+        self.assertEqual(
+            rogue_fight.poison_bite_message_key("weakened", terse=False),
+            "fight.you_feel_a_bite_in_your_leg_and_now_feel_weaker",
+        )
+        self.assertEqual(
+            rogue_fight.poison_bite_message_key("sustained", terse=False),
+            "fight.a_bite_momentarily_weakens_you",
+        )
+        self.assertIsNone(rogue_fight.poison_bite_message_key(None, terse=False))
 
     def test_rogue_544_move_helper_can_rust_armor_matches_source_gate(self):
         # Rogue 5.4.4 move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.

@@ -100,6 +100,8 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` / `put_things()` 相当の `no_food` 強制 food、`MAXOBJ=9` × 36% 物資生成、Amulet 上昇中の物資生成停止を helper 化
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 相当の room gold、部屋モンスター発生、gone/dark/maze room 選択を helper 化
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の Leprechaun 死亡時 gold drop を helper 化
+- [x] Rogue 5.4.4 `fight.c:killed()` 相当の Leprechaun gold drop gate を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:killed()` 相当の経験値加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` / `exp_add()` 相当の Amulet 階層以深モンスター生成 stat/EXP 補正と深層 `ISHASTE` を helper 化
 - [x] Rogue 5.4.4 `new_level.c` / `passages.c` / `command.c:search()` / `move.c:be_trapped()` 相当の trap・secret・search・単純trap状態分岐を helper 化
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `pack_room()` 相当の scare monster scroll 拾得消滅と満杯時スタック拒否を helper 化
@@ -254,6 +256,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Venus Flytrap `vf_hit` 加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Venus Flytrap miss 時 `vf_hit` ダメージを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Rattlesnake poison Strength 低下判定を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` 相当の Rattlesnake poison 文言分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Wraith level drain を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Vampire max HP drain を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Wraith/Vampire drain 発動率を `rogue_fight.py` へ小分割
@@ -276,6 +279,8 @@
 - [x] Rogue 5.4.4 `fight.c:hit()` / `miss()` 準拠で combat message 選択を `rnd(4)` 固定にする
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で、見えていない Ice monster freeze も `by the something` にする
 - [x] Rogue 5.4.4 `fight.c:prname()` 相当の combatant 名整形を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:killed()` 準拠で、通常kill表示を `you have defeated` にする
+- [x] Rogue 5.4.4 `fight.c:killed()` の defeated message 分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` の player 防御 AC 分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:thunk()` / `bounce()` の投擲表示分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:T_DART` 準拠の dart trap poison save 順序監査
