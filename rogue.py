@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1456"
+UI_BUILD = "260428_1503"
 
 # ===========================================================
 #  Font
@@ -2020,12 +2020,13 @@ class Game:
             self.room_for_ai(dest[0],dest[1],actor=False),
         )
         chase_dest=dest
-        if rer!=ree and hasattr(rer,"x"):
-            chase_dest = rogue_chase.nearest_exit_to_dest(
-                self.room_exits(rer),
-                dest,
-                self.dist2,
-            ) or chase_dest
+        if rer!=ree:
+            if hasattr(rer,"x"):
+                chase_dest = rogue_chase.nearest_exit_to_dest(
+                    self.room_exits(rer),
+                    dest,
+                    self.dist2,
+                ) or chase_dest
         elif self.try_dragon_breath(m):
             return 0
         moved_or_attack=self.chase(m,chase_dest)

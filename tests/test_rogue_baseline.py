@@ -959,6 +959,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertEqual(game.p.hp, 30)
 
+    def test_rogue_544_dragon_breath_only_when_chaser_and_hero_same_room(self):
+        # Rogue 5.4.4 chase.c:do_chase() checks Dragon breath only in the rer == ree branch.
+        game = new_game(seed=226)
+        room = rogue.Room(10, 8, 8, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_FLOOR
+        for x in range(5, 11):
+            game.tm[10][x] = rogue.T_CORR
+        game.tm[10][10] = rogue.T_DOOR
+        game.p.x, game.p.y = 11, 10
+        dragon = monster_at(5, 10, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [dragon]
+        breaths = []
+        game.try_dragon_breath = lambda monster: breaths.append(monster) or True
+
+        game.do_chase(dragon)
+
+        self.assertEqual(breaths, [])
+
     def test_rogue_544_dragon_breath_death_cause_is_dragon_not_flame(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() calls death(moat(start)->t_type) for monster-started bolts.
         game = new_game(seed=224)
