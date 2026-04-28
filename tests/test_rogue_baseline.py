@@ -105,6 +105,20 @@ def set_open_floor(game):
     game.update_fov()
 
 
+def set_two_room_floor(game):
+    game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+    room_a = rogue.Room(1, 1, 10, 8)
+    room_b = rogue.Room(20, 1, 10, 8)
+    game.rooms = [room_a, room_b]
+    for room in game.rooms:
+        for y in range(room.y, room.y + room.h):
+            for x in range(room.x, room.x + room.w):
+                game.tm[y][x] = rogue.T_FLOOR
+    game.p.x, game.p.y = 3, 4
+    game.visible = set()
+    return room_a, room_b
+
+
 def monster_at(x, y, sym="H", name="hobgoblin", hp=10, level=1, armor=5,
                damage="1x8", exp=3, flags=""):
     return rogue.Monster(x, y, sym, name, hp, level, armor, damage, exp, flags)
@@ -1879,6 +1893,17 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([mo.sym for mo in game.mons], ["B"])
 
+    def test_rogue_544_wanderer_floor_candidates_skip_plain_corridors(self):
+        # Rogue 5.4.4 monsters.c:wanderer() uses rooms.c:find_floor(NULL), which picks a room.
+        game = new_game(seed=340)
+        set_two_room_floor(game)
+        game.tm[12][12] = rogue.T_CORR
+
+        cands = game.wanderer_floor_candidates()
+
+        self.assertIn((22, 4), cands)
+        self.assertNotIn((12, 12), cands)
+
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
         cases = [
@@ -3132,6 +3157,90 @@ class RogueBaselineTest(unittest.TestCase):
             ),
             target,
         )
+
+    def test_rogue_544_game_find_dest_records_item_destination_coord(self):
+        # Rogue 5.4.4 chase.c:find_dest() stores t_dest as the chosen object position.
+        game = new_game(seed=509)
+        set_two_room_floor(game)
+        monster = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = 24, 4
+        game.mons = [monster]
+        game.gitems = [item]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            dest = game.find_dest(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(dest, (24, 4))
+        self.assertEqual(monster.dest, (24, 4))
+
+    def test_rogue_544_game_find_dest_skips_other_monster_destination(self):
+        # Rogue 5.4.4 chase.c:find_dest() skips lvl_obj positions already used as another t_dest.
+        game = new_game(seed=511)
+        set_two_room_floor(game)
+        claimed = rogue.Item(rogue.CAT_POT, 0)
+        claimed.x, claimed.y = 24, 4
+        target = rogue.Item(rogue.CAT_POT, 1)
+        target.x, target.y = 25, 4
+        first = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        first.dest = (24, 4)
+        second = monster_at(23, 4, "N", "nymph", hp=10, armor=100, exp=5)
+        game.mons = [first, second]
+        game.gitems = [claimed, target]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            dest = game.find_dest(second)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(dest, (25, 4))
+        self.assertEqual(second.dest, (25, 4))
+
+    def test_rogue_544_aggravate_uses_runto_find_dest_for_carry_monster(self):
+        # Rogue 5.4.4 misc.c:aggravate() calls chase.c:runto(), which sets t_dest = find_dest().
+        game = new_game(seed=512)
+        set_two_room_floor(game)
+        monster = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = 24, 4
+        game.mons = [monster]
+        game.gitems = [item]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.aggravate_monsters()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.dest, (24, 4))
+
+    def test_rogue_544_do_chase_collects_reached_item_destination(self):
+        # Rogue 5.4.4 chase.c:do_chase() moves reached lvl_obj into the monster pack.
+        game = new_game(seed=510)
+        set_two_room_floor(game)
+        monster = monster_at(23, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (24, 4)
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = 24, 4
+        game.mons = [monster]
+        game.gitems = [item]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.do_chase(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual((monster.x, monster.y), (24, 4))
+        self.assertNotIn(item, game.gitems)
+        self.assertIn(item, monster.pack)
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
 
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.

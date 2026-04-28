@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1233"
+UI_BUILD = "260428_1242"
 
 # ===========================================================
 #  Font
@@ -1420,10 +1420,11 @@ class Game:
             (x,y)
             for y,row in enumerate(self.tm)
             for x,tile in enumerate(row)
+            if (room := self.room_containing(x,y)) is not None
             if tile in (T_FLOOR,T_CORR)
             and (x,y)!=(self.p.x,self.p.y)
             and not self.mon_at(x,y)
-            and self.room_containing(x,y) is not player_room
+            and room is not player_room
         ]
 
     def _spawn_items(self):
@@ -1840,9 +1841,11 @@ class Game:
         if m in self.mons:
             self.mons.remove(m)
 
-    def runto(self,m,dest=DEST_PLAYER):
+    def runto(self,m,dest=None):
         # C: chase.c:runto()
-        rogue_chase.runto(m, dest)
+        rogue_chase.runto(m, DEST_PLAYER if dest is None else dest)
+        if dest is None:
+            self.find_dest(m)
 
     def aggravate_monsters(self):
         # C: misc.c:aggravate()
@@ -2062,9 +2065,14 @@ class Game:
 
     def find_dest(self,m):
         # C: chase.c:find_dest()
+        if isinstance(m.dest, tuple):
+            if self.gi_at(*m.dest):
+                return m.dest
+            m.dest=DEST_PLAYER
         if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:
+                m.dest=target
                 return target
             m.dest=DEST_PLAYER
         spec = self.monster_spec_for_sym(m.sym)
@@ -2082,14 +2090,18 @@ class Game:
             RNG.rnd,
         )
         if target:
-            return (target.x, target.y)
+            m.dest=(target.x, target.y)
+            return m.dest
+        m.dest=DEST_PLAYER
         return (self.p.x,self.p.y)
 
     def collect_monster_dest(self,m,dest):
         gi=self.gi_at(*dest)
-        if gi and gi.cat==CAT_GOLD:
+        if gi:
             self.gitems.remove(gi)
-            m.dest=DEST_PLAYER
+            if gi.cat!=CAT_GOLD:
+                m.pack.append(gi)
+        self.find_dest(m)
 
     def random_monster_move(self,m):
         # C: move.c:rndmove()
