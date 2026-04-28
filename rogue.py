@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1222"
+UI_BUILD = "260428_1233"
 
 # ===========================================================
 #  Font
@@ -2111,17 +2111,6 @@ class Game:
     def chase(self,m,dest):
         # C: chase.c:chase()
         px,py=self.p.x,self.p.y
-        if m.scared>0:
-            m.scared-=1
-            dx=-1 if m.x<px else 1 if m.x>px else 0
-            dy=-1 if m.y<py else 1 if m.y>py else 0
-            if dx and dy:
-                if RNG.random()<.5: dx=0
-                else: dy=0
-            nx,ny=m.x+dx,m.y+dy
-            if self.walkable(nx,ny) and not self.mon_at(nx,ny) and not(nx==px and ny==py):
-                m.x,m.y=nx,ny
-            return
         if rogue_chase.should_random_move(m.confused, m.sym, rnd):
             nx,ny=self.random_monster_move(m)
             if (nx,ny)==(px,py):
@@ -3417,7 +3406,7 @@ class Game:
             self.delayed_actions,
             RNG,
             self.wander_between,
-            RNG.spread(WANDERTIME),
+            lambda: RNG.spread(WANDERTIME),
             self.spawn_wanderer,
         )
         self.wander_timer=self.fuses.remaining("swander")

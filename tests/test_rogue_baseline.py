@@ -1517,7 +1517,7 @@ class RogueBaselineTest(unittest.TestCase):
         )
 
     def test_rogue_544_scrolls_helper_aggravate_monsters_runs_all(self):
-        # Rogue 5.4.4 scrolls.c:S_AGGR calls misc.c:aggravate(), which runto()s all monsters.
+        # Rogue 5.4.4 scrolls.c:S_AGGR calls misc.c:aggravate(), which only runto()s all monsters.
         import rogue_scrolls
 
         first = monster_at(1, 1)
@@ -1526,10 +1526,14 @@ class RogueBaselineTest(unittest.TestCase):
         second.scared = 4
         seen = []
 
-        rogue_scrolls.aggravate_monsters([first, second], seen.append)
+        def fake_runto(monster):
+            seen.append((monster, monster.held))
+            monster.held = 0
 
-        self.assertEqual(seen, [first, second])
-        self.assertEqual((first.held, second.scared), (0, 0))
+        rogue_scrolls.aggravate_monsters([first, second], fake_runto)
+
+        self.assertEqual(seen, [(first, 3), (second, 0)])
+        self.assertEqual((first.held, second.scared), (0, 4))
 
     def test_rogue_544_scrolls_helper_teleport_identifies_on_room_change(self):
         # Rogue 5.4.4 scrolls.c:S_TELEP identifies only when cur_room changes.
@@ -3487,6 +3491,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.daemons.running("rollwand"))
         self.assertEqual(game.fuses.tick(rogue.rogue_daemons.AFTER), [])
         self.assertEqual(game.fuses.tick(rogue.rogue_daemons.BEFORE), ["swander"])
+
+    def test_rogue_544_rollwand_spreads_wandertime_only_on_success(self):
+        # Rogue 5.4.4 daemons.c:rollwand() reaches WANDERTIME only after roll(1, 6) == 4.
+        game = new_game(seed=313)
+        old_roll = rogue.RNG.roll
+        old_spread = rogue.RNG.spread
+        try:
+            rogue.RNG.spread = lambda n: (_ for _ in ()).throw(AssertionError("spread used early"))
+            game.wander_between = 0
+            game.roll_wanderer()
+            self.assertEqual(game.wander_between, 1)
+
+            rogue.RNG.roll = lambda number, sides: 1
+            game.wander_between = 3
+            game.roll_wanderer()
+            self.assertEqual(game.wander_between, 0)
+        finally:
+            rogue.RNG.roll = old_roll
+            rogue.RNG.spread = old_spread
 
     def test_rogue_544_potion_haste_self_uses_nohaste_fuse_and_half_turns(self):
         # Rogue 5.4.4 potions.c:P_HASTE calls misc.c:add_haste(TRUE);
@@ -8145,6 +8168,20 @@ class RogueBaselineTest(unittest.TestCase):
         rng = SequenceRng([])
         self.assertFalse(rogue_chase.should_random_move(0, "O", rng.rnd))
         self.assertEqual(rng.calls, [])
+
+    def test_rogue_544_chase_ignores_non_source_scared_flag(self):
+        # Rogue 5.4.4 chase.c:chase() has no monster flee/scared branch.
+        game = new_game(seed=508)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5)
+        monster.scared = 2
+        game.mons = [monster]
+
+        game.chase(monster, (game.p.x, game.p.y))
+
+        self.assertEqual((monster.x, monster.y), (6, 5))
+        self.assertEqual(monster.scared, 2)
 
     def test_rogue_544_chase_helper_confusion_clears_on_rnd20_zero(self):
         # Rogue 5.4.4 chase.c:chase() clears ISHUH after random movement when rnd(20)==0.

@@ -125,7 +125,9 @@
 - [x] Rogue 5.4.4 `new_level.c:treas_room()` の treasure room 強制 `ISMEAN` を `rogue_monsters.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` の `!ISCANC` special gate を `rogue_monsters.has_special()` へ寄せる
 - [x] Rogue 5.4.4 `ISREGEN` は `extern.c` / `rogue.h` にあるが monster 回復 tick はないため、Pyxel 独自 regen を削除
+- [x] Rogue 5.4.4 `chase.c:chase()` / `misc.c:aggravate()` に存在しない Pyxel 独自 monster scared 逃走/解除分岐を削除
 - [x] Rogue 5.4.4 `rogue.h:ISGREED` / `monsters.c:wanderer()` / `chase.c:do_chase()` の gold 守備フラグを `rogue_monsters.is_greedy()` へ小分割
+- [x] Rogue 5.4.4 `daemons.c:rollwand()` 準拠で `WANDERTIME` spread を wandering monster 発生成功時だけ消費
 - [x] Rogue 5.4.4 `sticks.c:WS_CANCEL` の monster flag / disguise 更新を `rogue_monsters.cancel_monster()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の起床済みモンスター実行ゲートを `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 相当の飛行モンスター追加移動を `rogue_chase.py` へ小分割

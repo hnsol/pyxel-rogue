@@ -86,7 +86,7 @@ def rollwand(actions, rng, between: int, wander_time: int, wanderer) -> int:
     if rng.roll(1, 6) == 4:
         wanderer()
         actions.daemons.kill("rollwand")
-        actions.fuses.fuse("swander", wander_time, BEFORE)
+        actions.fuses.fuse("swander", wander_time() if callable(wander_time) else wander_time, BEFORE)
     return between
 
 
