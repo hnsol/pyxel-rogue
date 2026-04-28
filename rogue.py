@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0735"
+UI_BUILD = "260429_0740"
 
 # ===========================================================
 #  Font
@@ -2826,6 +2826,27 @@ class Game:
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True
                 self.msg("sticks.the_value_whizzes_by_you", value=name)
+            target=self.mon_at(x,y)
+            if target:
+                steps+=1
+                if not hit_hero:
+                    hit_hero=True
+                    changed=not changed
+                    if not self.monster_save_throw(VS_MAGIC,target):
+                        if target.sym=="D" and name=="flame":
+                            self.msg("sticks.the_flame_bounces")
+                        else:
+                            self.hit_monster_with_bolt(target,name)
+                        return True
+                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
+                        hero_started,
+                        rogue_monsters.is_disguised_xeroc(target),
+                    )
+                    if wake_miss:
+                        self.runto(target)
+                    if show_miss:
+                        self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
+                continue
             if rogue_sticks.bolt_should_bounce(self.bolt_bounces_at(x,y), (x,y)==(self.p.x,self.p.y)):
                 if not changed:
                     hit_hero=not hit_hero
@@ -2835,24 +2856,6 @@ class Game:
                 self.msg("sticks.the_value_bounces", value=name)
                 continue
             steps+=1
-            target=self.mon_at(x,y)
-            if target and not hit_hero:
-                hit_hero=True
-                changed=not changed
-                if not self.monster_save_throw(VS_MAGIC,target):
-                    if target.sym=="D" and name=="flame":
-                        self.msg("sticks.the_flame_bounces")
-                    else:
-                        self.hit_monster_with_bolt(target,name)
-                    return True
-                wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
-                    hero_started,
-                    rogue_monsters.is_disguised_xeroc(target),
-                )
-                if wake_miss:
-                    self.runto(target)
-                if show_miss:
-                    self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
         return False
 
     def zap_stick(self,it,dx,dy):
