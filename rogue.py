@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2319"
+UI_BUILD = "260428_2329"
 
 # ===========================================================
 #  Font
@@ -2199,6 +2199,9 @@ class Game:
     # ---------- Item effects ----------
     def use_pot(self,it):
         # C: potions.c:quaff()
+        if it.cat != CAT_POT:
+            self.msg("potions.yuk_why_would_you_want_to_drink_that")
+            return
         p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
             self.ident.pk[it.kind]=True
@@ -2499,6 +2502,9 @@ class Game:
 
     def use_scr(self,it):
         # C: scrolls.c:read_scroll()
+        if it.cat != CAT_SCR:
+            self.msg("scrolls.there_is_nothing_on_it_to_read")
+            return
         p=self.p; nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             rogue_scrolls.monster_confusion(p)
@@ -2886,6 +2892,9 @@ class Game:
 
     def eat(self,it):
         # C: misc.c:eat()
+        if it.cat != CAT_FOOD:
+            self.msg("misc.ugh_you_would_get_ill_if_you_ate_that")
+            return
         self.p.food, outcome, exp_gain = rogue_food.eat_food(
             self.p.food, it.kind, RNG.rnd, RNG.rnd, HUNGERTIME, STOMACHSIZE
         )

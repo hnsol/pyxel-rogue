@@ -5162,6 +5162,43 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(food, game.p.inv)
         self.assertEqual(food.qty, 1)
 
+    def test_rogue_544_eat_non_food_does_not_consume_pack_item(self):
+        # Rogue 5.4.4 misc.c:eat() rejects obj->o_type != FOOD before leave_pack().
+        game = new_game(seed=5062)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv.append(potion)
+        game.p.food = 100
+
+        game.eat(potion)
+
+        self.assertIn(potion, game.p.inv)
+        self.assertEqual(game.p.food, 100)
+        self.assertIn("ugh, you would get ill if you ate that", game.msgs)
+
+    def test_rogue_544_quaff_non_potion_does_not_consume_pack_item(self):
+        # Rogue 5.4.4 potions.c:quaff() rejects obj->o_type != POTION before leave_pack().
+        game = new_game(seed=5063)
+        scroll = rogue.Item(rogue.CAT_SCR, 0)
+        game.p.inv.append(scroll)
+        game.p.hp = 1
+
+        game.use_pot(scroll)
+
+        self.assertIn(scroll, game.p.inv)
+        self.assertEqual(game.p.hp, 1)
+        self.assertIn("yuk! Why would you want to drink that?", game.msgs)
+
+    def test_rogue_544_read_non_scroll_does_not_consume_pack_item(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() rejects obj->o_type != SCROLL before leave_pack().
+        game = new_game(seed=5064)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv.append(potion)
+
+        game.use_scr(potion)
+
+        self.assertIn(potion, game.p.inv)
+        self.assertIn("there is nothing on it to read", game.msgs)
+
     def test_rogue_544_quaff_potion_stack_consumes_one(self):
         # Rogue 5.4.4 potions.c:quaff() calls pack.c:leave_pack(obj, FALSE, FALSE).
         kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")

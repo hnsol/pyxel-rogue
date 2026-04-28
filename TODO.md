@@ -246,6 +246,8 @@
 - [x] Rogue 5.4.4 `pack.c:leave_pack()` 準拠で food/potion/scroll stack の drop/eat/quaff/read は1個だけ消費
 - [x] Rogue 5.4.4 `pack.c:add_pack()` 準拠で potion/scroll/food を同種スタックし、満杯時はスタック前に拒否
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `leave_pack(newobj=TRUE)` 準拠で scare monster の `ISFOUND` 相当を stack 分割コピーへ保持
+- [x] Rogue 5.4.4 `potions.c:quaff()` / `scrolls.c:read_scroll()` 準拠で型違い use は pack を変えず拒否
+- [x] Rogue 5.4.4 `misc.c:eat()` 準拠で FOOD 以外の eat は pack/food を変えず拒否
 - [x] Rogue 5.4.4 `weapons.c:init_weapon()` / `pack.c:add_pack()` 準拠で missile/dagger stack の `o_group` を分離
 - [x] Rogue 5.4.4 `pack.c:add_pack()` 準拠で matching weapon group は満杯packでも stack し、新規itemは同typeまとまりへ挿入
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
