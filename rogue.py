@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1733"
+UI_BUILD = "260428_1822"
 
 # ===========================================================
 #  Font
@@ -1822,7 +1822,7 @@ class Game:
         self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
         self.runto(m)
         if self.reveal_xeroc_for_attack(m, thrown=False):
-            return
+            return False
         mn=self.combat_monster_name(m)
         hit,dmg=self.roll_player_attack(m,self.p.wpn,False)
         if hit:
@@ -1837,7 +1837,10 @@ class Game:
                 self.award_monster_kill(m,mn)
             elif rogue_fight.confusion_message_allowed(confused_by_hit, self.p.blind > 0):
                 self.msg("fight.subject_appears_confused", subject=mn)
-        else: self.msg_text(self.player_miss_message(mn))
+            return True
+        else:
+            self.msg_text(self.player_miss_message(mn))
+            return False
 
     def reveal_xeroc_for_attack(self,m,thrown=False):
         # Rogue 5.4.4 fight.c:attack() reveals a disguised Xeroc; melee returns FALSE.
@@ -2020,6 +2023,7 @@ class Game:
                 if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
             if rogue_fight.monster_attack_message_allowed(m.sym):
                 self.msg_text(self.monster_miss_message(mn))
+        return rogue_fight.attack_result(monster_removed=False)
 
     def m_turn(self,m):
         # C: chase.c (monster turn loop)

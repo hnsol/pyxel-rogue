@@ -222,6 +222,8 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の `!ISCANC` special gate と `remove_mon()` 後 return を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:remove_mon()` 相当の monster pack fall/discard 分岐を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:fight()` / `attack()` 相当の Xeroc reveal gate と melee stop 分岐を `rogue_fight.py` へ小分割
+- [x] Rogue 5.4.4 `fight.c:attack()` 準拠で、monster attack の通常終了時 return を 0 にする
+- [x] Rogue 5.4.4 `fight.c:fight()` 準拠で、player fight の hit/miss/Xeroc reveal return を `did_hit` にする
 - [x] Rogue 5.4.4 `init.c:init_player()` 準拠で、初期pack順・+1 ring mail・矢数 `rnd(15)+25` を修正
 - [x] Rogue 5.4.4 `init.c:init_player()` の初期pack生成を `rogue_init.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` 準拠で、武器ダメージ表を `%dx%d` 表記へ統一

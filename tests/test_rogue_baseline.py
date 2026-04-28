@@ -5529,6 +5529,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(result, -1)
         self.assertNotIn(leprechaun, game.mons)
 
+    def test_rogue_544_monster_attack_returns_zero_when_monster_remains(self):
+        # Rogue 5.4.4 fight.c:attack() returns 0 when mp remains non-NULL.
+        game = new_game(seed=305)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "H", "hobgoblin", damage="0x0")
+        game.mons = [monster]
+        game.roll_monster_attack = lambda m: (True, 0)
+
+        result = game.m_attack(monster)
+
+        self.assertEqual(result, 0)
+        self.assertIn(monster, game.mons)
+
     def test_rogue_544_wraith_drain_sets_exp_to_new_level_threshold_plus_one(self):
         # Rogue 5.4.4 fight.c:attack() sets s_exp = e_levels[s_lvl-1] + 1
         # after Wraith level drain decrements s_lvl.
@@ -5687,14 +5700,37 @@ class RogueBaselineTest(unittest.TestCase):
         old_roll_player_attack = game.roll_player_attack
         try:
             game.roll_player_attack = lambda *args, **kwargs: calls.append(args) or (True, 5)
-            game.p_attack(xeroc)
+            result = game.p_attack(xeroc)
         finally:
             game.roll_player_attack = old_roll_player_attack
 
+        self.assertIs(result, False)
         self.assertEqual(calls, [])
         self.assertEqual(xeroc.hp, 40)
         self.assertEqual(xeroc.disguise, "X")
         self.assertIn("wait!  That's a xeroc!", game.msgs)
+
+    def test_rogue_544_player_fight_returns_false_on_miss(self):
+        # Rogue 5.4.4 fight.c:fight() returns did_hit, which is FALSE after a miss.
+        game = new_game(seed=308)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=40)
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (False, 0)
+
+        result = game.p_attack(monster)
+
+        self.assertIs(result, False)
+
+    def test_rogue_544_player_fight_returns_true_on_hit(self):
+        # Rogue 5.4.4 fight.c:fight() returns did_hit, which is TRUE after a hit.
+        game = new_game(seed=309)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=40)
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        result = game.p_attack(monster)
+
+        self.assertIs(result, True)
 
     def test_rogue_544_monster_attack_reveals_disguised_xeroc(self):
         # Rogue 5.4.4 fight.c:attack() also reveals attacking Xerocs before roll_em().
