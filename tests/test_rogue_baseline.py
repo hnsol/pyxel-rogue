@@ -5015,6 +5015,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("she stole purple potion!", game.msgs)
         self.assertNotIn("She stole your purple potion!", game.msgs)
 
+    def test_rogue_544_monster_attack_death_stops_before_special_effect(self):
+        # Rogue 5.4.4 fight.c:attack() calls rip.c:death(), which exits before the special switch.
+        game = new_game(seed=307)
+        set_open_floor(game)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        game.p.hp = 1
+        nymph = monster_at(game.p.x + 1, game.p.y, "N", "nymph", damage="1x1", flags="steal_item")
+        game.mons = [nymph]
+        game.roll_monster_attack = lambda m: (True, 1)
+
+        game.m_attack(nymph)
+
+        self.assertEqual(game.p.hp, 0)
+        self.assertIn(potion, game.p.inv)
+        self.assertIn(nymph, game.mons)
+        self.assertNotIn("she stole", " ".join(game.msgs))
+
     def test_rogue_544_rattlesnake_poison_reports_weakened_at_strength_floor(self):
         # Rogue 5.4.4 fight.c:attack() calls chg_str(-1), which clamps at 3, then still prints weakened text.
         import rogue_fight

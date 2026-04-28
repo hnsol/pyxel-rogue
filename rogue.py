@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_0922"
+UI_BUILD = "260428_0928"
 
 # ===========================================================
 #  Font
@@ -1915,7 +1915,10 @@ class Game:
                 self.p.hp-=dmg
             if rogue_fight.monster_attack_message_allowed(m.sym):
                 self.msg_text(self.monster_hit_message(mn))
-            if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
+            if self.p.hp<=0:
+                if not self.death_cause:
+                    self.death_cause=f"killed by a {m.name}"
+                return
             if not rogue_monsters.is_cancelled(m):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
