@@ -182,6 +182,7 @@
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath を chaser/chasee 同室分岐に限定
 - [x] Rogue 5.4.4 `chase.c:roomin()` / `do_chase()` 準拠で、door 上 Dragon も同室 hero へ breath 可能にする
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、候補マス走査順を x外側/y内側に合わせる
 - [x] Rogue 5.4.4 `monsters.c:save_throw()` / `save()` 相当の player/monster セーヴ式と protection ring 補正を helper 化
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:rust_armor()` 相当の錆び合法判定・保護分岐を `rogue_move.py` へ小分割

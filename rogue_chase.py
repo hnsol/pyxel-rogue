@@ -169,6 +169,16 @@ def is_chase_candidate(diagonal_ok: bool, step_ok: bool, scare_scroll: bool, xer
     return diagonal_ok and step_ok and not scare_scroll and not xeroc
 
 
+def chase_candidate_offsets():
+    """Rogue 5.4.4 chase.c:chase() scans x outer, y inner around the monster."""
+    return [
+        (dx, dy)
+        for dx in (-1, 0, 1)
+        for dy in (-1, 0, 1)
+        if dx != 0 or dy != 0
+    ]
+
+
 def chase_continues(current_distance: int, chosen_pos, hero_pos) -> bool:
     """Rogue 5.4.4 chase.c:chase() return value."""
     return current_distance != 0 and chosen_pos != hero_pos

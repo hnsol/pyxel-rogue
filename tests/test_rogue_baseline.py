@@ -9490,6 +9490,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_chase.is_chase_candidate(True, True, True, False))
         self.assertFalse(rogue_chase.is_chase_candidate(True, True, False, True))
 
+    def test_rogue_544_chase_helper_candidate_offsets_match_source_scan_order(self):
+        # Rogue 5.4.4 chase.c:chase() loops x from left to right, with y inner.
+        import rogue_chase
+
+        self.assertEqual(
+            rogue_chase.chase_candidate_offsets(),
+            [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)],
+        )
+
+    def test_rogue_544_chase_uses_source_candidate_scan_order_for_ties(self):
+        # Rogue 5.4.4 chase.c:chase() scans x outer, y inner before rnd(++plcnt) tie choice.
+        game = new_game(seed=518)
+        set_open_floor(game)
+        monster = monster_at(5, 5)
+        game.mons = [monster]
+        game.p.x, game.p.y = 20, 20
+        game.tm[6][4] = rogue.T_VOID
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.chase(monster, (3, 7))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual((monster.x, monster.y), (4, 5))
+
     def test_rogue_544_chase_helper_continues_unless_at_goal_or_hero(self):
         # Rogue 5.4.4 chase.c:chase() returns curdist != 0 && !ce(ch_ret, hero).
         import rogue_chase

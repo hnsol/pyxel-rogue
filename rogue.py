@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0824"
+UI_BUILD = "260429_0841"
 
 # ===========================================================
 #  Font
@@ -2213,7 +2213,7 @@ class Game:
             return "move"
         cur=self.dist2((m.x,m.y),dest)
         best=(m.x,m.y); bestd=cur; ties=1
-        for dx,dy in DIR8.values():
+        for dx,dy in rogue_chase.chase_candidate_offsets():
             nx,ny=m.x+dx,m.y+dy
             diagonal_ok=self.diag_ok(m.x,m.y,nx,ny)
             if not diagonal_ok:
