@@ -7812,6 +7812,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("@", calls)
         self.assertNotIn(".", calls)
 
+    def test_rogue_544_blind_player_does_not_explore_lit_room_cells(self):
+        # Rogue 5.4.4 rooms.c:enter_room() does not light rooms while ISBLIND.
+        game = new_game(seed=345)
+        room = rogue.Room(5, 5, 8, 6)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(game.tm, room)
+        game.p.x, game.p.y = room.x + 2, room.y + 2
+        game.p.blind = 10
+        game.visible = set()
+        game.explored = set()
+
+        game.update_fov()
+
+        self.assertEqual(game.visible, {(game.p.x, game.p.y)})
+        self.assertEqual(game.explored, {(game.p.x, game.p.y)})
+
     def test_hud_title_includes_build_revision_stamp(self):
         game = new_game(seed=344)
         calls = []

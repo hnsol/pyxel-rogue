@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0858"
+UI_BUILD = "260429_0918"
 
 # ===========================================================
 #  Font
@@ -1739,6 +1739,11 @@ class Game:
     def update_fov(self):
         self.visible = set()
         px,py = self.p.x,self.p.y
+        if self.p.blind > 0:
+            # Rogue 5.4.4 rooms.c:enter_room() and misc.c:look() reveal only the hero while blind.
+            self.visible.add((px, py))
+            self.explored |= self.visible
+            return
         room = self.room_at(px,py)
         if room and room.usable and not (room.is_dark or room.is_maze):
             # Rogue 5.4.4 rooms.c:enter_room() lights only the room's own cells.

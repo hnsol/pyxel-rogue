@@ -208,6 +208,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で原作にない monster melee confuse 分岐を削除
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で Dragon breath 後に `quiet` をリセットする
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で、攻撃側の偽装 Xeroc も非盲目時に reveal する
+- [x] Rogue 5.4.4 `rooms.c:enter_room()` / `misc.c:look()` 準拠で、blind 中は部屋や隣接マスを探索済みにしない
 - [x] Rogue 5.4.4 `fight.c:attack()` / `rogue.h:GOLDCALC` 準拠の Leprechaun 金盗み式監査
 - [x] Rogue 5.4.4 `rogue.h:GOLDCALC` 相当の金額ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Leprechaun 金額減算回数を `rogue_fight.py` へ小分割
