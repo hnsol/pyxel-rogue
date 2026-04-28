@@ -607,6 +607,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("haste", monster.flags)
         self.assertTrue(monster.turn)
 
+    def test_rogue_544_zap_haste_slow_flytrap_does_not_release_player(self):
+        # Rogue 5.4.4 sticks.c:do_zap() clears ISHELD for the misc target group, not WS_HASTE_M/WS_SLOW_M.
+        import rogue_sticks
+
+        game = new_game(seed=206)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 2, game.p.y, sym="F", name="venus flytrap")
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+
+        haste = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_HASTE_M, charges=1)
+        game.zap_stick(haste, 1, 0)
+
+        self.assertIs(game.p.held_by, flytrap)
+
+        slow = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_SLOW_M, charges=1)
+        game.zap_stick(slow, 1, 0)
+
+        self.assertIs(game.p.held_by, flytrap)
+
     def test_rogue_544_zap_magic_missile_identifies_and_damages_unsaved_target(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE sets known, save_throw(VS_MAGIC), then hit_monster with 1x4 +1.
         import rogue_sticks
