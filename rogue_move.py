@@ -56,6 +56,11 @@ def confused_player_uses_random_move(confused: bool, rnd) -> bool:
     return confused and rnd(5) != 0
 
 
+def held_move_blocked(held: bool, target_is_holder: bool) -> bool:
+    """Rogue 5.4.4 move.c:do_move() ISHELD gate blocks non-F destinations."""
+    return held and not target_is_holder
+
+
 def rndmove(origin, rnd, is_legal):
     """Rogue 5.4.4 move.c:rndmove() one-attempt confused move."""
     x, y = origin

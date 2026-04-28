@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2356"
+UI_BUILD = "260429_0002"
 
 # ===========================================================
 #  Font
@@ -3170,9 +3170,6 @@ class Game:
         p = self.p
         if p.held_by and not p.held_by.alive:
             p.held_by=None
-        if p.held_by and (p.x+dx,p.y+dy)!=(p.held_by.x,p.held_by.y):
-            self.msg("move.you_are_being_held")
-            return False
         if p.no_move>0:
             p.no_move-=1
             self.msg("move.you_are_still_stuck_in_the_bear_trap")
@@ -3194,6 +3191,11 @@ class Game:
         nx, ny = p.x+dx, p.y+dy
         if not self.diag_ok(p.x,p.y,nx,ny):
             return False
+        target_is_holder = p.held_by is not None and (nx, ny) == (p.held_by.x, p.held_by.y)
+        if rogue_move.held_move_blocked(p.held_by is not None, target_is_holder):
+            self.msg("move.you_are_being_held")
+            self.end_turn()
+            return True
         m = self.mon_at(nx, ny)
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):

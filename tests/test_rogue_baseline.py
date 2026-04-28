@@ -9102,6 +9102,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_move.confused_player_uses_random_move(True, lambda n: calls.append(n) or 1))
         self.assertEqual(calls, [5, 5])
 
+    def test_rogue_544_move_helper_held_gate_blocks_non_f_destinations(self):
+        # Rogue 5.4.4 move.c:do_move() ISHELD gate only allows a Venus Flytrap destination.
+        import rogue_move
+
+        self.assertTrue(rogue_move.held_move_blocked(True, False))
+        self.assertFalse(rogue_move.held_move_blocked(True, True))
+        self.assertFalse(rogue_move.held_move_blocked(False, False))
+
     def test_rogue_544_player_confused_move_uses_input_direction_when_rnd5_zero(self):
         # Rogue 5.4.4 move.c:do_move() only calls rndmove() when ISHUH && rnd(5) != 0.
         game = new_game(seed=516)
@@ -9122,6 +9130,52 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.choice = old_choice
 
         self.assertEqual((game.p.x, game.p.y), (11, 10))
+
+    def test_rogue_544_held_player_move_away_spends_turn_without_moving(self):
+        # Rogue 5.4.4 move.c:do_move() reports ISHELD after the destination checks and leaves after true.
+        game = new_game(seed=517)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        flytrap = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you are being held", game.msgs)
+
+    def test_rogue_544_confused_held_player_blocks_random_move_away_after_rndmove(self):
+        # Rogue 5.4.4 move.c:do_move() applies ISHELD after confused rndmove() chooses nh.
+        game = new_game(seed=518)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 10
+        flytrap = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rolls = iter([1, 0, 1])
+            rogue.RNG.rnd = lambda n: next(rolls)
+            turn = game.turn
+            moved = game.try_move(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you are being held", game.msgs)
 
     def test_rogue_544_chase_helper_random_move_gate_matches_source_order(self):
         # Rogue 5.4.4 chase.c:chase() tests ISHUH, Phantom, then Bat random movement.
