@@ -197,6 +197,8 @@ def roll_em_damage(damage_expr: str, swing, roll_part, dplus: int, add_dam: int)
     did_hit = False
     total = 0
     for part in damage_expr.split("/"):
+        if "x" not in part:
+            break
         if swing():
             total += roll_em_part_damage(roll_part(part), dplus, add_dam)
             did_hit = True

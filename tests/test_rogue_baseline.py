@@ -6543,6 +6543,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(damage, 7)
         self.assertEqual(rolls, ["1x4"])
 
+    def test_rogue_544_fight_helper_roll_em_damage_stops_before_malformed_part(self):
+        # Rogue 5.4.4 fight.c:roll_em() breaks before swing() when a damage part has no 'x'.
+        import rogue_fight
+
+        swings = []
+        hit, damage = rogue_fight.roll_em_damage(
+            "1x1/bad/1x1",
+            swing=lambda: swings.append(True) or True,
+            roll_part=lambda part: 1,
+            dplus=0,
+            add_dam=0,
+        )
+
+        self.assertTrue(hit)
+        self.assertEqual(damage, 1)
+        self.assertEqual(swings, [True])
+
     def test_rogue_544_fight_helper_roll_em_part_damage_clamps_negative(self):
         # Rogue 5.4.4 fight.c:roll_em() subtracts max(0, dplus + proll + add_dam[s_str]).
         import rogue_fight
