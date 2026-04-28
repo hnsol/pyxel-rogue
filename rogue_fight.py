@@ -25,6 +25,15 @@ def swing(at_lvl: int, op_arm: int, wplus: int, rnd) -> bool:
     return rnd(20) + wplus >= need
 
 
+def set_mname(visible: bool, detected: bool, hallucinating: bool, real_name: str, random_name, unseen_name: str):
+    """Rogue 5.4.4 fight.c:set_mname()."""
+    if not (visible or detected):
+        return unseen_name
+    if hallucinating:
+        return random_name()
+    return real_name
+
+
 def magic_item_to_steal(inventory, equipped_items, is_magic_item, rnd):
     """Rogue 5.4.4 fight.c:attack() Nymph steal selection."""
     steal = None

@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_1620"
+UI_BUILD = "260428_1632"
 
 # ===========================================================
 #  Font
@@ -1664,14 +1664,17 @@ class Game:
         self._append_msg(t)
 
     def combat_monster_name(self,m,upper=False):
-        if not (self.can_see_monster(m) or self.can_detect_monsters()):
-            name = "something" if self.lang == LANG_EN else "何者か"
-        else:
-            if self.p.hallucinating > 0:
-                spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
-                name = TextCatalog.monster(self.lang, spec.name if spec else m.name)
-            else:
-                name=TextCatalog.monster(self.lang,m.name)
+        def random_monster_name():
+            spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
+            return TextCatalog.monster(self.lang, spec.name if spec else m.name)
+        name = rogue_fight.set_mname(
+            self.can_see_monster(m),
+            self.can_detect_monsters(),
+            self.p.hallucinating > 0,
+            TextCatalog.monster(self.lang, m.name),
+            random_monster_name,
+            "something" if self.lang == LANG_EN else "何者か",
+        )
         if self.lang==LANG_EN and name != "something":
             name=f"the {name}"
         if self.lang==LANG_EN and upper:
