@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0918"
+UI_BUILD = "260429_0926"
 
 # ===========================================================
 #  Font
@@ -2309,6 +2309,7 @@ class Game:
             else:
                 self.fuses.fuse("sight", duration, rogue_daemons.AFTER)
             p.blind += duration
+            self.update_fov()
             self.msg("potions.oh_bummer_everything_is_dark_help" if p.hallucinating > 0 else "potions.a_cloak_of_darkness_falls_around_you")
         elif nm=="haste self":
             self.ident.pk[it.kind]=True
@@ -2377,7 +2378,7 @@ class Game:
             else:
                 self.fuses.fuse("land", duration, rogue_daemons.AFTER)
             p.levitating += duration
-            self.msg("potions.you_start_to_float_in_the_air")
+            self.msg("potions.oh_wow_you_re_floating_in_the_air" if p.hallucinating > 0 else "potions.you_start_to_float_in_the_air")
         self.ident.pg[it.kind] = rogue_potions.call_it_guess_after_use(
             self.ident.pk[it.kind], self.ident.pg[it.kind]
         )

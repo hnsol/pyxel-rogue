@@ -3034,6 +3034,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.fuses.remaining("sight"), 0)
         self.assertIn("the veil of darkness lifts", game.msgs)
 
+    def test_rogue_544_new_blindness_potion_refreshes_look_to_hero_only(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_BLIND) calls look(FALSE) after setting ISBLIND.
+        game = new_game(seed=346)
+        room = rogue.Room(5, 5, 8, 6)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(game.tm, room)
+        game.p.x, game.p.y = room.x + 2, room.y + 2
+        game.visible = {(x, y) for y in range(room.y, room.y + room.h) for x in range(room.x, room.x + room.w)}
+        game.explored = set(game.visible)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "blindness")
+
+        game.use_pot(rogue.Item(rogue.CAT_POT, potion_kind))
+
+        self.assertEqual(game.visible, {(game.p.x, game.p.y)})
+
     def test_rogue_544_daemon_fuse_lengthen_extinguish_and_after_tick(self):
         # Rogue 5.4.4 daemon.c:fuse()/lengthen()/extinguish()/do_fuses(AFTER).
         import rogue_daemons
@@ -4333,6 +4349,17 @@ class RogueBaselineTest(unittest.TestCase):
         duration = rogue.HEALTIME - rogue.HEALTIME // 20
         self.assertEqual(game.p.levitating, duration * 2)
         self.assertEqual(game.fuses.remaining("land"), duration * 2)
+
+    def test_rogue_544_hallucinating_levitation_uses_high_message(self):
+        # Rogue 5.4.4 potions.c:do_pot(P_LEVIT) prints choose_str(pa_high, pa_straight).
+        game = new_game(seed=315)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "levitation")
+        game.p.hallucinating = 10
+
+        game.use_pot(rogue.Item(rogue.CAT_POT, potion_kind))
+
+        self.assertIn("oh, wow!  You're floating in the air!", game.msgs)
+        self.assertNotIn("you start to float in the air", game.msgs)
 
     def test_rogue_544_potion_hallucination_uses_spread_seeduration_and_comes_down(self):
         # Rogue 5.4.4 potions.c:P_LSD uses do_pot(ISHALU, come_down, SEEDURATION).
