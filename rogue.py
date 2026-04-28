@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0811"
+UI_BUILD = "260429_0824"
 
 # ===========================================================
 #  Font
@@ -2087,9 +2087,13 @@ class Game:
                 ) or chase_dest
         elif self.try_dragon_breath(m):
             return 0
+        orig_pos=(m.x,m.y)
         moved_or_attack=self.chase(m,chase_dest)
         if moved_or_attack=="attack":
             return -1 if m not in self.mons else 0
+        if moved_or_attack=="move" and m.sym=="F":
+            m.x,m.y=orig_pos
+            return 0
         if m.dest!=DEST_PLAYER and (m.x,m.y)==dest:
             self.collect_monster_dest(m,dest)
         return 0

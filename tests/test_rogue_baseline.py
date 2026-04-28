@@ -3642,6 +3642,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertEqual(monster.dest, (24, 4))
 
+    def test_rogue_544_do_chase_venus_flytrap_does_not_relocate_while_chasing(self):
+        # Rogue 5.4.4 chase.c:do_chase() returns before relocate() when chase() continues for 'F'.
+        game = new_game(seed=517)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 3, game.p.y, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        flytrap.running = True
+        flytrap.dest = rogue.DEST_PLAYER
+        game.mons = [flytrap]
+
+        game.do_chase(flytrap)
+
+        self.assertEqual((flytrap.x, flytrap.y), (game.p.x + 3, game.p.y))
+
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
         import rogue_chase
