@@ -127,6 +127,20 @@ def nohaste_state():
     return 0, False, "daemons.you_feel_yourself_slowing_down"
 
 
+def come_down_result(hallucinating: bool, blind: bool):
+    """Rogue 5.4.4 daemons.c:come_down() action/message branch."""
+    if not hallucinating:
+        return False, None
+    if blind:
+        return True, None
+    return True, "daemons.everything_looks_so_boring_now"
+
+
+def land_state():
+    """Rogue 5.4.4 daemons.c:land() effect."""
+    return 0, "daemons.you_float_gently_to_the_ground"
+
+
 def swander(actions) -> None:
     """Rogue 5.4.4 daemons.c:swander()."""
     actions.daemons.start("rollwand", BEFORE)

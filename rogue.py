@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2101"
+UI_BUILD = "260428_2126"
 
 # ===========================================================
 #  Font
@@ -2344,17 +2344,19 @@ class Game:
 
     def come_down(self):
         # C: daemons.c:come_down()
-        if self.p.hallucinating <= 0:
+        should_clear, message_key = rogue_daemons.come_down_result(
+            self.p.hallucinating > 0, self.p.blind > 0
+        )
+        if not should_clear:
             return
         self.p.hallucinating = 0
-        if self.p.blind > 0:
-            return
-        self.msg("daemons.everything_looks_so_boring_now")
+        if message_key:
+            self.msg(message_key)
 
     def land(self):
         # C: daemons.c:land()
-        self.p.levitating = 0
-        self.msg("daemons.you_float_gently_to_the_ground")
+        self.p.levitating, message_key = rogue_daemons.land_state()
+        self.msg(message_key)
 
     def unconfuse(self):
         # C: daemons.c:unconfuse()

@@ -3706,6 +3706,22 @@ class RogueBaselineTest(unittest.TestCase):
             (0, False, "daemons.you_feel_yourself_slowing_down"),
         )
 
+    def test_rogue_544_daemons_helper_come_down_result_matches_source(self):
+        # Rogue 5.4.4 daemons.c:come_down() returns early if not hallucinating or while blind.
+        self.assertEqual(rogue.rogue_daemons.come_down_result(hallucinating=False, blind=False), (False, None))
+        self.assertEqual(rogue.rogue_daemons.come_down_result(hallucinating=True, blind=True), (True, None))
+        self.assertEqual(
+            rogue.rogue_daemons.come_down_result(hallucinating=True, blind=False),
+            (True, "daemons.everything_looks_so_boring_now"),
+        )
+
+    def test_rogue_544_daemons_helper_land_state_matches_source(self):
+        # Rogue 5.4.4 daemons.c:land() clears ISLEVIT and reports landing.
+        self.assertEqual(
+            rogue.rogue_daemons.land_state(),
+            (0, "daemons.you_float_gently_to_the_ground"),
+        )
+
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
         game = new_game(seed=316)

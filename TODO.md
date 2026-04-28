@@ -340,6 +340,7 @@
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の faint duration `rnd(8)+4` を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の starvation post-decrement / food subtraction / threshold 分岐を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:unconfuse()` / `sight()` / `nohaste()` の文言・状態分岐を `rogue_daemons.py` へ小分割
+  - [x] Rogue 5.4.4 `daemons.c:come_down()` / `land()` の文言・状態分岐を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:come_down()` 準拠で、blind 中は hallucination 解除後の再表示メッセージを抑止
   - [x] Rogue 5.4.4 `potions.c:P_HASTE` 準拠で、haste self quaff は `after=FALSE` として after-turn を進めない
   - [x] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
