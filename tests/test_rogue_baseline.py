@@ -1382,7 +1382,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue_rings.pick_ring_kind = old_pick
 
     def test_rogue_544_ring_slots_effects_and_cursed_remove(self):
-        # Rogue 5.4.4 rings.c:ring_on/ring_off and things.c:dropcheck().
+        # Rogue 5.4.4 rings.c:ring_on/ring_off, misc.c:chg_str(), and things.c:dropcheck().
         import rogue_rings
 
         player = rogue.Player()
@@ -1393,7 +1393,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(rogue_rings.put_on_ring(player, add_str, rogue_rings.LEFT))
         self.assertEqual(player.st, 18)
-        self.assertEqual(player.max_st, 18)
+        self.assertEqual(player.max_st, 16)
         self.assertTrue(rogue_rings.put_on_ring(player, prot, rogue_rings.RIGHT))
         player.recalc_ac()
         self.assertEqual(player.ac, 6)
@@ -4446,7 +4446,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
 
     def test_rogue_544_bonus_ring_on_does_not_identify_type(self):
-        # Rogue 5.4.4 rings.c:ring_on() applies ring effects but does not set ring_info[].oi_know.
+        # Rogue 5.4.4 rings.c:ring_on() uses misc.c:chg_str() but does not set ring_info[].oi_know.
         import rogue_rings
 
         game = new_game(seed=2101)
@@ -4458,6 +4458,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIs(game.p.ring_l, ring)
         self.assertEqual(game.p.st, 18)
+        self.assertEqual(game.p.max_st, 16)
         self.assertFalse(game.ident.rk[rogue_rings.R_ADDSTR])
 
     def test_rogue_544_ring_sustain_strength_blocks_poison_strength_loss(self):

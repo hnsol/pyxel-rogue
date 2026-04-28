@@ -238,6 +238,7 @@
 - [x] Rogue 5.4.4 `rings.c:ring_on()` / `command.c:command()` 準拠で ring put on bad path をターン消費にする
 - [x] Rogue 5.4.4 `rings.c:ring_on()` / `misc.c:is_current()` 準拠で現在装備中 ring の put on に in-use 表示を出す
 - [x] Rogue 5.4.4 `rings.c:ring_on()` 準拠で、補正系 ring 装備時も `ring_info[].oi_know` を立てない
+- [x] Rogue 5.4.4 `rings.c:ring_on()` / `misc.c:chg_str()` 準拠で add strength ring は現在 Strength だけを変え、base max Strength は変えない
 - [x] Rogue 5.4.4 `rings.c:ring_on()` の gate 判定を `rogue_rings.py` へ小分割
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `command.c:command()` 準拠で未装備 ring の take off を拒否しターン消費
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `things.c:dropcheck()` 準拠で cursed ring take off 失敗時はターン消費

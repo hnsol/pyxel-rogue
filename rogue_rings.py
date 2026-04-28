@@ -209,14 +209,12 @@ def _apply_on_effect(player, ring):
     """Apply stat side-effects when a ring is equipped (rings.c:ring_on)."""
     if ring.kind == R_ADDSTR:
         player.st += ring.ench
-        player.max_st += ring.ench
 
 
 def _remove_on_effect(player, ring):
     """Reverse stat side-effects when a ring is removed (rings.c:ring_off)."""
     if ring.kind == R_ADDSTR:
         player.st -= ring.ench
-        player.max_st -= ring.ench
 
 
 def protection_bonus(player):
