@@ -27,15 +27,25 @@ def doctor_tick(player, rng, regeneration_count: int = 0) -> None:
     level = player.level
     old_hp = player.hp
     player.quiet += 1
-    if level < 8:
-        if player.quiet + (level << 1) > 20:
-            player.hp += 1
-    elif player.quiet >= 3:
-        player.hp += rng.rnd(level - 7) + 1
+    player.hp += doctor_natural_heal_delta(level, player.quiet, rng.rnd)
     player.hp += regeneration_count
-    if player.hp != old_hp:
-        player.hp = min(player.hp, player.max_hp)
-        player.quiet = 0
+    player.hp, player.quiet = doctor_finalize_hp(old_hp, player.hp, player.max_hp, player.quiet)
+
+
+def doctor_natural_heal_delta(level: int, quiet: int, rnd) -> int:
+    """Rogue 5.4.4 daemons.c:doctor() non-ring recovery branch."""
+    if level < 8:
+        return 1 if quiet + (level << 1) > 20 else 0
+    if quiet >= 3:
+        return rnd(level - 7) + 1
+    return 0
+
+
+def doctor_finalize_hp(old_hp: int, hp: int, max_hp: int, quiet: int):
+    """Rogue 5.4.4 daemons.c:doctor() cap HP and reset quiet after change."""
+    if hp == old_hp:
+        return hp, quiet
+    return min(hp, max_hp), 0
 
 
 def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
@@ -51,7 +61,7 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
         if player.no_command or rng.rnd(5) != 0:
             return None
         player.state = "faint"
-        player.no_command += rng.rnd(8) + 4
+        player.no_command += stomach_faint_duration(rng.rnd)
         return "pyxel.faint_from_lack_of_food"
 
     old_food = player.food
@@ -70,6 +80,11 @@ def stomach_tick(player, rng, food_cost: int, moretime: int, starvetime: int):
 def stomach_stops_running(previous_state: str, current_state: str) -> bool:
     """Rogue 5.4.4 daemons.c:stomach() hungry_state change gate."""
     return previous_state != current_state
+
+
+def stomach_faint_duration(rnd) -> int:
+    """Rogue 5.4.4 daemons.c:stomach() faint no_command duration."""
+    return rnd(8) + 4
 
 
 def swander(actions) -> None:

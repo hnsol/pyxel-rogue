@@ -3528,6 +3528,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(player.hp, 13)
         self.assertEqual(player.quiet, 0)
 
+    def test_rogue_544_daemons_helper_doctor_natural_heal_delta_matches_source(self):
+        # Rogue 5.4.4 daemons.c:doctor() low/high level natural heal branches.
+        calls = []
+
+        self.assertEqual(rogue.rogue_daemons.doctor_natural_heal_delta(1, 18, lambda n: 99), 0)
+        self.assertEqual(rogue.rogue_daemons.doctor_natural_heal_delta(1, 19, lambda n: 99), 1)
+        self.assertEqual(
+            rogue.rogue_daemons.doctor_natural_heal_delta(10, 3, lambda n: calls.append(n) or 2),
+            3,
+        )
+        self.assertEqual(calls, [3])
+
+    def test_rogue_544_daemons_helper_doctor_finalize_caps_and_resets_on_hp_change(self):
+        # Rogue 5.4.4 daemons.c:doctor() caps to max_hp and clears quiet only if HP changed.
+        self.assertEqual(rogue.rogue_daemons.doctor_finalize_hp(12, 13, 12, 19), (12, 0))
+        self.assertEqual(rogue.rogue_daemons.doctor_finalize_hp(12, 12, 12, 19), (12, 19))
+
     def test_rogue_544_stomach_does_not_extend_existing_no_command_faint(self):
         # Rogue 5.4.4 daemons.c:stomach() returns when no_command is already nonzero.
         game = new_game(seed=315)
@@ -3627,6 +3644,13 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIsNone(msg)
         self.assertEqual(rng.calls, [5])
+
+    def test_rogue_544_daemons_helper_stomach_faint_duration_matches_source(self):
+        # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.
+        calls = []
+
+        self.assertEqual(rogue.rogue_daemons.stomach_faint_duration(lambda n: calls.append(n) or 7), 11)
+        self.assertEqual(calls, [8])
 
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
         # Rogue 5.4.4 daemons.c:stomach() uses no_command += rnd(8) + 4.

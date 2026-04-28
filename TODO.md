@@ -336,6 +336,8 @@
   - [x] Rogue 5.4.4 `daemon.c:do_fuses()` 準拠で、fuse 発火前に slot を空けて callback 中の再登録を可能にする
   - [x] Rogue 5.4.4 `daemon.c:d_slot()` 準拠で、daemon/fuse 登録時に先頭の空きスロットを再利用する
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の hungry_state 変化run停止と `misc.c:add_haste()` の nohaste 期間を helper 化
+  - [x] Rogue 5.4.4 `daemons.c:doctor()` の自然回復量と HP cap / quiet reset を `rogue_daemons.py` へ小分割
+  - [x] Rogue 5.4.4 `daemons.c:stomach()` の faint duration `rnd(8)+4` を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:come_down()` 準拠で、blind 中は hallucination 解除後の再表示メッセージを抑止
   - [x] Rogue 5.4.4 `potions.c:P_HASTE` 準拠で、haste self quaff は `after=FALSE` として after-turn を進めない
   - [x] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
