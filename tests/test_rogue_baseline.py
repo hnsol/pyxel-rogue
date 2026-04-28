@@ -4028,6 +4028,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn + 1)
         self.assertEqual(game.p.haste, 4)
 
+    def test_rogue_544_hasted_no_command_decrements_on_both_command_iterations(self):
+        # Rogue 5.4.4 command.c:command() sets ntimes++ for ISHASTE, then decrements no_command inside the loop.
+        game = new_game(seed=321)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.haste = 5
+        game.fuses.fuse("nohaste", 5, rogue.rogue_daemons.AFTER)
+        game.p.no_command = 2
+        turn = game.turn
+
+        game.end_turn()
+
+        self.assertEqual(game.p.no_command, 1)
+        self.assertEqual(game.turn, turn)
+        self.assertTrue(game.haste_half_turn)
+
+        game.end_turn()
+
+        self.assertEqual(game.p.no_command, 0)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you can move again", game.msgs)
+
     def test_rogue_544_haste_self_does_not_spend_after_turn_from_item_confirm(self):
         # Rogue 5.4.4 potions.c:P_HASTE sets after=FALSE before add_haste(TRUE).
         game = new_game(seed=313)

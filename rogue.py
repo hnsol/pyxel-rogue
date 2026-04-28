@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2338"
+UI_BUILD = "260428_2351"
 
 # ===========================================================
 #  Font
@@ -1248,6 +1248,7 @@ class Game:
         self.daemons.start("doctor", rogue_daemons.AFTER)
         self.daemons.start("stomach", rogue_daemons.AFTER)
         self.haste_half_turn = False
+        self.haste_no_command_half_turn = False
         self.result_scores = []
         self.result_entry = None
         self.result_outcome = None
@@ -2342,11 +2343,13 @@ class Game:
             self.p.no_command += result.no_command_add
             self.p.haste = 0
             self.haste_half_turn = False
+            self.haste_no_command_half_turn = False
             self.fuses.extinguish("nohaste")
             self.msg("misc.you_faint_from_exhaustion")
             return False
         self.p.haste = 1
         self.haste_half_turn = False
+        self.haste_no_command_half_turn = False
         if potion:
             self.p.haste = result.duration
             self.fuses.fuse("nohaste", result.duration, rogue_daemons.AFTER)
@@ -2355,6 +2358,7 @@ class Game:
     def nohaste(self):
         # C: daemons.c:nohaste()
         self.p.haste, self.haste_half_turn, message_key = rogue_daemons.nohaste_state()
+        self.haste_no_command_half_turn = False
         self.msg(message_key)
 
     def come_down(self):
@@ -3423,17 +3427,21 @@ class Game:
         if self.p.haste > 0 and not self.haste_half_turn:
             # Rogue 5.4.4 command.c:command() gives ISHASTE two player actions
             # before do_fuses(AFTER) and monster/daemon work advance.
+            if self.p.no_command > 0:
+                self.do_before_daemons()
+                self.decrement_no_command()
+                self.haste_no_command_half_turn = True
             self.haste_half_turn = True
             return
+        skip_before_daemons = self.haste_half_turn and self.haste_no_command_half_turn
         self.haste_half_turn = False
+        self.haste_no_command_half_turn = False
         self.turn+=1
         for i in range(msg_start, len(self.msg_turns)):
             self.msg_turns[i] = self.turn
-        self.do_before_daemons()
-        if self.p.no_command>0:
-            self.p.no_command-=1
-            if self.p.no_command==0:
-                self.msg("command.you_can_move_again")
+        if not skip_before_daemons:
+            self.do_before_daemons()
+        self.decrement_no_command()
         if self.p.confused>0 and self.fuses.remaining("unconfuse")==0:
             self.p.confused-=1
         if self.p.blind>0 and self.fuses.remaining("sight")==0:
@@ -3467,6 +3475,13 @@ class Game:
             if not self.death_cause: self.death_cause="died"
             self.msg("pyxel.died_restart"); self.enter_result_state("killed")
         self.turn_msg_start = len(self.msgs)
+
+    def decrement_no_command(self):
+        # C: command.c:command() --no_command inside the per-action loop.
+        if self.p.no_command > 0:
+            self.p.no_command -= 1
+            if self.p.no_command == 0:
+                self.msg("command.you_can_move_again")
 
     def do_before_daemons(self):
         # Rogue 5.4.4 command.c calls do_daemons(BEFORE), then do_fuses(BEFORE).
