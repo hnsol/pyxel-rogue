@@ -264,6 +264,8 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Rattlesnake sustain strength メッセージ監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Rattlesnake 毒低下メッセージ監査
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠の Ice monster freeze メッセージ再表示監査
+- [x] Rogue 5.4.4 `fight.c:set_mname()` 準拠で、見えていない monster の攻撃者名を `something` にする
+- [x] Rogue 5.4.4 `fight.c:set_mname()` 準拠で、hallucination 中の monster 名をランダム monster 名へ寄せる
 - [x] Rogue 5.4.4 `move.c:T_DART` 準拠の dart trap poison save 順序監査
 - [x] Rogue 5.4.4 `misc.c:add_str()` 準拠の poison potion Strength 下限監査
 - [x] Rogue 5.4.4 `potions.c:quaff()` / `misc.c:add_str()` 準拠の potion Strength / healing / extra healing helper 化

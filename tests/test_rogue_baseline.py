@@ -8309,6 +8309,38 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("you are frozen by the ice monster", game.msgs)
 
+    def test_rogue_544_unseen_monster_attack_uses_something_name(self):
+        # Rogue 5.4.4 fight.c:set_mname() uses "something" when !see_monst() && !SEEMONST.
+        game = new_game(seed=5033)
+        set_open_floor(game)
+        game.p.blind = 1
+        monster = monster_at(game.p.x + 1, game.p.y, "R", "rattlesnake", 10, 20, 100, "1x1", 5, "poison")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda subject: f"{subject} hit you"
+
+        game.m_attack(monster)
+
+        self.assertIn("Something hit you", game.msgs)
+        self.assertNotIn("The rattlesnake hit you", game.msgs)
+
+    def test_rogue_544_hallucinating_monster_attack_uses_random_monster_name(self):
+        # Rogue 5.4.4 fight.c:set_mname() uses the hallucinated A-Z screen glyph as the monster name.
+        game = new_game(seed=5034)
+        set_open_floor(game)
+        game.p.hallucinating = 10
+        monster = monster_at(game.p.x + 1, game.p.y, "H", "hobgoblin", 10, 20, 100, "1x1", 5, "")
+        game.roll_monster_attack = lambda m: (True, 0)
+        game.monster_hit_message = lambda subject: f"{subject} hit you"
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3 if n == 26 else 0
+            game.m_attack(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn("The dragon hit you", game.msgs)
+        self.assertNotIn("The hobgoblin hit you", game.msgs)
+
     def test_rogue_544_fight_helper_ice_freeze_adds_duration_and_reports_initial_freeze(self):
         # Rogue 5.4.4 fight.c:attack() adds rnd(2)+2; message only when no_command was zero.
         import rogue_fight
