@@ -176,7 +176,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260428_2243"
+UI_BUILD = "260428_2256"
 
 # ===========================================================
 #  Font
@@ -2517,6 +2517,10 @@ class Game:
                 return True  # Caller must NOT call close_menu()/end_turn() yet.
             else:
                 self.msg("pyxel.feel_vaguely_uneasy")
+                self.ident.sg[it.kind] = rogue_scrolls.call_it_guess_after_read(
+                    self.ident.sk[it.kind], self.ident.sg[it.kind]
+                )
+                return False
         elif nm=="enchant weapon":
             if rogue_scrolls.enchant_weapon(p.wpn, RNG.rnd):
                 self.msg("scrolls.your_color_glows_color2_for_a_moment", color=p.wpn.data["name"], color2="blue")
@@ -2965,9 +2969,6 @@ class Game:
             self.p.recalc_ac()
             if it.kind == rogue_rings.R_AGGR:
                 self.aggravate_monsters()
-            if it.kind in (rogue_rings.R_PROTECT, rogue_rings.R_ADDSTR,
-                           rogue_rings.R_ADDHIT, rogue_rings.R_ADDDAM):
-                self.ident.rk[it.kind]=True
             self.msg("pyxel.now_wearing_item", item=self.ident.name(it))
             return True
         return False
@@ -3761,9 +3762,10 @@ class Game:
         if self.dact=="Zap":
             if self.zap_item:
                 self.p.facing=(dx,dy)
-                self.zap_stick(self.zap_item,dx,dy)
+                spent_turn = self.zap_stick(self.zap_item,dx,dy)
                 self.close_menu()
-                self.end_turn()
+                if spent_turn:
+                    self.end_turn()
             return
 
     def start_trap_inspect(self):

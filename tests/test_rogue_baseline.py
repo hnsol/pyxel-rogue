@@ -384,6 +384,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_sticks.light_uses_room_branch(True))
         self.assertFalse(rogue_sticks.light_uses_room_branch(False))
 
+    def test_rogue_544_zap_non_stick_direction_does_not_spend_turn(self):
+        # Rogue 5.4.4 sticks.c:do_zap() sets after=FALSE when obj->o_type != STICK.
+        game = new_game(seed=2011)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.zap_item = potion
+        game.dact = "Zap"
+        game.st = rogue.ST_DIR
+        turn = game.turn
+
+        game.dir_confirm(1, 0)
+
+        self.assertEqual(game.turn, turn)
+        self.assertIn("you can't zap with that!", game.msgs)
+
     def test_rogue_544_zap_invisibility_and_cancellation_monster_flags(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_INVIS sets ISINVIS; WS_CANCEL sets ISCANC and clears ISINVIS/CANHUH.
         import rogue_sticks
@@ -4431,6 +4445,21 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.random.randrange = old_randrange
         self.assertFalse(monster.running)
 
+    def test_rogue_544_bonus_ring_on_does_not_identify_type(self):
+        # Rogue 5.4.4 rings.c:ring_on() applies ring effects but does not set ring_info[].oi_know.
+        import rogue_rings
+
+        game = new_game(seed=2101)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR, ench=2)
+        game.p.inv.append(ring)
+        game.ident.rk[rogue_rings.R_ADDSTR] = False
+
+        game.put_on_ring(ring)
+
+        self.assertIs(game.p.ring_l, ring)
+        self.assertEqual(game.p.st, 18)
+        self.assertFalse(game.ident.rk[rogue_rings.R_ADDSTR])
+
     def test_rogue_544_ring_sustain_strength_blocks_poison_strength_loss(self):
         # Rogue 5.4.4 fight.c/move.c/potions.c check R_SUSTSTR before chg_str(-1).
         import rogue_rings
@@ -5162,6 +5191,18 @@ class RogueBaselineTest(unittest.TestCase):
         # Rogue 5.4.4 scrolls.c:read_scroll() calls pack.c:leave_pack(obj, FALSE, FALSE).
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse")
         game = new_game(seed=5058)
+        scroll = rogue.Item(rogue.CAT_SCR, kind, qty=2)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertIn(scroll, game.p.inv)
+        self.assertEqual(scroll.qty, 1)
+
+    def test_rogue_544_identify_scroll_without_targets_consumes_one(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() calls leave_pack() once before whatis().
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
+        game = new_game(seed=5059)
         scroll = rogue.Item(rogue.CAT_SCR, kind, qty=2)
         game.p.inv.append(scroll)
 

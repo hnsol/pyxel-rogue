@@ -80,6 +80,7 @@
   - [x] Rogue 5.4.4 `sticks.c:WS_TELAWAY` / `WS_TELTO` 準拠で、teleport target は held を解除せず `ISRUN` / hero destination だけを設定する
   - [x] Rogue 5.4.4 `sticks.c:WS_LIGHT` 準拠で、既に明るい部屋でも room-lit branch にする
   - [x] Rogue 5.4.4 `sticks.c:WS_LIGHT` の room/gone branch 判定を `rogue_sticks.py` へ小分割
+  - [x] Rogue 5.4.4 `sticks.c:do_zap()` 準拠で、非杖 zap は `after=FALSE` としてターン非消費
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
@@ -115,6 +116,7 @@
   - [x] ring の `ring_num()` と stick の `charge_str()` は種類判明だけでなく個体 `ISKNOW` 後に表示する
   - [x] `command.c:call()` / `misc.c:call_it()` 相当の命名機能（`c` キー）— potion / scroll / ring / stick の `oi_guess` を設定
   - [x] Rogue 5.4.4 `scrolls.c:read_scroll()` / `misc.c:call_it()` 準拠で、判明した scroll の仮名を使用後にクリア
+  - [x] Rogue 5.4.4 `scrolls.c:read_scroll()` / `pack.c:leave_pack()` 準拠で、対象なし identify scroll stack は1個だけ消費
   - [x] `things.c:print_disc()` 相当の discovered list（`D` キー）— `oi_know`/`oi_guess` 一覧表示
   - [x] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
   - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
@@ -235,6 +237,7 @@
 - [x] Rogue 5.4.4 `weapons.c:wield()` の gate 判定を `rogue_weapons.py` へ小分割
 - [x] Rogue 5.4.4 `rings.c:ring_on()` / `command.c:command()` 準拠で ring put on bad path をターン消費にする
 - [x] Rogue 5.4.4 `rings.c:ring_on()` / `misc.c:is_current()` 準拠で現在装備中 ring の put on に in-use 表示を出す
+- [x] Rogue 5.4.4 `rings.c:ring_on()` 準拠で、補正系 ring 装備時も `ring_info[].oi_know` を立てない
 - [x] Rogue 5.4.4 `rings.c:ring_on()` の gate 判定を `rogue_rings.py` へ小分割
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `command.c:command()` 準拠で未装備 ring の take off を拒否しターン消費
 - [x] Rogue 5.4.4 `rings.c:ring_off()` / `things.c:dropcheck()` 準拠で cursed ring take off 失敗時はターン消費
