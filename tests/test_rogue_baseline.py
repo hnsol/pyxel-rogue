@@ -1146,22 +1146,25 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(hobgoblin.running)
 
-    def test_rogue_544_cancelled_monsters_do_not_use_special_attack_or_regen(self):
-        # Rogue 5.4.4 fight.c:attack() special switch is gated by !ISCANC; regen uses the same cancelled state.
+    def test_rogue_544_cancelled_monsters_do_not_use_special_attack(self):
+        # Rogue 5.4.4 fight.c:attack() special switch is gated by !ISCANC.
         game = new_game(seed=207)
         set_open_floor(game)
         ice = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze,cancel")
         game.m_attack(ice)
         self.assertEqual(game.p.no_command, 0)
 
-        troll = monster_at(game.p.x + 4, game.p.y, "T", "troll", hp=10, level=6, armor=4, damage="1x8", exp=120, flags="regen,cancel")
+    def test_rogue_544_isregen_flag_does_not_heal_monsters(self):
+        # Rogue 5.4.4 defines ISREGEN in rogue.h/extern.c but has no monster regen tick in chase.c.
+        game = new_game(seed=208)
+        set_open_floor(game)
+        troll = monster_at(game.p.x + 4, game.p.y, "T", "troll", hp=10, level=6, armor=4, damage="1x8", exp=120, flags="regen,mean")
         troll.max_hp = 20
         troll.running = True
         old_random = rogue.RNG.random
         try:
             rogue.RNG.random = lambda: 0
-            game.do_chase = lambda m: 0
-            game.m_turn(troll)
+            game.chase(troll, (game.p.x, game.p.y))
         finally:
             rogue.RNG.random = old_random
 
