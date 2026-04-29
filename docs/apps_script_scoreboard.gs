@@ -1,5 +1,7 @@
 const SHEET_NAME = 'scores';
 const DUMMY_TARGET_COUNT = 10;
+const DUMMY_DAILY_DAYS = 14;
+const DUMMY_WEEKLY_WEEKS = 8;
 const DUMMY_NAMES = [
   'RODNEY', 'YENDOR', 'WIZRODNY', 'AMULETYN', 'HJKLUSER',
   'LEVEL26', 'CHMOD777', 'DEADBEEF', 'SIGSEGV', 'NULLPTR',
@@ -28,7 +30,7 @@ function doGet(e) {
   if ((e.parameter.action || '') === 'rank') return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || 'weekly').toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
-  ensureDummyRows(period, key);
+  if (period !== 'season') ensureDummyRows(period, key);
   return json({ scores: topScores(period, key) });
 }
 
@@ -166,34 +168,40 @@ function allScores(period, key) {
 }
 
 function seedDummy() {
-  const p = currentPeriods();
-  return ensureDummyRows('daily', p.period_day)
-    + ensureDummyRows('weekly', p.period_week)
-    + ensureDummyRows('season', p.period_season);
+  const now = new Date();
+  let rows = 0;
+  for (let i = 0; i < DUMMY_DAILY_DAYS; i++) {
+    rows += ensureDummyRows('daily', periodsFor(addUtcDays(now, -i)).period_day);
+  }
+  for (let i = 0; i < DUMMY_WEEKLY_WEEKS; i++) {
+    rows += ensureDummyRows('weekly', periodsFor(addUtcDays(now, -i * 7)).period_week);
+  }
+  return rows;
 }
 
 function ensureDummyRows(period, key) {
-  const scores = topScores(period, key);
-  const needed = Math.max(0, DUMMY_TARGET_COUNT - scores.length);
+  const used = seededDummyNames(period, key);
+  const needed = Math.max(0, DUMMY_TARGET_COUNT - used.size);
   if (needed === 0) return 0;
-  const used = new Set(scores.map(r => cleanName(r.player_name)));
   const out = [];
+  const offset = dummyNameOffset(period, key);
   for (let i = 0; i < DUMMY_NAMES.length && out.length < needed; i++) {
-    if (used.has(cleanName(DUMMY_NAMES[i]))) continue;
-    const p = periodsFromKey(period, key);
+    const name = DUMMY_NAMES[(offset + i) % DUMMY_NAMES.length];
+    if (used.has(cleanName(name))) continue;
+    const p = periodsFromKey(period, key, i);
     out.push([
       timestampForPeriod(period, key, i),
       p.period_day,
       p.period_week,
       p.period_season,
-      DUMMY_NAMES[i],
+      name,
       60 + Math.floor(Math.random() * 1200),
       1 + Math.floor(Math.random() * 13),
       'killed',
       ['bat','orc','hobgoblin','snake','kestrel'][Math.floor(Math.random() * 5)],
       'dummy',
       true,
-      'dummy-' + period + '-' + key + '-' + DUMMY_NAMES[i]
+      'dummy-' + period + '-' + key + '-' + name
     ]);
   }
   if (out.length > 0) {
@@ -203,27 +211,39 @@ function ensureDummyRows(period, key) {
   return out.length;
 }
 
-function periodsFromKey(period, key) {
-  const now = currentPeriods();
+function seededDummyNames(period, key) {
+  const data = sheet().getDataRange().getValues();
+  const header = data.shift();
+  const idx = Object.fromEntries(header.map((h, i) => [h, i]));
+  const prefix = 'dummy-' + period + '-' + key + '-';
+  const names = new Set();
+  data.forEach(row => {
+    if (String(row[idx.score_id] || '').indexOf(prefix) === 0) {
+      names.add(cleanName(row[idx.player_name]));
+    }
+  });
+  return names;
+}
+
+function dummyNameOffset(period, key) {
+  const s = period + ':' + key;
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % DUMMY_NAMES.length;
+}
+
+function periodsFromKey(period, key, offset) {
   if (period === 'daily') {
-    return {
-      period_day: key,
-      period_week: now.period_week,
-      period_season: now.period_season
-    };
+    return periodsFor(new Date(key + 'T00:00:00Z'));
   }
-  if (period === 'season') {
-    return {
-      period_day: now.period_day,
-      period_week: now.period_week,
-      period_season: key
-    };
+  if (period === 'weekly') {
+    const p = periodsFor(dateForIsoWeek(key, offset % 7));
+    p.period_week = key;
+    return p;
   }
-  return {
-    period_day: now.period_day,
-    period_week: key,
-    period_season: now.period_season
-  };
+  const p = periodsFor(dateForSeason(key, offset * 7));
+  p.period_season = key;
+  return p;
 }
 
 function periodField(period) {
@@ -236,6 +256,28 @@ function timestampForPeriod(period, key, offset) {
   const d = new Date();
   d.setUTCMinutes(d.getUTCMinutes() - offset * 17);
   return d.toISOString();
+}
+
+function addUtcDays(d, days) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + days));
+}
+
+function dateForIsoWeek(key, dayOffset) {
+  const m = String(key).match(/^(\d{4})-W(\d{2})$/);
+  const year = m ? parseInt(m[1], 10) : new Date().getUTCFullYear();
+  const week = m ? parseInt(m[2], 10) : 1;
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const monday = addUtcDays(jan4, 1 - (jan4.getUTCDay() || 7));
+  return addUtcDays(monday, (week - 1) * 7 + dayOffset);
+}
+
+function dateForSeason(key, dayOffset) {
+  const parts = String(key).split('-');
+  const year = parseInt(parts[0], 10) || new Date().getUTCFullYear();
+  const season = parts[1] || 'Spring';
+  const month = { Spring: 2, Summer: 5, Fall: 8, Winter: 11 }[season] || 2;
+  const startYear = season === 'Winter' ? year - 1 : year;
+  return addUtcDays(new Date(Date.UTC(startYear, month, 1)), dayOffset);
 }
 
 function currentPeriods() {

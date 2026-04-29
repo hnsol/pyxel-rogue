@@ -8467,9 +8467,32 @@ class RogueBaselineTest(unittest.TestCase):
         with open(path, encoding="utf-8") as f:
             script = f.read()
 
+        self.assertIn("DUMMY_DAILY_DAYS = 14", script)
+        self.assertIn("DUMMY_WEEKLY_WEEKS = 8", script)
         self.assertIn("ensureDummyRows('daily'", script)
         self.assertIn("ensureDummyRows('weekly'", script)
-        self.assertIn("ensureDummyRows('season'", script)
+        self.assertNotIn("ensureDummyRows('season'", script)
+        self.assertIn("addUtcDays(now, -i)", script)
+        self.assertIn("addUtcDays(now, -i * 7)", script)
+
+    def test_apps_script_dummy_seed_uses_period_specific_dummy_rows(self):
+        path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
+        with open(path, encoding="utf-8") as f:
+            script = f.read()
+
+        self.assertIn("seededDummyNames(period, key)", script)
+        self.assertIn("dummyNameOffset(period, key)", script)
+        self.assertIn("'dummy-' + period + '-' + key + '-'", script)
+
+    def test_apps_script_weekly_and_season_dummy_rows_use_period_dates(self):
+        path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
+        with open(path, encoding="utf-8") as f:
+            script = f.read()
+
+        self.assertIn("periodsFromKey(period, key, i)", script)
+        self.assertIn("dateForIsoWeek(key, offset % 7)", script)
+        self.assertIn("dateForSeason(key, offset * 7)", script)
+        self.assertNotIn("period_day: now.period_day", script)
 
     def test_apps_script_score_fetch_ensures_dummy_rows_for_requested_period(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
@@ -8477,7 +8500,7 @@ class RogueBaselineTest(unittest.TestCase):
             script = f.read()
 
         do_get = script[script.index("function doGet"):script.index("function doPost")]
-        self.assertIn("ensureDummyRows(period, key)", do_get)
+        self.assertIn("if (period !== 'season') ensureDummyRows(period, key)", do_get)
         self.assertLess(do_get.index("ensureDummyRows(period, key)"), do_get.index("topScores(period, key)"))
 
     def test_online_score_url_defaults_to_deployed_apps_script(self):
