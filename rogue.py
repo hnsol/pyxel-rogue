@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0928"
+UI_BUILD = "260429_1126"
 
 # ===========================================================
 #  Font
@@ -2922,14 +2922,7 @@ class Game:
         else:
             target=self.first_zap_target(dx,dy)
             if target:
-                release_flytrap_kinds = (
-                    rogue_sticks.WS_INVIS,
-                    rogue_sticks.WS_POLYMORPH,
-                    rogue_sticks.WS_TELAWAY,
-                    rogue_sticks.WS_TELTO,
-                    rogue_sticks.WS_CANCEL,
-                )
-                if kind in release_flytrap_kinds and target.sym=="F" and self.p.held_by is target:
+                if rogue_sticks.zap_releases_flytrap(kind) and target.sym=="F" and self.p.held_by is target:
                     self.p.held_by=None
                 if kind == rogue_sticks.WS_INVIS:
                     rogue_monsters.make_invisible(target)

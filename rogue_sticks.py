@@ -132,6 +132,11 @@ def teleport_to_position(hero_pos: tuple[int, int], delta: tuple[int, int]) -> t
     return hero_pos[0] + delta[0], hero_pos[1] + delta[1]
 
 
+def zap_releases_flytrap(kind: int) -> bool:
+    """Rogue 5.4.4 sticks.c:do_zap() case group that clears player ISHELD for F."""
+    return kind in {WS_INVIS, WS_POLYMORPH, WS_TELAWAY, WS_TELTO, WS_CANCEL}
+
+
 def light_uses_room_branch(has_usable_room: bool) -> bool:
     """Rogue 5.4.4 sticks.c:WS_LIGHT checks ISGONE before room-lit branch."""
     return has_usable_room

@@ -714,6 +714,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_sticks.magic_missile_damage(4, 3, 1), 9)
         self.assertEqual(rogue_sticks.magic_missile_damage(1, -5, 0), 0)
 
+    def test_rogue_544_sticks_helper_zap_flytrap_release_group(self):
+        # Rogue 5.4.4 sticks.c:do_zap() clears ISHELD only for this target-effect case group.
+        import rogue_sticks
+
+        releasing = {
+            rogue_sticks.WS_INVIS,
+            rogue_sticks.WS_POLYMORPH,
+            rogue_sticks.WS_TELAWAY,
+            rogue_sticks.WS_TELTO,
+            rogue_sticks.WS_CANCEL,
+        }
+
+        for kind in range(len(rogue_sticks.STICKS)):
+            self.assertEqual(rogue_sticks.zap_releases_flytrap(kind), kind in releasing)
+
     def test_rogue_544_zap_magic_missile_saved_target_takes_no_damage(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE vanishes if save_throw(VS_MAGIC) succeeds.
         import rogue_sticks
