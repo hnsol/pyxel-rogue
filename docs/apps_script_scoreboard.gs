@@ -28,6 +28,7 @@ function doGet(e) {
   if ((e.parameter.action || '') === 'rank') return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || 'weekly').toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
+  ensureDummyRows(period, key);
   return json({ scores: topScores(period, key) });
 }
 

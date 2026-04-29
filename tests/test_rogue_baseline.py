@@ -8471,6 +8471,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ensureDummyRows('weekly'", script)
         self.assertIn("ensureDummyRows('season'", script)
 
+    def test_apps_script_score_fetch_ensures_dummy_rows_for_requested_period(self):
+        path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
+        with open(path, encoding="utf-8") as f:
+            script = f.read()
+
+        do_get = script[script.index("function doGet"):script.index("function doPost")]
+        self.assertIn("ensureDummyRows(period, key)", do_get)
+        self.assertLess(do_get.index("ensureDummyRows(period, key)"), do_get.index("topScores(period, key)"))
+
     def test_online_score_url_defaults_to_deployed_apps_script(self):
         import rogue_scores
 
