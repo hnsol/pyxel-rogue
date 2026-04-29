@@ -88,11 +88,19 @@ function topScores(period, key) {
 
 function seedDummy() {
   const p = currentPeriods();
-  const existing = topScores('weekly', p.period_week).filter(r => r.is_dummy).length;
+  return ensureDummyRows('weekly', p.period_week);
+}
+
+function ensureDummyRows(period, key) {
+  const existing = topScores(period, key).filter(r => r.is_dummy).length;
   let rows = 0;
   for (let i = existing; i < 24 && i < DUMMY_NAMES.length; i++) {
+    const p = periodsFromKey(period, key);
     appendScore({
-      timestamp: new Date().toISOString(),
+      timestamp: timestampForPeriod(period, key, i),
+      period_day: p.period_day,
+      period_week: p.period_week,
+      period_season: p.period_season,
       player_name: DUMMY_NAMES[i],
       score: 60 + Math.floor(Math.random() * 1200),
       depth: 1 + Math.floor(Math.random() * 13),
@@ -104,6 +112,28 @@ function seedDummy() {
     rows++;
   }
   return rows;
+}
+
+function periodsFromKey(period, key) {
+  const now = currentPeriods();
+  if (period === 'season') {
+    return {
+      period_day: now.period_day,
+      period_week: now.period_week,
+      period_season: key
+    };
+  }
+  return {
+    period_day: now.period_day,
+    period_week: key,
+    period_season: now.period_season
+  };
+}
+
+function timestampForPeriod(period, key, offset) {
+  const d = new Date();
+  d.setUTCMinutes(d.getUTCMinutes() - offset * 17);
+  return d.toISOString();
 }
 
 function currentPeriods() {

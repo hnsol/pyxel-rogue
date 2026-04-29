@@ -147,6 +147,7 @@ from rogue_scores import (
     save_player_name,
     save_score_entry,
     score_period_keys,
+    seed_dummy_online_scores,
     submit_online_score,
     sync_missing_local_best,
 )
@@ -198,7 +199,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1652"
+UI_BUILD = "260429_1707"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -1130,8 +1131,10 @@ class Game:
         self.name_pos = min(len(self.name_chars), 7)
         self.name_pick = 0
         self.logo_frames = 0
+        self.logo_seed_requested = False
         self.online_period = SCOREBOARD_PERIOD_WEEKLY
         self.online_scores = []
+        self.online_return_state = ST_TITLE
         self.b_prev = False
         self.b_frames = 0
         self.b_used = False
@@ -4194,6 +4197,9 @@ class Game:
 
     def upd_logo(self):
         self.logo_frames = getattr(self, "logo_frames", 0) + 1
+        if not getattr(self, "logo_seed_requested", False):
+            self.logo_seed_requested = True
+            seed_dummy_online_scores()
         if self.btn_any_key():
             self.st = ST_TITLE
             return
@@ -4209,6 +4215,7 @@ class Game:
                 self.prepare_title_new_game()
             elif self.title_cursor == 1:
                 self.st = ST_ONLINE_SCORE
+                self.online_return_state = ST_TITLE
                 self.load_online_period_scores()
             else:
                 self.open_name_input()
@@ -4245,7 +4252,11 @@ class Game:
 
     def upd_online_score(self):
         if self.btn_overlay_cancel() or self.btn_b():
-            self.st = ST_TITLE
+            target = getattr(self, "online_return_state", ST_TITLE)
+            if target == ST_LOGO:
+                self.logo_frames = 0
+                self.logo_seed_requested = False
+            self.st = target
             return
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
                    pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
@@ -4296,6 +4307,7 @@ class Game:
             if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
                        pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
                 self.st = ST_ONLINE_SCORE
+                self.online_return_state = ST_LOGO
                 self.load_online_period_scores()
                 return
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()

@@ -8338,6 +8338,19 @@ class RogueBaselineTest(unittest.TestCase):
             "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec",
         )
 
+    def test_seed_dummy_online_scores_posts_seed_action(self):
+        import rogue_scores
+
+        calls = []
+        old_http_json = rogue_scores._http_json
+        try:
+            rogue_scores._http_json = lambda url, payload=None: calls.append((url, payload)) or {"rows": 1}
+            self.assertTrue(rogue_scores.seed_dummy_online_scores("https://example.test/exec"))
+        finally:
+            rogue_scores._http_json = old_http_json
+
+        self.assertEqual(calls, [("https://example.test/exec", {"action": "seedDummy"})])
+
     def test_title_start_prepares_game_and_shows_map_immediately(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN)
@@ -8376,6 +8389,7 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+        self.assertEqual(game.online_return_state, rogue.ST_TITLE)
 
     def test_online_score_screen_cancel_is_safe_before_new_game_initializes_input_guards(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -8398,6 +8412,12 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
 
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+        self.assertEqual(game.online_return_state, rogue.ST_LOGO)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_LOGO)
+        self.assertEqual(game.logo_frames, 0)
 
     def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -8418,6 +8438,26 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
         self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_logo_requests_dummy_seed_once(self):
+        calls = []
+        old_seed = rogue.seed_dummy_online_scores
+        try:
+            rogue.seed_dummy_online_scores = lambda: calls.append("seed") or True
+            game = rogue.Game.__new__(rogue.Game)
+            game.settings = rogue.Settings()
+            game.st = rogue.ST_LOGO
+            game.logo_frames = 0
+            game.logo_seed_requested = False
+
+            rogue.pyxel.set_input()
+            game.update()
+            rogue.pyxel.set_input()
+            game.update()
+        finally:
+            rogue.seed_dummy_online_scores = old_seed
+
+        self.assertEqual(calls, ["seed"])
 
     def test_logo_and_title_use_bright_text_without_press_any_key_hint(self):
         game = rogue.Game.__new__(rogue.Game)

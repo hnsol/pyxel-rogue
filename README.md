@@ -122,7 +122,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 実装状況の詳細は [TODO.md](TODO.md) を参照してください。
 
-オンラインランキングの既定 Apps Script URL は `https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec` です。差し替える場合は `PYXEL_ROGUE_SCORE_URL` を指定してください。
+オンラインランキングの既定 Apps Script URL は `https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec` です。差し替える場合は `PYXEL_ROGUE_SCORE_URL` を指定してください。Pyxel Rogue は起動ロゴ中に `seedDummy` を呼び、Apps Script が不足分のダミー行を生成して Sheet に書きます。
 
 ## 今後の予定
 

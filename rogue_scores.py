@@ -330,6 +330,17 @@ def submit_online_score(entry: dict[str, Any], url: str | None = None) -> bool:
         return False
 
 
+def seed_dummy_online_scores(url: str | None = None) -> bool:
+    target = url if url is not None else ONLINE_SCORE_URL
+    if not target:
+        return False
+    try:
+        _http_json(target, {"action": "seedDummy"})
+        return True
+    except Exception:
+        return False
+
+
 def fetch_online_scores(period: str, url: str | None = None, timestamp: str | None = None) -> list[dict[str, Any]]:
     target = url if url is not None else ONLINE_SCORE_URL
     if not target:
