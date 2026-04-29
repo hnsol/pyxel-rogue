@@ -41,6 +41,8 @@ def install_pyxel_mock():
     pyxel.text = lambda *a, **kw: None
     pyxel.rect = lambda *a, **kw: None
     pyxel.rectb = lambda *a, **kw: None
+    pyxel.dither_calls = []
+    pyxel.dither = lambda alpha=1.0: pyxel.dither_calls.append(alpha)
     pyxel.__file__ = os.path.join(os.getcwd(), "pyxel", "__init__.py")
     for i, key in enumerate([
         "KEY_NONE", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
@@ -8509,25 +8511,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(text == "START" and c == 23 for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
 
-    def test_logo_colors_fade_in_hold_and_fade_out(self):
+    def test_logo_dither_fades_in_holds_and_fades_out(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
-        calls = []
-        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.txt = lambda x, y, s, c: None
 
+        rogue.pyxel.dither_calls.clear()
         game.logo_frames = 1
         game.draw_logo_screen()
-        early = dict(calls)["hann-solo laboratory"]
-        calls.clear()
+        early = rogue.pyxel.dither_calls[:]
+
+        rogue.pyxel.dither_calls.clear()
         game.logo_frames = 45
         game.draw_logo_screen()
-        hold = dict(calls)["hann-solo laboratory"]
-        calls.clear()
+        hold = rogue.pyxel.dither_calls[:]
+
+        rogue.pyxel.dither_calls.clear()
         game.logo_frames = 135
         game.draw_logo_screen()
-        late = dict(calls)["hann-solo laboratory"]
+        late = rogue.pyxel.dither_calls[:]
 
-        self.assertEqual((early, hold, late), (16, 23, 16))
+        rogue.pyxel.dither_calls.clear()
+        game.logo_frames = 145
+        game.draw_logo_screen()
+        black_hold = rogue.pyxel.dither_calls[:]
+
+        self.assertLess(early[0], 1.0)
+        self.assertEqual(hold[0], 1.0)
+        self.assertLess(late[0], 1.0)
+        self.assertEqual(black_hold[0], 0.0)
+        self.assertEqual((early[-1], hold[-1], late[-1], black_hold[-1]), (1.0, 1.0, 1.0, 1.0))
 
     def test_name_input_confirms_with_start_and_backspace_deletes(self):
         game = rogue.Game.__new__(rogue.Game)

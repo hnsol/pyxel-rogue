@@ -199,7 +199,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1718"
+UI_BUILD = "260429_1730"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -4575,20 +4575,14 @@ class Game:
 
     def draw_logo_screen(self):
         frame = getattr(self, "logo_frames", 0)
-        if frame < 15:
-            main_col, sub_col = 16, 5
-        elif frame < 30:
-            main_col, sub_col = 29, 8
-        elif frame < 45:
-            main_col, sub_col = 23, 13
-        elif frame < 105:
-            main_col, sub_col = 23, 30
-        elif frame < 120:
-            main_col, sub_col = 29, 23
-        elif frame < 135:
-            main_col, sub_col = 16, 8
+        if frame < 45:
+            alpha = max(0.0, min(1.0, frame / 45.0))
+        elif frame < 95:
+            alpha = 1.0
+        elif frame < 140:
+            alpha = max(0.0, min(1.0, (140 - frame) / 45.0))
         else:
-            main_col, sub_col = 16, 5
+            alpha = 0.0
         lines = [
             "hann-solo laboratory",
             "",
@@ -4597,8 +4591,10 @@ class Game:
             "    ALL RIGHTS RESERVED 1986",
         ]
         y = 118
+        pyxel.dither(alpha)
         for i, line in enumerate(lines):
-            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, main_col if i == 0 else sub_col)
+            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 23 if i == 0 else 30)
+        pyxel.dither(1.0)
 
     def draw_title_screen(self):
         self.txt(SCR_W // 2 - 30, 70, "ROGUE V5", 23)
