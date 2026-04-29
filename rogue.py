@@ -198,7 +198,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1627"
+UI_BUILD = "260429_1640"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -4188,7 +4188,7 @@ class Game:
         if self.btn_any_key():
             self.st = ST_TITLE
             return
-        if self.logo_frames >= 90:
+        if self.logo_frames >= 150:
             self.st = ST_TITLE
 
     def upd_title(self):
@@ -4548,10 +4548,18 @@ class Game:
 
     def draw_logo_screen(self):
         frame = getattr(self, "logo_frames", 0)
-        if frame < 60:
+        if frame < 15:
+            main_col, sub_col = 16, 5
+        elif frame < 30:
+            main_col, sub_col = 29, 8
+        elif frame < 45:
+            main_col, sub_col = 23, 13
+        elif frame < 105:
             main_col, sub_col = 23, 30
-        elif frame < 75:
+        elif frame < 120:
             main_col, sub_col = 29, 23
+        elif frame < 135:
+            main_col, sub_col = 16, 8
         else:
             main_col, sub_col = 16, 5
         lines = [

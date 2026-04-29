@@ -8377,13 +8377,13 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
 
-    def test_logo_auto_fades_after_three_seconds_and_can_be_skipped(self):
+    def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_LOGO
         game.logo_frames = 0
 
-        for _ in range(89):
+        for _ in range(149):
             rogue.pyxel.set_input()
             game.update()
         self.assertEqual(game.st, rogue.ST_LOGO)
@@ -8405,6 +8405,7 @@ class RogueBaselineTest(unittest.TestCase):
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c, x))
 
+        game.logo_frames = 45
         game.draw_logo_screen()
         self.assertIn(("hann-solo laboratory", 23, rogue.SCR_W // 2 - len("hann-solo laboratory") * 3), calls)
         self.assertFalse(any("PRESS ANY KEY" in text for text, _c, _x in calls))
@@ -8414,6 +8415,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("ROGUE V5", 23, rogue.SCR_W // 2 - 30), calls)
         self.assertTrue(any(text == "START" and c == 23 for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
+
+    def test_logo_colors_fade_in_hold_and_fade_out(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.logo_frames = 1
+        game.draw_logo_screen()
+        early = dict(calls)["hann-solo laboratory"]
+        calls.clear()
+        game.logo_frames = 45
+        game.draw_logo_screen()
+        hold = dict(calls)["hann-solo laboratory"]
+        calls.clear()
+        game.logo_frames = 135
+        game.draw_logo_screen()
+        late = dict(calls)["hann-solo laboratory"]
+
+        self.assertEqual((early, hold, late), (16, 23, 16))
 
     def test_name_input_confirms_with_start_and_backspace_deletes(self):
         game = rogue.Game.__new__(rogue.Game)
