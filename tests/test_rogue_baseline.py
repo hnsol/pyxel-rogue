@@ -8369,6 +8369,44 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
 
+    def test_logo_auto_fades_after_three_seconds_and_can_be_skipped(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_LOGO
+        game.logo_frames = 0
+
+        for _ in range(89):
+            rogue.pyxel.set_input()
+            game.update()
+        self.assertEqual(game.st, rogue.ST_LOGO)
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+        game.st = rogue.ST_LOGO
+        game.logo_frames = 0
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_logo_and_title_use_bright_text_without_press_any_key_hint(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.player_name = "ACE"
+        game.title_cursor = 0
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c, x))
+
+        game.draw_logo_screen()
+        self.assertIn(("hann-solo laboratory", 23, rogue.SCR_W // 2 - len("hann-solo laboratory") * 3), calls)
+        self.assertFalse(any("PRESS ANY KEY" in text for text, _c, _x in calls))
+
+        calls.clear()
+        game.draw_title_screen()
+        self.assertIn(("ROGUE V5", 23, rogue.SCR_W // 2 - 30), calls)
+        self.assertTrue(any(text == "START" and c == 23 for text, c, _x in calls))
+        self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
+
     def test_name_input_confirms_with_start_and_backspace_deletes(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()

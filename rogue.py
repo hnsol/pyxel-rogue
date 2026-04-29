@@ -198,7 +198,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1544"
+UI_BUILD = "260429_1627"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -1129,6 +1129,7 @@ class Game:
         self.name_chars = list(self.player_name[:8])
         self.name_pos = min(len(self.name_chars), 7)
         self.name_pick = 0
+        self.logo_frames = 0
         self.online_period = SCOREBOARD_PERIOD_WEEKLY
         self.online_scores = []
         self.st = ST_LOGO
@@ -4183,7 +4184,11 @@ class Game:
         self.st = ST_NAME
 
     def upd_logo(self):
+        self.logo_frames = getattr(self, "logo_frames", 0) + 1
         if self.btn_any_key():
+            self.st = ST_TITLE
+            return
+        if self.logo_frames >= 90:
             self.st = ST_TITLE
 
     def upd_title(self):
@@ -4542,6 +4547,13 @@ class Game:
         elif self.st==ST_SCORE: self.draw_score_screen()
 
     def draw_logo_screen(self):
+        frame = getattr(self, "logo_frames", 0)
+        if frame < 60:
+            main_col, sub_col = 23, 30
+        elif frame < 75:
+            main_col, sub_col = 29, 23
+        else:
+            main_col, sub_col = 16, 5
         lines = [
             "hann-solo laboratory",
             "",
@@ -4551,18 +4563,16 @@ class Game:
         ]
         y = 118
         for i, line in enumerate(lines):
-            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 10 if i == 0 else 13)
-        self.txt(SCR_W // 2 - 54, 250, "PRESS ANY KEY", 6)
+            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, main_col if i == 0 else sub_col)
 
     def draw_title_screen(self):
-        self.txt(SCR_W // 2 - 30, 70, "ROGUE V5", 10)
+        self.txt(SCR_W // 2 - 30, 70, "ROGUE V5", 23)
         items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
         y = 130
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
-            self.txt(205, y + i * 24, ">" if i == cur else " ", 10)
-            self.txt(220, y + i * 24, item, 10 if i == cur else 7)
-        self.txt(190, 270, "A/Start SELECT", 5)
+            self.txt(205, y + i * 24, ">" if i == cur else " ", 23)
+            self.txt(220, y + i * 24, item, 23 if i == cur else 30)
 
     def draw_name_input(self):
         self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", 10)
