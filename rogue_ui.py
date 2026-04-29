@@ -15,6 +15,11 @@ ST_QUIT_CONFIRM = 11
 ST_SCORE = 12
 ST_CALL = 13
 ST_DISC = 14
+ST_LOGO = 15
+ST_TITLE = 16
+ST_NAME = 17
+ST_READY = 18
+ST_ONLINE_SCORE = 19
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",

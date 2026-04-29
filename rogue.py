@@ -133,7 +133,23 @@ from rogue_palettes import (
     PALETTE_LABELS,
     PALETTES,
 )
-from rogue_scores import build_score_entry, format_top_score_lines, get_top_scores, load_score_entries, save_score_entry
+from rogue_scores import (
+    SCOREBOARD_PERIOD_SEASON,
+    SCOREBOARD_PERIOD_WEEKLY,
+    fetch_online_scores,
+    build_score_entry,
+    format_top_score_lines,
+    get_period_scores,
+    get_top_scores,
+    load_player_name,
+    load_score_entries,
+    sanitize_player_name,
+    save_player_name,
+    save_score_entry,
+    score_period_keys,
+    submit_online_score,
+    sync_missing_local_best,
+)
 from rogue_timing import (
     AMULET_LEVEL,
     BEARTIME,
@@ -168,16 +184,22 @@ from rogue_ui import (
     ST_INVENTORY,
     ST_ITEM,
     ST_LOADING,
+    ST_LOGO,
     ST_MENU,
+    ST_NAME,
+    ST_ONLINE_SCORE,
     ST_PLAY,
     ST_QUIT,
     ST_QUIT_CONFIRM,
+    ST_READY,
     ST_SCORE,
+    ST_TITLE,
     ST_WIN,
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_0928"
+UI_BUILD = "260429_1544"
+NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
 #  Font
@@ -1097,9 +1119,20 @@ class Game:
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
         self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
-        self.st = ST_LOADING
-        self._loading_phase = 0
+        self.init_frontend_state()
         pyxel.run(self.update, self.draw)
+
+    def init_frontend_state(self):
+        default_name = os.environ.get("USER", "ROGUE")
+        self.player_name = load_player_name(default_name)
+        self.title_cursor = 0
+        self.name_chars = list(self.player_name[:8])
+        self.name_pos = min(len(self.name_chars), 7)
+        self.name_pick = 0
+        self.online_period = SCOREBOARD_PERIOD_WEEKLY
+        self.online_scores = []
+        self.st = ST_LOGO
+        self._loading_phase = 0
 
     def ensure_settings(self):
         if "settings" not in self.__dict__:
@@ -1134,6 +1167,9 @@ class Game:
 
     def run_step_interval(self):
         return DASH_INTERVAL if self.ensure_settings().show_run_steps else 1
+
+    def current_player_name(self):
+        return sanitize_player_name(getattr(self, "player_name", "rogue"))
 
     def monster_color(self, sym):
         overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
@@ -1237,7 +1273,8 @@ class Game:
         self.hp_damage_from = None
         self.hp_damage_turn = None
         self.death_cause = ""
-        self.options = {"tombstone": True, "name": os.environ.get("USER", "rogue")}
+        self.player_name = self.current_player_name()
+        self.options = {"tombstone": True, "name": self.player_name}
         self.max_depth = 0
         self.no_food = 0
         self.wander_timer = 0
@@ -1256,7 +1293,7 @@ class Game:
         self.descend()
         self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
         self.wander_timer = self.fuses.remaining("swander")
-        self.msg("pyxel.welcome_to_dungeons")
+        self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
 
     def result_level(self, outcome):
         return self.max_depth if outcome == "winner" else self.p.depth
@@ -1278,11 +1315,12 @@ class Game:
             result_flags=self.result_flags(outcome),
             level=self.result_level(outcome),
             killer=self.result_killer(outcome),
-            player_name=self.options.get("name", "rogue"),
+            player_name=self.current_player_name(),
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             gold=self.p.gold,
         )
         save_score_entry(self.result_entry)
+        submit_online_score(self.result_entry)
         self.result_scores = get_top_scores(load_score_entries(), limit=10)
         if outcome == "winner":
             self.st = ST_WIN
@@ -2922,14 +2960,7 @@ class Game:
         else:
             target=self.first_zap_target(dx,dy)
             if target:
-                release_flytrap_kinds = (
-                    rogue_sticks.WS_INVIS,
-                    rogue_sticks.WS_POLYMORPH,
-                    rogue_sticks.WS_TELAWAY,
-                    rogue_sticks.WS_TELTO,
-                    rogue_sticks.WS_CANCEL,
-                )
-                if kind in release_flytrap_kinds and target.sym=="F" and self.p.held_by is target:
+                if rogue_sticks.zap_releases_flytrap(kind) and target.sym=="F" and self.p.held_by is target:
                     self.p.held_by=None
                 if kind == rogue_sticks.WS_INVIS:
                     rogue_monsters.make_invisible(target)
@@ -3891,9 +3922,9 @@ class Game:
         if not self.dash_held():
             self.dash_restart_guard=False
         if b_now:
-            self.b_frames = self.b_frames+1 if self.b_prev else 1
+            self.b_frames = getattr(self, "b_frames", 0)+1 if getattr(self, "b_prev", False) else 1
         else:
-            if self.b_prev and not self.b_used and self.b_frames<=B_TAP_FRAMES:
+            if getattr(self, "b_prev", False) and not getattr(self, "b_used", False) and getattr(self, "b_frames", 0)<=B_TAP_FRAMES:
                 self.b_tap=True
             self.b_frames=0; self.b_used=False
         self.b_prev=b_now
@@ -3903,9 +3934,9 @@ class Game:
                       or self.kh(pyxel.GAMEPAD1_BUTTON_A)):
             self.b_used=True
         if back_now:
-            self.back_frames = self.back_frames+1 if self.back_prev else 1
+            self.back_frames = getattr(self, "back_frames", 0)+1 if getattr(self, "back_prev", False) else 1
         else:
-            if self.back_prev and not self.back_used and self.back_frames<=BACK_TAP_FRAMES:
+            if getattr(self, "back_prev", False) and not getattr(self, "back_used", False) and getattr(self, "back_frames", 0)<=BACK_TAP_FRAMES:
                 self.back_tap=True
             self.back_frames=0; self.back_used=False
         self.back_prev=back_now
@@ -4006,7 +4037,7 @@ class Game:
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT)
     def btn_a(self): return self.kp(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def held_a(self): return self.kh(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
-    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
+    def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or getattr(self, "b_tap", False)
     def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
     def btn_overlay_cancel(self):
         if self.kp(pyxel.KEY_ESCAPE): return True
@@ -4118,8 +4149,113 @@ class Game:
         if self.key_lower(pyxel.KEY_C): return "Call"
         return None
 
+    def prepare_title_new_game(self):
+        self.player_name = self.current_player_name()
+        self.new_game()
+        self.st = ST_READY
+
+    def load_online_period_scores(self):
+        period = getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY)
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        online = fetch_online_scores(period, timestamp=now)
+        keys = score_period_keys(now)
+        key = keys["period_season"] if period == SCOREBOARD_PERIOD_SEASON else keys["period_week"]
+        local = load_score_entries()
+        if online:
+            sync_missing_local_best(local, online, period, key, submit_online_score)
+            self.online_scores = get_period_scores(online, period, key, limit=10)
+        else:
+            self.online_scores = get_period_scores(local, period, key, limit=10)
+        return self.online_scores
+
+    def confirm_name_input(self):
+        name = "".join(getattr(self, "name_chars", [])).strip()
+        self.player_name = save_player_name(name)
+        self.name_chars = list(self.player_name)
+        self.name_pos = min(len(self.name_chars), 7)
+        self.st = ST_TITLE
+
+    def open_name_input(self):
+        self.player_name = self.current_player_name()
+        self.name_chars = list(self.player_name[:8])
+        self.name_pos = min(len(self.name_chars), 7)
+        self.name_pick = 0
+        self.st = ST_NAME
+
+    def upd_logo(self):
+        if self.btn_any_key():
+            self.st = ST_TITLE
+
+    def upd_title(self):
+        d = self.menu_vertical_press()
+        if d:
+            self.title_cursor = (getattr(self, "title_cursor", 0) + d) % 3
+        if self.btn_a() or self.btn_start_tap():
+            if self.title_cursor == 0:
+                self.prepare_title_new_game()
+            elif self.title_cursor == 1:
+                self.st = ST_ONLINE_SCORE
+                self.load_online_period_scores()
+            else:
+                self.open_name_input()
+
+    def upd_name(self):
+        if self.btn_start_tap():
+            self.confirm_name_input()
+            return
+        if self.btn_b():
+            if getattr(self, "name_chars", []):
+                self.name_chars.pop()
+                self.name_pos = max(0, len(self.name_chars) - 1)
+            else:
+                self.st = ST_TITLE
+            return
+        if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
+            self.name_pos = max(0, getattr(self, "name_pos", 0) - 1)
+        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
+            self.name_pos = min(8, getattr(self, "name_pos", 0) + 1)
+        d = self.menu_vertical_press()
+        if d:
+            chars = getattr(self, "name_chars", [])
+            pos = min(getattr(self, "name_pos", 0), 7)
+            while len(chars) <= pos:
+                chars.append(" ")
+            idx = NAME_ALPHABET.index(chars[pos]) if chars[pos] in NAME_ALPHABET else 0
+            chars[pos] = NAME_ALPHABET[(idx + d) % len(NAME_ALPHABET)]
+            self.name_chars = chars[:8]
+        if self.btn_a():
+            if getattr(self, "name_pos", 0) >= 8:
+                self.confirm_name_input()
+            else:
+                self.name_pos = min(8, getattr(self, "name_pos", 0) + 1)
+
+    def upd_ready(self):
+        if self.btn_any_key():
+            self.st = ST_PLAY
+
+    def upd_online_score(self):
+        if self.btn_overlay_cancel() or self.btn_b():
+            self.st = ST_TITLE
+            return
+        if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
+                   pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
+            self.online_period = (
+                SCOREBOARD_PERIOD_SEASON
+                if getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY) == SCOREBOARD_PERIOD_WEEKLY
+                else SCOREBOARD_PERIOD_WEEKLY
+            )
+            self.load_online_period_scores()
+
     # ---------- Update ----------
     def update(self):
+        if self.st in (ST_LOGO, ST_TITLE, ST_NAME, ST_READY, ST_ONLINE_SCORE):
+            self.begin_input()
+            if self.st == ST_LOGO: self.upd_logo()
+            elif self.st == ST_TITLE: self.upd_title()
+            elif self.st == ST_NAME: self.upd_name()
+            elif self.st == ST_READY: self.upd_ready()
+            elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
+            return
         if self.st == ST_LOADING:
             if self._loading_phase == 0:
                 self._loading_phase = 1  # let draw() show loading screen first
@@ -4375,6 +4511,21 @@ class Game:
     # =====================================================
     def draw(self):
         pyxel.cls(0)
+        if self.st == ST_LOGO:
+            self.draw_logo_screen()
+            return
+        if self.st == ST_TITLE:
+            self.draw_title_screen()
+            return
+        if self.st == ST_NAME:
+            self.draw_name_input()
+            return
+        if self.st == ST_READY:
+            self.draw_ready_screen()
+            return
+        if self.st == ST_ONLINE_SCORE:
+            self.draw_online_score_screen()
+            return
         if self.st == ST_LOADING:
             msg = "Loading..." if self.lang == LANG_EN else "ロード中..."
             self.txt(SCR_W // 2 - 30, SCR_H // 2, msg, 10)
@@ -4397,6 +4548,64 @@ class Game:
         elif self.st==ST_QUIT: self.draw_quit()
         elif self.st==ST_QUIT_CONFIRM: self.draw_quit_confirm()
         elif self.st==ST_SCORE: self.draw_score_screen()
+
+    def draw_logo_screen(self):
+        lines = [
+            "hann-solo laboratory",
+            "",
+            "(C) 1980-1985 U.C.BERKELEY / CSRG",
+            "      BY HSL LABORATORY, INC.",
+            "    ALL RIGHTS RESERVED 1986",
+        ]
+        y = 118
+        for i, line in enumerate(lines):
+            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 10 if i == 0 else 7)
+        self.txt(SCR_W // 2 - 54, 250, "PRESS ANY KEY", 5)
+
+    def draw_title_screen(self):
+        self.txt(SCR_W // 2 - 30, 70, "ROGUE V5", 10)
+        items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
+        y = 130
+        cur = getattr(self, "title_cursor", 0)
+        for i, item in enumerate(items):
+            self.txt(205, y + i * 24, ">" if i == cur else " ", 10)
+            self.txt(220, y + i * 24, item, 10 if i == cur else 7)
+        self.txt(190, 270, "A/Start SELECT", 5)
+
+    def draw_name_input(self):
+        self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", 10)
+        chars = getattr(self, "name_chars", [])
+        display = "".join(chars).ljust(8)[:8]
+        base_x, y = 216, 136
+        for i, ch in enumerate(display):
+            col = 10 if i == getattr(self, "name_pos", 0) else 7
+            self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
+        end_col = 10 if getattr(self, "name_pos", 0) >= 8 else 7
+        self.txt(base_x + 126, y, "END", end_col)
+        self.txt(154, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", 5)
+        self.txt(184, 226, "A NEXT/END  START OK  B DEL", 5)
+
+    def draw_ready_screen(self):
+        name = self.current_player_name()
+        self.txt(102, SCR_H // 2 - 6, TextCatalog.msg(self.lang, "pyxel.welcome_to_dungeons", name=name), 10)
+        self.txt(SCR_W // 2 - 42, SCR_H // 2 + 24, "PRESS ANY KEY", 5)
+
+    def draw_online_score_screen(self):
+        period = getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY)
+        title = "Season Legends" if period == SCOREBOARD_PERIOD_SEASON else "Weekly Rivals"
+        self._box(98, 48, 380, 244, title)
+        scores = getattr(self, "online_scores", []) or self.load_online_period_scores()
+        y = 78
+        for i, entry in enumerate(scores[:10], start=1):
+            name = str(entry.get("player_name", "ROGUE"))[:8]
+            score = int(entry.get("score", 0))
+            depth = int(entry.get("level", entry.get("depth", 0)) or 0)
+            dummy = "*" if entry.get("is_dummy") else " "
+            self.txt(120, y, f"{i:>2}{dummy} {score:>5} {name:<8} D:{depth:>2}", 10 if i == 1 else 7)
+            y += 16
+        if not scores:
+            self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
+        self.txt(126, 268, "LEFT/RIGHT WEEKLY/SEASON   B BACK", 5)
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)

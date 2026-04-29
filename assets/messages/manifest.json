@@ -2295,8 +2295,10 @@
     "origin": "pyxel-rogue"
   },
   "pyxel.welcome_to_dungeons": {
-    "source": "rogue.py:1158",
-    "params": [],
+    "source": "rogue.py:new_game",
+    "params": [
+      "name"
+    ],
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },

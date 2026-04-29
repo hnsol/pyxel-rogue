@@ -114,6 +114,8 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Amulet of Yendor、Amulet 所持での1階帰還勝利
 - 自動拾得ON/OFF、投擲アニメーション
 - 墓石つき死亡画面
+- 起動ロゴ、タイトル画面、英数字8文字のプレイヤー名入力
+- Google Sheets + Apps Script 連携用の Weekly Rivals / Season Legends オンラインランキング雛形
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
 - JSONメッセージカタログによる日英切替基盤、ロジックテスト基盤
 - Rogue2.Official の `mesg_E` / `mesg_J` を参考データとして同梱
@@ -127,7 +129,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - HUD / Inventory / Help / Death の文言辞書化
 - 可変レイアウト、フォント選択
 - BGM
-- ハイスコア / 全履歴
+- ハイスコア全履歴、オンラインランキング運用改善
 - リプレイ
 
 ## 参考リンク

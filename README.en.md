@@ -114,6 +114,8 @@ Implemented overview:
 - Amulet of Yendor and depth-1 return victory while carrying it
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
+- Startup logo, title screen, and 8-character alphanumeric player name entry
+- Weekly Rivals / Season Legends online ranking scaffold for Google Sheets + Apps Script
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - JSON message catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
@@ -127,7 +129,7 @@ See [TODO.md](TODO.md) for the detailed implementation status.
 - HUD / Inventory / Help / Death text catalog coverage
 - Responsive layout and font selection
 - BGM
-- High scores / full history
+- Full score history and online ranking operation improvements
 - Replay support
 
 ## Links
