@@ -328,7 +328,7 @@
   "pyxel.thrown_item_hits_monster_damage": "{item}が{monster}に当たった。 ({damage})",
   "pyxel.thrown_item_misses_monster": "{item}は{monster}に当たらなかった。",
   "pyxel.unable_to_move": "動けない。",
-  "pyxel.welcome_to_dungeons": "やあ {name}、ダンジョンを掘っているので少し待って...",
+  "pyxel.welcome_to_dungeons": "やあ {name}、運命の洞窟へようこそ。",
   "pyxel.welcome_to_level": "レベル{level}へようこそ。",
   "pyxel.wield_item": "{item}を武器にした。",
   "pyxel.wrenching_sensation_gut": "腹の底がねじれるような感じがした。",

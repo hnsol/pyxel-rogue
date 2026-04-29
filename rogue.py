@@ -4152,7 +4152,7 @@ class Game:
     def prepare_title_new_game(self):
         self.player_name = self.current_player_name()
         self.new_game()
-        self.st = ST_READY
+        self.st = ST_PLAY
 
     def load_online_period_scores(self):
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY)
@@ -4229,10 +4229,6 @@ class Game:
             else:
                 self.name_pos = min(8, getattr(self, "name_pos", 0) + 1)
 
-    def upd_ready(self):
-        if self.btn_any_key():
-            self.st = ST_PLAY
-
     def upd_online_score(self):
         if self.btn_overlay_cancel() or self.btn_b():
             self.st = ST_TITLE
@@ -4248,12 +4244,11 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
-        if self.st in (ST_LOGO, ST_TITLE, ST_NAME, ST_READY, ST_ONLINE_SCORE):
+        if self.st in (ST_LOGO, ST_TITLE, ST_NAME, ST_ONLINE_SCORE):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
             elif self.st == ST_TITLE: self.upd_title()
             elif self.st == ST_NAME: self.upd_name()
-            elif self.st == ST_READY: self.upd_ready()
             elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
             return
         if self.st == ST_LOADING:
@@ -4520,9 +4515,6 @@ class Game:
         if self.st == ST_NAME:
             self.draw_name_input()
             return
-        if self.st == ST_READY:
-            self.draw_ready_screen()
-            return
         if self.st == ST_ONLINE_SCORE:
             self.draw_online_score_screen()
             return
@@ -4559,8 +4551,8 @@ class Game:
         ]
         y = 118
         for i, line in enumerate(lines):
-            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 10 if i == 0 else 7)
-        self.txt(SCR_W // 2 - 54, 250, "PRESS ANY KEY", 5)
+            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 10 if i == 0 else 13)
+        self.txt(SCR_W // 2 - 54, 250, "PRESS ANY KEY", 6)
 
     def draw_title_screen(self):
         self.txt(SCR_W // 2 - 30, 70, "ROGUE V5", 10)
@@ -4584,11 +4576,6 @@ class Game:
         self.txt(base_x + 126, y, "END", end_col)
         self.txt(154, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", 5)
         self.txt(184, 226, "A NEXT/END  START OK  B DEL", 5)
-
-    def draw_ready_screen(self):
-        name = self.current_player_name()
-        self.txt(102, SCR_H // 2 - 6, TextCatalog.msg(self.lang, "pyxel.welcome_to_dungeons", name=name), 10)
-        self.txt(SCR_W // 2 - 42, SCR_H // 2 + 24, "PRESS ANY KEY", 5)
 
     def draw_online_score_screen(self):
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY)

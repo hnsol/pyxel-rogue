@@ -275,7 +275,7 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 スコア保存はゲームメカニクスの外側に置く。`vendor/rogue544/rip.c:score()` と `main.c:quit()` を基準に、順位は Gold のみ、死亡は 90%、quit と勝利は 100% を採用する。ローカル保存は JSON / localStorage とし、オンライン v1 は Google Sheets + Apps Script へ任意投稿する。タイトルの Online Ranking では Weekly Rivals / Season Legends を切り替え、Weekly / Season とも同一期間・同一 player_name の最高点だけを表示する。Season は Spring 3-5月、Summer 6-8月、Fall 9-11月、Winter 12-2月の固定季節制とする。Apps Script の雛形は `docs/apps_script_scoreboard.gs` に置く。投稿失敗時はゲーム進行を止めずローカル表示へ戻し、次回オンライン接続時にローカル最高点が未掲載なら再送する。
 
-タイトル導線は移植UIとして `Logo -> Title -> Name確認 -> Play` にする。起動ロゴは仮置きで HSL 表記と U.C.BERKELEY / CSRG 表記を表示し、任意キーでスキップできる。Title の Start は即 New Game 準備に進み、Name 欄選択時だけ英数字8文字の名前入力に入る。Name確認画面は Rogue 5.4.4 `main.c` の `Hello %s, just a moment while I dig the dungeon...` を表示し、この間はマップ/HUD/ログを描画しない。
+タイトル導線は移植UIとして `Logo -> Title -> Play` にする。起動ロゴは仮置きで HSL 表記と U.C.BERKELEY / CSRG 表記を表示し、任意キーでスキップできる。Title の Start は即 New Game に進み、Name 欄選択時だけ英数字8文字の名前入力に入る。ゲーム開始ログは `Hello <NAME>, welcome to the Dungeons of Doom!` / `やあ <NAME>、運命の洞窟へようこそ。` とし、開始直後からマップ/HUD/ログを描画する。
 
 ## Phase 4 残課題：原作との種類数・部屋タイプ差分
 

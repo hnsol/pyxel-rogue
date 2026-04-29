@@ -5054,7 +5054,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.TextCatalog._catalogs = None
             self.assertEqual(
                 rogue.TextCatalog.msg(rogue.LANG_EN, "pyxel.welcome_to_dungeons"),
-                "Hello {name}, just a moment while I dig the dungeon...",
+                "Hello {name}, welcome to the Dungeons of Doom!",
             )
         finally:
             builtins.open = original_open
@@ -5065,7 +5065,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)
         self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertEqual(game.msgs[-1], "Hello ROGUE, just a moment while I dig the dungeon...")
+        self.assertEqual(game.msgs[-1], "Hello ROGUE, welcome to the Dungeons of Doom!")
 
     def test_rogue_544_player_initial_stats_use_init_stats(self):
         # Rogue 5.4.4 extern.c:INIT_STATS is {16, 0, 1, 10, 12, "1x4", 12}.
@@ -8330,7 +8330,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(posted), 1)
         self.assertEqual(posted[0]["score"], 300)
 
-    def test_title_start_prepares_game_and_ready_screen_hides_map_until_input(self):
+    def test_title_start_prepares_game_and_shows_map_immediately(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.font = rogue.pyxel.Font("")
@@ -8341,16 +8341,16 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
-        self.assertEqual(game.st, rogue.ST_READY)
-        self.assertEqual(game.msgs[-1], "Hello ACE, just a moment while I dig the dungeon...")
-        game.draw_zoom = lambda: self.fail("ready screen must not draw the map")
-        game.draw_stat = lambda: self.fail("ready screen must not draw HUD")
-        game.draw_msgs = lambda: self.fail("ready screen must not draw log")
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.msgs[-1], "Hello ACE, welcome to the Dungeons of Doom!")
+        calls = []
+        game.draw_title = lambda: calls.append("title")
+        game.draw_zoom = lambda: calls.append("map")
+        game.draw_stat = lambda: calls.append("hud")
+        game.draw_msgs = lambda: calls.append("log")
         game.txt = lambda *args: None
         game.draw()
-        rogue.pyxel.set_input(held={rogue.pyxel.KEY_SPACE}, pressed={rogue.pyxel.KEY_SPACE})
-        game.update()
-        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(calls[:4], ["title", "map", "hud", "log"])
 
     def test_title_name_and_online_ranking_navigation(self):
         game = rogue.Game.__new__(rogue.Game)
