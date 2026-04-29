@@ -202,12 +202,15 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260430_0046"
+UI_BUILD = "260430_0114"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
 SCOREBOARD_TEXT_COL = 30
-SCOREBOARD_DIM_COL = 8
+SCOREBOARD_DIM_COL = 30
+UI_TEXT_COL = 30
+UI_SUBTEXT_COL = 9
+UI_HILITE_COL = 10
 
 # ===========================================================
 #  Font
@@ -4729,17 +4732,17 @@ class Game:
             self.txt(x, y + i * 24, item, 23 if i == cur else 30)
 
     def draw_name_input(self):
-        self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", 10)
+        self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_HILITE_COL)
         chars = getattr(self, "name_chars", [])
         display = "".join(chars).ljust(8)[:8]
         base_x, y = 216, 136
         for i, ch in enumerate(display):
-            col = 10 if i == getattr(self, "name_pos", 0) else 7
+            col = UI_HILITE_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
-        end_col = 10 if getattr(self, "name_pos", 0) >= 8 else 7
+        end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(154, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", 5)
-        self.txt(184, 226, "A NEXT/END  START OK  B DEL", 5)
+        self.txt(154, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
+        self.txt(184, 226, "A NEXT/END  START OK  B DEL", UI_TEXT_COL)
 
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
@@ -4773,7 +4776,7 @@ class Game:
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)
-        self.txt(HUD_X, 13, UI_BUILD, 5)
+        self.txt(HUD_X, 13, UI_BUILD, UI_SUBTEXT_COL)
 
     def should_draw_memory_tile(self, mx, my, tile):
         room = self.room_at(mx, my)
@@ -4956,7 +4959,7 @@ class Game:
             if not text:
                 continue
             self.txt(bx + 6, by + 16 + i * 9, text[:60], col if col else 9)
-        self.txt(bx + 4, by + bh - 10, hint, 5)
+        self.txt(bx + 4, by + bh - 10, hint, UI_TEXT_COL)
 
     def draw_dirp(self):
         bx,by=ZV_X+50,ZV_Y+90
@@ -5039,7 +5042,7 @@ class Game:
             self.txt(bx + 6, y, f"{i:>2} {score:>5} {name}", 9 if i != 1 else 10)
             y += 12
         if not scores:
-            self.txt(bx + 6, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
+            self.txt(bx + 6, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), UI_TEXT_COL)
 
     def draw_score_screen(self):
         bx,by=118,34; bw=340; bh=220
@@ -5050,7 +5053,7 @@ class Game:
             self.txt(bx + 12, y, line, 10 if i == 0 else 9)
             y += 14
         if not scores:
-            self.txt(bx + 12, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
+            self.txt(bx + 12, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), UI_TEXT_COL)
         self.txt(bx + 12, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_new_game"), 10)
 
     def draw_dead(self):
@@ -5058,16 +5061,16 @@ class Game:
             bx,by=105,42; bw=270; bh=190
             self._box(bx,by,bw,bh,"=== R.I.P. ===")
             p=self.p; x=bx+18; y=by+24
-            self.txt(x,y,"Here lies a brave rogue.",7); y+=22
-            self.txt(x,y,f"Cause: {self.death_cause or 'died'}",8); y+=18
-            self.txt(x,y,f"Depth: {p.depth}",7); y+=14
-            self.txt(x,y,f"Level: {p.level}",7); y+=14
-            self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
+            self.txt(x,y,"Here lies a brave rogue.",UI_TEXT_COL); y+=22
+            self.txt(x,y,f"Cause: {self.death_cause or 'died'}",UI_TEXT_COL); y+=18
+            self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
+            self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
+            self.txt(x,y,f"Gold:  {p.gold}",UI_HILITE_COL); y+=14
             next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-            self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
-            self.txt(x,y,f"Turn:  {self.turn}",5); y+=24
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10); y+=14
-            self.txt(x,y,"B          Stay here",5)
+            self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
+            self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=24
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL); y+=14
+            self.txt(x,y,"B          Stay here",UI_TEXT_COL)
             return
         bx,by=88,30; bw=320; bh=232
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
@@ -5091,43 +5094,43 @@ class Game:
             "____)/\\_//(\\/(/\\)/\\//\\|_)____",
         ]
         for ln in rip:
-            self.txt(x,y,ln,7); y+=11
+            self.txt(x,y,ln,UI_TEXT_COL); y+=11
         y+=4
-        self.txt(x,y,f"Depth: {p.depth}",7); y+=14
-        self.txt(x,y,f"Level: {p.level}",7); y+=14
+        self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
+        self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
         next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-        self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",7); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",5); y+=18
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10); y+=14
-        self.txt(x,y,"B          Stay here",5)
+        self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
+        self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=18
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL); y+=14
+        self.txt(x,y,"B          Stay here",UI_TEXT_COL)
 
     def draw_win(self):
         bx,by=82,50; bw=334; bh=176
         self._box(bx,by,bw,bh,"=== Victory ===")
         p=self.p; x=bx+18; y=by+26
-        self.txt(x,y,"You escaped from the Dungeons of Doom",10); y+=16
-        self.txt(x,y,"with the Amulet of Yendor.",10); y+=24
-        self.txt(x,y,f"Gold:  {p.gold}",10); y+=14
-        self.txt(x,y,f"Level: {p.level}",7); y+=14
-        self.txt(x,y,f"Exp:   {p.exp}",7); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",5); y+=28
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10)
+        self.txt(x,y,"You escaped from the Dungeons of Doom",UI_HILITE_COL); y+=16
+        self.txt(x,y,"with the Amulet of Yendor.",UI_HILITE_COL); y+=24
+        self.txt(x,y,f"Gold:  {p.gold}",UI_HILITE_COL); y+=14
+        self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
+        self.txt(x,y,f"Exp:   {p.exp}",UI_TEXT_COL); y+=14
+        self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=28
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_quit_confirm(self):
         bx,by=176,132; bw=224; bh=56
         self._box(bx,by,bw,bh,"-- Quit --")
-        self.txt(bx+12, by+20, TextCatalog.msg(self.lang, "main.really_quit"), 10)
-        self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), 5)
+        self.txt(bx+12, by+20, TextCatalog.msg(self.lang, "main.really_quit"), UI_HILITE_COL)
+        self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), UI_TEXT_COL)
 
     def draw_quit(self):
         bx,by=96,60; bw=300; bh=148
         self._box(bx,by,bw,bh,"=== Quit ===")
         p=self.p; x=bx+18; y=by+24
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),10); y+=24
-        self.txt(x,y,f"Depth: {p.depth}",7); y+=14
-        self.txt(x,y,f"Level: {p.level}",7); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",5); y+=26
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),10)
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),UI_HILITE_COL); y+=24
+        self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
+        self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
+        self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=26
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
 # ===========================================================
 if __name__=="__main__":
