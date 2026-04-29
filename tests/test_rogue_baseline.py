@@ -8462,18 +8462,17 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("'score_id'", script)
         self.assertIn("scoreIdExists(scoreId)", script)
 
-    def test_apps_script_dummy_seed_fills_daily_weekly_and_season(self):
+    def test_apps_script_dummy_seed_uses_small_seed_set(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
         with open(path, encoding="utf-8") as f:
             script = f.read()
 
-        self.assertIn("DUMMY_DAILY_DAYS = 14", script)
-        self.assertIn("DUMMY_WEEKLY_WEEKS = 8", script)
-        self.assertIn("ensureDummyRows('daily'", script)
-        self.assertIn("ensureDummyRows('weekly'", script)
+        self.assertIn("DUMMY_PAST_DAYS = 10", script)
+        self.assertIn("DUMMY_PAST_WEEKS = 10", script)
+        self.assertIn("ensureDummyRows('daily', currentPeriods().period_day, DUMMY_TARGET_COUNT)", script)
+        self.assertIn("ensureDummyRows('daily', periodsFor(addUtcDays(now, -i)).period_day, DUMMY_BACKFILL_COUNT)", script)
+        self.assertIn("ensureDummyRows('weekly', periodsFor(addUtcDays(now, -i * 7)).period_week, DUMMY_BACKFILL_COUNT)", script)
         self.assertNotIn("ensureDummyRows('season'", script)
-        self.assertIn("addUtcDays(now, -i)", script)
-        self.assertIn("addUtcDays(now, -i * 7)", script)
 
     def test_apps_script_dummy_seed_uses_period_specific_dummy_rows(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
@@ -8481,7 +8480,10 @@ class RogueBaselineTest(unittest.TestCase):
             script = f.read()
 
         self.assertIn("seededDummyNames(period, key)", script)
+        self.assertIn("targetCount - scores.length", script)
         self.assertIn("dummyNameOffset(period, key)", script)
+        self.assertIn("dummyValue(period, key, i, 'score', 1200)", script)
+        self.assertIn("dummyKiller(period, key, i)", script)
         self.assertIn("'dummy-' + period + '-' + key + '-'", script)
 
     def test_apps_script_weekly_and_season_dummy_rows_use_period_dates(self):
@@ -8500,8 +8502,9 @@ class RogueBaselineTest(unittest.TestCase):
             script = f.read()
 
         do_get = script[script.index("function doGet"):script.index("function doPost")]
-        self.assertIn("if (period !== 'season') ensureDummyRows(period, key)", do_get)
-        self.assertLess(do_get.index("ensureDummyRows(period, key)"), do_get.index("topScores(period, key)"))
+        self.assertIn("if (period === 'daily') ensureDummyRows(period, key, DUMMY_TARGET_COUNT)", do_get)
+        self.assertIn("if (period === 'weekly') ensureDummyRows(period, key, DUMMY_BACKFILL_COUNT)", do_get)
+        self.assertLess(do_get.index("ensureDummyRows(period, key,"), do_get.index("topScores(period, key)"))
 
     def test_online_score_url_defaults_to_deployed_apps_script(self):
         import rogue_scores

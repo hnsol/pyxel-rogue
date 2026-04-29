@@ -1,7 +1,8 @@
 const SHEET_NAME = 'scores';
 const DUMMY_TARGET_COUNT = 10;
-const DUMMY_DAILY_DAYS = 14;
-const DUMMY_WEEKLY_WEEKS = 8;
+const DUMMY_PAST_DAYS = 10;
+const DUMMY_PAST_WEEKS = 10;
+const DUMMY_BACKFILL_COUNT = 1;
 const DUMMY_NAMES = [
   'RODNEY', 'YENDOR', 'WIZRODNY', 'AMULETYN', 'HJKLUSER',
   'LEVEL26', 'CHMOD777', 'DEADBEEF', 'SIGSEGV', 'NULLPTR',
@@ -30,7 +31,8 @@ function doGet(e) {
   if ((e.parameter.action || '') === 'rank') return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || 'weekly').toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
-  if (period !== 'season') ensureDummyRows(period, key);
+  if (period === 'daily') ensureDummyRows(period, key, DUMMY_TARGET_COUNT);
+  if (period === 'weekly') ensureDummyRows(period, key, DUMMY_BACKFILL_COUNT);
   return json({ scores: topScores(period, key) });
 }
 
@@ -170,18 +172,21 @@ function allScores(period, key) {
 function seedDummy() {
   const now = new Date();
   let rows = 0;
-  for (let i = 0; i < DUMMY_DAILY_DAYS; i++) {
-    rows += ensureDummyRows('daily', periodsFor(addUtcDays(now, -i)).period_day);
+  rows += ensureDummyRows('daily', currentPeriods().period_day, DUMMY_TARGET_COUNT);
+  for (let i = 1; i <= DUMMY_PAST_DAYS; i++) {
+    rows += ensureDummyRows('daily', periodsFor(addUtcDays(now, -i)).period_day, DUMMY_BACKFILL_COUNT);
   }
-  for (let i = 0; i < DUMMY_WEEKLY_WEEKS; i++) {
-    rows += ensureDummyRows('weekly', periodsFor(addUtcDays(now, -i * 7)).period_week);
+  for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
+    rows += ensureDummyRows('weekly', periodsFor(addUtcDays(now, -i * 7)).period_week, DUMMY_BACKFILL_COUNT);
   }
   return rows;
 }
 
-function ensureDummyRows(period, key) {
-  const used = seededDummyNames(period, key);
-  const needed = Math.max(0, DUMMY_TARGET_COUNT - used.size);
+function ensureDummyRows(period, key, targetCount) {
+  const scores = topScores(period, key);
+  const used = new Set(scores.map(r => cleanName(r.player_name)));
+  seededDummyNames(period, key).forEach(name => used.add(cleanName(name)));
+  const needed = Math.max(0, targetCount - scores.length);
   if (needed === 0) return 0;
   const out = [];
   const offset = dummyNameOffset(period, key);
@@ -195,10 +200,10 @@ function ensureDummyRows(period, key) {
       p.period_week,
       p.period_season,
       name,
-      60 + Math.floor(Math.random() * 1200),
-      1 + Math.floor(Math.random() * 13),
+      60 + dummyValue(period, key, i, 'score', 1200),
+      1 + dummyValue(period, key, i, 'depth', 13),
       'killed',
-      ['bat','orc','hobgoblin','snake','kestrel'][Math.floor(Math.random() * 5)],
+      dummyKiller(period, key, i),
       'dummy',
       true,
       'dummy-' + period + '-' + key + '-' + name
@@ -226,10 +231,22 @@ function seededDummyNames(period, key) {
 }
 
 function dummyNameOffset(period, key) {
-  const s = period + ':' + key;
+  return hashString(period + ':' + key) % DUMMY_NAMES.length;
+}
+
+function dummyValue(period, key, offset, salt, max) {
+  return hashString([period, key, offset, salt].join(':')) % max;
+}
+
+function dummyKiller(period, key, offset) {
+  const killers = ['bat','orc','hobgoblin','snake','kestrel'];
+  return killers[dummyValue(period, key, offset, 'killer', killers.length)];
+}
+
+function hashString(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h % DUMMY_NAMES.length;
+  return h;
 }
 
 function periodsFromKey(period, key, offset) {
@@ -253,8 +270,15 @@ function periodField(period) {
 }
 
 function timestampForPeriod(period, key, offset) {
-  const d = new Date();
-  d.setUTCMinutes(d.getUTCMinutes() - offset * 17);
+  let d;
+  if (period === 'daily') {
+    d = new Date(key + 'T00:00:00Z');
+  } else if (period === 'weekly') {
+    d = dateForIsoWeek(key, offset % 7);
+  } else {
+    d = dateForSeason(key, offset * 7);
+  }
+  d.setUTCHours(12, (offset * 17) % 60, 0, 0);
   return d.toISOString();
 }
 
