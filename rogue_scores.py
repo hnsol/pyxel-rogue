@@ -21,7 +21,8 @@ PLAYER_NAME_FILE = os.environ.get(
     "PYXEL_ROGUE_NAME_FILE",
     os.path.join(os.path.expanduser("~"), ".pyxel_rogue_name_v1.json"),
 )
-ONLINE_SCORE_URL = os.environ.get("PYXEL_ROGUE_SCORE_URL", "")
+DEFAULT_ONLINE_SCORE_URL = "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec"
+ONLINE_SCORE_URL = os.environ.get("PYXEL_ROGUE_SCORE_URL", DEFAULT_ONLINE_SCORE_URL)
 SCOREBOARD_PERIOD_WEEKLY = "weekly"
 SCOREBOARD_PERIOD_SEASON = "season"
 SCOREBOARD_PERIODS = (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)

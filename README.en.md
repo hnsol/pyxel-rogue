@@ -122,6 +122,8 @@ Implemented overview:
 
 See [TODO.md](TODO.md) for the detailed implementation status.
 
+The default Apps Script URL for online rankings is `https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec`. Set `PYXEL_ROGUE_SCORE_URL` to override it.
+
 ## Roadmap
 
 - Wand/staff bolt, magic missile, and drain life effects

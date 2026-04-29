@@ -8330,6 +8330,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(posted), 1)
         self.assertEqual(posted[0]["score"], 300)
 
+    def test_online_score_url_defaults_to_deployed_apps_script(self):
+        import rogue_scores
+
+        self.assertEqual(
+            rogue_scores.ONLINE_SCORE_URL,
+            "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec",
+        )
+
     def test_title_start_prepares_game_and_shows_map_immediately(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN)
