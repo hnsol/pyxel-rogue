@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1126"
+UI_BUILD = "260429_1327"
 
 # ===========================================================
 #  Font
@@ -1958,6 +1958,10 @@ class Game:
             self.p.see_invisible > 0 or rogue_rings.is_wearing(self.p, rogue_rings.R_SEEINVIS),
         )
 
+    def monster_is_seen(self, m):
+        # C: chase.c:see_monst(); Pyxel visible supplies lamp/room geometry.
+        return (m.x, m.y) in self.visible and self.can_see_monster(m)
+
     def can_detect_monsters(self):
         return getattr(self.p, "see_monsters", 0) > 0
 
@@ -2345,7 +2349,7 @@ class Game:
             else:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
             add_new = rogue_potions.turn_see_adds_new(
-                self.can_see_monster(m) for m in self.mons
+                self.monster_is_seen(m) for m in self.mons
             )
             p.see_monsters = rogue_potions.turn_see_state(False, HUHDURATION)
             if add_new:

@@ -2809,6 +2809,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
         self.assertNotIn("You sense monsters.", game.msgs)
 
+    def test_rogue_544_monster_detection_unseen_room_monster_senses_monsters(self):
+        # Rogue 5.4.4 potions.c:turn_see(FALSE) sets add_new when chase.c:see_monst() is false.
+        game = new_game(seed=3201)
+        room_a, room_b = set_two_room_floor(game)
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "monster detection")
+        potion = rogue.Item(rogue.CAT_POT, kind)
+        game.p.inv.append(potion)
+        monster = monster_at(room_b.x + 1, room_b.y + 1, "O", "orc")
+        game.mons = [monster]
+        game.visible = {(room_a.x + 1, room_a.y + 1)}
+
+        game.use_pot(potion)
+
+        self.assertIn("You sense monsters.", game.msgs)
+        self.assertNotIn("you have a strange feeling for a moment, then it passes", game.msgs)
+
     def test_rogue_544_magic_detection_sees_monster_pack_magic(self):
         # Rogue 5.4.4 potions.c:P_TFIND scans mlist t_pack with is_magic().
         import rogue_rings
