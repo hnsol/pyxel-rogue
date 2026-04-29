@@ -951,6 +951,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster.running)
         self.assertTrue(any("flame whizzes past" in msg for msg in game.msgs))
 
+    def test_rogue_544_unseen_bolt_miss_uses_something_name(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() miss text uses fight.c:set_mname().
+        game = new_game(seed=2191)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        orc = monster_at(12, 10, sym="O", name="orc")
+        game.mons = [orc]
+        game.visible = {(10, 10)}
+        game.monster_save_throw = lambda which, monster: True
+
+        hit = game.fire_bolt(1, 0, "flame")
+
+        self.assertFalse(hit)
+        self.assertIn("the flame whizzes past something", game.msgs)
+        self.assertNotIn("the flame whizzes past the orc", game.msgs)
+
     def test_rogue_544_zap_bolt_bounces_from_wall_and_can_hit_hero(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() reverses direction on walls and can hit the hero.
         import rogue_sticks
@@ -1221,8 +1237,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(orc.running)
         self.assertIn("the flame whizzes past the orc", game.msgs)
 
-    def test_rogue_544_bolt_miss_silent_for_disguised_xeroc(self):
-        # Rogue 5.4.4 sticks.c:fire_bolt() suppresses miss text unless ch != 'M' or t_disguise == 'M'.
+    def test_rogue_544_bolt_miss_reports_disguised_xeroc_name(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() uses winat(); item-disguised Xeroc still passes ch != 'M'.
         game = new_game(seed=227)
         set_open_floor(game)
         game.p.x, game.p.y = 10, 10
@@ -1234,16 +1250,15 @@ class RogueBaselineTest(unittest.TestCase):
         hit = game.fire_bolt(1, 0, "flame")
 
         self.assertFalse(hit)
-        self.assertFalse(xeroc.running)
-        self.assertNotIn("the flame whizzes past the xeroc", game.msgs)
+        self.assertTrue(xeroc.running)
+        self.assertIn("the flame whizzes past the xeroc", game.msgs)
 
     def test_rogue_544_sticks_helper_saved_monster_miss_feedback(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() saved monster miss display/runto branch.
         import rogue_sticks
 
-        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, False), (True, True))
-        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False, False), (False, True))
-        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, True), (False, False))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True), (True, True))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False), (False, True))
 
     def test_rogue_544_sticks_helper_bolt_death_cause(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses death('b') for hero-started bolt deaths.

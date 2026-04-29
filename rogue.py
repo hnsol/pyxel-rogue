@@ -177,7 +177,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1327"
+UI_BUILD = "260429_1351"
 
 # ===========================================================
 #  Font
@@ -1674,7 +1674,7 @@ class Game:
             spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
             return TextCatalog.monster(self.lang, spec.name if spec else m.name)
         name = rogue_fight.set_mname(
-            self.can_see_monster(m),
+            self.monster_is_seen(m),
             self.can_detect_monsters(),
             self.p.hallucinating > 0,
             TextCatalog.monster(self.lang, m.name),
@@ -2870,10 +2870,7 @@ class Game:
                         else:
                             self.hit_monster_with_bolt(target,name)
                         return True
-                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
-                        hero_started,
-                        rogue_monsters.is_disguised_xeroc(target),
-                    )
+                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(hero_started)
                     if wake_miss:
                         self.runto(target)
                     if show_miss:

@@ -93,10 +93,9 @@ def stick_damage(stick_type):
     return "1x1", "1x1"
 
 
-def saved_monster_miss_feedback(hero_started: bool, disguised_non_monster: bool):
+def saved_monster_miss_feedback(hero_started: bool):
     """Rogue 5.4.4 sticks.c:fire_bolt() saved monster miss runto/message branch."""
-    show_miss = not disguised_non_monster
-    return hero_started and show_miss, show_miss
+    return hero_started, True
 
 
 def bolt_death_cause(hero_started: bool, source_monster_name: str | None) -> str:
