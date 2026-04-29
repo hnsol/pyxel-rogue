@@ -1,4 +1,5 @@
 const SHEET_NAME = 'scores';
+const DUMMY_TARGET_COUNT = 10;
 const DUMMY_NAMES = [
   'ACE','NOVA','RIN','KAI','MIO','LUNA','SAGE','ZERO','NIX','REI',
   'JIN','TOMO','YUKI','HAL','ROOK','MINT','ECHO','BYTE','DOT','ASH',
@@ -13,6 +14,7 @@ const DUMMY_NAMES = [
 ];
 
 function doGet(e) {
+  if ((e.parameter.action || '') === 'seedDummy') return json({ rows: seedDummy() });
   const period = (e.parameter.period || 'weekly').toLowerCase();
   const key = e.parameter.key || currentPeriods()[period === 'season' ? 'period_season' : 'period_week'];
   return json({ scores: topScores(period, key) });
@@ -92,26 +94,33 @@ function seedDummy() {
 }
 
 function ensureDummyRows(period, key) {
-  const existing = topScores(period, key).filter(r => r.is_dummy).length;
-  let rows = 0;
-  for (let i = existing; i < 24 && i < DUMMY_NAMES.length; i++) {
+  const scores = topScores(period, key);
+  const needed = Math.max(0, DUMMY_TARGET_COUNT - scores.length);
+  if (needed === 0) return 0;
+  const used = new Set(scores.map(r => cleanName(r.player_name)));
+  const out = [];
+  for (let i = 0; i < DUMMY_NAMES.length && out.length < needed; i++) {
+    if (used.has(cleanName(DUMMY_NAMES[i]))) continue;
     const p = periodsFromKey(period, key);
-    appendScore({
-      timestamp: timestampForPeriod(period, key, i),
-      period_day: p.period_day,
-      period_week: p.period_week,
-      period_season: p.period_season,
-      player_name: DUMMY_NAMES[i],
-      score: 60 + Math.floor(Math.random() * 1200),
-      depth: 1 + Math.floor(Math.random() * 13),
-      result_flags: 'killed',
-      killer: ['bat','orc','hobgoblin','snake','kestrel'][Math.floor(Math.random() * 5)],
-      client_build: 'dummy',
-      is_dummy: true
-    });
-    rows++;
+    out.push([
+      timestampForPeriod(period, key, i),
+      p.period_day,
+      p.period_week,
+      p.period_season,
+      DUMMY_NAMES[i],
+      60 + Math.floor(Math.random() * 1200),
+      1 + Math.floor(Math.random() * 13),
+      'killed',
+      ['bat','orc','hobgoblin','snake','kestrel'][Math.floor(Math.random() * 5)],
+      'dummy',
+      true
+    ]);
   }
-  return rows;
+  if (out.length > 0) {
+    const sh = sheet();
+    sh.getRange(sh.getLastRow() + 1, 1, out.length, out[0].length).setValues(out);
+  }
+  return out.length;
 }
 
 function periodsFromKey(period, key) {

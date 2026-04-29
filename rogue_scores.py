@@ -335,7 +335,8 @@ def seed_dummy_online_scores(url: str | None = None) -> bool:
     if not target:
         return False
     try:
-        _http_json(target, {"action": "seedDummy"})
+        sep = "&" if "?" in target else "?"
+        _http_json(target + sep + urllib.parse.urlencode({"action": "seedDummy"}))
         return True
     except Exception:
         return False

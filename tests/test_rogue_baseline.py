@@ -8349,7 +8349,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue_scores._http_json = old_http_json
 
-        self.assertEqual(calls, [("https://example.test/exec", {"action": "seedDummy"})])
+        self.assertEqual(calls, [("https://example.test/exec?action=seedDummy", None)])
 
     def test_title_start_prepares_game_and_shows_map_immediately(self):
         game = rogue.Game.__new__(rogue.Game)
