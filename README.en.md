@@ -30,6 +30,14 @@ You can launch the game in a browser with Pyxel Web Launcher.
 
 The web version lets you try the game without installing Python or Pyxel locally. The URL enables the virtual gamepad, which is useful for phones and tablets.
 
+For faster device debugging, build a local HTML file:
+
+```bash
+tools/build_web.sh
+```
+
+The output is `web/index.html`.
+
 ## Download and Play Locally
 
 Python 3.10+ and Pyxel are required.
