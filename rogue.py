@@ -202,8 +202,12 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_2327"
+UI_BUILD = "260430_0030"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
+SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
+SCOREBOARD_HILITE_COL = 23
+SCOREBOARD_TEXT_COL = 30
+SCOREBOARD_DIM_COL = 8
 
 # ===========================================================
 #  Font
@@ -1147,6 +1151,7 @@ class Game:
         self.online_syncing = False
         self.online_sync_wait = 0
         self.online_sync_force = False
+        self.online_sync_periods = []
         self.online_return_state = ST_TITLE
         self.title_bg = None
         self.title_fade_frames = 0
@@ -4204,6 +4209,12 @@ class Game:
             return keys["period_season"]
         return keys["period_week"]
 
+    def scoreboard_period_label(self, period, timestamp=None):
+        key = self.scoreboard_period_key(period, timestamp)
+        if period in (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY):
+            return f"UTC {key}"
+        return key
+
     def ensure_online_score_state(self):
         if not hasattr(self, "online_score_cache"):
             self.online_score_cache = {}
@@ -4219,35 +4230,35 @@ class Game:
             self.online_sync_wait = 0
         if not hasattr(self, "online_sync_force"):
             self.online_sync_force = False
+        if not hasattr(self, "online_sync_periods"):
+            self.online_sync_periods = []
 
     def request_online_period_scores(self, force=False):
         self.ensure_online_score_state()
-        period = getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)
+        periods = list(SCOREBOARD_PERIOD_ORDER)
         if force:
-            self.online_score_loaded.discard(period)
-        if period in self.online_score_loaded and not force:
-            return
+            self.online_score_loaded.difference_update(periods)
         self.online_sync_pending = True
         self.online_syncing = True
         self.online_sync_wait = 1
         self.online_sync_force = bool(force)
+        self.online_sync_periods = periods
 
     def enter_online_scoreboard(self):
         self.ensure_online_score_state()
         self.online_period = SCOREBOARD_PERIOD_DAILY
         self.online_return_state = ST_TITLE
         self.st = ST_ONLINE_SCORE
-        self.request_online_period_scores()
+        self.request_online_period_scores(force=True)
 
-    def load_online_period_scores(self, force=False):
+    def load_online_period_scores(self, period=None, force=False):
         self.ensure_online_score_state()
-        period = getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)
+        period = period or getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         online = fetch_online_scores(period, timestamp=now)
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
         if online:
-            sync_missing_local_best(local, online, period, key, submit_online_score)
             scores = get_period_scores(online, period, key, limit=10)
         else:
             scores = get_period_scores(local, period, key, limit=10)
@@ -4353,7 +4364,10 @@ class Game:
             self.online_syncing = True
             force = getattr(self, "online_sync_force", False)
             self.online_sync_force = False
-            self.load_online_period_scores(force=force)
+            periods = list(getattr(self, "online_sync_periods", [])) or list(SCOREBOARD_PERIOD_ORDER)
+            for period in periods:
+                self.load_online_period_scores(period, force=force)
+            self.online_sync_periods = []
             self.online_syncing = False
             return
         if self.online_syncing:
@@ -4363,7 +4377,6 @@ class Game:
             periods = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
             d = -1 if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) else 1
             self.online_period = periods[(periods.index(getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)) + d) % len(periods)]
-            self.request_online_period_scores()
             return
         if pyxel.btnp(pyxel.KEY_R) or self.btn_back():
             self.request_online_period_scores(force=True)
@@ -4738,25 +4751,23 @@ class Game:
         }.get(period, "Daily Top Ten")
         self._box(98, 48, 380, 244, title)
         scores = self.online_score_cache.get(period, [])
-        y = 78
+        self.txt(120, 66, self.scoreboard_period_label(period), SCOREBOARD_TEXT_COL)
+        self.txt(120, 82, "   Score Name", SCOREBOARD_TEXT_COL)
+        y = 98
         for i, entry in enumerate(scores[:10], start=1):
-            name = str(entry.get("player_name", "ROGUE"))[:8]
-            score = int(entry.get("score", 0))
-            depth = int(entry.get("level", entry.get("depth", 0)) or 0)
-            dummy = "*" if entry.get("is_dummy") else " "
-            self.txt(120, y, f"{i:>2}{dummy} {score:>5} {name:<8} D:{depth:>2}", 10 if i == 1 else 7)
-            y += 16
+            self.txt(120, y, format_score_line(i, entry)[:56], SCOREBOARD_HILITE_COL if i == 1 else SCOREBOARD_TEXT_COL)
+            y += 13
         if getattr(self, "online_syncing", False):
-            self.txt(120, y, "SYNCING...", 10)
+            self.txt(120, y, "SYNCING...", SCOREBOARD_HILITE_COL)
             y += 16
         elif not scores:
-            self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
+            self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
         entry = getattr(self, "result_entry", None)
         rank = self.online_rank_cache.get(period)
         if entry and rank and rank > 10:
-            self.txt(120, 242, format_score_line(rank, entry)[:52], 9)
-        self.txt(114, 268, "LEFT/RIGHT DAILY/WEEKLY/SEASON  R/SELECT SYNC  B BACK", 5)
+            self.txt(120, 242, format_score_line(rank, entry)[:56], SCOREBOARD_TEXT_COL)
+        self.txt(114, 268, "LEFT/RIGHT DAILY/WEEKLY/SEASON  R/SELECT SYNC  B BACK", SCOREBOARD_DIM_COL)
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)

@@ -46,7 +46,9 @@ function sheet() {
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
   if (sh.getLastRow() === 0) {
-    sh.appendRow(['timestamp','period_day','period_week','period_season','player_name','score','depth','result_flags','killer','client_build','is_dummy']);
+    sh.appendRow(['timestamp','period_day','period_week','period_season','player_name','score','depth','result_flags','killer','client_build','is_dummy','score_id']);
+  } else {
+    ensureScoreIdColumn(sh);
   }
   return sh;
 }
@@ -55,6 +57,8 @@ function appendScore(entry) {
   const now = entry.timestamp || new Date().toISOString();
   const p = periodsFor(new Date(now));
   const name = cleanName(entry.player_name);
+  const scoreId = String(entry.score_id || scoreIdFor(entry, now, name));
+  if (scoreIdExists(scoreId)) return false;
   const sh = sheet();
   sh.appendRow([
     now,
@@ -67,8 +71,39 @@ function appendScore(entry) {
     String(entry.result_flags || ''),
     String(entry.killer || '').slice(0, 40),
     String(entry.client_build || ''),
-    Boolean(entry.is_dummy)
+    Boolean(entry.is_dummy),
+    scoreId
   ]);
+  return true;
+}
+
+function ensureScoreIdColumn(sh) {
+  const lastCol = sh.getLastColumn();
+  const header = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (header.indexOf('score_id') === -1) {
+    sh.getRange(1, lastCol + 1).setValue('score_id');
+  }
+}
+
+function scoreIdExists(scoreId) {
+  if (!scoreId) return false;
+  const sh = sheet();
+  const data = sh.getDataRange().getValues();
+  const header = data.shift();
+  const idx = header.indexOf('score_id');
+  if (idx === -1) return false;
+  return data.some(row => String(row[idx] || '') === String(scoreId));
+}
+
+function scoreIdFor(entry, timestamp, name) {
+  return [
+    timestamp,
+    name,
+    Math.max(0, parseInt(entry.score || 0, 10)),
+    Math.max(0, parseInt(entry.depth || entry.level || 0, 10)),
+    String(entry.result_flags || ''),
+    String(entry.killer || '')
+  ].join('|');
 }
 
 function topScores(period, key) {
@@ -92,7 +127,8 @@ function topScores(period, key) {
         result_flags: row[idx.result_flags],
         killer: row[idx.killer],
         client_build: row[idx.client_build],
-        is_dummy: row[idx.is_dummy] === true
+        is_dummy: row[idx.is_dummy] === true,
+        score_id: idx.score_id === undefined ? '' : row[idx.score_id]
       };
     }
   });
@@ -153,7 +189,8 @@ function ensureDummyRows(period, key) {
       'killed',
       ['bat','orc','hobgoblin','snake','kestrel'][Math.floor(Math.random() * 5)],
       'dummy',
-      true
+      true,
+      'dummy-' + period + '-' + key + '-' + DUMMY_NAMES[i]
     ]);
   }
   if (out.length > 0) {

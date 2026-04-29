@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import random
 import sys
@@ -51,6 +52,18 @@ DUMMY_PLAYER_NAMES = [
 ]
 
 
+def score_entry_id(entry: dict[str, Any]) -> str:
+    fields = (
+        str(entry.get("timestamp", "")),
+        sanitize_player_name(str(entry.get("player_name", "ROGUE"))),
+        str(int(entry.get("score", 0))),
+        str(int(entry.get("level", entry.get("depth", 0)) or 0)),
+        str(entry.get("result_flags", "")),
+        str(entry.get("killer", "")),
+    )
+    return hashlib.sha1("|".join(fields).encode("utf-8")).hexdigest()[:16]
+
+
 def score_value(gold: int, result_flags: str) -> int:
     gold = max(0, int(gold))
     if result_flags in ("killed", "killed_with_amulet"):
@@ -68,7 +81,7 @@ def build_score_entry(
     timestamp: str,
     gold: int,
 ) -> dict[str, Any]:
-    return {
+    entry = {
         "score": int(score) if score else score_value(gold, result_flags),
         "result_flags": result_flags,
         "level": int(level),
@@ -76,6 +89,8 @@ def build_score_entry(
         "player_name": str(player_name),
         "timestamp": str(timestamp),
     }
+    entry["score_id"] = score_entry_id(entry)
+    return entry
 
 
 def _parse_timestamp(timestamp: str) -> datetime:
@@ -116,6 +131,7 @@ def with_score_periods(entry: dict[str, Any]) -> dict[str, Any]:
     out.setdefault("period_day", keys["period_day"])
     out.setdefault("period_week", keys["period_week"])
     out.setdefault("period_season", keys["period_season"])
+    out.setdefault("score_id", score_entry_id(out))
     return out
 
 
@@ -182,6 +198,9 @@ def sync_missing_local_best(
         return False
     online = get_period_scores(online_entries, period, key, limit=10)
     best = local[0]
+    best_id = str(best.get("score_id", ""))
+    if best_id and any(str(entry.get("score_id", "")) == best_id for entry in online_entries):
+        return False
     name = str(best.get("player_name", "")).upper()
     online_score = max((int(e.get("score", 0)) for e in online if str(e.get("player_name", "")).upper() == name), default=-1)
     if int(best.get("score", 0)) <= online_score:
