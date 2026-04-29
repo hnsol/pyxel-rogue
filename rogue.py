@@ -202,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260430_0030"
+UI_BUILD = "260430_0046"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -4749,13 +4749,15 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: "Weekly Rivals",
             SCOREBOARD_PERIOD_SEASON: "Season Legends",
         }.get(period, "Daily Top Ten")
-        self._box(98, 48, 380, 244, title)
+        self._box(98, 48, 380, 244, f"{title} - {self.scoreboard_period_label(period)}")
         scores = self.online_score_cache.get(period, [])
-        self.txt(120, 66, self.scoreboard_period_label(period), SCOREBOARD_TEXT_COL)
-        self.txt(120, 82, "   Score Name", SCOREBOARD_TEXT_COL)
-        y = 98
+        self.txt(120, 74, "   Score Name", SCOREBOARD_TEXT_COL)
+        y = 90
+        player_name = str(getattr(self, "player_name", self.current_player_name())).upper()[:8]
         for i, entry in enumerate(scores[:10], start=1):
-            self.txt(120, y, format_score_line(i, entry)[:56], SCOREBOARD_HILITE_COL if i == 1 else SCOREBOARD_TEXT_COL)
+            name = str(entry.get("player_name", "")).upper()[:8]
+            col = SCOREBOARD_HILITE_COL if name == player_name else SCOREBOARD_TEXT_COL
+            self.txt(120, y, format_score_line(i, entry)[:56], col)
             y += 13
         if getattr(self, "online_syncing", False):
             self.txt(120, y, "SYNCING...", SCOREBOARD_HILITE_COL)

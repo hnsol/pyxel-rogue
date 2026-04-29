@@ -8343,6 +8343,14 @@ class RogueBaselineTest(unittest.TestCase):
             ],
         )
 
+    def test_score_lines_use_depth_when_sheet_rows_do_not_have_level(self):
+        line = rogue.format_score_line(
+            7,
+            {"score": 614, "player_name": "NIX", "result_flags": "killed", "depth": 8, "killer": "kestrel"},
+        )
+
+        self.assertEqual(line, " 7   614 NIX: killed on level 8 by a kestrel.")
+
     def test_score_period_keys_include_week_and_fixed_season(self):
         import rogue_scores
 
@@ -8453,6 +8461,15 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("'score_id'", script)
         self.assertIn("scoreIdExists(scoreId)", script)
+
+    def test_apps_script_dummy_seed_fills_daily_weekly_and_season(self):
+        path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
+        with open(path, encoding="utf-8") as f:
+            script = f.read()
+
+        self.assertIn("ensureDummyRows('daily'", script)
+        self.assertIn("ensureDummyRows('weekly'", script)
+        self.assertIn("ensureDummyRows('season'", script)
 
     def test_online_score_url_defaults_to_deployed_apps_script(self):
         import rogue_scores
@@ -8677,15 +8694,16 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([(e["player_name"], e["score"]) for e in scores], [("DOT", 20)])
 
-    def test_online_score_draw_uses_rogue_score_lines_period_label_and_bright_colors(self):
+    def test_online_score_draw_uses_rogue_score_lines_title_and_player_highlight(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.lang = rogue.LANG_EN
+        game.player_name = "ACE"
         game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
         game.online_score_cache = {
             rogue.SCOREBOARD_PERIOD_DAILY: [
                 {"score": 346, "player_name": "masatora", "result_flags": "killed", "level": 4, "killer": "orc"},
-                {"score": 194, "player_name": "masatora", "result_flags": "killed", "level": 3, "killer": "bat"},
+                {"score": 194, "player_name": "ACE", "result_flags": "killed", "level": 3, "killer": "bat"},
             ]
         }
         game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_DAILY}
@@ -8706,6 +8724,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         text = "\n".join(str(item) for item in drawn)
+        self.assertIn("Daily Top Ten - UTC", text)
         self.assertIn("UTC", text)
         self.assertIn("Score Name", text)
         self.assertIn(" 1   346 masatora: killed on level 4 by an orc.", text)
@@ -8714,7 +8733,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ACE", text)
         self.assertIn("killed", text)
         self.assertIn("bat", text)
-        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 23), drawn)
+        self.assertIn((" 2   194 ACE: killed on level 3 by a bat.", 23), drawn)
+        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30), drawn)
         self.assertIn(("SYNCING...", 23), drawn)
 
     def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):

@@ -166,7 +166,9 @@ function allScores(period, key) {
 
 function seedDummy() {
   const p = currentPeriods();
-  return ensureDummyRows('weekly', p.period_week);
+  return ensureDummyRows('daily', p.period_day)
+    + ensureDummyRows('weekly', p.period_week)
+    + ensureDummyRows('season', p.period_season);
 }
 
 function ensureDummyRows(period, key) {

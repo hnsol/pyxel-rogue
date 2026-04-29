@@ -229,7 +229,7 @@ def format_score_line(rank: int, entry: dict[str, Any]) -> str:
     score = int(entry.get("score", 0))
     name = str(entry.get("player_name", "rogue"))
     flags = str(entry.get("result_flags", ""))
-    level = int(entry.get("level", 0))
+    level = int(entry.get("level", entry.get("depth", 0)) or 0)
     line = f"{rank:2d} {score:5d} {name}: {score_reason(flags)} on level {level}"
     if flags in ("killed", "killed_with_amulet"):
         killer = str(entry.get("killer", "")).strip()
