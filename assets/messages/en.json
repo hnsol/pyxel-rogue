@@ -328,7 +328,7 @@
   "pyxel.thrown_item_hits_monster_damage": "The {item} hits the {monster}. ({damage})",
   "pyxel.thrown_item_misses_monster": "The {item} misses the {monster}.",
   "pyxel.unable_to_move": "You are unable to move.",
-  "pyxel.welcome_to_dungeons": "Welcome to the Dungeons of Doom!",
+  "pyxel.welcome_to_dungeons": "Hello {name}, welcome to the Dungeons of Doom!",
   "pyxel.welcome_to_level": "Welcome to level {level}!",
   "pyxel.wield_item": "You wield the {item}.",
   "pyxel.wrenching_sensation_gut": "You feel a wrenching sensation in your gut.",

@@ -185,6 +185,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((rogue.ST_PLAY, rogue.ST_MENU, rogue.ST_ITEM, rogue.ST_DIR), (0, 1, 2, 3))
         self.assertEqual((rogue.ST_QUIT, rogue.ST_QUIT_CONFIRM, rogue.ST_SCORE), (10, 11, 12))
+        self.assertEqual((rogue.ST_LOGO, rogue.ST_TITLE, rogue.ST_NAME, rogue.ST_READY, rogue.ST_ONLINE_SCORE), (15, 16, 17, 18, 19))
         self.assertEqual(rogue.CALL_PRESETS, rogue_ui.CALL_PRESETS)
         self.assertEqual(rogue.MENU_ACTIONS, rogue_ui.MENU_ACTIONS)
         self.assertEqual(rogue.AUX_ACTIONS, rogue_ui.AUX_ACTIONS)
@@ -5084,18 +5085,18 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.TextCatalog._catalogs = None
             self.assertEqual(
                 rogue.TextCatalog.msg(rogue.LANG_EN, "pyxel.welcome_to_dungeons"),
-                "Welcome to the Dungeons of Doom!",
+                "Hello {name}, welcome to the Dungeons of Doom!",
             )
         finally:
             builtins.open = original_open
             rogue.__file__ = original_file
             rogue.TextCatalog._catalogs = original_catalogs
 
-    def test_module_loads_and_new_game_emits_welcome(self):
+    def test_module_loads_and_new_game_emits_rogue_544_start_message(self):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)
         self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertEqual(game.msgs[-1], "Welcome to the Dungeons of Doom!")
+        self.assertEqual(game.msgs[-1], "Hello ROGUE, welcome to the Dungeons of Doom!")
 
     def test_rogue_544_player_initial_stats_use_init_stats(self):
         # Rogue 5.4.4 extern.c:INIT_STATS is {16, 0, 1, 10, 12, "1x4", 12}.
@@ -8301,6 +8302,251 @@ class RogueBaselineTest(unittest.TestCase):
                 " 4    47 masatora: killed on level 2 by a kestrel.",
             ],
         )
+
+    def test_score_period_keys_include_week_and_fixed_season(self):
+        import rogue_scores
+
+        keys = rogue_scores.score_period_keys("2026-02-01T12:00:00Z")
+
+        self.assertEqual(keys["period_day"], "2026-02-01")
+        self.assertEqual(keys["period_week"], "2026-W05")
+        self.assertEqual(keys["period_season"], "2026-Winter")
+        self.assertEqual(rogue_scores.score_period_keys("2025-12-01T00:00:00Z")["period_season"], "2026-Winter")
+
+    def test_online_scores_deduplicate_weekly_and_season_by_player_best(self):
+        import rogue_scores
+
+        entries = [
+            {"player_name": "ACE", "score": 10, "period_week": "2026-W17", "period_season": "2026-Spring"},
+            {"player_name": "ACE", "score": 20, "period_week": "2026-W17", "period_season": "2026-Spring"},
+            {"player_name": "DOT", "score": 15, "period_week": "2026-W17", "period_season": "2026-Spring"},
+            {"player_name": "ACE", "score": 99, "period_week": "2026-W18", "period_season": "2026-Spring"},
+        ]
+
+        weekly = rogue_scores.get_period_scores(entries, "weekly", "2026-W17", limit=10)
+        season = rogue_scores.get_period_scores(entries, "season", "2026-Spring", limit=10)
+
+        self.assertEqual([(e["player_name"], e["score"]) for e in weekly], [("ACE", 20), ("DOT", 15)])
+        self.assertEqual([(e["player_name"], e["score"]) for e in season], [("ACE", 99), ("DOT", 15)])
+
+    def test_dummy_scores_are_sheet_rows_with_consistent_periods(self):
+        import rogue_scores
+
+        rows = rogue_scores.build_dummy_score_rows("2026-04-28T00:00:00Z", count=12, seed=3)
+
+        self.assertEqual(len(rows), 12)
+        self.assertTrue(all(row["is_dummy"] for row in rows))
+        self.assertTrue(all(row["period_week"] == "2026-W18" for row in rows))
+        self.assertTrue(all(row["period_season"] == "2026-Spring" for row in rows))
+        self.assertTrue(all(0 < int(row["score"]) < 1800 for row in rows))
+        self.assertGreaterEqual(len(rogue_scores.DUMMY_PLAYER_NAMES), 80)
+
+    def test_sync_missing_local_best_posts_when_online_lacks_it(self):
+        import rogue_scores
+
+        local = [
+            {"player_name": "ACE", "score": 300, "period_week": "2026-W18", "period_season": "2026-Spring"},
+            {"player_name": "ACE", "score": 100, "period_week": "2026-W18", "period_season": "2026-Spring"},
+        ]
+        posted = []
+
+        rogue_scores.sync_missing_local_best(
+            local,
+            [{"player_name": "ACE", "score": 250, "period_week": "2026-W18"}],
+            "weekly",
+            "2026-W18",
+            posted.append,
+        )
+
+        self.assertEqual(len(posted), 1)
+        self.assertEqual(posted[0]["score"], 300)
+
+    def test_online_score_url_defaults_to_deployed_apps_script(self):
+        import rogue_scores
+
+        self.assertEqual(
+            rogue_scores.ONLINE_SCORE_URL,
+            "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec",
+        )
+
+    def test_seed_dummy_online_scores_posts_seed_action(self):
+        import rogue_scores
+
+        calls = []
+        old_http_json = rogue_scores._http_json
+        try:
+            rogue_scores._http_json = lambda url, payload=None: calls.append((url, payload)) or {"rows": 1}
+            self.assertTrue(rogue_scores.seed_dummy_online_scores("https://example.test/exec"))
+        finally:
+            rogue_scores._http_json = old_http_json
+
+        self.assertEqual(calls, [("https://example.test/exec?action=seedDummy", None)])
+
+    def test_title_start_prepares_game_and_shows_map_immediately(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.font = rogue.pyxel.Font("")
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 0
+        game.player_name = "ACE"
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.msgs[-1], "Hello ACE, welcome to the Dungeons of Doom!")
+        calls = []
+        game.draw_title = lambda: calls.append("title")
+        game.draw_zoom = lambda: calls.append("map")
+        game.draw_stat = lambda: calls.append("hud")
+        game.draw_msgs = lambda: calls.append("log")
+        game.txt = lambda *args: None
+        game.draw()
+        self.assertEqual(calls[:4], ["title", "map", "hud", "log"])
+
+    def test_title_name_and_online_ranking_navigation(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 2
+        game.player_name = "ACE"
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_NAME)
+
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 1
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+        self.assertEqual(game.online_return_state, rogue.ST_TITLE)
+
+    def test_online_score_screen_cancel_is_safe_before_new_game_initializes_input_guards(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        game.online_scores = []
+
+        rogue.pyxel.set_input()
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+
+    def test_score_screen_can_open_online_ranking_after_game_over(self):
+        game = new_game(seed=35)
+        game.st = rogue.ST_SCORE
+        game.load_online_period_scores = lambda: []
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+        self.assertEqual(game.online_return_state, rogue.ST_LOGO)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_LOGO)
+        self.assertEqual(game.logo_frames, 0)
+
+    def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_LOGO
+        game.logo_frames = 0
+
+        for _ in range(149):
+            rogue.pyxel.set_input()
+            game.update()
+        self.assertEqual(game.st, rogue.ST_LOGO)
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+        game.st = rogue.ST_LOGO
+        game.logo_frames = 0
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_logo_requests_dummy_seed_once(self):
+        calls = []
+        old_seed = rogue.seed_dummy_online_scores
+        try:
+            rogue.seed_dummy_online_scores = lambda: calls.append("seed") or True
+            game = rogue.Game.__new__(rogue.Game)
+            game.settings = rogue.Settings()
+            game.st = rogue.ST_LOGO
+            game.logo_frames = 0
+            game.logo_seed_requested = False
+
+            rogue.pyxel.set_input()
+            game.update()
+            rogue.pyxel.set_input()
+            game.update()
+        finally:
+            rogue.seed_dummy_online_scores = old_seed
+
+        self.assertEqual(calls, ["seed"])
+
+    def test_logo_and_title_use_bright_text_without_press_any_key_hint(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.player_name = "ACE"
+        game.title_cursor = 0
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c, x))
+
+        game.logo_frames = 45
+        game.draw_logo_screen()
+        self.assertIn(("hann-solo laboratory", 23, rogue.SCR_W // 2 - len("hann-solo laboratory") * 3), calls)
+        self.assertFalse(any("PRESS ANY KEY" in text for text, _c, _x in calls))
+
+        calls.clear()
+        game.draw_title_screen()
+        self.assertIn(("ROGUE V5", 23, rogue.SCR_W // 2 - 30), calls)
+        self.assertTrue(any(text == "START" and c == 23 for text, c, _x in calls))
+        self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
+
+    def test_logo_colors_fade_in_hold_and_fade_out(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.logo_frames = 1
+        game.draw_logo_screen()
+        early = dict(calls)["hann-solo laboratory"]
+        calls.clear()
+        game.logo_frames = 45
+        game.draw_logo_screen()
+        hold = dict(calls)["hann-solo laboratory"]
+        calls.clear()
+        game.logo_frames = 135
+        game.draw_logo_screen()
+        late = dict(calls)["hann-solo laboratory"]
+
+        self.assertEqual((early, hold, late), (16, 23, 16))
+
+    def test_name_input_confirms_with_start_and_backspace_deletes(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_NAME
+        game.name_chars = list("ACE")
+        game.name_pos = 2
+        game.name_pick = 0
+        game.player_name = "ACE"
+        game.title_cursor = 2
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual("".join(game.name_chars).strip(), "AC")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_SPACE}, pressed={rogue.pyxel.KEY_SPACE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.player_name, "AC")
 
     def test_aux_quit_enters_quit_confirm_state(self):
         game = new_game(seed=35)
