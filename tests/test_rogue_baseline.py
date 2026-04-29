@@ -8399,6 +8399,51 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [("https://example.test/exec?action=seedDummy", None)])
 
+    def test_emscripten_http_json_uses_simple_cors_requests_for_apps_script(self):
+        import rogue_scores
+
+        calls = []
+
+        class FakeXhr:
+            status = 200
+            responseText = '{"ok": true}'
+
+            def open(self, method, url, async_flag):
+                calls.append(("open", method, url, async_flag))
+
+            def setRequestHeader(self, key, value):
+                calls.append(("header", key, value))
+
+            def send(self, body):
+                calls.append(("send", body))
+
+        js = types.ModuleType("js")
+        js.XMLHttpRequest = types.SimpleNamespace(new=lambda: FakeXhr())
+        old_js = sys.modules.get("js")
+        old_platform = sys.platform
+        try:
+            sys.modules["js"] = js
+            sys.platform = "emscripten"
+            self.assertEqual(rogue_scores._http_json("https://example.test/exec"), {"ok": True})
+            self.assertEqual(calls, [
+                ("open", "GET", "https://example.test/exec", False),
+                ("send", None),
+            ])
+
+            calls.clear()
+            self.assertEqual(rogue_scores._http_json("https://example.test/exec", {"action": "submit"}), {"ok": True})
+            self.assertEqual(calls, [
+                ("open", "POST", "https://example.test/exec", False),
+                ("header", "Content-Type", "text/plain;charset=utf-8"),
+                ("send", '{"action": "submit"}'),
+            ])
+        finally:
+            sys.platform = old_platform
+            if old_js is None:
+                sys.modules.pop("js", None)
+            else:
+                sys.modules["js"] = old_js
+
     def test_title_start_prepares_game_and_shows_map_immediately(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN)

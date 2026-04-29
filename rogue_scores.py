@@ -304,7 +304,8 @@ def _http_json(url: str, payload: dict[str, Any] | None = None) -> Any:
         xhr = XMLHttpRequest.new()
         method = "POST" if payload is not None else "GET"
         xhr.open(method, url, False)
-        xhr.setRequestHeader("Content-Type", "application/json")
+        if payload is not None:
+            xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8")
         xhr.send(json.dumps(payload) if payload is not None else None)
         if int(xhr.status) >= 400:
             raise RuntimeError(f"HTTP {xhr.status}")
