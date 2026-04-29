@@ -39,8 +39,12 @@ def install_pyxel_mock():
     pyxel.run = lambda *a, **kw: None
     pyxel.cls = lambda *a, **kw: None
     pyxel.text = lambda *a, **kw: None
-    pyxel.rect = lambda *a, **kw: None
-    pyxel.rectb = lambda *a, **kw: None
+    pyxel.rect_calls = []
+    pyxel.rect = lambda *a, **kw: pyxel.rect_calls.append((a, kw))
+    pyxel.rectb_calls = []
+    pyxel.rectb = lambda *a, **kw: pyxel.rectb_calls.append((a, kw))
+    pyxel.blt_calls = []
+    pyxel.blt = lambda *a, **kw: pyxel.blt_calls.append((a, kw))
     pyxel.dither_calls = []
     pyxel.dither = lambda alpha=1.0: pyxel.dither_calls.append(alpha)
     pyxel.__file__ = os.path.join(os.getcwd(), "pyxel", "__init__.py")
@@ -73,6 +77,17 @@ def install_pyxel_mock():
             return len(str(s)) * 6
 
     pyxel.Font = MockFont
+
+    class MockImage:
+        def __init__(self, w, h):
+            self.w = w
+            self.h = h
+            self.load_calls = []
+
+        def load(self, *a):
+            self.load_calls.append(a)
+
+    pyxel.Image = MockImage
     sys.modules["pyxel"] = pyxel
 
 
@@ -8497,6 +8512,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.settings = rogue.Settings()
         game.player_name = "ACE"
         game.title_cursor = 0
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c, x))
 
@@ -8506,10 +8523,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any("PRESS ANY KEY" in text for text, _c, _x in calls))
 
         calls.clear()
+        rogue.pyxel.blt_calls.clear()
+        rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
-        self.assertIn(("ROGUE V5", 23, rogue.SCR_W // 2 - 30), calls)
+        self.assertEqual(rogue.pyxel.blt_calls[0][0], (0, 0, game.title_bg, 0, 0, rogue.SCR_W, rogue.SCR_H))
+        self.assertEqual(rogue.pyxel.rect_calls[0][0], (344, 228, 174, 84, 0))
+        self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
         self.assertTrue(any(text == "START" and c == 23 for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
+
+    def test_title_background_dither_fades_in_and_input_finishes_fade(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 0
+        game.title_bg = object()
+        game.title_fade_frames = 0
+        game.player_name = "ACE"
+        game.txt = lambda x, y, s, c: None
+
+        rogue.pyxel.set_input()
+        game.update()
+        rogue.pyxel.dither_calls.clear()
+        game.draw_title_screen()
+        self.assertLess(rogue.pyxel.dither_calls[0], 1.0)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
+        game.update()
+        self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
+        self.assertEqual(game.title_cursor, 1)
+        rogue.pyxel.dither_calls.clear()
+        game.draw_title_screen()
+        self.assertEqual(rogue.pyxel.dither_calls[0], 1.0)
 
     def test_logo_dither_fades_in_holds_and_fades_out(self):
         game = rogue.Game.__new__(rogue.Game)

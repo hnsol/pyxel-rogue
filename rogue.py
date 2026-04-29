@@ -199,7 +199,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1730"
+UI_BUILD = "260429_2232"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -207,6 +207,8 @@ NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 # ===========================================================
 _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
+TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
+TITLE_FADE_FRAMES = 30
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
@@ -1121,6 +1123,7 @@ class Game:
         self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
         self.init_frontend_state()
+        self.load_title_background()
         pyxel.run(self.update, self.draw)
 
     def init_frontend_state(self):
@@ -1135,6 +1138,8 @@ class Game:
         self.online_period = SCOREBOARD_PERIOD_WEEKLY
         self.online_scores = []
         self.online_return_state = ST_TITLE
+        self.title_bg = None
+        self.title_fade_frames = 0
         self.b_prev = False
         self.b_frames = 0
         self.b_used = False
@@ -1146,6 +1151,19 @@ class Game:
         self.b_menu_guard = False
         self.st = ST_LOGO
         self._loading_phase = 0
+
+    def load_title_background(self):
+        self.title_bg = None
+        try:
+            img = pyxel.Image(SCR_W, SCR_H)
+            img.load(0, 0, TITLE_BG_PATH)
+            self.title_bg = img
+        except Exception:
+            self.title_bg = None
+
+    def enter_title_screen(self):
+        self.title_fade_frames = 0
+        self.st = ST_TITLE
 
     def ensure_settings(self):
         if "settings" not in self.__dict__:
@@ -4187,7 +4205,7 @@ class Game:
         self.player_name = save_player_name(name)
         self.name_chars = list(self.player_name)
         self.name_pos = min(len(self.name_chars), 7)
-        self.st = ST_TITLE
+        self.enter_title_screen()
 
     def open_name_input(self):
         self.player_name = self.current_player_name()
@@ -4202,12 +4220,17 @@ class Game:
             self.logo_seed_requested = True
             seed_dummy_online_scores()
         if self.btn_any_key():
-            self.st = ST_TITLE
+            self.enter_title_screen()
             return
         if self.logo_frames >= 150:
-            self.st = ST_TITLE
+            self.enter_title_screen()
 
     def upd_title(self):
+        if getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) < TITLE_FADE_FRAMES:
+            if self.btn_any_key():
+                self.title_fade_frames = TITLE_FADE_FRAMES
+            else:
+                self.title_fade_frames = min(TITLE_FADE_FRAMES, getattr(self, "title_fade_frames", 0) + 1)
         d = self.menu_vertical_press()
         if d:
             self.title_cursor = (getattr(self, "title_cursor", 0) + d) % 3
@@ -4230,7 +4253,7 @@ class Game:
                 self.name_chars.pop()
                 self.name_pos = max(0, len(self.name_chars) - 1)
             else:
-                self.st = ST_TITLE
+                self.enter_title_screen()
             return
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
             self.name_pos = max(0, getattr(self, "name_pos", 0) - 1)
@@ -4257,7 +4280,10 @@ class Game:
             if target == ST_LOGO:
                 self.logo_frames = 0
                 self.logo_seed_requested = False
-            self.st = target
+            if target == ST_TITLE:
+                self.enter_title_screen()
+            else:
+                self.st = target
             return
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
                    pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
@@ -4597,13 +4623,24 @@ class Game:
         pyxel.dither(1.0)
 
     def draw_title_screen(self):
-        self.txt(SCR_W // 2 - 30, 70, "ROGUE V5", 23)
+        if not hasattr(self, "title_bg"):
+            self.load_title_background()
+        if self.title_bg is not None:
+            alpha = max(0.0, min(1.0, getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) / TITLE_FADE_FRAMES))
+            pyxel.dither(alpha)
+            pyxel.blt(0, 0, self.title_bg, 0, 0, SCR_W, SCR_H)
+            pyxel.dither(1.0)
         items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
-        y = 130
+        x = 372
+        y = 238
+        pyxel.dither(0.8)
+        pyxel.rect(x - 28, y - 10, 174, 84, 0)
+        pyxel.dither(1.0)
+        pyxel.rectb(x - 28, y - 10, 174, 84, 23)
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
-            self.txt(205, y + i * 24, ">" if i == cur else " ", 23)
-            self.txt(220, y + i * 24, item, 23 if i == cur else 30)
+            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 23)
+            self.txt(x, y + i * 24, item, 23 if i == cur else 30)
 
     def draw_name_input(self):
         self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", 10)
