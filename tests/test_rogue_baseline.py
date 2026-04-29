@@ -8330,6 +8330,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(keys["period_season"], "2026-Winter")
         self.assertEqual(rogue_scores.score_period_keys("2025-12-01T00:00:00Z")["period_season"], "2026-Winter")
 
+    def test_daily_period_scores_filter_by_utc_day(self):
+        import rogue_scores
+
+        entries = [
+            {"player_name": "ACE", "score": 10, "period_day": "2026-04-29"},
+            {"player_name": "DOT", "score": 20, "period_day": "2026-04-29"},
+            {"player_name": "ACE", "score": 99, "period_day": "2026-04-30"},
+        ]
+
+        daily = rogue_scores.get_period_scores(entries, "daily", "2026-04-29", limit=10)
+
+        self.assertEqual([(e["player_name"], e["score"]) for e in daily], [("DOT", 20), ("ACE", 10)])
+
+    def test_fetch_online_scores_supports_daily_period_key(self):
+        import rogue_scores
+
+        calls = []
+        old_http_json = rogue_scores._http_json
+        try:
+            rogue_scores._http_json = lambda url, payload=None: calls.append((url, payload)) or {"scores": []}
+            rogue_scores.fetch_online_scores("daily", "https://example.test/exec", "2026-04-29T12:00:00Z")
+        finally:
+            rogue_scores._http_json = old_http_json
+
+        self.assertEqual(calls, [("https://example.test/exec?period=daily&key=2026-04-29", None)])
+
     def test_online_scores_deduplicate_weekly_and_season_by_player_best(self):
         import rogue_scores
 
@@ -8483,34 +8509,115 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
         self.assertEqual(game.online_return_state, rogue.ST_TITLE)
+        self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_DAILY)
+        self.assertTrue(game.online_sync_pending)
 
     def test_online_score_screen_cancel_is_safe_before_new_game_initializes_input_guards(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_ONLINE_SCORE
-        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
-        game.online_scores = []
+        game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_sync_pending = False
+        game.online_syncing = False
 
         rogue.pyxel.set_input()
         game.update()
 
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
 
-    def test_score_screen_can_open_online_ranking_after_game_over(self):
+    def test_score_screen_after_game_over_opens_shared_daily_ranking_and_returns_title(self):
         game = new_game(seed=35)
         game.st = rogue.ST_SCORE
-        game.load_online_period_scores = lambda: []
 
-        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
-        self.assertEqual(game.online_return_state, rogue.ST_LOGO)
+        self.assertEqual(game.online_return_state, rogue.ST_TITLE)
+        self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_DAILY)
+        self.assertTrue(game.online_sync_pending)
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
         game.update()
-        self.assertEqual(game.st, rogue.ST_LOGO)
-        self.assertEqual(game.logo_frames, 0)
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_online_score_tabs_sync_once_and_refresh_with_select(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.online_sync_pending = False
+        game.online_syncing = False
+        game.online_sync_wait = 0
+        calls = []
+        game.load_online_period_scores = lambda force=False: calls.append((game.online_period, force)) or []
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_WEEKLY)
+        self.assertTrue(game.online_sync_pending)
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(calls, [])
+        self.assertTrue(game.online_syncing)
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(calls, [(rogue.SCOREBOARD_PERIOD_WEEKLY, False)])
+        self.assertFalse(game.online_syncing)
+
+        game.online_score_loaded.update({rogue.SCOREBOARD_PERIOD_DAILY, rogue.SCOREBOARD_PERIOD_WEEKLY})
+        game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertFalse(game.online_sync_pending)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_TAB}, pressed={rogue.pyxel.KEY_TAB})
+        game.update()
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertTrue(game.online_sync_pending)
+        rogue.pyxel.set_input()
+        game.update()
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(calls[-1], (rogue.SCOREBOARD_PERIOD_WEEKLY, True))
+
+    def test_online_score_draw_does_not_fetch_and_shows_syncing_and_last_result(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
+        game.online_score_cache = {rogue.SCOREBOARD_PERIOD_DAILY: []}
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_DAILY}
+        game.online_syncing = True
+        game.result_entry = {
+            "player_name": "ACE",
+            "score": 12,
+            "result_flags": "killed",
+            "level": 2,
+            "killer": "bat",
+        }
+        game.online_rank_cache = {rogue.SCOREBOARD_PERIOD_DAILY: 123}
+        game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append(str(s))
+
+        game.draw_online_score_screen()
+
+        text = "\n".join(str(item) for item in drawn)
+        self.assertIn("SYNCING", text)
+        self.assertIn("123", text)
+        self.assertIn("ACE", text)
+        self.assertIn("killed", text)
+        self.assertIn("bat", text)
 
     def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -8670,7 +8777,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_PLAY)
 
-    def test_result_screens_advance_to_score_screen_before_new_game(self):
+    def test_result_screens_advance_to_shared_daily_scoreboard(self):
         for state in (rogue.ST_DEAD, rogue.ST_WIN, rogue.ST_QUIT):
             game = new_game(seed=35)
             game.st = state
@@ -8678,9 +8785,11 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
             game.update()
 
-            self.assertEqual(game.st, rogue.ST_SCORE, state)
+            self.assertEqual(game.st, rogue.ST_ONLINE_SCORE, state)
+            self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_DAILY)
+            self.assertTrue(game.online_sync_pending)
 
-    def test_score_screen_starts_new_game_on_confirm(self):
+    def test_legacy_score_screen_confirm_opens_shared_daily_scoreboard(self):
         game = new_game(seed=35)
         game.st = rogue.ST_SCORE
         game.turn = 12
@@ -8688,8 +8797,8 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
-        self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+        self.assertEqual(game.turn, 12)
 
     def test_dpad_cardinal_waits_one_frame_so_second_axis_makes_one_diagonal_turn(self):
         game = new_game(seed=36)

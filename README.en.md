@@ -115,14 +115,14 @@ Implemented overview:
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
 - Startup logo, title screen, and 8-character alphanumeric player name entry
-- Weekly Rivals / Season Legends online ranking scaffold for Google Sheets + Apps Script
+- Daily Top Ten / Weekly Rivals / Season Legends online ranking scaffold for Google Sheets + Apps Script
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - JSON message catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
 See [TODO.md](TODO.md) for the detailed implementation status.
 
-The default Apps Script URL for online rankings is `https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec`. Set `PYXEL_ROGUE_SCORE_URL` to override it. Pyxel Rogue calls `?action=seedDummy` during the startup logo, and Apps Script batch-writes only the dummy rows needed to fill the displayed Top 10.
+The default Apps Script URL for online rankings is `https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec`. Set `PYXEL_ROGUE_SCORE_URL` to override it. The scoreboard syncs Daily / Weekly / Season on first display and can be refreshed with R / Select. Pyxel Rogue calls `?action=seedDummy` during the startup logo, and Apps Script batch-writes only the dummy rows needed to fill the displayed Top 10.
 
 ## Roadmap
 

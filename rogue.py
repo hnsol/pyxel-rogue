@@ -134,10 +134,13 @@ from rogue_palettes import (
     PALETTES,
 )
 from rogue_scores import (
+    SCOREBOARD_PERIOD_DAILY,
     SCOREBOARD_PERIOD_SEASON,
     SCOREBOARD_PERIOD_WEEKLY,
     fetch_online_scores,
+    fetch_online_rank,
     build_score_entry,
+    format_score_line,
     format_top_score_lines,
     get_period_scores,
     get_top_scores,
@@ -199,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_2302"
+UI_BUILD = "260429_2327"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -1135,8 +1138,15 @@ class Game:
         self.name_pick = 0
         self.logo_frames = 0
         self.logo_seed_requested = False
-        self.online_period = SCOREBOARD_PERIOD_WEEKLY
+        self.online_period = SCOREBOARD_PERIOD_DAILY
         self.online_scores = []
+        self.online_score_cache = {}
+        self.online_score_loaded = set()
+        self.online_rank_cache = {}
+        self.online_sync_pending = False
+        self.online_syncing = False
+        self.online_sync_wait = 0
+        self.online_sync_force = False
         self.online_return_state = ST_TITLE
         self.title_bg = None
         self.title_fade_frames = 0
@@ -4186,19 +4196,77 @@ class Game:
         self.new_game()
         self.st = ST_PLAY
 
-    def load_online_period_scores(self):
-        period = getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY)
+    def scoreboard_period_key(self, period, timestamp=None):
+        keys = score_period_keys(timestamp)
+        if period == SCOREBOARD_PERIOD_DAILY:
+            return keys["period_day"]
+        if period == SCOREBOARD_PERIOD_SEASON:
+            return keys["period_season"]
+        return keys["period_week"]
+
+    def ensure_online_score_state(self):
+        if not hasattr(self, "online_score_cache"):
+            self.online_score_cache = {}
+        if not hasattr(self, "online_score_loaded"):
+            self.online_score_loaded = set()
+        if not hasattr(self, "online_rank_cache"):
+            self.online_rank_cache = {}
+        if not hasattr(self, "online_sync_pending"):
+            self.online_sync_pending = False
+        if not hasattr(self, "online_syncing"):
+            self.online_syncing = False
+        if not hasattr(self, "online_sync_wait"):
+            self.online_sync_wait = 0
+        if not hasattr(self, "online_sync_force"):
+            self.online_sync_force = False
+
+    def request_online_period_scores(self, force=False):
+        self.ensure_online_score_state()
+        period = getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)
+        if force:
+            self.online_score_loaded.discard(period)
+        if period in self.online_score_loaded and not force:
+            return
+        self.online_sync_pending = True
+        self.online_syncing = True
+        self.online_sync_wait = 1
+        self.online_sync_force = bool(force)
+
+    def enter_online_scoreboard(self):
+        self.ensure_online_score_state()
+        self.online_period = SCOREBOARD_PERIOD_DAILY
+        self.online_return_state = ST_TITLE
+        self.st = ST_ONLINE_SCORE
+        self.request_online_period_scores()
+
+    def load_online_period_scores(self, force=False):
+        self.ensure_online_score_state()
+        period = getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         online = fetch_online_scores(period, timestamp=now)
-        keys = score_period_keys(now)
-        key = keys["period_season"] if period == SCOREBOARD_PERIOD_SEASON else keys["period_week"]
+        key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
         if online:
             sync_missing_local_best(local, online, period, key, submit_online_score)
-            self.online_scores = get_period_scores(online, period, key, limit=10)
+            scores = get_period_scores(online, period, key, limit=10)
         else:
-            self.online_scores = get_period_scores(local, period, key, limit=10)
-        return self.online_scores
+            scores = get_period_scores(local, period, key, limit=10)
+        self.online_scores = scores
+        self.online_score_cache[period] = scores
+        self.online_score_loaded.add(period)
+        if getattr(self, "result_entry", None):
+            rank = fetch_online_rank(self.result_entry, period)
+            if rank is None:
+                ranked = get_period_scores((online or local) + [self.result_entry], period, key, limit=9999)
+                name = str(self.result_entry.get("player_name", "")).upper()[:8]
+                score = int(self.result_entry.get("score", 0))
+                for i, entry in enumerate(ranked, start=1):
+                    if str(entry.get("player_name", "")).upper()[:8] == name and int(entry.get("score", 0)) == score:
+                        rank = i
+                        break
+            if rank is not None:
+                self.online_rank_cache[period] = rank
+        return scores
 
     def confirm_name_input(self):
         name = "".join(getattr(self, "name_chars", [])).strip()
@@ -4238,9 +4306,7 @@ class Game:
             if self.title_cursor == 0:
                 self.prepare_title_new_game()
             elif self.title_cursor == 1:
-                self.st = ST_ONLINE_SCORE
-                self.online_return_state = ST_TITLE
-                self.load_online_period_scores()
+                self.enter_online_scoreboard()
             else:
                 self.open_name_input()
 
@@ -4275,24 +4341,33 @@ class Game:
                 self.name_pos = min(8, getattr(self, "name_pos", 0) + 1)
 
     def upd_online_score(self):
-        if self.btn_overlay_cancel() or self.btn_b():
-            target = getattr(self, "online_return_state", ST_TITLE)
-            if target == ST_LOGO:
-                self.logo_frames = 0
-                self.logo_seed_requested = False
-            if target == ST_TITLE:
-                self.enter_title_screen()
-            else:
-                self.st = target
+        if self.btn_b():
+            self.enter_title_screen()
+            return
+        self.ensure_online_score_state()
+        if self.online_sync_pending:
+            if self.online_sync_wait > 0:
+                self.online_sync_wait -= 1
+                return
+            self.online_sync_pending = False
+            self.online_syncing = True
+            force = getattr(self, "online_sync_force", False)
+            self.online_sync_force = False
+            self.load_online_period_scores(force=force)
+            self.online_syncing = False
+            return
+        if self.online_syncing:
             return
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
-                   pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
-            self.online_period = (
-                SCOREBOARD_PERIOD_SEASON
-                if getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY) == SCOREBOARD_PERIOD_WEEKLY
-                else SCOREBOARD_PERIOD_WEEKLY
-            )
-            self.load_online_period_scores()
+                   pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
+            periods = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
+            d = -1 if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) else 1
+            self.online_period = periods[(periods.index(getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)) + d) % len(periods)]
+            self.request_online_period_scores()
+            return
+        if pyxel.btnp(pyxel.KEY_R) or self.btn_back():
+            self.request_online_period_scores(force=True)
+            return
 
     # ---------- Update ----------
     def update(self):
@@ -4322,22 +4397,20 @@ class Game:
                     self.end_turn()
             return
         if self.st==ST_DEAD:
-            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.enter_online_scoreboard()
             return
         if self.st==ST_WIN:
-            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.enter_online_scoreboard()
             return
         if self.st==ST_QUIT:
-            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.enter_online_scoreboard()
             return
         if self.st==ST_SCORE:
-            if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
-                       pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
-                self.st = ST_ONLINE_SCORE
-                self.online_return_state = ST_LOGO
-                self.load_online_period_scores()
-                return
-            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
+            if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R) or self.kp(
+                pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
+                pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT
+            ) or self.btn_back():
+                self.enter_online_scoreboard()
             return
         if self.st==ST_QUIT_CONFIRM:
             if self.btn_overlay_cancel():
@@ -4656,10 +4729,15 @@ class Game:
         self.txt(184, 226, "A NEXT/END  START OK  B DEL", 5)
 
     def draw_online_score_screen(self):
-        period = getattr(self, "online_period", SCOREBOARD_PERIOD_WEEKLY)
-        title = "Season Legends" if period == SCOREBOARD_PERIOD_SEASON else "Weekly Rivals"
+        self.ensure_online_score_state()
+        period = getattr(self, "online_period", SCOREBOARD_PERIOD_DAILY)
+        title = {
+            SCOREBOARD_PERIOD_DAILY: "Daily Top Ten",
+            SCOREBOARD_PERIOD_WEEKLY: "Weekly Rivals",
+            SCOREBOARD_PERIOD_SEASON: "Season Legends",
+        }.get(period, "Daily Top Ten")
         self._box(98, 48, 380, 244, title)
-        scores = getattr(self, "online_scores", []) or self.load_online_period_scores()
+        scores = self.online_score_cache.get(period, [])
         y = 78
         for i, entry in enumerate(scores[:10], start=1):
             name = str(entry.get("player_name", "ROGUE"))[:8]
@@ -4668,9 +4746,17 @@ class Game:
             dummy = "*" if entry.get("is_dummy") else " "
             self.txt(120, y, f"{i:>2}{dummy} {score:>5} {name:<8} D:{depth:>2}", 10 if i == 1 else 7)
             y += 16
-        if not scores:
+        if getattr(self, "online_syncing", False):
+            self.txt(120, y, "SYNCING...", 10)
+            y += 16
+        elif not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), 5)
-        self.txt(126, 268, "LEFT/RIGHT WEEKLY/SEASON   B BACK", 5)
+            y += 16
+        entry = getattr(self, "result_entry", None)
+        rank = self.online_rank_cache.get(period)
+        if entry and rank and rank > 10:
+            self.txt(120, 242, format_score_line(rank, entry)[:52], 9)
+        self.txt(114, 268, "LEFT/RIGHT DAILY/WEEKLY/SEASON  R/SELECT SYNC  B BACK", 5)
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)

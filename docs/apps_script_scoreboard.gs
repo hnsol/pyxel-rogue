@@ -1,22 +1,33 @@
 const SHEET_NAME = 'scores';
 const DUMMY_TARGET_COUNT = 10;
 const DUMMY_NAMES = [
-  'ACE','NOVA','RIN','KAI','MIO','LUNA','SAGE','ZERO','NIX','REI',
-  'JIN','TOMO','YUKI','HAL','ROOK','MINT','ECHO','BYTE','DOT','ASH',
-  'RUNE','KITE','NERO','ARIA','LYNX','VOLT','ONYX','MICA','SORA','NOA',
-  'ZED','IVY','REX','SOL','NIA','MIKA','YURI','AKI','MAO','HANA',
-  'RAY','KIR','NEMO','PICO','LOOP','BETA','GAMMA','DELTA','SIGMA','TAU',
-  'MARS','VENUS','PLUTO','COMET','FINN','FAY','LEO','MAY','NOEL','OTTO',
-  'PAX','QUIN','RIO','SKY','TEO','UMA','VAN','WREN','XAN','YALE',
-  'ZARA','BOLT','DUSK','EMBER','FLUX','GLEN','HAZE','ION','JADE','KNOX',
-  'LUX','MOON','NEON','OPAL','PEARL','QUEST','RIFT','SPAR','TIDE','VALE',
-  'WAVE','XENO','YON','ZINC','ATLAS','MESA','ORBIT','PIXEL','QUARTZ','RUST'
+  'RODNEY', 'YENDOR', 'WIZRODNY', 'AMULETYN', 'HJKLUSER',
+  'LEVEL26', 'CHMOD777', 'DEADBEEF', 'SIGSEGV', 'NULLPTR',
+  'ROOT', 'SUDO', 'BINSH', 'DEVNULL', 'TARBALL',
+  'PDP11', 'VAX1178', 'VT100', 'BSD43', 'V7UNIX',
+  'KENTOMP', 'DMR', 'BJOY', 'WICHMAN', 'KENARNLD',
+  'KESTREL', 'GRIFFON', 'JABBERWK', 'DRAGON', 'GRIDBUG',
+  'RNGGOD', 'RNGHATER', 'PERMADTH', 'FOODLESS', 'SPEEDRUN',
+  'SAVE_SC', 'LVL26F', 'RIPPER', 'RETRY', 'GAMEOVER',
+  'MALLOC', 'FREE', 'STACKOVF', 'BITSHIFT', 'XOR',
+  'GOTO10', 'EXIT0', 'STDOUT', 'STDIN', 'STDERR',
+  'ASCII', 'HEXDUMP', 'BINARY', 'BYTE', 'OPCODE',
+  'TTY0', 'ANSI80', 'CRLF', 'EOF', 'SOF',
+  'PYXELDEV', '8BITLUV', 'PIXELART', 'SPRITE', 'PALETTE',
+  'X86', 'Z80A', '6502', 'MOTOROLA', 'C64',
+  'PASCAL', 'FORTRAN', 'COBOL', 'ALGOL', 'B_LANG',
+  'LOBOLTO', 'UMORIA', 'NETHACK', 'ANGBAND', 'DUNGEON',
+  'XYZZY', 'PLUGH', 'FROB', 'FOOBAR', 'BAZQUX',
+  'STR0', 'CHAR1', 'VOID', 'CONST', 'STATIC',
+  'VOLATILE', 'REGISTER', 'STRUCT', 'UNION', 'TYPEDEF',
+  'MAXINT', 'MININT', 'ID001', 'USER99', 'GUEST'
 ];
 
 function doGet(e) {
   if ((e.parameter.action || '') === 'seedDummy') return json({ rows: seedDummy() });
+  if ((e.parameter.action || '') === 'rank') return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || 'weekly').toLowerCase();
-  const key = e.parameter.key || currentPeriods()[period === 'season' ? 'period_season' : 'period_week'];
+  const key = e.parameter.key || currentPeriods()[periodField(period)];
   return json({ scores: topScores(period, key) });
 }
 
@@ -64,7 +75,7 @@ function topScores(period, key) {
   const data = sheet().getDataRange().getValues();
   const header = data.shift();
   const idx = Object.fromEntries(header.map((h, i) => [h, i]));
-  const field = period === 'season' ? 'period_season' : 'period_week';
+  const field = periodField(period);
   const best = {};
   data.forEach(row => {
     if (String(row[idx[field]]) !== String(key)) return;
@@ -86,6 +97,35 @@ function topScores(period, key) {
     }
   });
   return Object.values(best).sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+function scoreRank(params) {
+  const period = (params.period || 'weekly').toLowerCase();
+  const key = params.key || currentPeriods()[periodField(period)];
+  const score = Math.max(0, parseInt(params.score || 0, 10));
+  const scores = allScores(period, key);
+  let rank = 1;
+  scores.forEach(row => {
+    if (row.score > score) rank++;
+  });
+  return rank;
+}
+
+function allScores(period, key) {
+  const data = sheet().getDataRange().getValues();
+  const header = data.shift();
+  const idx = Object.fromEntries(header.map((h, i) => [h, i]));
+  const field = periodField(period);
+  const best = {};
+  data.forEach(row => {
+    if (String(row[idx[field]]) !== String(key)) return;
+    const name = cleanName(row[idx.player_name]);
+    const score = parseInt(row[idx.score] || 0, 10);
+    if (!best[name] || score > best[name].score) {
+      best[name] = { player_name: name, score: score };
+    }
+  });
+  return Object.values(best).sort((a, b) => b.score - a.score);
 }
 
 function seedDummy() {
@@ -125,6 +165,13 @@ function ensureDummyRows(period, key) {
 
 function periodsFromKey(period, key) {
   const now = currentPeriods();
+  if (period === 'daily') {
+    return {
+      period_day: key,
+      period_week: now.period_week,
+      period_season: now.period_season
+    };
+  }
   if (period === 'season') {
     return {
       period_day: now.period_day,
@@ -137,6 +184,12 @@ function periodsFromKey(period, key) {
     period_week: key,
     period_season: now.period_season
   };
+}
+
+function periodField(period) {
+  if (period === 'daily') return 'period_day';
+  if (period === 'season') return 'period_season';
+  return 'period_week';
 }
 
 function timestampForPeriod(period, key, offset) {

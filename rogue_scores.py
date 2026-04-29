@@ -23,20 +23,31 @@ PLAYER_NAME_FILE = os.environ.get(
 )
 DEFAULT_ONLINE_SCORE_URL = "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec"
 ONLINE_SCORE_URL = os.environ.get("PYXEL_ROGUE_SCORE_URL", DEFAULT_ONLINE_SCORE_URL)
+SCOREBOARD_PERIOD_DAILY = "daily"
 SCOREBOARD_PERIOD_WEEKLY = "weekly"
 SCOREBOARD_PERIOD_SEASON = "season"
-SCOREBOARD_PERIODS = (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
+SCOREBOARD_PERIODS = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 DUMMY_PLAYER_NAMES = [
-    "ACE", "NOVA", "RIN", "KAI", "MIO", "LUNA", "SAGE", "ZERO", "NIX", "REI",
-    "JIN", "TOMO", "YUKI", "HAL", "ROOK", "MINT", "ECHO", "BYTE", "DOT", "ASH",
-    "RUNE", "KITE", "NERO", "ARIA", "LYNX", "VOLT", "ONYX", "MICA", "SORA", "NOA",
-    "ZED", "IVY", "REX", "SOL", "NIA", "KUMA", "MIKA", "YURI", "AKI", "MAO",
-    "HANA", "RAY", "KIR", "NEMO", "PICO", "LOOP", "BETA", "GAMMA", "DELTA", "SIGMA",
-    "TAU", "ORCA", "MARS", "VENUS", "PLUTO", "COMET", "NIM", "FINN", "FAY", "LEO",
-    "MAY", "NOEL", "OTTO", "PAX", "QUIN", "RIO", "SKY", "TEO", "UMA", "VAN",
-    "WREN", "XAN", "YALE", "ZARA", "BOLT", "CROW", "DUSK", "EMBER", "FLUX", "GLEN",
-    "HAZE", "ION", "JADE", "KNOX", "LUX", "MOON", "NEON", "OPAL", "PEARL", "QUEST",
-    "RIFT", "SPAR", "TIDE", "ULAN", "VALE", "WAVE", "XENO", "YON", "ZINC", "ATLAS",
+    "RODNEY", "YENDOR", "WIZRODNY", "AMULETYN", "HJKLUSER",
+    "LEVEL26", "CHMOD777", "DEADBEEF", "SIGSEGV", "NULLPTR",
+    "ROOT", "SUDO", "BINSH", "DEVNULL", "TARBALL",
+    "PDP11", "VAX1178", "VT100", "BSD43", "V7UNIX",
+    "KENTOMP", "DMR", "BJOY", "WICHMAN", "KENARNLD",
+    "KESTREL", "GRIFFON", "JABBERWK", "DRAGON", "GRIDBUG",
+    "RNGGOD", "RNGHATER", "PERMADTH", "FOODLESS", "SPEEDRUN",
+    "SAVE_SC", "LVL26F", "RIPPER", "RETRY", "GAMEOVER",
+    "MALLOC", "FREE", "STACKOVF", "BITSHIFT", "XOR",
+    "GOTO10", "EXIT0", "STDOUT", "STDIN", "STDERR",
+    "ASCII", "HEXDUMP", "BINARY", "BYTE", "OPCODE",
+    "TTY0", "ANSI80", "CRLF", "EOF", "SOF",
+    "PYXELDEV", "8BITLUV", "PIXELART", "SPRITE", "PALETTE",
+    "X86", "Z80A", "6502", "MOTOROLA", "C64",
+    "PASCAL", "FORTRAN", "COBOL", "ALGOL", "B_LANG",
+    "LOBOLTO", "UMORIA", "NETHACK", "ANGBAND", "DUNGEON",
+    "XYZZY", "PLUGH", "FROB", "FOOBAR", "BAZQUX",
+    "STR0", "CHAR1", "VOID", "CONST", "STATIC",
+    "VOLATILE", "REGISTER", "STRUCT", "UNION", "TYPEDEF",
+    "MAXINT", "MININT", "ID001", "USER99", "GUEST",
 ]
 
 
@@ -113,6 +124,8 @@ def get_top_scores(entries: list[dict[str, Any]], limit: int = 10) -> list[dict[
 
 
 def _period_field(period: str) -> str:
+    if period == SCOREBOARD_PERIOD_DAILY:
+        return "period_day"
     return "period_season" if period == SCOREBOARD_PERIOD_SEASON else "period_week"
 
 
@@ -357,3 +370,26 @@ def fetch_online_scores(period: str, url: str | None = None, timestamp: str | No
         return data if isinstance(data, list) else []
     except Exception:
         return []
+
+
+def fetch_online_rank(entry: dict[str, Any], period: str, url: str | None = None) -> int | None:
+    target = url if url is not None else ONLINE_SCORE_URL
+    if not target:
+        return None
+    entry = with_score_periods(entry)
+    key = str(entry.get(_period_field(period), ""))
+    try:
+        sep = "&" if "?" in target else "?"
+        query = urllib.parse.urlencode({
+            "action": "rank",
+            "period": period,
+            "key": key,
+            "player_name": str(entry.get("player_name", "")),
+            "score": int(entry.get("score", 0)),
+        })
+        data = _http_json(target + sep + query)
+        if isinstance(data, dict) and data.get("rank") is not None:
+            return int(data["rank"])
+    except Exception:
+        return None
+    return None
