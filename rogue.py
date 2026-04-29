@@ -198,7 +198,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260429_1640"
+UI_BUILD = "260429_1652"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 
 # ===========================================================
@@ -1132,6 +1132,15 @@ class Game:
         self.logo_frames = 0
         self.online_period = SCOREBOARD_PERIOD_WEEKLY
         self.online_scores = []
+        self.b_prev = False
+        self.b_frames = 0
+        self.b_used = False
+        self.b_tap = False
+        self.back_prev = False
+        self.back_frames = 0
+        self.back_used = False
+        self.back_tap = False
+        self.b_menu_guard = False
         self.st = ST_LOGO
         self._loading_phase = 0
 
@@ -4042,17 +4051,17 @@ class Game:
     def btn_cancel(self): return self.kp(pyxel.KEY_ESCAPE, pyxel.GAMEPAD1_BUTTON_B)
     def btn_overlay_cancel(self):
         if self.kp(pyxel.KEY_ESCAPE): return True
-        if self.back_tap: return True
+        if getattr(self, "back_tap", False): return True
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
-        if self.b_menu_guard:
+        if getattr(self, "b_menu_guard", False):
             if not b_now:
                 self.b_menu_guard=False
             return False
         if self.kp(pyxel.GAMEPAD1_BUTTON_B):
             self.b_used=True
             return True
-        return self.b_tap
-    def btn_menu(self): return self.kp(pyxel.KEY_ESCAPE) or self.b_tap
+        return getattr(self, "b_tap", False)
+    def btn_menu(self): return self.kp(pyxel.KEY_ESCAPE) or getattr(self, "b_tap", False)
     def btn_wait(self):
         return self.kp(pyxel.KEY_PERIOD) or (
             self.kh(pyxel.GAMEPAD1_BUTTON_A) and self.kh(pyxel.GAMEPAD1_BUTTON_B)
@@ -4284,6 +4293,11 @@ class Game:
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.st=ST_SCORE
             return
         if self.st==ST_SCORE:
+            if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
+                       pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or self.btn_back():
+                self.st = ST_ONLINE_SCORE
+                self.load_online_period_scores()
+                return
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.new_game()
             return
         if self.st==ST_QUIT_CONFIRM:

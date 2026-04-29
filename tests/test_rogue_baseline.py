@@ -8377,6 +8377,28 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
 
+    def test_online_score_screen_cancel_is_safe_before_new_game_initializes_input_guards(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        game.online_scores = []
+
+        rogue.pyxel.set_input()
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+
+    def test_score_screen_can_open_online_ranking_after_game_over(self):
+        game = new_game(seed=35)
+        game.st = rogue.ST_SCORE
+        game.load_online_period_scores = lambda: []
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+
     def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
