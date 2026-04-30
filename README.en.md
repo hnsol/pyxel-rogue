@@ -141,7 +141,7 @@ Implemented overview:
 
 See [TODO.md](TODO.md) for the detailed implementation status.
 
-The Apps Script scaffold for online rankings lives in `docs/apps_script_scoreboard.gs`. Set `PYXEL_ROGUE_SCORE_URL` to point at your deployment. The scoreboard syncs Daily / Weekly / Season together on entry, tab switches do not fetch, and R / Select refreshes all three periods. Online submission happens only at game end, and `score_id` prevents duplicate rows. Pyxel Rogue calls `?action=seedDummy` during the startup logo, and Apps Script creates stable period/key-specific dummy rows: 10 for today, then 1 each for the previous 10 days and previous 10 weeks. Season aggregates those period rows.
+The Apps Script scaffold for online rankings lives in `docs/apps_script_scoreboard.gs`. Set `PYXEL_ROGUE_SCORE_URL` to point at your deployment. The scoreboard syncs Daily / Weekly / Season together on entry, tab switches do not fetch, and R / Select refreshes all three periods. Online submission happens only at game end, and `score_id` prevents duplicate rows. During scoreboard sync, Apps Script creates only the needed stable dummy rows for the requested period/key: 10 for today, then 1 each for the previous 10 days and previous 10 weeks. Season aggregates those period rows.
 
 ## Roadmap
 

@@ -141,7 +141,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 実装状況の詳細は [TODO.md](TODO.md) を参照してください。
 
-オンラインランキングは Google Sheets + Apps Script 連携用の雛形を `docs/apps_script_scoreboard.gs` に置いています。公開先を差し替える場合は `PYXEL_ROGUE_SCORE_URL` を指定してください。スコアボードは入場時に Daily / Weekly / Season をまとめて同期し、タブ切替では通信せず、R / Select で3期間を手動更新できます。オンライン投稿はゲーム終了時のみ行い、`score_id` で重複行を抑止します。Pyxel Rogue は起動ロゴ中に `?action=seedDummy` を呼び、Apps Script が今日10件、過去10日と過去10週を各1件ずつ、period/key別の安定したダミー行として生成します。Season はそれらの期間行を集計します。
+オンラインランキングは Google Sheets + Apps Script 連携用の雛形を `docs/apps_script_scoreboard.gs` に置いています。公開先を差し替える場合は `PYXEL_ROGUE_SCORE_URL` を指定してください。スコアボードは入場時に Daily / Weekly / Season をまとめて同期し、タブ切替では通信せず、R / Select で3期間を手動更新できます。オンライン投稿はゲーム終了時のみ行い、`score_id` で重複行を抑止します。Apps Script はスコアボード同期時に必要なperiod/keyだけ、今日10件、過去10日と過去10週を各1件ずつ、安定したダミー行として生成します。Season はそれらの期間行を集計します。
 
 ## 今後の予定
 

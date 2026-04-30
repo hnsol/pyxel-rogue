@@ -150,7 +150,6 @@ from rogue_scores import (
     save_player_name,
     save_score_entry,
     score_period_keys,
-    seed_dummy_online_scores,
     submit_online_score,
     sync_missing_local_best,
 )
@@ -202,7 +201,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260430_2257"
+UI_BUILD = "260430_2316"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1152,7 +1151,6 @@ class Game:
         self.name_pos = min(len(self.name_chars), 7)
         self.name_pick = 0
         self.logo_frames = 0
-        self.logo_seed_requested = False
         self.online_period = SCOREBOARD_PERIOD_DAILY
         self.online_scores = []
         self.online_score_cache = {}
@@ -4319,9 +4317,6 @@ class Game:
 
     def upd_logo(self):
         self.logo_frames = getattr(self, "logo_frames", 0) + 1
-        if not getattr(self, "logo_seed_requested", False):
-            self.logo_seed_requested = True
-            seed_dummy_online_scores()
         if self.btn_any_key():
             self.enter_title_screen()
             return

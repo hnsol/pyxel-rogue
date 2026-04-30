@@ -8813,25 +8813,18 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_TITLE)
 
-    def test_logo_requests_dummy_seed_once(self):
-        calls = []
-        old_seed = rogue.seed_dummy_online_scores
-        try:
-            rogue.seed_dummy_online_scores = lambda: calls.append("seed") or True
-            game = rogue.Game.__new__(rogue.Game)
-            game.settings = rogue.Settings()
-            game.st = rogue.ST_LOGO
-            game.logo_frames = 0
-            game.logo_seed_requested = False
+    def test_logo_does_not_request_dummy_seed(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_LOGO
+        game.logo_frames = 0
 
-            rogue.pyxel.set_input()
-            game.update()
-            rogue.pyxel.set_input()
-            game.update()
-        finally:
-            rogue.seed_dummy_online_scores = old_seed
+        rogue.pyxel.set_input()
+        game.update()
+        rogue.pyxel.set_input()
+        game.update()
 
-        self.assertEqual(calls, ["seed"])
+        self.assertFalse(hasattr(game, "logo_seed_requested"))
 
     def test_logo_and_title_use_bright_text_without_press_any_key_hint(self):
         game = rogue.Game.__new__(rogue.Game)
