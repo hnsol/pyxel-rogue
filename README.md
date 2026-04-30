@@ -37,6 +37,17 @@ tools/build_web.sh
 ```
 
 出力先は `web/index.html` です。
+プログラム変更後にWebビルドの更新漏れを確認する場合:
+
+```bash
+tools/check_web_build.sh
+```
+
+GitHub Pages は `gh-pages` ブランチのrootを公開元にします。`main` のrootや `docs/` に生成物を置かず、次で `web/` の成果物を公開ブランチへ反映します。
+
+```bash
+tools/deploy_pages.sh
+```
 
 ## 手元でダウンロードして遊ぶ
 

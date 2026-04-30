@@ -37,6 +37,17 @@ tools/build_web.sh
 ```
 
 The output is `web/index.html`.
+To check that the tracked web build is current after program changes:
+
+```bash
+tools/check_web_build.sh
+```
+
+GitHub Pages uses the root of the `gh-pages` branch. This keeps generated files out of the `main` root and `docs/`; publish the generated `web/` output with:
+
+```bash
+tools/deploy_pages.sh
+```
 
 ## Download and Play Locally
 
