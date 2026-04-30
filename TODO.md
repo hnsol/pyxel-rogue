@@ -107,6 +107,7 @@
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の経験値加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` / `exp_add()` 相当の Amulet 階層以深モンスター生成 stat/EXP 補正と深層 `ISHASTE` を helper 化
 - [x] Rogue 5.4.4 `new_level.c` / `passages.c` / `command.c:search()` / `move.c:be_trapped()` 相当の trap・secret・search・単純trap状態分岐を helper 化
+- [x] Rogue 5.4.4 `io.c:step_ok()` 相当の文字/地形判定を `rogue_io.py` へ小分割し、視界・杖照準の共通基準にする
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `pack_room()` 相当の scare monster scroll 拾得消滅と満杯時スタック拒否を helper 化
 - [x] 生成時 curse / enchant の非可視性と装備時 `ISKNOW` 相当の識別表示監査
 - [x] Rogue 5.4.4 `move.c:do_run()` / `do_move()` と `misc.c:look()` 準拠の run 停止条件再監査

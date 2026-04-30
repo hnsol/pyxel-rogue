@@ -1,7 +1,8 @@
 """Rogue 5.4.4 misc.c:look() visibility helpers."""
 from __future__ import annotations
 
-from rogue_map import T_CORR, T_DOOR, T_VOID, WALKABLE
+import rogue_io
+from rogue_map import TILE_CH, T_CORR, T_DOOR, T_VOID
 
 
 def look_cell_visible(
@@ -28,4 +29,4 @@ def _f_pass(tile: int) -> bool:
 
 
 def _step_ok(tile: int) -> bool:
-    return tile in WALKABLE
+    return rogue_io.step_ok_tile(tile, TILE_CH)

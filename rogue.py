@@ -43,6 +43,7 @@ import rogue_chase
 import rogue_fight
 import rogue_food
 import rogue_init
+import rogue_io
 import rogue_levels
 import rogue_misc
 import rogue_move
@@ -203,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0742"
+UI_BUILD = "260501_0748"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2790,7 +2791,7 @@ class Game:
 
     def zap_step_ok_char(self, ch):
         # C: io.c:step_ok() rejects space, walls, and alphabetic monster glyphs.
-        return ch not in (" ", "|", "-") and not ch.isalpha()
+        return rogue_io.step_ok_char(ch)
 
     def first_zap_target(self, dx, dy, stop_at_door=False):
         x,y=self.p.x,self.p.y

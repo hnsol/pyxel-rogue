@@ -6703,6 +6703,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_dungeon.should_place_room_monster(SequenceRng([24]), False))
         self.assertFalse(rogue_dungeon.should_place_room_monster(SequenceRng([25]), False))
 
+    def test_rogue544_io_helper_step_ok_matches_source_char_gate(self):
+        # Rogue 5.4.4 io.c:step_ok() rejects spaces, walls, and alphabetic glyphs.
+        import rogue_io
+
+        for ch in (" ", "|", "-", "A", "z"):
+            self.assertFalse(rogue_io.step_ok_char(ch))
+        for ch in (".", "#", "+", "%", "^", "?", "!", "/", "=", ")", "]", ":", "*", "$", ","):
+            self.assertTrue(rogue_io.step_ok_char(ch))
+
+    def test_rogue544_io_helper_step_ok_tile_uses_tile_glyphs(self):
+        # Rogue 5.4.4 io.c:step_ok() works on map glyphs returned by chat()/winat().
+        import rogue_io
+
+        self.assertFalse(rogue_io.step_ok_tile(rogue.T_VOID, rogue.TILE_CH))
+        self.assertFalse(rogue_io.step_ok_tile(rogue.T_HWALL, rogue.TILE_CH))
+        self.assertFalse(rogue_io.step_ok_tile(rogue.T_VWALL, rogue.TILE_CH))
+        self.assertTrue(rogue_io.step_ok_tile(rogue.T_FLOOR, rogue.TILE_CH))
+        self.assertTrue(rogue_io.step_ok_tile(rogue.T_DOOR, rogue.TILE_CH))
+        self.assertTrue(rogue_io.step_ok_tile(rogue.T_TRAP, rogue.TILE_CH))
+
     def test_rogue544_find_floor_monster_candidates_match_rooms_find_floor_gate(self):
         # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) accepts step_ok() room cells.
         import rogue_dungeon
