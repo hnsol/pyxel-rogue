@@ -6731,6 +6731,37 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_dungeon.should_place_room_gold(SequenceRng([0]), True, 3, 4))
         self.assertTrue(rogue_dungeon.should_place_room_gold(SequenceRng([0]), True, 4, 4))
 
+    def test_rogue544_room_gold_rolls_goldcalc_before_find_floor(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() sets o_goldval = GOLDCALC before find_floor().
+        game = new_game(seed=3042)
+        set_open_floor(game)
+        room = game.rooms[0]
+        game.p.depth = 3
+        events = []
+
+        class GoldRng:
+            def rnd(self, n):
+                events.append(f"rnd:{n}")
+                return 0
+
+            def choice(self, seq):
+                events.append("choice")
+                return seq[0]
+
+        old_rng = rogue.RNG
+        old_usable_rooms = game.usable_rooms
+        try:
+            rogue.RNG = GoldRng()
+            game.gitems = []
+            game.usable_rooms = lambda: [room]
+
+            game._spawn_room_gold()
+        finally:
+            rogue.RNG = old_rng
+            game.usable_rooms = old_usable_rooms
+
+        self.assertEqual(events[:3], ["rnd:2", "rnd:80", "choice"])
+
     def test_rogue544_room_monster_gate_matches_do_rooms(self):
         # Rogue 5.4.4 rooms.c:do_rooms() uses 80% with gold in room, otherwise 25%.
         import rogue_dungeon
@@ -7972,6 +8003,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 11)
         self.assertEqual(game.p.quiet, 0)
 
+        game.p.gold = 0
+        game.gitems = []
         gold = rogue.Item(rogue.CAT_GOLD, 0)
         gold.qty = 42
         gold.x = game.p.x
