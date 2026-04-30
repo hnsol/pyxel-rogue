@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0752"
+UI_BUILD = "260501_0827"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1550,12 +1550,15 @@ class Game:
         rooms=self.usable_rooms()
         if rogue_dungeon.should_place_treasure_room(RNG):
             self._spawn_treasure_room()
-        for _ in range(rogue_dungeon.put_things_item_count(RNG)):
+        for _ in range(rogue_dungeon.MAXOBJ):
+            if not rogue_dungeon.should_put_thing_attempt(RNG):
+                continue
+            it=self.make_game_item(d)
             rm=RNG.choice(rooms)
             for _ in range(20):
                 ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
                 if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
-                    it=self.make_game_item(d); it.x,it.y=ix,iy; self.gitems.append(it); break
+                    it.x,it.y=ix,iy; self.gitems.append(it); break
 
     def _spawn_room_gold(self):
         # C: rooms.c:do_rooms()

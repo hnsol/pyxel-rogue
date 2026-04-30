@@ -30,9 +30,14 @@ def should_place_treasure_room(rng):
     return rng.rnd(TREAS_ROOM) == 0
 
 
+def should_put_thing_attempt(rng):
+    """Rogue 5.4.4 new_level.c:put_things() per-MAXOBJ 36% gate."""
+    return rng.rnd(100) < PUT_THINGS_PROB
+
+
 def put_things_item_count(rng):
     """Rogue 5.4.4 new_level.c:put_things() MAXOBJ attempts at 36% each."""
-    return sum(1 for _ in range(MAXOBJ) if rng.rnd(100) < PUT_THINGS_PROB)
+    return sum(1 for _ in range(MAXOBJ) if should_put_thing_attempt(rng))
 
 
 def should_put_things(has_amulet: bool, level: int, max_level: int) -> bool:

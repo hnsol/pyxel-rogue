@@ -6677,6 +6677,43 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_dungeon.put_things_item_count(rng), 5)
         self.assertEqual(rng.calls, [100] * 9)
 
+    def test_rogue544_put_things_interleaves_attempt_new_thing_and_floor(self):
+        # Rogue 5.4.4 new_level.c:put_things() calls new_thing() and find_floor() inside each successful attempt.
+        game = new_game(seed=3041)
+        set_open_floor(game)
+        events = []
+
+        class PutThingsRng:
+            def __init__(self):
+                self.item_attempts = 0
+
+            def rnd(self, n):
+                events.append(f"rnd:{n}")
+                if n == rogue.rogue_dungeon.TREAS_ROOM:
+                    return 1
+                if n == 100:
+                    self.item_attempts += 1
+                    return 0 if self.item_attempts == 1 else 99
+                return 0
+
+            def choice(self, seq):
+                events.append("choice")
+                return seq[0]
+
+        old_rng = rogue.RNG
+        old_make_game_item = game.make_game_item
+        try:
+            rogue.RNG = PutThingsRng()
+            game.gitems = []
+            game.make_game_item = lambda depth: events.append("new_thing") or rogue.Item(rogue.CAT_FOOD, 0)
+
+            game._spawn_items()
+        finally:
+            rogue.RNG = old_rng
+            game.make_game_item = old_make_game_item
+
+        self.assertEqual(events[:4], ["rnd:20", "rnd:100", "new_thing", "choice"])
+
     def test_rogue544_put_things_skips_when_returning_up_with_amulet(self):
         # Rogue 5.4.4 new_level.c:put_things() returns when amulet && level < max_level.
         import rogue_dungeon
