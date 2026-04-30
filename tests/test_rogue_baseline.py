@@ -8852,7 +8852,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.pyxel.blt_calls[0][0], (0, 0, game.title_bg, 0, 0, rogue.SCR_W, rogue.SCR_H))
         self.assertEqual(rogue.pyxel.rect_calls[0][0], (344, 228, 174, 84, 0))
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
-        self.assertTrue(any(text == "START" and c == 23 for text, c, _x in calls))
+        self.assertTrue(any(text == "START" and c == 7 for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
 
     def test_title_background_dither_fades_in_and_input_finishes_fade(self):
@@ -8878,6 +8878,29 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.dither_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.dither_calls[0], 1.0)
+
+    def test_title_screen_uses_dedicated_palette_and_restores_game_palette_on_exit(self):
+        old_colors = getattr(rogue.pyxel, "colors", None)
+        try:
+            rogue.pyxel.colors = []
+            game = rogue.Game.__new__(rogue.Game)
+            game.settings = rogue.Settings()
+            game.title_fade_frames = 0
+            game.st = rogue.ST_LOGO
+
+            game.enter_title_screen()
+            self.assertEqual(rogue.pyxel.colors[: len(rogue.TITLE_BG_PALETTE)], list(rogue.TITLE_BG_PALETTE))
+
+            game.open_name_input()
+            self.assertEqual(
+                rogue.pyxel.colors[: len(rogue.GBC_HIGH_CONTRAST_PALETTE)],
+                rogue.GBC_HIGH_CONTRAST_PALETTE,
+            )
+        finally:
+            if old_colors is None:
+                del rogue.pyxel.colors
+            else:
+                rogue.pyxel.colors = old_colors
 
     def test_logo_dither_fades_in_holds_and_fades_out(self):
         game = rogue.Game.__new__(rogue.Game)

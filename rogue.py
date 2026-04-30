@@ -202,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260430_0743"
+UI_BUILD = "260430_1647"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -219,6 +219,14 @@ _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
 TITLE_FADE_FRAMES = 30
+TITLE_BG_PALETTE = (
+    0x000000, 0x010717, 0x000516, 0x010000, 0x0B4519, 0x011342, 0x01144B, 0xDE8A04,
+    0x365B7D, 0x294259, 0x000D3C, 0x081614, 0x076C28, 0x010100, 0x092D11, 0x2E4A63,
+    0x2A4A63, 0xFEFCD6, 0x013012, 0x000400, 0x132231, 0x011744, 0x02081A, 0x3A2D1F,
+    0x0A2A49, 0x010920, 0x04070C, 0x1C404E, 0x000611, 0x1D3142, 0x020305, 0x1B4A34,
+    0x8E6831, 0x000109, 0x0D090C, 0x030509, 0x143428, 0x011332, 0x000324, 0x011F28,
+    0x081A41, 0x00081A, 0x010711, 0xDEB95A, 0x768442, 0x010207, 0x444B4E, 0x125937,
+)
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
@@ -1173,13 +1181,17 @@ class Game:
     def load_title_background(self):
         self.title_bg = None
         try:
+            self.apply_title_palette()
             img = pyxel.Image(SCR_W, SCR_H)
             img.load(0, 0, TITLE_BG_PATH)
             self.title_bg = img
         except Exception:
             self.title_bg = None
+        if getattr(self, "st", None) != ST_TITLE:
+            self.apply_palette()
 
     def enter_title_screen(self):
+        self.apply_title_palette()
         self.title_fade_frames = 0
         self.st = ST_TITLE
 
@@ -1205,9 +1217,15 @@ class Game:
         self.ensure_settings().auto_pickup = bool(value)
 
     def apply_palette(self):
+        palette = PALETTES.get(self.ensure_settings().palette, GBC_PALETTE)
+        self.apply_palette_values(palette)
+
+    def apply_title_palette(self):
+        self.apply_palette_values(TITLE_BG_PALETTE)
+
+    def apply_palette_values(self, palette):
         if not hasattr(pyxel, 'colors'):
             return
-        palette = PALETTES.get(self.ensure_settings().palette, GBC_PALETTE)
         for i, rgb in enumerate(palette):
             if i < len(pyxel.colors):
                 pyxel.colors[i] = rgb
@@ -4201,6 +4219,7 @@ class Game:
 
     def prepare_title_new_game(self):
         self.player_name = self.current_player_name()
+        self.apply_palette()
         self.new_game()
         self.st = ST_PLAY
 
@@ -4248,6 +4267,7 @@ class Game:
         self.online_sync_periods = periods
 
     def enter_online_scoreboard(self):
+        self.apply_palette()
         self.ensure_online_score_state()
         self.online_period = SCOREBOARD_PERIOD_DAILY
         self.online_return_state = ST_TITLE
@@ -4290,6 +4310,7 @@ class Game:
         self.enter_title_screen()
 
     def open_name_input(self):
+        self.apply_palette()
         self.player_name = self.current_player_name()
         self.name_chars = list(self.player_name[:8])
         self.name_pos = min(len(self.name_chars), 7)
@@ -4712,6 +4733,7 @@ class Game:
         pyxel.dither(1.0)
 
     def draw_title_screen(self):
+        self.apply_title_palette()
         if not hasattr(self, "title_bg"):
             self.load_title_background()
         if self.title_bg is not None:
@@ -4725,11 +4747,11 @@ class Game:
         pyxel.dither(0.8)
         pyxel.rect(x - 28, y - 10, 174, 84, 0)
         pyxel.dither(1.0)
-        pyxel.rectb(x - 28, y - 10, 174, 84, 23)
+        pyxel.rectb(x - 28, y - 10, 174, 84, 17)
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
-            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 23)
-            self.txt(x, y + i * 24, item, 23 if i == cur else 30)
+            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 7)
+            self.txt(x, y + i * 24, item, 7 if i == cur else 17)
 
     def draw_name_input(self):
         self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_HILITE_COL)
