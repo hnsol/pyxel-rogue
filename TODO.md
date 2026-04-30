@@ -94,6 +94,7 @@
 - [x] Rogue 5.4.4 `daemons.c:swander()` / `rollwand()` と `monsters.c:wanderer()` 準拠の wandering monster spawn
 - [x] Rogue 5.4.4 `monsters.c:wanderer()` / `rooms.c:find_floor()` / `rnd_pos()` 準拠で wandering monster 候補を部屋内床に限定
 - [x] Rogue 5.4.4 `rooms.c:find_floor(..., monst=TRUE)` 準拠で、wandering monster と teleport away の候補は部屋内の stair / trap も許可
+- [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `find_floor(rp, ..., monst=TRUE)` 準拠で、部屋モンスター配置も `io.c:step_ok()` 候補を先に選んでから `randmonster(FALSE)` する
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
 - [x] Rogue 5.4.4 `armor.c:wear()` / `command.c:command()` 準拠で armor wear 拒否時はターン非消費
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠で armor 以外の wear を拒否

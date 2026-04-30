@@ -6747,12 +6747,54 @@ class RogueBaselineTest(unittest.TestCase):
             room_at,
             occupied={(2, 2)},
             player_pos=(1, 1),
-            walkable=rogue.WALKABLE,
+            tile_ch=rogue.TILE_CH,
             avoid={(1, 2)},
             excluded_room=room_b,
         )
 
         self.assertEqual(cands, [(2, 1)])
+
+    def test_rogue544_find_floor_monster_candidates_use_step_ok_tile_gate(self):
+        # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) gates through io.c:step_ok().
+        import rogue_dungeon
+
+        room = object()
+        tm = [[rogue.T_HWALL, rogue.T_VWALL, rogue.T_FLOOR, rogue.T_DOOR]]
+
+        def room_at(x, y):
+            return room
+
+        cands = rogue_dungeon.find_floor_monster_candidates(
+            tm,
+            room_at,
+            occupied=set(),
+            player_pos=(-1, -1),
+            tile_ch=rogue.TILE_CH,
+        )
+
+        self.assertEqual(cands, [(2, 0), (3, 0)])
+
+    def test_rogue544_find_floor_monster_candidates_can_scope_to_source_room(self):
+        # Rogue 5.4.4 rooms.c:find_floor(rp, ...) only samples the supplied room.
+        import rogue_dungeon
+
+        room_a = object()
+        room_b = object()
+        tm = [[rogue.T_FLOOR, rogue.T_FLOOR]]
+
+        def room_at(x, y):
+            return room_a if x == 0 else room_b
+
+        cands = rogue_dungeon.find_floor_monster_candidates(
+            tm,
+            room_at,
+            occupied=set(),
+            player_pos=(-1, -1),
+            tile_ch=rogue.TILE_CH,
+            only_room=room_b,
+        )
+
+        self.assertEqual(cands, [(1, 0)])
 
     def test_rogue544_rooms_helper_gone_room_selection_allows_duplicates(self):
         # Rogue 5.4.4 rooms.c:do_rooms() loops left_out times and may pick the same room twice.
@@ -6777,17 +6819,17 @@ class RogueBaselineTest(unittest.TestCase):
         room = game.rooms[0]
         spec = next(s for s in rogue.BESTIARY if s.sym == "E")
         old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
         old_usable_rooms = game.usable_rooms
-        old_random_room_tile = game.random_room_tile
         old_random_monster_spec = game.random_monster_spec
         old_give_pack = game.give_pack
         try:
             game.mons = []
             game.gitems = []
             game.usable_rooms = lambda: [room]
-            game.random_room_tile = lambda room_arg, tiles: (game.p.x + 1, game.p.y)
             game.random_monster_spec = lambda depth: spec
             game.give_pack = lambda monster: None
+            rogue.RNG.choice = lambda seq: next(pos for pos in seq if pos != (game.p.x, game.p.y))
             rogue.RNG.rnd = lambda n: 25
             game._spawn_mons()
             self.assertEqual(game.mons, [])
@@ -6797,10 +6839,51 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual([m.sym for m in game.mons], ["E"])
         finally:
             rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
             game.usable_rooms = old_usable_rooms
-            game.random_room_tile = old_random_room_tile
             game.random_monster_spec = old_random_monster_spec
             game.give_pack = old_give_pack
+
+    def test_rogue544_spawn_mons_finds_floor_before_randmonster_false(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() calls find_floor(rp, ..., monst=TRUE) before randmonster(FALSE).
+        game = new_game(seed=3304)
+        set_open_floor(game)
+        room = game.rooms[0]
+        spec = next(s for s in rogue.BESTIARY if s.sym == "E")
+        events = []
+
+        class SpawnRng:
+            def rnd(self, n):
+                events.append(f"rnd:{n}")
+                return 0
+
+            def choice(self, seq):
+                events.append("choice")
+                return next(pos for pos in seq if pos != (game.p.x, game.p.y))
+
+            def roll(self, number, sides):
+                return 1
+
+        old_rng = rogue.RNG
+        old_usable_rooms = game.usable_rooms
+        old_random_monster_spec = game.random_monster_spec
+        old_give_pack = game.give_pack
+        try:
+            rogue.RNG = SpawnRng()
+            game.mons = []
+            game.gitems = []
+            game.usable_rooms = lambda: [room]
+            game.random_monster_spec = lambda depth: events.append("randmonster") or spec
+            game.give_pack = lambda monster: None
+
+            game._spawn_mons()
+        finally:
+            rogue.RNG = old_rng
+            game.usable_rooms = old_usable_rooms
+            game.random_monster_spec = old_random_monster_spec
+            game.give_pack = old_give_pack
+
+        self.assertEqual(events[:3], ["rnd:100", "choice", "randmonster"])
 
     def test_rogue_544_killed_monster_drops_pack_items_at_monster_position(self):
         # Rogue 5.4.4 fight.c:killed() calls remove_mon(..., TRUE), which falls t_pack items.

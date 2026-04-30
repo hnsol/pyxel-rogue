@@ -1,3 +1,5 @@
+import rogue_io
+
 TREAS_ROOM = 20
 MINTREAS = 2
 MAXTREAS = 10
@@ -53,11 +55,12 @@ def find_floor_monster_candidates(
     room_at,
     occupied,
     player_pos,
-    walkable,
+    tile_ch,
     avoid=(),
     excluded_room=None,
+    only_room=None,
 ):
-    """Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) candidate gate."""
+    """Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) + io.c:step_ok()."""
     avoid = set(avoid or ())
     occupied = set(occupied or ())
     candidates = []
@@ -66,8 +69,10 @@ def find_floor_monster_candidates(
             room = room_at(x, y)
             if room is None or room is excluded_room:
                 continue
+            if only_room is not None and room is not only_room:
+                continue
             pos = (x, y)
-            if tile in walkable and pos not in avoid and pos != player_pos and pos not in occupied:
+            if rogue_io.step_ok_tile(tile, tile_ch) and pos not in avoid and pos != player_pos and pos not in occupied:
                 candidates.append(pos)
     return candidates
 

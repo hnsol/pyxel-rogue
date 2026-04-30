@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0748"
+UI_BUILD = "260501_0752"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1453,15 +1453,21 @@ class Game:
         for rm in self.usable_rooms():
             if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(rm)):
                 continue
+            cands=rogue_dungeon.find_floor_monster_candidates(
+                self.tm,
+                self.room_at,
+                {(m.x,m.y) for m in self.mons if m.alive},
+                (self.p.x,self.p.y),
+                TILE_CH,
+                only_room=rm,
+            )
+            if not cands:
+                continue
+            mx,my=RNG.choice(cands)
             e=self.random_monster_spec(d)
-            for _ in range(30):
-                mx,my=self.random_room_tile(rm, WALKABLE)
-                if self.tm[my][mx] in WALKABLE and not self.mon_at(mx,my) \
-                   and not(mx==self.p.x and my==self.p.y):
-                    monster=self.new_monster_from_spec(mx,my,e)
-                    self.give_pack(monster)
-                    self.mons.append(monster)
-                    break
+            monster=self.new_monster_from_spec(mx,my,e)
+            self.give_pack(monster)
+            self.mons.append(monster)
 
     def room_has_gold(self, room):
         return any(
@@ -1532,7 +1538,7 @@ class Game:
             self.room_at,
             {(m.x,m.y) for m in self.mons if m.alive},
             (self.p.x,self.p.y),
-            WALKABLE,
+            TILE_CH,
             excluded_room=player_room,
         )
 
@@ -2870,7 +2876,7 @@ class Game:
             self.room_at,
             {(m.x,m.y) for m in self.mons if m.alive},
             (self.p.x,self.p.y),
-            WALKABLE,
+            TILE_CH,
             avoid=avoid,
         )
         return RNG.choice(cands) if cands else None
