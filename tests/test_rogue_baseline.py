@@ -2295,6 +2295,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn((20, 1), cands)
         self.assertNotIn((12, 12), cands)
 
+    def test_rogue_544_wanderer_floor_candidates_allow_room_stairs_and_traps(self):
+        # Rogue 5.4.4 monsters.c:wanderer() uses rooms.c:find_floor(..., monst=TRUE), which accepts step_ok().
+        game = new_game(seed=341)
+        room_a, room_b = set_two_room_floor(game)
+        game.p.x, game.p.y = room_a.x + 2, room_a.y + 2
+        stair = (room_b.x + 2, room_b.y + 2)
+        trap = (room_b.x + 3, room_b.y + 2)
+        game.tm[stair[1]][stair[0]] = rogue.T_STAIR
+        game.tm[trap[1]][trap[0]] = rogue.T_TRAP
+
+        cands = game.wanderer_floor_candidates()
+
+        self.assertIn(stair, cands)
+        self.assertIn(trap, cands)
+
     def test_rogue_544_effect_scrolls_do_not_directly_identify_without_oi_know(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE/S_SCARE/S_REMOVE/S_AGGR do not assign scr_info[].oi_know.
         cases = [
@@ -6687,6 +6702,37 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_dungeon.should_place_room_monster(SequenceRng([80]), True))
         self.assertTrue(rogue_dungeon.should_place_room_monster(SequenceRng([24]), False))
         self.assertFalse(rogue_dungeon.should_place_room_monster(SequenceRng([25]), False))
+
+    def test_rogue544_find_floor_monster_candidates_match_rooms_find_floor_gate(self):
+        # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) accepts step_ok() room cells.
+        import rogue_dungeon
+
+        room_a = object()
+        room_b = object()
+        tm = [
+            [rogue.T_VOID, rogue.T_VOID, rogue.T_VOID, rogue.T_VOID],
+            [rogue.T_VOID, rogue.T_FLOOR, rogue.T_STAIR, rogue.T_VOID],
+            [rogue.T_VOID, rogue.T_TRAP, rogue.T_FLOOR, rogue.T_CORR],
+        ]
+
+        def room_at(x, y):
+            if (x, y) in {(1, 1), (2, 1), (1, 2), (2, 2)}:
+                return room_a
+            if (x, y) == (3, 2):
+                return room_b
+            return None
+
+        cands = rogue_dungeon.find_floor_monster_candidates(
+            tm,
+            room_at,
+            occupied={(2, 2)},
+            player_pos=(1, 1),
+            walkable=rogue.WALKABLE,
+            avoid={(1, 2)},
+            excluded_room=room_b,
+        )
+
+        self.assertEqual(cands, [(2, 1)])
 
     def test_rogue544_rooms_helper_gone_room_selection_allows_duplicates(self):
         # Rogue 5.4.4 rooms.c:do_rooms() loops left_out times and may pick the same room twice.

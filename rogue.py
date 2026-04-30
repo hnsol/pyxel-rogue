@@ -203,7 +203,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0732"
+UI_BUILD = "260501_0742"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1526,16 +1526,14 @@ class Game:
 
     def wanderer_floor_candidates(self):
         player_room=self.room_containing(self.p.x,self.p.y)
-        return [
-            (x,y)
-            for y,row in enumerate(self.tm)
-            for x,tile in enumerate(row)
-            if (room := self.room_at(x,y)) is not None
-            if tile in (T_FLOOR,T_CORR)
-            and (x,y)!=(self.p.x,self.p.y)
-            and not self.mon_at(x,y)
-            and room is not player_room
-        ]
+        return rogue_dungeon.find_floor_monster_candidates(
+            self.tm,
+            self.room_at,
+            {(m.x,m.y) for m in self.mons if m.alive},
+            (self.p.x,self.p.y),
+            WALKABLE,
+            excluded_room=player_room,
+        )
 
     def _spawn_items(self):
         # C: new_level.c:put_things()
@@ -2866,16 +2864,14 @@ class Game:
 
     def random_monster_floor(self,avoid=None):
         avoid=set(avoid or ())
-        cands=[
-            (x,y)
-            for y,row in enumerate(self.tm)
-            for x,tile in enumerate(row)
-            if self.room_at(x,y) is not None
-            and tile in WALKABLE
-            and (x,y) not in avoid
-            and (x,y)!=(self.p.x,self.p.y)
-            and not self.mon_at(x,y)
-        ]
+        cands=rogue_dungeon.find_floor_monster_candidates(
+            self.tm,
+            self.room_at,
+            {(m.x,m.y) for m in self.mons if m.alive},
+            (self.p.x,self.p.y),
+            WALKABLE,
+            avoid=avoid,
+        )
         return RNG.choice(cands) if cands else None
 
     def relocate_monster(self,m,pos):

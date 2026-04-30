@@ -48,6 +48,30 @@ def should_place_room_monster(rng, has_gold: bool) -> bool:
     return rng.rnd(100) < (80 if has_gold else 25)
 
 
+def find_floor_monster_candidates(
+    tm,
+    room_at,
+    occupied,
+    player_pos,
+    walkable,
+    avoid=(),
+    excluded_room=None,
+):
+    """Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) candidate gate."""
+    avoid = set(avoid or ())
+    occupied = set(occupied or ())
+    candidates = []
+    for y, row in enumerate(tm):
+        for x, tile in enumerate(row):
+            room = room_at(x, y)
+            if room is None or room is excluded_room:
+                continue
+            pos = (x, y)
+            if tile in walkable and pos not in avoid and pos != player_pos and pos not in occupied:
+                candidates.append(pos)
+    return candidates
+
+
 def trap_count_for_level(level: int, rng) -> int:
     """Rogue 5.4.4 new_level.c:new_level() trap count."""
     if rng.rnd(10) >= level:
