@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0830"
+UI_BUILD = "260501_0840"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1555,10 +1555,18 @@ class Game:
                 continue
             it=self.make_game_item(d)
             rm=RNG.choice(rooms)
-            for _ in range(20):
-                ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
-                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
-                    it.x,it.y=ix,iy; self.gitems.append(it); break
+            cands=rogue_dungeon.find_floor_object_candidates(
+                self.tm,
+                self.room_at,
+                T_FLOOR,
+                T_CORR,
+                avoid={(self.p.x,self.p.y)},
+                occupied={(i.x,i.y) for i in self.gitems},
+                only_room=rm,
+            )
+            if cands:
+                ix,iy=RNG.choice(cands)
+                it.x,it.y=ix,iy; self.gitems.append(it)
 
     def _spawn_room_gold(self):
         # C: rooms.c:do_rooms()
@@ -1567,11 +1575,19 @@ class Game:
             if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
                 continue
             qty=goldcalc(d)
-            for _ in range(20):
-                ix,iy=self.random_room_tile(rm, {T_FLOOR,T_CORR})
-                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy):
-                    g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
-                    self.gitems.append(g); break
+            cands=rogue_dungeon.find_floor_object_candidates(
+                self.tm,
+                self.room_at,
+                T_FLOOR,
+                T_CORR,
+                avoid={(self.p.x,self.p.y)},
+                occupied={(i.x,i.y) for i in self.gitems},
+                only_room=rm,
+            )
+            if cands:
+                ix,iy=RNG.choice(cands)
+                g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
+                self.gitems.append(g)
 
     def _spawn_treasure_room(self, room=None):
         # Rogue 5.4.4 new_level.c:treas_room().
@@ -1580,10 +1596,18 @@ class Game:
         inner_area=max(0,(room.w-2)*(room.h-2))
         treasure_count, monster_count = rogue_dungeon.treasure_room_counts(inner_area,RNG)
         for _ in range(treasure_count):
-            for _ in range(2 * rogue_dungeon.MAXTRIES):
-                ix,iy=self.random_room_tile(room,{T_FLOOR,T_CORR})
-                if self.tm[iy][ix] in (T_FLOOR,T_CORR) and not self.gi_at(ix,iy) and not self.mon_at(ix,iy):
-                    it=self.make_game_item(self.p.depth); it.x,it.y=ix,iy; self.gitems.append(it); break
+            cands=rogue_dungeon.find_floor_object_candidates(
+                self.tm,
+                self.room_at,
+                T_FLOOR,
+                T_CORR,
+                avoid={(self.p.x,self.p.y)},
+                occupied={(i.x,i.y) for i in self.gitems} | {(m.x,m.y) for m in self.mons if m.alive},
+                only_room=room,
+            )
+            if cands:
+                ix,iy=RNG.choice(cands)
+                it=self.make_game_item(self.p.depth); it.x,it.y=ix,iy; self.gitems.append(it)
         monster_depth=self.p.depth+1
         for _ in range(monster_count):
             for _ in range(rogue_dungeon.MAXTRIES):
@@ -1603,15 +1627,14 @@ class Game:
             return
         if any(item.cat==CAT_AMULET for item in self.p.inv + self.gitems):
             return
-        cands=[
-            (x,y)
-            for y,row in enumerate(self.tm)
-            for x,tile in enumerate(row)
-            if tile==T_FLOOR
-            and (x,y)!=(self.p.x,self.p.y)
-            and not self.gi_at(x,y)
-            and not self.mon_at(x,y)
-        ]
+        cands=rogue_dungeon.find_floor_object_candidates(
+            self.tm,
+            self.room_at,
+            T_FLOOR,
+            T_CORR,
+            avoid={(self.p.x,self.p.y)},
+            occupied={(i.x,i.y) for i in self.gitems} | {(m.x,m.y) for m in self.mons if m.alive},
+        )
         if not cands:
             return
         x,y=RNG.choice(cands)

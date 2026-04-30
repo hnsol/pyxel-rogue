@@ -82,6 +82,34 @@ def find_floor_monster_candidates(
     return candidates
 
 
+def find_floor_object_candidates(
+    tm,
+    room_at,
+    floor_tile,
+    passage_tile,
+    avoid=(),
+    occupied=(),
+    excluded_room=None,
+    only_room=None,
+):
+    """Rogue 5.4.4 rooms.c:find_floor(..., monst=FALSE) FLOOR/PASSAGE gate."""
+    avoid = set(avoid or ())
+    occupied = set(occupied or ())
+    candidates = []
+    for y, row in enumerate(tm):
+        for x, tile in enumerate(row):
+            room = room_at(x, y)
+            if room is None or room is excluded_room:
+                continue
+            if only_room is not None and room is not only_room:
+                continue
+            target = passage_tile if getattr(room, "is_maze", False) else floor_tile
+            pos = (x, y)
+            if tile == target and pos not in avoid and pos not in occupied:
+                candidates.append(pos)
+    return candidates
+
+
 def trap_count_for_level(level: int, rng) -> int:
     """Rogue 5.4.4 new_level.c:new_level() trap count."""
     if rng.rnd(10) >= level:

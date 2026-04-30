@@ -6762,6 +6762,99 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(events[:3], ["rnd:2", "rnd:80", "choice"])
 
+    def test_rogue544_room_gold_find_floor_uses_maze_passage(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() room gold uses find_floor(rp, ..., monst=FALSE).
+        game = new_game(seed=3044)
+        room = rogue.Room(5, 5, 5, 5, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_FLOOR
+        game.tm[6][7] = rogue.T_CORR
+        game.p.x, game.p.y = 6, 6
+        game.gitems = []
+        game.mons = []
+
+        class GoldRng:
+            def rnd(self, n):
+                return 0
+
+            def choice(self, seq):
+                return seq[0]
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = GoldRng()
+            game._spawn_room_gold()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual([(item.x, item.y) for item in game.gitems if item.cat == rogue.CAT_GOLD], [(7, 6)])
+
+    def test_rogue544_put_things_find_floor_uses_maze_passage(self):
+        # Rogue 5.4.4 new_level.c:put_things() object placement uses find_floor(..., monst=FALSE).
+        game = new_game(seed=3045)
+        room = rogue.Room(5, 5, 5, 5, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_FLOOR
+        game.tm[6][7] = rogue.T_CORR
+        game.p.x, game.p.y = 6, 6
+        game.gitems = []
+        game.mons = []
+
+        class PutThingsRng:
+            def __init__(self):
+                self.attempts = 0
+
+            def rnd(self, n):
+                if n == rogue.rogue_dungeon.TREAS_ROOM:
+                    return 1
+                if n == 100:
+                    self.attempts += 1
+                    return 0 if self.attempts == 1 else 99
+                return 0
+
+            def choice(self, seq):
+                return seq[0]
+
+        old_rng = rogue.RNG
+        old_make_game_item = game.make_game_item
+        try:
+            rogue.RNG = PutThingsRng()
+            game.make_game_item = lambda depth: rogue.Item(rogue.CAT_FOOD, 0)
+            game._spawn_items()
+        finally:
+            rogue.RNG = old_rng
+            game.make_game_item = old_make_game_item
+
+        self.assertEqual([(item.x, item.y) for item in game.gitems], [(7, 6)])
+
+    def test_rogue544_treasure_room_items_find_floor_use_maze_passage(self):
+        # Rogue 5.4.4 new_level.c:treas_room() treasure placement uses find_floor(rp, ..., FALSE).
+        game = new_game(seed=3046)
+        room = rogue.Room(5, 5, 5, 5, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_FLOOR
+        game.tm[6][7] = rogue.T_CORR
+        game.p.x, game.p.y = 6, 6
+        game.gitems = []
+        game.mons = []
+        old_counts = rogue.rogue_dungeon.treasure_room_counts
+        old_choice = rogue.RNG.choice
+        old_make_game_item = game.make_game_item
+        try:
+            rogue.rogue_dungeon.treasure_room_counts = lambda inner_area, rng: (1, 0)
+            rogue.RNG.choice = lambda seq: seq[0]
+            game.make_game_item = lambda depth: rogue.Item(rogue.CAT_FOOD, 0)
+            game._spawn_treasure_room(room=room)
+        finally:
+            rogue.rogue_dungeon.treasure_room_counts = old_counts
+            rogue.RNG.choice = old_choice
+            game.make_game_item = old_make_game_item
+
+        self.assertEqual([(item.x, item.y) for item in game.gitems], [(7, 6)])
+
     def test_rogue544_room_monster_gate_matches_do_rooms(self):
         # Rogue 5.4.4 rooms.c:do_rooms() uses 80% with gold in room, otherwise 25%.
         import rogue_dungeon
@@ -6863,6 +6956,53 @@ class RogueBaselineTest(unittest.TestCase):
         )
 
         self.assertEqual(cands, [(1, 0)])
+
+    def test_rogue544_find_floor_object_candidates_use_maze_passage_compchar(self):
+        # Rogue 5.4.4 rooms.c:find_floor(..., monst=FALSE) uses PASSAGE for ISMAZE rooms.
+        import rogue_dungeon
+
+        normal = rogue.Room(0, 0, 3, 3)
+        maze = rogue.Room(3, 0, 3, 3, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_FLOOR, rogue.T_CORR, rogue.T_VOID, rogue.T_FLOOR, rogue.T_CORR]]
+
+        def room_at(x, y):
+            return normal if x < 2 else maze if x >= 3 else None
+
+        self.assertEqual(
+            rogue_dungeon.find_floor_object_candidates(
+                tm, room_at, rogue.T_FLOOR, rogue.T_CORR, only_room=normal
+            ),
+            [(0, 0)],
+        )
+        self.assertEqual(
+            rogue_dungeon.find_floor_object_candidates(
+                tm, room_at, rogue.T_FLOOR, rogue.T_CORR, only_room=maze
+            ),
+            [(4, 0)],
+        )
+
+    def test_rogue544_amulet_find_floor_can_place_in_maze_passage(self):
+        # Rogue 5.4.4 new_level.c:put_things() places Amulet with find_floor(..., monst=FALSE).
+        game = new_game(seed=3043)
+        room = rogue.Room(5, 5, 5, 5, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_CORR
+        game.tm[6][7] = rogue.T_FLOOR
+        game.p.depth = rogue.AMULET_LEVEL
+        game.p.has_amulet = False
+        game.p.x, game.p.y = 6, 7
+        game.gitems = []
+        game.mons = []
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.choice = lambda seq: seq[0]
+            game._spawn_amulet()
+        finally:
+            rogue.RNG.choice = old_choice
+
+        amulets = [item for item in game.gitems if item.cat == rogue.CAT_AMULET]
+        self.assertEqual([(item.x, item.y) for item in amulets], [(6, 6)])
 
     def test_rogue544_rooms_helper_gone_room_selection_allows_duplicates(self):
         # Rogue 5.4.4 rooms.c:do_rooms() loops left_out times and may pick the same room twice.
