@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0848"
+UI_BUILD = "260501_0853"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1675,8 +1675,10 @@ class Game:
             and (x,y)!=(self.p.x,self.p.y)
             and not self.gi_at(x,y)
         ]
-        RNG.shuffle(cands)
-        for x,y in cands[:n]:
+        for _ in range(n):
+            if not cands:
+                break
+            x,y=RNG.choice(cands)
             self.traps[(x,y)]=rogue_dungeon.trap_kind(RNG)
 
     # ---------- Helpers ----------

@@ -11595,6 +11595,51 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn((6, 6), game.traps)
 
+    def test_rogue544_trap_placement_interleaves_find_floor_and_kind_rolls(self):
+        # Rogue 5.4.4 new_level.c:new_level() repeats find_floor() then rnd(NTRAPS) for each trap.
+        game = new_game(seed=3048)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_FLOOR
+        game.tm[6][7] = rogue.T_FLOOR
+        game.p.depth = 8
+        game.p.x, game.p.y = 7, 7
+        game.gitems = []
+        game.traps = {}
+        events = []
+
+        class TrapRng:
+            def __init__(self):
+                self.first = True
+
+            def rnd(self, n):
+                events.append(f"rnd:{n}")
+                if n == 10:
+                    return 0
+                if n == 2:
+                    return 1
+                return 0
+
+            def choice(self, seq):
+                events.append("choice")
+                if self.first:
+                    self.first = False
+                    return (6, 6)
+                return (6, 7)
+
+            def shuffle(self, seq):
+                events.append("shuffle")
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = TrapRng()
+            game._spawn_traps()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(events[:6], ["rnd:10", "rnd:2", "choice", "rnd:8", "choice", "rnd:8"])
+
     def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
         game = new_game(seed=56)
         set_open_floor(game)
