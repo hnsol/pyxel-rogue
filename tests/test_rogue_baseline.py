@@ -567,6 +567,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn((12, 12), seen)
         self.assertIn((22, 4), seen)
 
+    def test_rogue_544_zap_teleport_away_find_floor_allows_room_stairs_and_traps(self):
+        # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) accepts step_ok(), not only FLOOR/PASSAGE.
+        game = new_game(seed=2062)
+        room_a, _ = set_two_room_floor(game)
+        stair = (room_a.x + 2, room_a.y + 2)
+        trap = (room_a.x + 3, room_a.y + 2)
+        game.tm[stair[1]][stair[0]] = rogue.T_STAIR
+        game.tm[trap[1]][trap[0]] = rogue.T_TRAP
+        seen = []
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.choice = lambda seq: seen.extend(seq) or seq[0]
+            game.random_monster_floor()
+        finally:
+            rogue.RNG.choice = old_choice
+
+        self.assertIn(stair, seen)
+        self.assertIn(trap, seen)
+
     def test_rogue_544_sticks_helper_teleport_to_position(self):
         # Rogue 5.4.4 sticks.c:WS_TELTO sets new_pos to hero + delta.
         import rogue_sticks
