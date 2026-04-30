@@ -8490,9 +8490,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("score", script)
         self.assertIn("dummyKiller(period, key, i)", script)
         self.assertIn("function dummyKillersForDepth(depth)", script)
-        self.assertIn('if (depth <= 2) return ["bat", "kestrel"]', script)
-        self.assertIn('if (depth <= 6) return ["rattlesnake", "orc"]', script)
-        self.assertIn('return ["troll", "wraith"]', script)
+        self.assertIn('["bat", "emu"]', script)
+        self.assertIn('["aquator", "centaur"]', script)
+        self.assertIn('["dragon", "griffin"]', script)
+        self.assertNotIn('"xeroc"', script[script.index("function dummyKillersForDepth"):])
         self.assertIn("dummy-\" + period + \"-\" + key + \"-", script)
 
     def test_apps_script_weekly_and_season_dummy_rows_use_period_dates(self):

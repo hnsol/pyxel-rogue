@@ -366,13 +366,35 @@ function dummyKiller(period, key, offset) {
 }
 
 function dummyKillersForDepth(depth) {
-  if (depth <= 2) return ["bat", "kestrel"];
-  if (depth <= 4) return ["snake", "hobgoblin"];
-  if (depth <= 6) return ["rattlesnake", "orc"];
-  if (depth <= 8) return ["ice monster", "zombie"];
-  if (depth <= 10) return ["centaur", "quagga"];
-  if (depth <= 12) return ["yeti", "xeroc"];
-  return ["troll", "wraith"];
+  const killersByDepth = [
+    ["bat", "emu"],
+    ["bat", "emu"],
+    ["bat", "emu"],
+    ["bat", "emu"],
+    ["bat", "emu"],
+    ["bat", "emu"],
+    ["bat", "centaur"],
+    ["bat", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "centaur"],
+    ["aquator", "venus flytrap"],
+    ["aquator", "venus flytrap"],
+    ["venus flytrap", "medusa"],
+    ["venus flytrap", "griffin"],
+    ["venus flytrap", "griffin"],
+    ["dragon", "griffin"],
+    ["dragon", "griffin"],
+    ["dragon", "griffin"],
+    ["dragon", "griffin"],
+    ["dragon", "griffin"],
+  ];
+  return killersByDepth[Math.max(1, Math.min(26, depth)) - 1];
 }
 
 function hashString(s) {
