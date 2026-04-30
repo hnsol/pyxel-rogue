@@ -8850,8 +8850,10 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.blt_calls[0][0], (0, 0, game.title_bg, 0, 0, rogue.SCR_W, rogue.SCR_H))
-        self.assertEqual(rogue.pyxel.rect_calls[0][0], (344, 228, 174, 84, 0))
+        self.assertIn(((344, 228, 174, 84, 0), {}), rogue.pyxel.rect_calls)
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
+        self.assertFalse(any(text == "ローグ" for text, _c, _x in calls))
+        self.assertFalse(any(text == "ver 5.4" for text, _c, _x in calls))
         self.assertTrue(any(text == "START" and c == 7 for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
 
