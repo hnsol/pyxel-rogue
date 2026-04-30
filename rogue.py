@@ -202,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0047"
+UI_BUILD = "260501_0055"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1955,6 +1955,7 @@ class Game:
     def p_attack(self, m):
         # C: fight.c:fight()
         self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
+        self.clear_running_count()
         self.runto(m)
         if self.reveal_xeroc_for_attack(m, thrown=False):
             return False
@@ -2080,6 +2081,7 @@ class Game:
     def m_attack(self,m):
         # C: fight.c:attack()
         self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
+        self.clear_running_count()
         if rogue_fight.attack_reveals_disguised_xeroc(
             rogue_monsters.is_disguised_xeroc(m), self.p.blind > 0
         ):
@@ -2244,7 +2246,7 @@ class Game:
         if direction is None:
             return False
         sx,sy=direction
-        self.dashing=False
+        self.clear_running_count()
         self.p.quiet=0
         self.fire_bolt_from(m.x,m.y,sx,sy,"flame")
         return True
@@ -2823,6 +2825,10 @@ class Game:
         # Rogue 5.4.4 wizard.c:teleport() clears ISHELD/vf_hit, no_move, count, running.
         self.clear_player_hold()
         self.p.no_move = 0
+        self.clear_running_count()
+
+    def clear_running_count(self):
+        # C: running=FALSE/count=0 in fight.c, chase.c, daemons.c, wizard.c.
         self.dashing = False
         self.dash_steps = 0
 
@@ -3718,7 +3724,7 @@ class Game:
         if m:
             self.msg(m)
         if rogue_daemons.stomach_stops_running(old_state, self.p.state):
-            self.dashing=False
+            self.clear_running_count()
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
 

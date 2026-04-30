@@ -1132,13 +1132,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((dragon.x, dragon.y), (game.p.x + rogue.BOLT_LENGTH, game.p.y))
         self.assertIn("you are hit by the flame", game.msgs)
 
-    def test_rogue_544_dragon_breath_resets_quiet(self):
-        # Rogue 5.4.4 chase.c:do_chase() clears quiet after Dragon fire_bolt().
+    def test_rogue_544_dragon_breath_clears_running_count_and_quiet(self):
+        # Rogue 5.4.4 chase.c:do_chase() clears running/count/quiet after Dragon fire_bolt().
         game = new_game(seed=225)
         set_open_floor(game)
         game.p.x, game.p.y = 10, 10
         game.p.hp = 30
         game.p.quiet = 7
+        game.dashing = True
+        game.dash_steps = 6
         dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
         dragon.running = True
         game.mons = [dragon]
@@ -1153,6 +1155,8 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
             rogue.RNG.roll = old_roll
 
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.quiet, 0)
 
     def test_rogue_544_cancelled_dragon_does_not_breathe_or_roll_dragonshot(self):
@@ -4193,6 +4197,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [5, 8])
         self.assertEqual(game.p.no_command, 11)
 
+    def test_rogue_544_stomach_hunger_state_change_clears_running_count(self):
+        # Rogue 5.4.4 daemons.c:stomach() clears ISRUN/running/count when hungry_state changes.
+        game = new_game(seed=443)
+        set_open_floor(game)
+        game.p.food = rogue.MORETIME
+        game.p.state = "normal"
+        game.dashing = True
+        game.dash_steps = 5
+
+        game.run_stomach()
+
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.dash_steps, 0)
+        self.assertEqual(game.p.state, "weak")
+
     def test_rogue_544_stomach_decrements_food_on_starvation_death_check(self):
         # Rogue 5.4.4 daemons.c:stomach() uses food_left-- in the starvation death check.
         player = rogue.Player()
@@ -7143,16 +7162,20 @@ class RogueBaselineTest(unittest.TestCase):
         set_open_floor(game)
         player_target = monster_at(game.p.x + 1, game.p.y, hp=20)
         game.dashing = True
+        game.dash_steps = 4
         game.p.quiet = 19
         game.p_attack(player_target)
         self.assertFalse(game.dashing)
+        self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.quiet, 0)
 
         monster = monster_at(game.p.x + 1, game.p.y, hp=20, damage="1x1")
         game.dashing = True
+        game.dash_steps = 4
         game.p.quiet = 19
         game.m_attack(monster)
         self.assertFalse(game.dashing)
+        self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.quiet, 0)
 
     def test_rogue_544_player_kill_message_uses_you_have_defeated(self):

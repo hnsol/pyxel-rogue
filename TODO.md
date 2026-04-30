@@ -215,6 +215,7 @@
 - [x] Rogue 5.4.4 `rogue.h:GOLDCALC` 相当の金額ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Leprechaun 金額減算回数を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` / `chase.c:move_monst()` 準拠で、Leprechaun/Nymph 消滅時は `-1` を返して追加行動を止める
+- [x] Rogue 5.4.4 `fight.c:fight()` / `attack()`、`chase.c:do_chase()`、`daemons.c:stomach()` 準拠で、running/count 解除を dash 状態へ反映
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当のダメージ式ロールを `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 準拠で combat damage string を `x` 区切り専用にする
 - [x] Rogue 5.4.4 `fight.c:roll_em()` 相当の部位ごとの命中/ダメージ加算を `rogue_fight.py` へ小分割
