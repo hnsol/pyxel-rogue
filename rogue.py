@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0840"
+UI_BUILD = "260501_0848"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1674,7 +1674,6 @@ class Game:
             if tile==T_FLOOR
             and (x,y)!=(self.p.x,self.p.y)
             and not self.gi_at(x,y)
-            and not self.mon_at(x,y)
         ]
         RNG.shuffle(cands)
         for x,y in cands[:n]:

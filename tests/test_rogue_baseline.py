@@ -11563,6 +11563,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_dungeon.trap_count_for_level(40, SequenceRng([0, 99])), 10)
         self.assertEqual(rogue_dungeon.trap_kind(SequenceRng([7])), 7)
 
+    def test_rogue544_trap_placement_find_floor_does_not_skip_monster_square(self):
+        # Rogue 5.4.4 new_level.c trap placement uses find_floor(..., FALSE), which ignores p_monst.
+        game = new_game(seed=3047)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_FLOOR
+        game.p.depth = 4
+        game.p.x, game.p.y = 7, 7
+        game.gitems = []
+        game.traps = {}
+        game.mons = [monster_at(6, 6)]
+
+        class TrapRng:
+            def rnd(self, n):
+                return 0
+
+            def choice(self, seq):
+                return seq[0]
+
+            def shuffle(self, seq):
+                pass
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = TrapRng()
+            game._spawn_traps()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertIn((6, 6), game.traps)
+
     def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
         game = new_game(seed=56)
         set_open_floor(game)
