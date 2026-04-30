@@ -1,7 +1,7 @@
 const SHEET_NAME = "scores";
 const DUMMY_TARGET_COUNT = 10;
-const DUMMY_PAST_DAYS = 10;
-const DUMMY_PAST_WEEKS = 10;
+const DUMMY_PAST_DAYS = 6;
+const DUMMY_PAST_WEEKS = 4;
 const DUMMY_BACKFILL_COUNT = 1;
 const DUMMY_NAMES = [
   "RODNEY",
@@ -114,7 +114,11 @@ function doGet(e) {
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
   if (period === "daily") ensureDummyRows(period, key, DUMMY_TARGET_COUNT);
-  if (period === "weekly") ensureDummyRows(period, key, DUMMY_BACKFILL_COUNT);
+  if (period === "weekly") {
+    ensureRecentDailyRows();
+    ensureDummyRows(period, key, DUMMY_BACKFILL_COUNT);
+  }
+  if (period === "season") ensureHistoricalWeeklyRows();
   return json({ scores: topScores(period, key) });
 }
 
@@ -269,12 +273,20 @@ function allScores(period, key) {
 
 function periodCellValue(value, field) {
   if (field === "period_day" && value instanceof Date) {
-    return Utilities.formatDate(value, "UTC", "yyyy-MM-dd");
+    return Utilities.formatDate(
+      value,
+      SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(),
+      "yyyy-MM-dd",
+    );
   }
   return String(value || "");
 }
 
 function seedDummy() {
+  return ensureScoreboardDummyContext();
+}
+
+function ensureScoreboardDummyContext() {
   const now = new Date();
   let rows = 0;
   rows += ensureDummyRows(
@@ -282,29 +294,57 @@ function seedDummy() {
     currentPeriods().period_day,
     DUMMY_TARGET_COUNT,
   );
+  rows += ensureRecentDailyRows(now);
+  rows += ensureHistoricalWeeklyRows(now);
+  return rows;
+}
+
+function ensureRecentDailyRows(now) {
+  const base = now || new Date();
+  let rows = 0;
   for (let i = 1; i <= DUMMY_PAST_DAYS; i++) {
     rows += ensureDummyRows(
       "daily",
-      periodsFor(addUtcDays(now, -i)).period_day,
-      DUMMY_BACKFILL_COUNT,
-    );
-  }
-  for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
-    rows += ensureDummyRows(
-      "weekly",
-      periodsFor(addUtcDays(now, -i * 7)).period_week,
+      periodsFor(addUtcDays(base, -i)).period_day,
       DUMMY_BACKFILL_COUNT,
     );
   }
   return rows;
 }
 
+function ensureHistoricalWeeklyRows(now) {
+  const base = now || new Date();
+  let rows = 0;
+  for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
+    rows += ensureSeededDummyRows(
+      "weekly",
+      periodsFor(addUtcDays(base, historicalWeeklyDayOffset(i))).period_week,
+      DUMMY_BACKFILL_COUNT,
+    );
+  }
+  return rows;
+}
+
+function historicalWeeklyDayOffset(i) {
+  return -(DUMMY_PAST_DAYS + 2 + (i - 1) * 7);
+}
+
 function ensureDummyRows(period, key, targetCount) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, false);
+}
+
+function ensureSeededDummyRows(period, key, targetCount) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, true);
+}
+
+function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly) {
   const scores = topScores(period, key);
   const used = new Set(scores.map((r) => cleanName(r.player_name)));
   const seeded = seededDummyNames(period, key);
   seeded.forEach((name) => used.add(cleanName(name)));
-  const visibleOrSeeded = Math.max(scores.length, seeded.size);
+  const visibleOrSeeded = countSeededOnly
+    ? seeded.size
+    : Math.max(scores.length, seeded.size);
   const needed = Math.max(0, targetCount - visibleOrSeeded);
   if (needed === 0) return 0;
   const out = [];
@@ -319,8 +359,8 @@ function ensureDummyRows(period, key, targetCount) {
       p.period_week,
       p.period_season,
       name,
-      60 + dummyValue(period, key, i, "score", 1200),
-      1 + dummyValue(period, key, i, "depth", 13),
+      dummyScore(period, key, i, targetCount),
+      dummyDepth(period, key, i),
       "killed",
       dummyKiller(period, key, i),
       "dummy",
@@ -359,42 +399,46 @@ function dummyValue(period, key, offset, salt, max) {
   return hashString([period, key, offset, salt].join(":")) % max;
 }
 
+function dummyScore(period, key, offset, targetCount) {
+  if (period === "weekly") {
+    return 900 + dummyValue(period, key, offset, "score", 600);
+  }
+  if (period === "daily" && targetCount === DUMMY_BACKFILL_COUNT) {
+    return 850 + dummyValue(period, key, offset, "score", 550);
+  }
+  return 80 + dummyValue(period, key, offset, "score", 950);
+}
+
+function dummyDepth(period, key, offset) {
+  return 1 + dummyValue(period, key, offset, "depth", 16);
+}
+
 function dummyKiller(period, key, offset) {
-  const depth = 1 + dummyValue(period, key, offset, "depth", 13);
+  const depth = dummyDepth(period, key, offset);
   const killers = dummyKillersForDepth(depth);
   return killers[dummyValue(period, key, offset, "killer", killers.length)];
 }
 
 function dummyKillersForDepth(depth) {
   const killersByDepth = [
-    ["bat", "emu"],
-    ["bat", "emu"],
-    ["bat", "emu"],
-    ["bat", "emu"],
-    ["bat", "emu"],
-    ["bat", "emu"],
-    ["bat", "centaur"],
-    ["bat", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "centaur"],
-    ["aquator", "venus flytrap"],
-    ["aquator", "venus flytrap"],
-    ["venus flytrap", "medusa"],
-    ["venus flytrap", "griffin"],
-    ["venus flytrap", "griffin"],
-    ["dragon", "griffin"],
-    ["dragon", "griffin"],
-    ["dragon", "griffin"],
-    ["dragon", "griffin"],
-    ["dragon", "griffin"],
+    ["hobgoblin", "kestrel"],
+    ["snake", "bat"],
+    ["hobgoblin", "snake"],
+    ["rattlesnake", "orc"],
+    ["orc", "zombie"],
+    ["rattlesnake", "zombie"],
+    ["centaur", "quagga"],
+    ["quagga", "yeti"],
+    ["centaur", "yeti"],
+    ["quagga", "yeti"],
+    ["venus flytrap", "troll"],
+    ["troll", "wraith"],
+    ["venus flytrap", "wraith"],
+    ["phantom", "vampire"],
+    ["vampire", "xeroc"],
+    ["phantom", "xeroc"],
   ];
-  return killersByDepth[Math.max(1, Math.min(26, depth)) - 1];
+  return killersByDepth[Math.max(1, Math.min(16, depth)) - 1];
 }
 
 function hashString(s) {
