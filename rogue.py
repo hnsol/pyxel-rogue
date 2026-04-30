@@ -46,6 +46,7 @@ import rogue_init
 import rogue_levels
 import rogue_misc
 import rogue_move
+import rogue_passages
 import rogue_weapons
 from rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
@@ -202,7 +203,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0105"
+UI_BUILD = "260501_0115"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1710,31 +1711,24 @@ class Game:
         # C: passages.c:numpass() numbers F_PASS cells and door/secret-door exits.
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return False
-        if self.tm[y][x] in (T_CORR,T_DOOR):
-            return True
-        return self.hidden_tiles.get((x,y)) in (T_CORR,T_DOOR)
+        return rogue_passages.is_number_cell(
+            self.tm[y][x], self.hidden_tiles.get((x,y)), T_CORR, T_DOOR
+        )
     def is_passage_exit_cell(self,x,y):
         # C: passages.c:numpass() records DOOR and non-F_REAL '|'/'-' as exits.
-        return (
-            0<=x<MAP_W and 0<=y<MAP_H
-            and (self.tm[y][x] == T_DOOR or self.hidden_tiles.get((x,y)) == T_DOOR)
+        return 0<=x<MAP_W and 0<=y<MAP_H and rogue_passages.is_exit_cell(
+            self.tm[y][x], self.hidden_tiles.get((x,y)), T_DOOR
         )
     def passage_component(self,x,y):
         # C: passages.c:numpass() / chase.c:roomin() passage identity.
-        if not self.is_passage_number_cell(x,y):
+        component = rogue_passages.passage_component(
+            (x,y),
+            lambda px, py: 0<=px<MAP_W and 0<=py<MAP_H,
+            self.is_passage_number_cell,
+        )
+        if component is None:
             return None
-        seen=set()
-        stack=[(x,y)]
-        while stack:
-            cx,cy=stack.pop()
-            if (cx,cy) in seen:
-                continue
-            if not self.is_passage_number_cell(cx,cy):
-                continue
-            seen.add((cx,cy))
-            for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-                stack.append((cx+dx,cy+dy))
-        return ("passage", frozenset(seen))
+        return ("passage", component)
     def room_for_ai(self,x,y,actor=False):
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return None
@@ -1763,7 +1757,7 @@ class Game:
     def passage_exits(self,passage):
         if not (isinstance(passage, tuple) and len(passage) == 2 and passage[0] == "passage"):
             return []
-        return [pos for pos in passage[1] if self.is_passage_exit_cell(pos[0], pos[1])]
+        return rogue_passages.passage_exits(passage[1], self.is_passage_exit_cell)
     def dist2(self,a,b):
         # C: chase.c:dist()
         return rogue_chase.dist_points(a, b)

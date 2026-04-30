@@ -170,6 +170,7 @@
 - [x] Rogue 5.4.4 `chase.c:do_chase()` / `passages.c:numpass()` 準拠で、passage 内 chaser は nearest passage exit へ向かう
 - [x] Rogue 5.4.4 `passages.c:putpass()` / `numpass()` 準拠で、隠し通路/隠し扉を passage 番号・exit 判定に含める
 - [x] Rogue 5.4.4 `passages.c:door()` 準拠で、部屋の exit 候補に隠し扉を含める
+- [x] Rogue 5.4.4 `passages.c:numpass()` 相当の passage 番号・exit 判定を `rogue_passages.py` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` / `chase.c:do_chase()` 準拠で、greedy monster の gold 目的地は拾得せず守備地点として停止
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 相当の Dragon flame gate / 最寄り出口 / greedy 目的地補正 / chasee room 選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、door 上の hero は bolt 反射ではなく命中判定にする
