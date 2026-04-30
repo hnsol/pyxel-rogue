@@ -34,7 +34,7 @@ touch "${PAGES_DIR}/.nojekyll"
 
 git -C "${PAGES_DIR}" add index.html .nojekyll
 if [[ -f "${PAGES_DIR}/pyxel-rogue.pyxapp" ]]; then
-    git -C "${PAGES_DIR}" add pyxel-rogue.pyxapp
+    git -C "${PAGES_DIR}" add -f pyxel-rogue.pyxapp
 fi
 
 if git -C "${PAGES_DIR}" diff --cached --quiet; then
