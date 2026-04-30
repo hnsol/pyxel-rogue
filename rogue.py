@@ -203,7 +203,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0726"
+UI_BUILD = "260501_0732"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1356,6 +1356,7 @@ class Game:
         self.haste_no_command_half_turn = False
         self.result_scores = []
         self.result_entry = None
+        self.result_online_submitted = False
         self.result_outcome = None
         self.descend()
         self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
@@ -1387,7 +1388,7 @@ class Game:
             gold=self.p.gold,
         )
         save_score_entry(self.result_entry)
-        submit_online_score(self.result_entry)
+        self.result_online_submitted = False
         self.result_scores = get_top_scores(load_score_entries(), limit=10)
         if outcome == "winner":
             self.st = ST_WIN
@@ -4347,6 +4348,21 @@ class Game:
         self.online_sync_force = bool(force)
         self.online_sync_periods = periods
 
+    def cancel_online_sync(self):
+        self.ensure_online_score_state()
+        self.online_sync_pending = False
+        self.online_syncing = False
+        self.online_sync_wait = 0
+        self.online_sync_force = False
+        self.online_sync_periods = []
+
+    def submit_result_online_score(self):
+        entry = getattr(self, "result_entry", None)
+        if not entry or getattr(self, "result_online_submitted", False):
+            return
+        if submit_online_score(entry):
+            self.result_online_submitted = True
+
     def enter_online_scoreboard(self):
         self.apply_palette()
         self.ensure_online_score_state()
@@ -4455,6 +4471,7 @@ class Game:
 
     def upd_online_score(self):
         if self.btn_b():
+            self.cancel_online_sync()
             self.enter_title_screen()
             return
         self.ensure_online_score_state()
@@ -4467,6 +4484,7 @@ class Game:
             force = getattr(self, "online_sync_force", False)
             self.online_sync_force = False
             periods = list(getattr(self, "online_sync_periods", [])) or list(SCOREBOARD_PERIOD_ORDER)
+            self.submit_result_online_score()
             for period in periods:
                 self.load_online_period_scores(period, force=force)
             self.online_sync_periods = []

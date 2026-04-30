@@ -8857,6 +8857,87 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_TITLE)
 
+    def test_game_end_saves_local_score_without_online_submit(self):
+        for outcome in ("quit", "killed", "winner"):
+            game = new_game(seed=35)
+            game.death_cause = "killed by a kestrel"
+            saved = []
+            old_save = rogue.save_score_entry
+            old_submit = rogue.submit_online_score
+            old_load = rogue.load_score_entries
+            try:
+                rogue.save_score_entry = lambda entry: saved.append(entry)
+                rogue.submit_online_score = lambda entry: self.fail("game end must not submit online score")
+                rogue.load_score_entries = lambda: saved[:]
+
+                game.enter_result_state(outcome)
+            finally:
+                rogue.save_score_entry = old_save
+                rogue.submit_online_score = old_submit
+                rogue.load_score_entries = old_load
+
+            self.assertEqual(len(saved), 1, outcome)
+            self.assertIn(game.st, (rogue.ST_QUIT, rogue.ST_DEAD, rogue.ST_WIN), outcome)
+
+    def test_online_score_pending_sync_can_be_cancelled_before_fetch(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.online_sync_pending = True
+        game.online_syncing = True
+        game.online_sync_wait = 1
+        game.online_sync_force = True
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_DAILY]
+        game.load_online_period_scores = lambda period=None, force=False: self.fail("B must cancel before fetch")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertFalse(game.online_sync_pending)
+        self.assertFalse(game.online_syncing)
+        self.assertEqual(game.online_sync_periods, [])
+
+    def test_online_score_sync_submits_current_result_inside_scoreboard(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_period = rogue.SCOREBOARD_PERIOD_DAILY
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.online_sync_pending = True
+        game.online_syncing = True
+        game.online_sync_wait = 1
+        game.online_sync_force = True
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_DAILY, rogue.SCOREBOARD_PERIOD_WEEKLY]
+        game.result_entry = {"score": 42, "player_name": "ACE", "result_flags": "quit", "level": 1, "timestamp": "t"}
+        game.result_online_submitted = False
+        submitted = []
+        loaded = []
+        old_submit = rogue.submit_online_score
+        try:
+            rogue.submit_online_score = lambda entry: submitted.append(entry) or True
+            game.load_online_period_scores = lambda period=None, force=False: loaded.append((period, force)) or []
+
+            rogue.pyxel.set_input()
+            game.update()
+            rogue.pyxel.set_input()
+            game.update()
+        finally:
+            rogue.submit_online_score = old_submit
+
+        self.assertEqual(submitted, [game.result_entry])
+        self.assertTrue(game.result_online_submitted)
+        self.assertEqual(loaded, [
+            (rogue.SCOREBOARD_PERIOD_DAILY, True),
+            (rogue.SCOREBOARD_PERIOD_WEEKLY, True),
+        ])
+
     def test_online_score_tabs_do_not_sync_and_refresh_syncs_all_periods(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
