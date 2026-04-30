@@ -551,6 +551,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
         self.assertEqual(monster.held, 4)
 
+    def test_rogue_544_zap_teleport_away_find_floor_skips_plain_corridors(self):
+        # Rogue 5.4.4 sticks.c:WS_TELAWAY uses rooms.c:find_floor(NULL, ..., monst=TRUE), which picks a room.
+        game = new_game(seed=2061)
+        set_two_room_floor(game)
+        game.tm[12][12] = rogue.T_CORR
+        seen = []
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.choice = lambda seq: seen.extend(seq) or seq[0]
+            game.random_monster_floor()
+        finally:
+            rogue.RNG.choice = old_choice
+
+        self.assertNotIn((12, 12), seen)
+        self.assertIn((22, 4), seen)
+
     def test_rogue_544_sticks_helper_teleport_to_position(self):
         # Rogue 5.4.4 sticks.c:WS_TELTO sets new_pos to hero + delta.
         import rogue_sticks

@@ -202,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0018"
+UI_BUILD = "260501_0044"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2840,7 +2840,8 @@ class Game:
             (x,y)
             for y,row in enumerate(self.tm)
             for x,tile in enumerate(row)
-            if tile in (T_FLOOR,T_CORR)
+            if self.room_at(x,y) is not None
+            and tile in (T_FLOOR,T_CORR)
             and (x,y) not in avoid
             and (x,y)!=(self.p.x,self.p.y)
             and not self.mon_at(x,y)
