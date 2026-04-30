@@ -202,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0055"
+UI_BUILD = "260501_0105"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1706,9 +1706,22 @@ class Game:
     def room_containing(self,x,y):
         # C: chase.c:roomin()
         return rogue_chase.roomin(x, y, self.rooms)
+    def is_passage_number_cell(self,x,y):
+        # C: passages.c:numpass() numbers F_PASS cells and door/secret-door exits.
+        if not (0<=x<MAP_W and 0<=y<MAP_H):
+            return False
+        if self.tm[y][x] in (T_CORR,T_DOOR):
+            return True
+        return self.hidden_tiles.get((x,y)) in (T_CORR,T_DOOR)
+    def is_passage_exit_cell(self,x,y):
+        # C: passages.c:numpass() records DOOR and non-F_REAL '|'/'-' as exits.
+        return (
+            0<=x<MAP_W and 0<=y<MAP_H
+            and (self.tm[y][x] == T_DOOR or self.hidden_tiles.get((x,y)) == T_DOOR)
+        )
     def passage_component(self,x,y):
         # C: passages.c:numpass() / chase.c:roomin() passage identity.
-        if not (0<=x<MAP_W and 0<=y<MAP_H) or self.tm[y][x] not in (T_CORR,T_DOOR):
+        if not self.is_passage_number_cell(x,y):
             return None
         seen=set()
         stack=[(x,y)]
@@ -1716,7 +1729,7 @@ class Game:
             cx,cy=stack.pop()
             if (cx,cy) in seen:
                 continue
-            if not (0<=cx<MAP_W and 0<=cy<MAP_H) or self.tm[cy][cx] not in (T_CORR,T_DOOR):
+            if not self.is_passage_number_cell(cx,cy):
                 continue
             seen.add((cx,cy))
             for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
@@ -1740,17 +1753,17 @@ class Game:
         exits=[]
         for x in range(room.x,room.x+room.w):
             for y in (room.y,room.y+room.h-1):
-                if 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x]==T_DOOR:
+                if self.is_passage_exit_cell(x,y):
                     exits.append((x,y))
         for y in range(room.y,room.y+room.h):
             for x in (room.x,room.x+room.w-1):
-                if 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x]==T_DOOR:
+                if self.is_passage_exit_cell(x,y):
                     exits.append((x,y))
         return list(dict.fromkeys(exits))
     def passage_exits(self,passage):
         if not (isinstance(passage, tuple) and len(passage) == 2 and passage[0] == "passage"):
             return []
-        return [pos for pos in passage[1] if self.tm[pos[1]][pos[0]] == T_DOOR]
+        return [pos for pos in passage[1] if self.is_passage_exit_cell(pos[0], pos[1])]
     def dist2(self,a,b):
         # C: chase.c:dist()
         return rogue_chase.dist_points(a, b)

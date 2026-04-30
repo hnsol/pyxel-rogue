@@ -3822,6 +3822,60 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(chased, [(15, 10)])
 
+    def test_rogue_544_room_exits_include_hidden_secret_doors(self):
+        # Rogue 5.4.4 passages.c:door() stores secret doors in room.r_exit before hiding them.
+        game = new_game(seed=522)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room = rogue.Room(10, 5, 8, 8)
+        game.rooms = [room]
+        for y in range(room.y, room.y + room.h):
+            for x in range(room.x, room.x + room.w):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.tm[9][room.x + room.w - 1] = rogue.T_VWALL
+        game.hidden_tiles[(room.x + room.w - 1, 9)] = rogue.T_DOOR
+        game.p.x, game.p.y = 25, 9
+        monster = monster_at(12, 9, "H", "hobgoblin", hp=10)
+        monster.running = True
+        monster.dest = rogue.DEST_PLAYER
+        game.mons = [monster]
+        chased = []
+        old_chase = game.chase
+        try:
+            game.chase = lambda m, dest: chased.append(dest) or "move"
+            game.do_chase(monster)
+        finally:
+            game.chase = old_chase
+
+        self.assertEqual(chased, [(room.x + room.w - 1, 9)])
+
+    def test_rogue_544_passage_component_includes_hidden_passage_cells(self):
+        # Rogue 5.4.4 passages.c:putpass()/numpass() keep hidden passages as F_PASS.
+        game = new_game(seed=520)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = []
+        for x in (5, 7):
+            game.tm[10][x] = rogue.T_CORR
+        game.hidden_tiles[(6, 10)] = rogue.T_CORR
+
+        component = game.passage_component(5, 10)
+
+        self.assertIn((5, 10), component[1])
+        self.assertIn((6, 10), component[1])
+        self.assertIn((7, 10), component[1])
+
+    def test_rogue_544_passage_exits_include_hidden_secret_doors(self):
+        # Rogue 5.4.4 passages.c:numpass() records non-F_REAL '|'/'-' as passage exits.
+        game = new_game(seed=521)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = []
+        game.tm[10][5] = rogue.T_CORR
+        game.tm[10][6] = rogue.T_HWALL
+        game.hidden_tiles[(6, 10)] = rogue.T_DOOR
+
+        passage = game.passage_component(5, 10)
+
+        self.assertIn((6, 10), game.passage_exits(passage))
+
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
         import rogue_chase
