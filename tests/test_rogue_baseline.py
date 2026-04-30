@@ -8870,7 +8870,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
         self.assertFalse(any(text == "ローグ" for text, _c, _x in calls))
         self.assertFalse(any(text == "ver 5.4" for text, _c, _x in calls))
-        self.assertTrue(any(text == "START" and c == 7 for text, c, _x in calls))
+        self.assertTrue(any(text == "START" and c == 9 for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
 
     def test_title_background_dither_fades_in_and_input_finishes_fade(self):

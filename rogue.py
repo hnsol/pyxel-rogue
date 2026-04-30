@@ -201,7 +201,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260430_2358"
+UI_BUILD = "260501_0008"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -219,12 +219,12 @@ FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
 TITLE_FADE_FRAMES = 30
 TITLE_BG_PALETTE = (
-    0x000000, 0x010717, 0x000516, 0x010000, 0x0B4519, 0x011342, 0x01144B, 0xDE8A04,
-    0x365B7D, 0x294259, 0x000D3C, 0x081614, 0x076C28, 0x010100, 0x092D11, 0x2E4A63,
-    0x2A4A63, 0xFEFCD6, 0x013012, 0x000400, 0x132231, 0x011744, 0x02081A, 0x3A2D1F,
-    0x0A2A49, 0x010920, 0x04070C, 0x1C404E, 0x000611, 0x1D3142, 0x020305, 0x1B4A34,
-    0x8E6831, 0x000109, 0x0D090C, 0x030509, 0x143428, 0x011332, 0x000324, 0x011F28,
-    0x081A41, 0x00081A, 0x010711, 0xDEB95A, 0x768442, 0x010207, 0x444B4E, 0x125937,
+    0x000000, 0x011447, 0x01081B, 0x010000, 0x0B4517, 0x27465F, 0x01091C, 0x01091B,
+    0x013010, 0xDC8A04, 0x2B4965, 0x325B7F, 0x011758, 0x046C24, 0x081618, 0x000500,
+    0x1A323F, 0xFEFCDC, 0x000D3D, 0x04174B, 0x01071E, 0x010100, 0x392C1E, 0x112230,
+    0x01144E, 0x010104, 0x010B2A, 0x00070C, 0x123326, 0x020408, 0x0E090C, 0x05080E,
+    0x01050E, 0x84683A, 0x010A15, 0x030712, 0x00000A, 0x082034, 0xDCBA5A, 0x0D5A30,
+    0x1B4545, 0x011333, 0x00042C, 0x424B51, 0x011E34, 0x6B833D, 0x011734, 0x082F32,
 )
 
 INV_MAX = 26
@@ -4745,8 +4745,8 @@ class Game:
         pyxel.rectb(x - 28, y - 10, 174, 84, 17)
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
-            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 7)
-            self.txt(x, y + i * 24, item, 7 if i == cur else 17)
+            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 9)
+            self.txt(x, y + i * 24, item, 9 if i == cur else 17)
 
     def draw_name_input(self):
         self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_HILITE_COL)
