@@ -8483,7 +8483,8 @@ class RogueBaselineTest(unittest.TestCase):
             script = f.read()
 
         self.assertIn("seededDummyNames(period, key)", script)
-        self.assertIn("targetCount - scores.length", script)
+        self.assertIn("visibleOrSeeded = Math.max(scores.length, seeded.size)", script)
+        self.assertIn("targetCount - visibleOrSeeded", script)
         self.assertIn("dummyNameOffset(period, key)", script)
         self.assertIn("dummyValue(period, key, i,", script)
         self.assertIn("score", script)
@@ -8730,12 +8731,13 @@ class RogueBaselineTest(unittest.TestCase):
         old_fetch = rogue.fetch_online_scores
         old_load = rogue.load_score_entries
         old_sync = rogue.sync_missing_local_best
+        day = rogue.score_period_keys()["period_day"]
         try:
             rogue.fetch_online_scores = lambda period, timestamp=None: [
-                {"player_name": "DOT", "score": 20, "period_day": "2026-04-29"}
+                {"player_name": "DOT", "score": 20, "period_day": day}
             ]
             rogue.load_score_entries = lambda: [
-                {"player_name": "ACE", "score": 300, "period_day": "2026-04-29"}
+                {"player_name": "ACE", "score": 300, "period_day": day}
             ]
             rogue.sync_missing_local_best = lambda *args, **kwargs: self.fail("score fetch must not post local best")
 

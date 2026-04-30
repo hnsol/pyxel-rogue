@@ -302,8 +302,10 @@ function seedDummy() {
 function ensureDummyRows(period, key, targetCount) {
   const scores = topScores(period, key);
   const used = new Set(scores.map((r) => cleanName(r.player_name)));
-  seededDummyNames(period, key).forEach((name) => used.add(cleanName(name)));
-  const needed = Math.max(0, targetCount - scores.length);
+  const seeded = seededDummyNames(period, key);
+  seeded.forEach((name) => used.add(cleanName(name)));
+  const visibleOrSeeded = Math.max(scores.length, seeded.size);
+  const needed = Math.max(0, targetCount - visibleOrSeeded);
   if (needed === 0) return 0;
   const out = [];
   const offset = dummyNameOffset(period, key);
