@@ -24,6 +24,7 @@ import os
 import sys
 import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from rogue_rng import RogueRng
 import rogue_monsters
 import rogue_pack
@@ -201,7 +202,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0008"
+UI_BUILD = "260501_0018"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -4235,6 +4236,58 @@ class Game:
             return f"UTC {key}"
         return key
 
+    def scoreboard_period_end(self, period, now=None):
+        if now is None:
+            dt = datetime.now(timezone.utc)
+        elif isinstance(now, datetime):
+            dt = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
+        else:
+            text = str(now).replace("Z", "+00:00")
+            try:
+                dt = datetime.fromisoformat(text)
+            except ValueError:
+                dt = datetime.now(timezone.utc)
+            dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        if period == SCOREBOARD_PERIOD_DAILY:
+            return (dt + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        if period == SCOREBOARD_PERIOD_WEEKLY:
+            start = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            return start + timedelta(days=7 - start.weekday())
+        y, m = dt.year, dt.month
+        if 3 <= m <= 5:
+            return datetime(y, 6, 1, tzinfo=timezone.utc)
+        if 6 <= m <= 8:
+            return datetime(y, 9, 1, tzinfo=timezone.utc)
+        if 9 <= m <= 11:
+            return datetime(y, 12, 1, tzinfo=timezone.utc)
+        return datetime(y + 1 if m == 12 else y, 3, 1, tzinfo=timezone.utc)
+
+    def scoreboard_period_ends_line(self, period, now=None):
+        if now is None:
+            dt = datetime.now(timezone.utc)
+        elif isinstance(now, datetime):
+            dt = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
+        else:
+            text = str(now).replace("Z", "+00:00")
+            try:
+                dt = datetime.fromisoformat(text)
+            except ValueError:
+                dt = datetime.now(timezone.utc)
+            dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        end = self.scoreboard_period_end(period, dt)
+        seconds = max(0, int((end - dt).total_seconds()))
+        days, rem = divmod(seconds, 86400)
+        hours, rem = divmod(rem, 3600)
+        minutes, seconds = divmod(rem, 60)
+        if period == SCOREBOARD_PERIOD_DAILY:
+            remain = f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
+        elif period == SCOREBOARD_PERIOD_WEEKLY:
+            remain = f"{days}d {hours:02d}h {minutes:02d}m"
+        else:
+            weeks, days = divmod(days, 7)
+            remain = f"{weeks}w {days}d {hours:02d}h {minutes:02d}m"
+        return f"Ends in {remain}  UTC {end:%Y-%m-%d %H:%M}"
+
     def ensure_online_score_state(self):
         if not hasattr(self, "online_score_cache"):
             self.online_score_cache = {}
@@ -4770,6 +4823,8 @@ class Game:
             SCOREBOARD_PERIOD_SEASON: "Season Legends",
         }.get(period, "Daily Top Ten")
         self._box(98, 48, 380, 244, f"{title} - {self.scoreboard_period_label(period)}")
+        if getattr(self, "online_syncing", False):
+            self.txt(410, 55, "SYNCING...", SCOREBOARD_HILITE_COL)
         scores = self.online_score_cache.get(period, [])
         self.txt(120, 74, "   Score Name", SCOREBOARD_TEXT_COL)
         y = 90
@@ -4779,16 +4834,14 @@ class Game:
             col = SCOREBOARD_HILITE_COL if name == player_name else SCOREBOARD_TEXT_COL
             self.txt(120, y, format_score_line(i, entry)[:56], col)
             y += 13
-        if getattr(self, "online_syncing", False):
-            self.txt(120, y, "SYNCING...", SCOREBOARD_HILITE_COL)
-            y += 16
-        elif not scores:
+        if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
         entry = getattr(self, "result_entry", None)
         rank = self.online_rank_cache.get(period)
         if entry and rank and rank > 10:
             self.txt(120, 242, format_score_line(rank, entry)[:56], SCOREBOARD_TEXT_COL)
+        self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         self.txt(114, 268, "LEFT/RIGHT DAILY/WEEKLY/SEASON  R/SELECT SYNC  B BACK", SCOREBOARD_DIM_COL)
 
     def draw_title(self):

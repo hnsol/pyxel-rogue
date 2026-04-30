@@ -8793,9 +8793,10 @@ class RogueBaselineTest(unittest.TestCase):
         }
         game.online_rank_cache = {rogue.SCOREBOARD_PERIOD_DAILY: 123}
         game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+        game.scoreboard_period_ends_line = lambda period: "Ends in 03h 12m 45s  UTC 2026-05-01 00:00"
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
-        game.txt = lambda x, y, s, c: drawn.append((str(s), c))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
 
         game.draw_online_score_screen()
 
@@ -8809,9 +8810,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ACE", text)
         self.assertIn("killed", text)
         self.assertIn("bat", text)
-        self.assertIn((" 2   194 ACE: killed on level 3 by a bat.", 23), drawn)
-        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30), drawn)
-        self.assertIn(("SYNCING...", 23), drawn)
+        self.assertIn("Ends in 03h 12m 45s  UTC 2026-05-01 00:00", text)
+        self.assertIn((" 2   194 ACE: killed on level 3 by a bat.", 23, 120, 103), drawn)
+        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 90), drawn)
+        self.assertIn(("SYNCING...", 23, 410, 55), drawn)
+        self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
+
+    def test_online_score_period_end_lines_use_utc_rank_windows(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+
+        self.assertEqual(
+            game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_DAILY, "2026-04-30T20:47:15Z"),
+            "Ends in 03h 12m 45s  UTC 2026-05-01 00:00",
+        )
+        self.assertEqual(
+            game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_WEEKLY, "2026-04-30T20:47:15Z"),
+            "Ends in 3d 03h 12m  UTC 2026-05-04 00:00",
+        )
+        self.assertEqual(
+            game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_SEASON, "2026-04-30T20:47:15Z"),
+            "Ends in 4w 3d 03h 12m  UTC 2026-06-01 00:00",
+        )
 
     def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
         game = rogue.Game.__new__(rogue.Game)
