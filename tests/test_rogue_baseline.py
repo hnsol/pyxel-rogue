@@ -440,11 +440,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("invis", medusa.flags)
         self.assertNotIn("confuse", medusa.flags)
 
-    def test_rogue_544_cancelled_xeroc_reveals_disguise_as_type(self):
+    def test_rogue_544_cancelled_revealed_xeroc_keeps_disguise_as_type(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_CANCEL sets t_disguise = t_type.
         import rogue_sticks
 
         game = new_game(seed=305)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 2, game.p.y, sym="X", name="xeroc")
+        xeroc.disguise = "X"
+        game.mons = [xeroc]
+
+        cancel = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_CANCEL, charges=1)
+        game.zap_stick(cancel, 1, 0)
+
+        self.assertEqual(xeroc.disguise, "X")
+        self.assertEqual(game.visible_monster_sym(xeroc), "X")
+
+    def test_rogue_544_cancel_passes_item_disguised_xeroc(self):
+        # Rogue 5.4.4 sticks.c:do_zap() scans while step_ok(winat()), and winat() returns t_disguise.
+        import rogue_sticks
+
+        game = new_game(seed=306)
         set_open_floor(game)
         xeroc = monster_at(game.p.x + 2, game.p.y, sym="X", name="xeroc")
         xeroc.disguise = "?"
@@ -453,8 +469,9 @@ class RogueBaselineTest(unittest.TestCase):
         cancel = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_CANCEL, charges=1)
         game.zap_stick(cancel, 1, 0)
 
-        self.assertEqual(xeroc.disguise, "X")
-        self.assertEqual(game.visible_monster_sym(xeroc), "X")
+        self.assertEqual(cancel.charges, 0)
+        self.assertEqual(xeroc.disguise, "?")
+        self.assertNotIn("cancel", xeroc.flags)
 
     def test_rogue_544_zap_polymorph_replaces_monster_type_with_rnd_26(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH calls new_monster(tp, rnd(26)+'A', pos).
@@ -759,6 +776,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(xeroc.disguise, "X")
         self.assertLess(xeroc.hp, 40)
         self.assertIn("wait!  That's a xeroc!", game.msgs)
+
+    def test_rogue_544_zap_magic_missile_passes_item_disguised_xeroc(self):
+        # Rogue 5.4.4 sticks.c:do_motion() uses winat(); item-like Xeroc disguise is step_ok().
+        import rogue_sticks
+
+        game = new_game(seed=232)
+        set_open_floor(game)
+        xeroc = monster_at(game.p.x + 2, game.p.y, sym="X", name="xeroc", hp=40)
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+        saves = []
+        game.monster_save_throw = lambda versus, monster: saves.append((versus, monster)) or False
+
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_MISSILE, charges=1)
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(stick.charges, 0)
+        self.assertEqual(saves, [])
+        self.assertEqual(xeroc.disguise, "?")
+        self.assertEqual(xeroc.hp, 40)
+        self.assertIn("the missle vanishes with a puff of smoke", game.msgs)
 
     def test_rogue_544_sticks_helper_magic_missile_damage(self):
         # Rogue 5.4.4 sticks.c:WS_MISSILE uses 1x4 + o_dplus + cur_weapon o_dplus + strength damage.

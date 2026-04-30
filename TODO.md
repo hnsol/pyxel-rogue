@@ -81,6 +81,7 @@
   - [x] Rogue 5.4.4 `sticks.c:WS_LIGHT` 準拠で、既に明るい部屋でも room-lit branch にする
   - [x] Rogue 5.4.4 `sticks.c:WS_LIGHT` の room/gone branch 判定を `rogue_sticks.py` へ小分割
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` 準拠で、非杖 zap は `after=FALSE` としてターン非消費
+  - [x] Rogue 5.4.4 `rogue.h:winat()` / `io.c:step_ok()` / `sticks.c:do_zap()` 準拠で、アイテム擬態中の Xeroc は単体対象杖と magic missile の照準を通過する
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious

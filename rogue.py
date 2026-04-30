@@ -203,7 +203,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0115"
+UI_BUILD = "260501_0726"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2780,20 +2780,36 @@ class Game:
         )
         self.consume_pack_item(it)
 
+    def zap_winat_char(self, x, y):
+        # C: rogue.h:winat(y,x) returns t_disguise before chat(y,x).
+        m = self.mon_at(x, y)
+        if m:
+            return getattr(m, "disguise", m.sym)
+        if not (0 <= x < MAP_W and 0 <= y < MAP_H):
+            return " "
+        return TILE_CH.get(self.tm[y][x], (" ", 0))[0]
+
+    def zap_step_ok_char(self, ch):
+        # C: io.c:step_ok() rejects space, walls, and alphabetic monster glyphs.
+        return ch not in (" ", "|", "-") and not ch.isalpha()
+
     def first_zap_target(self, dx, dy, stop_at_door=False):
         x,y=self.p.x,self.p.y
         for _ in range(max(MAP_W,MAP_H)):
-            nx,ny=x+dx,y+dy
-            if not (0<=nx<MAP_W and 0<=ny<MAP_H):
+            if stop_at_door:
+                x,y=x+dx,y+dy
+                if not (0<=x<MAP_W and 0<=y<MAP_H):
+                    return None
+                ch=self.zap_winat_char(x,y)
+                if self.zap_step_ok_char(ch) and ch != TILE_CH[T_DOOR][0]:
+                    continue
+                return self.mon_at(x,y)
+            if not (0<=x<MAP_W and 0<=y<MAP_H):
                 return None
-            m=self.mon_at(nx,ny)
-            if m:
-                return m
-            if stop_at_door and self.tm[ny][nx] == T_DOOR:
-                return None
-            if not self.walkable(nx,ny):
-                return None
-            x,y=nx,ny
+            ch=self.zap_winat_char(x,y)
+            if not self.zap_step_ok_char(ch):
+                return self.mon_at(x,y)
+            x,y=x+dx,y+dy
         return None
 
     def monster_spec_for_sym(self, sym):
