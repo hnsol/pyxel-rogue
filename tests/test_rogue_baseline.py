@@ -54,6 +54,8 @@ def install_pyxel_mock():
         "KEY_Y", "KEY_U", "KEY_B", "KEY_N",
         "KEY_Z", "KEY_X", "KEY_C", "KEY_S",
         "KEY_Q", "KEY_W", "KEY_E", "KEY_T", "KEY_P",
+        "KEY_A", "KEY_D", "KEY_F", "KEY_G", "KEY_M",
+        "KEY_O", "KEY_V",
         "KEY_I", "KEY_6", "KEY_SPACE",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_BACKSPACE",
         "KEY_PERIOD", "KEY_COMMA", "KEY_MINUS",
@@ -11566,6 +11568,58 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
 
         self.assertEqual(calls, [])
+
+    def test_rogue_544_item_overlay_pack_letter_can_select_filtered_out_type(self):
+        # Rogue 5.4.4 pack.c:get_item() filters only the '*' inventory list;
+        # a typed pack letter returns that object and lets quaff() reject the type.
+        game = new_game(seed=551)
+        scroll = rogue.Item(rogue.CAT_SCR, 0)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [scroll, potion]
+        game.start_item_action("Quaff")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed={rogue.pyxel.KEY_A})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn(scroll, game.p.inv)
+        self.assertIn(potion, game.p.inv)
+        self.assertIn("yuk! Why would you want to drink that?", game.msgs)
+
+    def test_rogue_544_keyboard_quaff_still_prompts_when_no_potions_but_pack_has_items(self):
+        # Rogue 5.4.4 potions.c:quaff() calls pack.c:get_item() before the type gate,
+        # so a non-empty pack still reaches the item prompt even without POTION objects.
+        game = new_game(seed=5511)
+        scroll = rogue.Item(rogue.CAT_SCR, 0)
+        game.p.inv = [scroll]
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Q}, pressed={rogue.pyxel.KEY_Q})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed={rogue.pyxel.KEY_A})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn(scroll, game.p.inv)
+        self.assertIn("yuk! Why would you want to drink that?", game.msgs)
+
+    def test_rogue_544_call_pack_letter_can_select_food_and_reject_without_name_prompt(self):
+        # Rogue 5.4.4 command.c:call() can receive FOOD from pack.c:get_item()
+        # by typed letter even though inventory(... CALLABLE) omits it.
+        game = new_game(seed=552)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        weapon = rogue.Item(rogue.CAT_WPN, 0)
+        game.p.inv = [food, weapon]
+        game.start_item_action("Call")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed={rogue.pyxel.KEY_A})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIsNone(game.call_item)
+        self.assertIn("you can't call that anything", game.msgs)
 
     def test_help_text_separates_gamepad_pad_style_and_rogue_commands(self):
         game = new_game(seed=56)

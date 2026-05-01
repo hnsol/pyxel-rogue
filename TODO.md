@@ -405,7 +405,7 @@
 - [ ] pyxapp / 中華ゲーム機向けの Pyxel 終了方法追加（セーブ / システム系インタフェースで扱う）
 - [x] Rogue V5 直打ちキーボードショートカット基礎（`t/q/r/e/w/W/T/i/?/s/^/z`。既存メニュー項目への入口として実装し、プレイ中だけ発火）
 - [x] Rogue V5 `P` put on ring の直打ち入力を追加する。`c` call は実装済み。英字キーは原作コマンドを優先するため、Pad style では使わない。
-- [ ] Item overlay で `a-z` のアイテム letter 直接選択を追加する。プレイ中の Rogue commands とは別レイヤーとして扱い、overlay 中は文字コマンドを発火させない。
+- [x] Item overlay で `a-z` のアイテム letter 直接選択を追加する。プレイ中の Rogue commands とは別レイヤーとして扱い、overlay 中は文字コマンドを発火させない。
 - [x] B+D-pad run 開始をホールド方向判定にし、B と D-pad の押下順に依存しないよう修正
 - [x] メニュー中のB短押しキャンセルを Pyxel Web / SteamDeck Firefox でも直感通りにする
 - [x] Rogue 5.4.4 `do_run()` / `do_move()` / `turn_ok()` 準拠のダッシュ停止・通路角処理へ修正

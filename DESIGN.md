@@ -125,7 +125,7 @@ Select(Back) は補助メニューにしつつ、ゲームパッド向け chord 
 
 キーボードは「Pad style」と「Rogue commands」を分ける。Pad style はゲームパッドの A/B/Start/Select に対応する移植UIで、`Enter` / `Esc` / `Space` / `Tab` / `Shift+方向` を使う。英字キーは Rogue V5 の直打ちコマンドに優先配分するため、旧 A 相当の `z` と旧 B 相当の `c` は Pad style から外す。これにより `z` は zap、`c` は将来の call 用として自然に残せる。
 
-Rogue commands はプレイ中だけ発火し、専用UIや別ロジックは作らず既存のメニュー項目へのショートカットとして扱う。現行では `t` quick throw、`q` quaff、`r` read、`e` eat、`w` wear、`W` wield、`T` take off、`z` zap、`i` inventory、`?` help、`s` 周囲 search、`^` trap inspect を実装する。`^` は Rogue 5.4.4 風に方向待ちへ入り、Select+D-pad / Tab+方向 は携帯機向けの即時 Trap Inspect として同じ確認処理へ接続する。メニュー/アイテム選択/方向指定オーバーレイ中は文字コマンドを発火させない。将来的にアイテム選択中の `a-z` は、表示されている inventory letter の直接選択として別レイヤーで扱う。
+Rogue commands はプレイ中だけ発火し、専用UIや別ロジックは作らず既存のメニュー項目へのショートカットとして扱う。現行では `t` quick throw、`q` quaff、`r` read、`e` eat、`w` wear、`W` wield、`T` take off、`z` zap、`i` inventory、`?` help、`s` 周囲 search、`^` trap inspect を実装する。`^` は Rogue 5.4.4 風に方向待ちへ入り、Select+D-pad / Tab+方向 は携帯機向けの即時 Trap Inspect として同じ確認処理へ接続する。メニュー/アイテム選択/方向指定オーバーレイ中はプレイ中 Rogue command を発火させず、`pack.c:get_item()` の `o_packch` 相当として `a-z` を直接選択に使う。直打ち item command は、pack が空でなければ type filter 済み一覧が空でも prompt 相当の overlay へ進み、型違いは `quaff()` / `read_scroll()` / `eat()` / `call()` など各コマンド側で拒否する。
 
 A+B は足踏み専用にする。search を兼ねると足踏みが search の上位互換になり、Rogue 5.4.4 の `.` と `s` の意味が薄くなるため、周囲 search は Select+A または補助メニュー/キーボード `S` に分ける。A の空押しは、何もない場所での正面1マス search として扱い、探索の手触りを増やしつつ周囲 search とは区別する。
 

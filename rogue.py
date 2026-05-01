@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_1101"
+UI_BUILD = "260501_1134"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -3997,6 +3997,14 @@ class Game:
             self.fitems=[i for i in p.inv if i.cat==cat]
         else:
             self.fitems=list(p.inv)
+        if (
+            not self.fitems
+            and self.action_origin == ST_PLAY
+            and p.inv
+            and aname in ("Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Zap", "Call")
+        ):
+            # Rogue 5.4.4 pack.c:get_item() prompts before command-specific type gates.
+            self.fitems=list(p.inv)
         if not self.fitems:
             self.msg("pyxel.nothing_to_action", action=aname.lower()); self.close_menu(); return
         self.icur=0
@@ -4010,7 +4018,10 @@ class Game:
 
     def item_confirm(self):
         if not self.fitems: self.close_menu(); return
-        it=self.fitems[self.icur]; a=self.cact
+        self.confirm_item(self.fitems[self.icur])
+
+    def confirm_item(self, it):
+        a=self.cact
         if a=="Throw":
             if self.throw_dir:
                 dx,dy=self.throw_dir
@@ -4241,6 +4252,13 @@ class Game:
         return self.kp(key) and not self.shift_held()
     def key_upper(self, key):
         return self.kp(key) and self.shift_held()
+    def pack_letter_item_press(self):
+        # Rogue 5.4.4 pack.c:get_item() accepts a typed o_packch directly.
+        for idx, ch in enumerate("abcdefghijklmnopqrstuvwxyz"):
+            key = getattr(pyxel, f"KEY_{ch.upper()}", None)
+            if self.key_lower(key):
+                return self.p.inv[idx] if idx < len(self.p.inv) else None
+        return None
     def btn_search(self): return self.key_lower(pyxel.KEY_S)
     def btn_trap_inspect(self):
         return self.shift_held() and self.kp(getattr(pyxel,"KEY_6",None))
@@ -4721,6 +4739,10 @@ class Game:
         if self.btn_overlay_cancel(): self.close_menu(); return
 
     def upd_item(self):
+        letter_item = self.pack_letter_item_press()
+        if letter_item is not None:
+            self.confirm_item(letter_item)
+            return
         dy=self.menu_vertical_press()
         if dy and self.fitems: self.icur=(self.icur+dy)%len(self.fitems); return
         if self.btn_a(): self.item_confirm(); return
@@ -4738,6 +4760,14 @@ class Game:
     def upd_call(self):
         # Phase 1: アイテム選択
         if self.call_item is None:
+            letter_item = self.pack_letter_item_press()
+            if letter_item is not None:
+                if self.call_result(letter_item) == rogue_things.CALL_RESULT_OK:
+                    self.call_item = letter_item
+                else:
+                    self.apply_call_name(letter_item, "")
+                    self.close_menu()
+                return
             dy = self.menu_vertical_press()
             if dy and self.fitems:
                 self.icur = (self.icur + dy) % len(self.fitems)
