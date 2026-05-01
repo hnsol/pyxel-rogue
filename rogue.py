@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0827"
+UI_BUILD = "260502_0840"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2432,6 +2432,7 @@ class Game:
             return
         if it is self.p.wpn:
             self.p.wpn = None
+        self.consume_pack_item(it)
         p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
             self.ident.pk[it.kind]=True
@@ -2499,7 +2500,6 @@ class Game:
             self.ident.pg[it.kind] = rogue_potions.call_it_guess_after_use(
                 self.ident.pk[it.kind], self.ident.pg[it.kind]
             )
-            self.consume_pack_item(it)
             return False
         elif nm=="see invisible":
             self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], False)
@@ -2563,7 +2563,6 @@ class Game:
         self.ident.pg[it.kind] = rogue_potions.call_it_guess_after_use(
             self.ident.pk[it.kind], self.ident.pg[it.kind]
         )
-        self.consume_pack_item(it)
         return True
 
     def add_haste(self, potion=True):
@@ -2787,6 +2786,7 @@ class Game:
         p=self.p
         if it is p.wpn:
             p.wpn = None
+        self.consume_pack_item(it)
         nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             rogue_scrolls.monster_confusion(p)
@@ -2794,7 +2794,6 @@ class Game:
         elif nm.startswith("identify "):
             cats = self.identify_scroll_target_cats(nm)
             self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
-            self.consume_pack_item(it)
             unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
             if unid:
                 # Interactive target selection (Rogue 5.4.4 wizard.c:whatis()).
@@ -2887,7 +2886,6 @@ class Game:
         self.ident.sg[it.kind] = rogue_scrolls.call_it_guess_after_read(
             self.ident.sk[it.kind], self.ident.sg[it.kind]
         )
-        self.consume_pack_item(it)
 
     def zap_winat_char(self, x, y):
         # C: rogue.h:winat(y,x) returns t_disguise before chat(y,x).

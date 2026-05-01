@@ -5847,6 +5847,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(seen, [None])
         self.assertIsNone(game.p.wpn)
 
+    def test_rogue_544_quaff_leaves_pack_before_effect_branch(self):
+        # Rogue 5.4.4 potions.c:quaff() calls leave_pack() before the switch effects run.
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        game = new_game(seed=5067)
+        potion = rogue.Item(rogue.CAT_POT, kind, qty=1)
+        game.p.inv.append(potion)
+        seen = []
+        game.sight = lambda: seen.append(potion in game.p.inv)
+
+        game.use_pot(potion)
+
+        self.assertEqual(seen, [False])
+        self.assertNotIn(potion, game.p.inv)
+
     def test_rogue_544_read_scroll_stack_consumes_one(self):
         # Rogue 5.4.4 scrolls.c:read_scroll() calls pack.c:leave_pack(obj, FALSE, FALSE).
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse")
@@ -5884,6 +5898,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.p.wpn)
         self.assertIn(scroll, game.p.inv)
         self.assertEqual(scroll.qty, 1)
+
+    def test_rogue_544_read_scroll_leaves_pack_before_effect_branch(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() calls leave_pack() before the switch effects run.
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "aggravate monsters")
+        game = new_game(seed=5068)
+        scroll = rogue.Item(rogue.CAT_SCR, kind, qty=1)
+        game.p.inv.append(scroll)
+        seen = []
+        game.aggravate_monsters = lambda: seen.append(scroll in game.p.inv)
+
+        game.use_scr(scroll)
+
+        self.assertEqual(seen, [False])
+        self.assertNotIn(scroll, game.p.inv)
 
     def test_rogue_544_pack_helper_leave_pack_counts_split_mult_items(self):
         # Rogue 5.4.4 pack.c:leave_pack() splits one object only for count > 1 && !all.

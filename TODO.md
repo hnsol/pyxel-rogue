@@ -276,6 +276,7 @@
 - [x] Rogue 5.4.4 `misc.c:eat()` 準拠で、wielded food は食料メッセージ / check_level 前に current weapon から外す
 - [x] Rogue 5.4.4 `potions.c:quaff()` 準拠で、wielded potion は効果分岐前に current weapon から外す
 - [x] Rogue 5.4.4 `scrolls.c:read_scroll()` 準拠で、wielded scroll は効果分岐前に current weapon から外す
+- [x] Rogue 5.4.4 `potions.c:quaff()` / `scrolls.c:read_scroll()` 準拠で、potion / scroll を効果分岐前に `leave_pack()` する
 - [x] Rogue 5.4.4 `misc.c:eat()` 準拠で FOOD 以外の eat は pack/food を変えず拒否
 - [x] Rogue 5.4.4 `weapons.c:init_weapon()` / `pack.c:add_pack()` 準拠で missile/dagger stack の `o_group` を分離
 - [x] Rogue 5.4.4 `pack.c:add_pack()` 準拠で matching weapon group は満杯packでも stack し、新規itemは同typeまとまりへ挿入
