@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0853"
+UI_BUILD = "260501_0912"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2919,7 +2919,6 @@ class Game:
         rogue_monsters.cancel_monster(m)
         if self.p.held_by is m:
             self.p.held_by=None
-        m.vf_hit=0
 
     def drain_targets(self):
         # C: sticks.c:drain() uses proom, plus corp when hero stands on a door.

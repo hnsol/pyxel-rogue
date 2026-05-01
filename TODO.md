@@ -194,6 +194,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` の DOOR 上 hero 反射例外を `rogue_sticks.py` へ小分割
 - [x] Rogue 5.4.4 `sticks.c:do_zap()` 準拠で、haste/slow monster 杖は Venus Flytrap の hold を解除しない
 - [x] Rogue 5.4.4 `sticks.c:do_zap()` の Venus Flytrap hold 解除対象 group を `rogue_sticks.py` へ小分割
+- [x] Rogue 5.4.4 `sticks.c:do_zap()` / `fight.c:attack()` 準拠で、cancellation は Venus Flytrap の hold だけ解除し `vf_hit` 蓄積を残す
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath を chaser/chasee 同室分岐に限定
 - [x] Rogue 5.4.4 `chase.c:roomin()` / `do_chase()` 準拠で、door 上 Dragon も同室 hero へ breath 可能にする
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割

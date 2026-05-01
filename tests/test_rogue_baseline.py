@@ -440,6 +440,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("invis", medusa.flags)
         self.assertNotIn("confuse", medusa.flags)
 
+    def test_rogue_544_cancel_flytrap_releases_hold_without_resetting_vf_hit(self):
+        # Rogue 5.4.4 sticks.c:do_zap() clears ISHELD for F but does not reset fight.c vf_hit.
+        import rogue_sticks
+
+        game = new_game(seed=204)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 2, game.p.y, sym="F", name="venus flytrap", flags="hold")
+        flytrap.vf_hit = 3
+        flytrap.damage_expr = "3x1"
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+
+        cancel = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_CANCEL, charges=1)
+        game.zap_stick(cancel, 1, 0)
+
+        self.assertIsNone(game.p.held_by)
+        self.assertEqual(flytrap.vf_hit, 3)
+        self.assertEqual(flytrap.damage_expr, "3x1")
+
     def test_rogue_544_cancelled_revealed_xeroc_keeps_disguise_as_type(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_CANCEL sets t_disguise = t_type.
         import rogue_sticks
