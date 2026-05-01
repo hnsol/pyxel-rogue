@@ -3375,6 +3375,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(fired, ["first", "second"])
         self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["third", "second"])
 
+    def test_rogue_544_do_daemons_runs_daemon_started_in_later_empty_slot(self):
+        # Rogue 5.4.4 daemon.c:do_daemons() scans d_list slots live, so new later slots can run.
+        import rogue_daemons
+
+        daemons = rogue_daemons.DaemonList()
+        fired = []
+        daemons.start("first", rogue_daemons.BEFORE)
+
+        def run(name):
+            fired.append(name)
+            if name == "first":
+                daemons.start("second", rogue_daemons.BEFORE)
+
+        daemons.tick_each(rogue_daemons.BEFORE, run)
+
+        self.assertEqual(fired, ["first", "second"])
+
     def test_rogue_544_fuse_table_keeps_duplicate_slots(self):
         # Rogue 5.4.4 daemon.c:fuse()/extinguish() use slots, not a unique map.
         import rogue_daemons
@@ -11121,7 +11138,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.scared, 2)
 
     def test_rogue_544_chase_helper_confusion_clears_on_rnd20_zero(self):
-        # Rogue 5.4.4 chase.c:chase() clears ISHUH after random movement when rnd(20)==0.
+        # Rogue 5.4.4 chase.c:chase() always rolls rnd(20) after random movement.
         import rogue_chase
 
         rng = SequenceRng([0])
@@ -11132,9 +11149,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_chase.confusion_clears_after_random_move(1, rng.rnd))
         self.assertEqual(rng.calls, [20])
 
-        rng = SequenceRng([])
+        rng = SequenceRng([0])
         self.assertFalse(rogue_chase.confusion_clears_after_random_move(0, rng.rnd))
-        self.assertEqual(rng.calls, [])
+        self.assertEqual(rng.calls, [20])
 
     def test_rogue_544_chase_helper_choose_chase_step_matches_tie_roll(self):
         # Rogue 5.4.4 chase.c:chase() replaces equal-distance candidates only when rnd(++plcnt)==0.

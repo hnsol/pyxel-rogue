@@ -260,11 +260,12 @@ class DaemonList:
 
     def tick_each(self, when: str, callback) -> None:
         """Run active daemons immediately in slot order."""
-        for daemon in list(self._daemons):
-            if daemon not in self._daemons:
-                continue
+        idx = 0
+        while idx < len(self._daemons):
+            daemon = self._daemons[idx]
             if daemon.get("kind") == "daemon" and daemon["when"] == when:
                 callback(daemon["name"])
+            idx += 1
 
 
 class DelayedActionTable:

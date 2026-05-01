@@ -150,7 +150,7 @@ def should_random_move(confused: int, monster_sym: str, rnd) -> bool:
 
 def confusion_clears_after_random_move(confused: int, rnd) -> bool:
     """Rogue 5.4.4 chase.c:chase() ISHUH clear chance after rndmove()."""
-    return confused > 0 and rnd(20) == 0
+    return rnd(20) == 0 and confused > 0
 
 
 def choose_chase_step(best, best_distance: int, tie_count: int, candidate, candidate_distance: int, rnd):
