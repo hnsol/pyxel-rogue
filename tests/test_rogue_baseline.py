@@ -156,6 +156,24 @@ def monster_at(x, y, sym="H", name="hobgoblin", hp=10, level=1, armor=5,
     return rogue.Monster(x, y, sym, name, hp, level, armor, damage, exp, flags)
 
 
+def state_signature(game):
+    return (
+        game.turn,
+        game.p.x,
+        game.p.y,
+        game.p.hp,
+        game.p.max_hp,
+        game.p.food,
+        game.p.exp,
+        game.p.level,
+        tuple((it.cat, it.kind, it.qty, it.known) for it in game.p.inv),
+        tuple((it.cat, it.kind, it.qty, it.x, it.y) for it in game.gitems),
+        tuple((m.sym, m.x, m.y, m.hp, tuple(sorted(m.flags))) for m in game.mons),
+        tuple(game.ident.pk),
+        tuple(game.ident.sk),
+    )
+
+
 def reachable_tiles(tm, start):
     seen = set()
     stack = [start]
@@ -8102,6 +8120,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(en.rooms), len(ja.rooms))
         self.assertEqual(len(en.mons), len(ja.mons))
         self.assertEqual(len(en.gitems), len(ja.gitems))
+
+    def test_language_does_not_change_quaff_read_eat_or_drop_state(self):
+        # DESIGN.md: translation must not alter game state for the same seed and operations.
+        def run(lang):
+            game = new_game(seed=2301, lang=lang)
+            set_open_floor(game)
+            healing = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+            remove = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse")
+            potion = rogue.Item(rogue.CAT_POT, healing)
+            scroll = rogue.Item(rogue.CAT_SCR, remove)
+            food = rogue.Item(rogue.CAT_FOOD, 0)
+            drop_item = rogue.Item(rogue.CAT_FOOD, 1)
+            game.p.inv.extend([potion, scroll, food, drop_item])
+            game.p.hp = 5
+            game.p.food = 100
+            old_roll = rogue.RNG.roll
+            old_rnd = rogue.RNG.rnd
+            try:
+                rogue.RNG.roll = lambda number, sides: 3
+                rogue.RNG.rnd = lambda n: 0
+                game.use_pot(potion)
+                game.use_scr(scroll)
+                game.eat(food)
+                game.drop(drop_item)
+            finally:
+                rogue.RNG.roll = old_roll
+                rogue.RNG.rnd = old_rnd
+            return state_signature(game)
+
+        self.assertEqual(run(rogue.LANG_EN), run(rogue.LANG_JA))
 
     def test_assist_language_toggle_changes_display_layer_only(self):
         game = new_game(seed=24, lang=rogue.LANG_EN)

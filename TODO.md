@@ -525,6 +525,6 @@
 - [x] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
 - [x] Rogue 5.4.4 メッセージ全文監査（`vendor/rogue544` の `msg()` / `addmsg()` 抽出と catalog 化）
 - [ ] Select(Back) 補助メニューから開くメッセージ履歴ビュー
-- [ ] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
+- [x] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
 - [ ] 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加
 - [x] Rogue 5.4.4 `rogue.h:NUMCOLS/NUMLINES/STATLINE`, `move.c:do_move()`, `rooms.c:bsze` 準拠のマップ寸法・地形領域テスト追加
