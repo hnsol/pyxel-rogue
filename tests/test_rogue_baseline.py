@@ -11621,6 +11621,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.call_item)
         self.assertIn("you can't call that anything", game.msgs)
 
+    def test_rogue_544_item_overlay_invalid_pack_letter_keeps_prompt(self):
+        # Rogue 5.4.4 pack.c:get_item() reports invalid o_packch and keeps asking.
+        game = new_game(seed=553)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        game.start_item_action("Quaff")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_M}, pressed={rogue.pyxel.KEY_M})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertIn("'m' is not a valid item", game.msgs)
+
+    def test_rogue_544_keyboard_item_command_empty_pack_uses_get_item_message(self):
+        # Rogue 5.4.4 pack.c:get_item() reports an empty pack before command type gates.
+        game = new_game(seed=554)
+        game.p.inv = []
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Q}, pressed={rogue.pyxel.KEY_Q})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("you aren't carrying anything", game.msgs)
+
     def test_help_text_separates_gamepad_pad_style_and_rogue_commands(self):
         game = new_game(seed=56)
         calls = []
