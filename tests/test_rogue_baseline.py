@@ -9186,7 +9186,7 @@ class RogueBaselineTest(unittest.TestCase):
             else:
                 sys.modules["js"] = old_js
 
-    def test_title_start_prepares_game_and_shows_map_immediately(self):
+    def test_title_start_stops_bgm_before_preparing_game_and_showing_map(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.font = rogue.pyxel.Font("")
@@ -9197,6 +9197,10 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        for _ in range(rogue.TITLE_BGM_STOP_WAIT_FRAMES):
+            rogue.pyxel.set_input()
+            game.update()
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(game.msgs[-1], "Hello ACE, welcome to the Dungeons of Doom!")
         calls = []
@@ -9490,7 +9494,9 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_logo_auto_fades_on_bgm_bar_timing_and_can_be_skipped(self):
         self.assertEqual(rogue.LOGO_BGM_DELAY_FRAMES, 78)
-        self.assertEqual(rogue.LOGO_TOTAL_FRAMES, 391)
+        self.assertEqual(rogue.LOGO_HOLD_FRAMES, 78)
+        self.assertEqual(rogue.LOGO_TOTAL_FRAMES, 312)
+        self.assertEqual(rogue.TITLE_FADE_FRAMES, 156)
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_LOGO
@@ -9535,9 +9541,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(rogue.pyxel.play_calls), 3)
 
         game.title_cursor = 0
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
         game.new_game = lambda: None
         game.current_player_name = lambda: "ACE"
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+        self.assertEqual(len(rogue.pyxel.play_calls), 3)
+        for _ in range(rogue.TITLE_BGM_STOP_WAIT_FRAMES - 1):
+            rogue.pyxel.set_input()
+            game.update()
+            self.assertEqual(game.st, rogue.ST_TITLE)
+        rogue.pyxel.set_input()
         game.update()
 
         self.assertEqual(game.st, rogue.ST_PLAY)
@@ -9596,16 +9613,38 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input()
         game.update()
         rogue.pyxel.dither_calls.clear()
+        rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertLess(rogue.pyxel.dither_calls[0], 1.0)
+        self.assertFalse(rogue.pyxel.rect_calls)
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
         game.update()
         self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
+        self.assertEqual(game.title_cursor, 0)
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
+        game.update()
         self.assertEqual(game.title_cursor, 1)
         rogue.pyxel.dither_calls.clear()
+        rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.dither_calls[0], 1.0)
+        self.assertIn(((344, 228, 174, 84, 0), {}), rogue.pyxel.rect_calls)
+
+    def test_title_start_during_fade_only_finishes_fade(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 0
+        game.title_fade_frames = 12
+        game.player_name = "ACE"
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
+        self.assertEqual(getattr(game, "title_bgm_stop_wait", 0), 0)
 
     def test_title_screen_uses_dedicated_palette_and_restores_game_palette_on_exit(self):
         old_colors = getattr(rogue.pyxel, "colors", None)

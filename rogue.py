@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_2227"
+UI_BUILD = "260502_0217"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -220,11 +220,12 @@ UI_HILITE_COL = 10
 _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
-TITLE_FADE_FRAMES = 30
+TITLE_FADE_FRAMES = 156
 LOGO_BGM_DELAY_FRAMES = 78
 LOGO_FADE_FRAMES = 78
-LOGO_HOLD_FRAMES = 157
+LOGO_HOLD_FRAMES = 78
 LOGO_TOTAL_FRAMES = LOGO_BGM_DELAY_FRAMES + LOGO_FADE_FRAMES + LOGO_HOLD_FRAMES + LOGO_FADE_FRAMES
+TITLE_BGM_STOP_WAIT_FRAMES = 3
 TITLE_BGM_MMLS = (
     "Q100 T92 L16 @0 V91 @ENV1{0,9,127,37,76,122,76,6,0} @VIB0 @GLI0 O4 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,37,76,38,76,6,0} O5 E16&16&16&16&16&16&16&16 @ENV1{0,9,127,33,82,6,0} O4 E16&16&16&16 O5 E16&16&16&16 @ENV1{0,9,127,23,95,6,0} O4 E16&16&16 O5 E16&16&16 @ENV1{0,9,127,12,110,6,0} D16&16 @ENV1{0,9,127,23,95,6,0} C+16&16&16 E16&16&16 @ENV1{0,9,127,12,110,6,0} E16&16 @ENV1{0,9,127,37,76,59,76,6,0} G16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,12,110,6,0} C16&16 C16&16 E16&16 O4 E16&16 O5 E16&16 @ENV1{0,9,127,37,76,80,76,6,0} C16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,23,95,6,0} D16&16&16 D+16&16&16 @ENV1{0,9,127,12,110,6,0} O4 B16&16 @ENV1{0,9,127,37,76,38,76,6,0} G+16&16&16&16&16&16&16&16 @ENV1{0,9,127,23,95,6,0} O5 D+16&16&16 O4 B16&16&16 @ENV1{0,9,127,12,110,6,0} O5 D+16&16 @ENV1{0,9,127,37,76,38,76,6,0} D+16&16&16&16&16&16&16&16",
     "Q100 T92 L16 R @2 V36 @ENV1{0,12,127,12,89,144,89,6,0} @VIB1{37,12,25} @GLI0 O4 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,60,89,6,0} O5 E16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,18,89,6,0} O4 E16&16&16&16 O5 E16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} O4 E16&16&16 O5 E16&16&16 @ENV1{0,12,127,9,99,6,0} D16&16 @ENV1{0,12,127,12,89,8,89,6,0} C+16&16&16 E16&16&16 @ENV1{0,12,127,9,99,6,0} E16&16 @ENV1{0,12,127,12,89,81,89,6,0} G16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,9,99,6,0} C16&16 C16&16 E16&16 O4 E16&16 O5 E16&16 @ENV1{0,12,127,12,89,102,89,6,0} C16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} D16&16&16 D+16&16&16 @ENV1{0,12,127,9,99,6,0} O4 B16&16 @ENV1{0,12,127,12,89,60,89,6,0} G+16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} O5 D+16&16&16 O4 B16&16&16 @ENV1{0,12,127,9,99,6,0} O5 D+16&16 @ENV1{0,12,127,12,89,50,89,6,0} D+16&16&16&16&16&16&16",
@@ -1191,6 +1192,7 @@ class Game:
         self._loading_phase = 0
         self.title_bgm_loaded = False
         self.title_bgm_started = False
+        self.title_bgm_stop_wait = 0
 
     def setup_title_bgm(self):
         for i, mml in enumerate(TITLE_BGM_MMLS):
@@ -1207,6 +1209,8 @@ class Game:
         self.title_bgm_started = True
 
     def stop_title_bgm(self):
+        if not getattr(self, "title_bgm_started", False):
+            return
         for ch in range(len(TITLE_BGM_MMLS)):
             pyxel.stop(ch)
         self.title_bgm_started = False
@@ -4393,6 +4397,12 @@ class Game:
         self.new_game()
         self.st = ST_PLAY
 
+    def request_title_new_game(self):
+        if getattr(self, "title_bgm_stop_wait", 0) > 0:
+            return
+        self.stop_title_bgm()
+        self.title_bgm_stop_wait = TITLE_BGM_STOP_WAIT_FRAMES
+
     def scoreboard_period_key(self, period, timestamp=None):
         keys = score_period_keys(timestamp)
         if period == SCOREBOARD_PERIOD_DAILY:
@@ -4564,10 +4574,16 @@ class Game:
             self.enter_title_screen()
 
     def upd_title(self):
+        if getattr(self, "title_bgm_stop_wait", 0) > 0:
+            self.title_bgm_stop_wait -= 1
+            if self.title_bgm_stop_wait <= 0:
+                self.prepare_title_new_game()
+            return
         self.start_title_bgm()
         if getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) < TITLE_FADE_FRAMES:
             if self.btn_any_key():
                 self.title_fade_frames = TITLE_FADE_FRAMES
+                return
             else:
                 self.title_fade_frames = min(TITLE_FADE_FRAMES, getattr(self, "title_fade_frames", 0) + 1)
         d = self.menu_vertical_press()
@@ -4575,7 +4591,7 @@ class Game:
             self.title_cursor = (getattr(self, "title_cursor", 0) + d) % 3
         if self.btn_a() or self.btn_start_tap():
             if self.title_cursor == 0:
-                self.prepare_title_new_game()
+                self.request_title_new_game()
             elif self.title_cursor == 1:
                 self.enter_online_scoreboard()
             else:
@@ -4998,11 +5014,14 @@ class Game:
         self.apply_title_palette()
         if not hasattr(self, "title_bg"):
             self.load_title_background()
+        title_alpha = 1.0
         if self.title_bg is not None:
-            alpha = max(0.0, min(1.0, getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) / TITLE_FADE_FRAMES))
-            pyxel.dither(alpha)
+            title_alpha = max(0.0, min(1.0, getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) / TITLE_FADE_FRAMES))
+            pyxel.dither(title_alpha)
             pyxel.blt(0, 0, self.title_bg, 0, 0, SCR_W, SCR_H)
             pyxel.dither(1.0)
+        if title_alpha < 1.0:
+            return
         items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
         x = 372
         y = 238
