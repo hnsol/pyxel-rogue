@@ -3458,6 +3458,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.fuses.remaining("swander"), 0)
         self.assertEqual(game.wander_between, 2)
 
+    def test_rogue_544_new_level_clears_flytrap_hold(self):
+        # Rogue 5.4.4 new_level.c:new_level() clears player ISHELD before generating the level.
+        game = new_game(seed=327)
+        set_open_floor(game)
+        flytrap = monster_at(game.p.x + 1, game.p.y, "F", "venus flytrap", flags="hold")
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+
+        game.descend()
+
+        self.assertIsNone(game.p.held_by)
+
     def test_rogue_544_runners_skips_held_running_monsters(self):
         # Rogue 5.4.4 chase.c:runners() gates move_monst() on !ISHELD && ISRUN.
         game = new_game(seed=310)
@@ -12072,6 +12084,21 @@ class TestPrintDisc(unittest.TestCase):
         lines = self.g._disc_lines()
         texts = [t for _, t in lines]
         self.assertTrue(any("boo" in t for t in texts))
+
+    def test_rogue_544_print_disc_omits_ring_bonus_and_stick_charges(self):
+        # Rogue 5.4.4 things.c:print_disc() uses a dummy object with o_flags=0.
+        import rogue_rings
+        import rogue_sticks
+
+        self.g.ident.rk[rogue_rings.R_PROTECT] = True
+        self.g.ident.wk[rogue_sticks.WS_LIGHT] = True
+
+        texts = [t for _, t in self.g._disc_lines()]
+
+        self.assertTrue(any("ring of protection" in t for t in texts))
+        self.assertTrue(any("of light" in t for t in texts))
+        self.assertFalse(any("[+0]" in t for t in texts))
+        self.assertFalse(any("charges" in t for t in texts))
 
 
 if __name__ == "__main__":

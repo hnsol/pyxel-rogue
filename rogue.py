@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0922"
+UI_BUILD = "260501_0956"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1408,6 +1408,8 @@ class Game:
         self.msg("pyxel.language_japanese" if self.lang == LANG_JA else "pyxel.language_english")
 
     def descend(self):
+        # C: new_level.c:new_level() clears ISHELD before generating the level.
+        self.p.held_by = None
         self.p.depth += 1
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
         self.tm, self.rooms = DGen.gen(self.p.depth)
@@ -2668,7 +2670,7 @@ class Game:
             found = 0
             for i in range(len(table)):
                 if known_arr[i] or (guess_arr[i] is not None):
-                    dummy = Item(cat, i, known=known_arr[i])
+                    dummy = Item(cat, i, known=False)
                     result.append((9, self.ident.name(dummy)))
                     found += 1
             if found == 0:
