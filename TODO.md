@@ -129,6 +129,7 @@
   - [x] Rogue 5.4.4 `scrolls.c:read_scroll()` / `pack.c:leave_pack()` 準拠で、対象なし identify scroll stack は1個だけ消費
   - [x] `things.c:print_disc()` 相当の discovered list（`D` キー）— `oi_know`/`oi_guess` 一覧表示
   - [x] Rogue 5.4.4 `things.c:print_disc()` 準拠で、発見リストの ring 補正値 / stick チャージを表示しない
+  - [x] Rogue 5.4.4 `things.c:set_order()` 準拠で、発見リストを開く時にカテゴリごとの表示順を `rnd(i)` シャッフルする
   - [x] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
   - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
   - [x] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll を分ける

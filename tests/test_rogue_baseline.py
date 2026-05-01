@@ -11320,6 +11320,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_things.pick_one(table, 99), 6)
         self.assertEqual(rogue_things.pick_one([("only", 1)], 99), 0)
 
+    def test_rogue_544_things_helper_set_order_matches_print_disc(self):
+        # Rogue 5.4.4 things.c:set_order() shuffles by swapping i-1 with rnd(i).
+        import rogue_things
+
+        rolls = [0, 1, 0, 0]
+        calls = []
+
+        def rnd(n):
+            calls.append(n)
+            return rolls.pop(0)
+
+        self.assertEqual(rogue_things.discovery_order(4, rnd), [2, 3, 1, 0])
+        self.assertEqual(calls, [4, 3, 2, 1])
+
     def test_rogue_544_things_helper_category_roll_forces_food_after_four_levels(self):
         # Rogue 5.4.4 things.c:new_thing() bypasses pick_one() when no_food > 3.
         import rogue_things
@@ -12099,6 +12113,22 @@ class TestPrintDisc(unittest.TestCase):
         self.assertTrue(any("of light" in t for t in texts))
         self.assertFalse(any("[+0]" in t for t in texts))
         self.assertFalse(any("charges" in t for t in texts))
+
+    def test_rogue_544_open_discoveries_consumes_print_disc_rng_once(self):
+        # Rogue 5.4.4 things.c:print_disc() calls set_order() once per category display.
+        calls = []
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            self.g.open_discoveries()
+            expected = len(rogue.POTIONS) + len(rogue.SCROLLS) + len(rogue.RINGS) + len(rogue.STICKS)
+            self.assertEqual(len(calls), expected)
+            self.g._box = lambda *args, **kwargs: None
+            self.g.txt = lambda *args, **kwargs: None
+            self.g.draw_disc()
+            self.assertEqual(len(calls), expected)
+        finally:
+            rogue.RNG.rnd = old_rnd
 
 
 if __name__ == "__main__":

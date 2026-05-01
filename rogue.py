@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0956"
+UI_BUILD = "260501_1024"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2659,7 +2659,7 @@ class Game:
         elif it.cat in (CAT_WPN, CAT_ARM):
             it.o_label = val
 
-    def _disc_lines(self):
+    def _disc_lines(self, rnd_func=None):
         # things.c:print_disc(*) — 全カテゴリの発見済みアイテム名を (color, text) リストで返す
         nothing = TextCatalog.msg(self.lang, "misc.nothing_discovered")
         lang = self.lang
@@ -2668,7 +2668,8 @@ class Game:
         def section(label, cat, table, known_arr, guess_arr):
             result.append((27, f"-- {label} --"))
             found = 0
-            for i in range(len(table)):
+            order = rogue_things.discovery_order(len(table), rnd_func) if rnd_func else range(len(table))
+            for i in order:
                 if known_arr[i] or (guess_arr[i] is not None):
                     dummy = Item(cat, i, known=False)
                     result.append((9, self.ident.name(dummy)))
@@ -2684,6 +2685,11 @@ class Game:
         result.append((0, ""))
         section("Sticks"  if lang == LANG_EN else "杖",     CAT_STICK, STICKS,  self.ident.wk, self.ident.wg)
         return result
+
+    def open_discoveries(self):
+        self.disc_scroll = 0
+        self.disc_lines = self._disc_lines(RNG.rnd)
+        self.st = ST_DISC
 
     def identify_item(self, it):
         # Backward-compat alias for set_know().
@@ -4637,7 +4643,7 @@ class Game:
         if self.btn_search(): self.do_search(); return
         if self.btn_trap_inspect(): self.start_trap_inspect(); return
         if self.key_upper(getattr(pyxel, "KEY_D", None)):
-            self.disc_scroll = 0; self.st = ST_DISC; return
+            self.open_discoveries(); return
         aname = self.rogue_command_action()
         if aname:
             self.start_item_action(aname)
@@ -4739,7 +4745,7 @@ class Game:
             self.close_menu(); return
 
     def upd_disc(self):
-        lines = self._disc_lines()
+        lines = getattr(self, "disc_lines", None) or self._disc_lines()
         visible = 18
         max_scroll = max(0, len(lines) - visible)
         dy = self.menu_vertical_press()
@@ -5102,7 +5108,7 @@ class Game:
         title = TextCatalog.msg(self.lang, "misc.discoveries_title")
         hint  = TextCatalog.msg(self.lang, "misc.discoveries_hint")
         self._box(bx, by, bw, bh, f"=== {title} ===")
-        lines = self._disc_lines()
+        lines = getattr(self, "disc_lines", None) or self._disc_lines()
         visible = (bh - 24) // 9
         start = self.disc_scroll
         for i, (col, text) in enumerate(lines[start:start + visible]):

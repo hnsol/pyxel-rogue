@@ -27,6 +27,15 @@ def pick_one(weighted_items, roll100: int) -> int:
     return 0
 
 
+def discovery_order(numthings: int, rnd) -> list[int]:
+    """Rogue 5.4.4 things.c:set_order() used by print_disc()."""
+    order = list(range(numthings))
+    for i in range(numthings, 0, -1):
+        r = rnd(i)
+        order[i - 1], order[r] = order[r], order[i - 1]
+    return order
+
+
 def new_thing_category(roll100: int, no_food: int = 0) -> str:
     """Rogue 5.4.4 things.c:new_thing() and extern.c:things[]."""
     if no_food > 3:
