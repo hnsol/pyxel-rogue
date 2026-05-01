@@ -1,19 +1,8 @@
 """
-PYXEL ROGUE  Phase 3
-Faithful Rogue 5.4.4 clone  ·  Shiren-style controls  ·  BDF font
+PYXEL ROGUE
+Rogue 5.4.4 fidelity build for Pyxel.
 
-Gamepad:                        Keyboard:
-  D-pad        Move (8-dir)      Arrow / HJKL   Move
-  Start tap    Diag assist       Space          Diag assist
-  B + D-pad    Dash (run)        Shift+dir      Dash
-  A            Action/Search     Enter          Action
-  B tap        Menu/Cancel       Esc            Menu/Cancel
-  A + B        Wait a turn       Enter+Esc/.    Wait
-  Back         Assist menu       Tab            Assist menu
-  Back + A     Search            Tab+Enter/s    Search
-  Back + B     Quick throw       Tab+Esc/t      Quick throw
-                                i              Inventory
-                                ?              Help
+Current controls are documented in the in-game Help and DESIGN.md.
 """
 
 from __future__ import annotations
@@ -204,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0307"
+UI_BUILD = "260502_0316"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
