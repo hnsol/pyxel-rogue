@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_0912"
+UI_BUILD = "260501_0922"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -3088,7 +3088,7 @@ class Game:
         else:
             target=self.first_zap_target(dx,dy)
             if target:
-                if rogue_sticks.zap_releases_flytrap(kind) and target.sym=="F" and self.p.held_by is target:
+                if rogue_sticks.zap_releases_flytrap(kind) and target.sym=="F":
                     self.p.held_by=None
                 if kind == rogue_sticks.WS_INVIS:
                     rogue_monsters.make_invisible(target)

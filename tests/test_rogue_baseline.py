@@ -459,6 +459,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(flytrap.vf_hit, 3)
         self.assertEqual(flytrap.damage_expr, "3x1")
 
+    def test_rogue_544_zap_any_flytrap_target_releases_player_hold(self):
+        # Rogue 5.4.4 sticks.c:do_zap() clears player ISHELD when the target monster is F.
+        import rogue_sticks
+
+        game = new_game(seed=205)
+        set_open_floor(game)
+        holder = monster_at(game.p.x, game.p.y + 1, sym="F", name="venus flytrap", flags="hold")
+        target = monster_at(game.p.x + 2, game.p.y, sym="F", name="venus flytrap", flags="hold")
+        holder.vf_hit = 2
+        game.p.held_by = holder
+        game.mons = [holder, target]
+
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_INVIS, charges=1)
+        game.zap_stick(stick, 1, 0)
+
+        self.assertIsNone(game.p.held_by)
+        self.assertEqual(holder.vf_hit, 2)
+        self.assertIn("invis", target.flags)
+
     def test_rogue_544_cancelled_revealed_xeroc_keeps_disguise_as_type(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_CANCEL sets t_disguise = t_type.
         import rogue_sticks
