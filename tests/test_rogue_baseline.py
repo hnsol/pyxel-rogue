@@ -11719,6 +11719,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.call_item)
         self.assertIn("you can't call that anything", game.msgs)
 
+    def test_rogue_544_call_escape_from_keyboard_command_returns_to_play(self):
+        # Rogue 5.4.4 command.c:call() starts with pack.c:get_item(); ESC aborts.
+        game = new_game(seed=5521)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed={rogue.pyxel.KEY_C})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_CALL)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.p.inv, [potion])
+
+    def test_call_escape_from_menu_returns_to_menu(self):
+        game = new_game(seed=5522)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        game.open_menu()
+        game.start_item_action("Call")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_MENU)
+
     def test_rogue_544_item_overlay_invalid_pack_letter_keeps_prompt(self):
         # Rogue 5.4.4 pack.c:get_item() reports invalid o_packch and keeps asking.
         game = new_game(seed=553)
@@ -11772,6 +11802,71 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertIn("you aren't carrying anything", game.msgs)
+
+    def test_rogue_544_get_item_escape_from_keyboard_command_returns_to_play(self):
+        # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
+        game = new_game(seed=555)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Q}, pressed={rogue.pyxel.KEY_Q})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.p.inv, [potion])
+
+    def test_rogue_544_get_dir_escape_from_keyboard_zap_returns_to_play(self):
+        # Rogue 5.4.4 command.c:'z' sets after=FALSE when misc.c:get_dir() returns FALSE.
+        game = new_game(seed=5551)
+        stick = rogue.Item(rogue.CAT_STICK, 0, charges=1)
+        game.p.inv = [stick]
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_Z}, pressed={rogue.pyxel.KEY_Z})
+        game.update()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed={rogue.pyxel.KEY_A})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(stick.charges, 1)
+
+    def test_item_overlay_escape_from_menu_returns_to_menu(self):
+        game = new_game(seed=556)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        game.open_menu()
+        game.start_item_action("Quaff")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_MENU)
+
+    def test_zap_direction_escape_from_menu_returns_to_menu(self):
+        game = new_game(seed=5561)
+        stick = rogue.Item(rogue.CAT_STICK, 0, charges=1)
+        game.p.inv = [stick]
+        game.open_menu()
+        game.start_item_action("Zap")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed={rogue.pyxel.KEY_A})
+        game.update()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_MENU)
+        self.assertEqual(stick.charges, 1)
 
     def test_help_text_separates_gamepad_pad_style_and_rogue_commands(self):
         game = new_game(seed=56)

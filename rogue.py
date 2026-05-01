@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0217"
+UI_BUILD = "260502_0234"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -4307,6 +4307,36 @@ class Game:
         return None
     def invalid_pack_letter(self, ch):
         self.msg("pack.item_is_not_a_valid_item", item=ch)
+    def cancel_item_prompt(self):
+        # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
+        if self.cact=="Throw" and self.throw_dir is not None and self.action_origin==ST_MENU:
+            self.st=ST_MENU
+        elif self.action_origin==ST_MENU:
+            self.st=ST_MENU
+        else:
+            self.close_menu()
+        self.throw_dir=None
+    def cancel_call_prompt(self):
+        # Rogue 5.4.4 command.c:call() returns without changing guesses on ESC.
+        self.call_item=None; self.call_input=""; self.call_preset_idx=0
+        if self.action_origin==ST_MENU:
+            self.st=ST_MENU
+        else:
+            self.close_menu()
+    def cancel_dir_prompt(self):
+        # Rogue 5.4.4 misc.c:get_dir() ESC aborts direction commands with after=FALSE.
+        if self.dact=="Trap":
+            self.st=ST_PLAY
+            self.dact=None
+        elif self.dact in ("Throw", "Zap"):
+            self.dact=None
+            self.zap_item=None
+            if self.action_origin==ST_MENU:
+                self.st=ST_MENU
+            else:
+                self.close_menu()
+        else:
+            self.st=ST_ITEM
     def btn_search(self): return self.key_lower(pyxel.KEY_S)
     def btn_trap_inspect(self):
         return self.shift_held() and self.kp(getattr(pyxel,"KEY_6",None))
@@ -4814,14 +4844,7 @@ class Game:
         if dy and self.fitems: self.icur=(self.icur+dy)%len(self.fitems); return
         if self.btn_a(): self.item_confirm(); return
         if self.btn_overlay_cancel():
-            if self.cact=="Throw" and self.throw_dir is not None:
-                if self.action_origin==ST_MENU:
-                    self.st=ST_MENU
-                else:
-                    self.close_menu()
-            else:
-                self.st=ST_MENU
-            self.throw_dir=None
+            self.cancel_item_prompt()
             return
 
     def upd_call(self):
@@ -4850,7 +4873,7 @@ class Game:
                 self.call_item = it
                 return
             if self.btn_overlay_cancel():
-                self.close_menu(); return
+                self.cancel_call_prompt(); return
             return
         # Phase 2: テキスト入力
         dy = self.menu_vertical_press()
@@ -4882,7 +4905,7 @@ class Game:
             # ターン消費なし (misc.c:call_it() 準拠)
             return
         if self.btn_overlay_cancel():
-            self.close_menu(); return
+            self.cancel_call_prompt(); return
 
     def upd_disc(self):
         lines = getattr(self, "disc_lines", None) or self._disc_lines()
@@ -4899,17 +4922,7 @@ class Game:
         d=self.dir_prompt_press()
         if d: self.dir_confirm(*d); return
         if self.btn_overlay_cancel():
-            if self.dact=="Trap":
-                self.st=ST_PLAY
-                self.dact=None
-            elif self.dact=="Throw":
-                if self.action_origin==ST_MENU:
-                    self.st=ST_MENU
-                    self.dact=None
-                else:
-                    self.close_menu()
-            else:
-                self.st=ST_ITEM
+            self.cancel_dir_prompt()
             return
 
     def open_aux(self):
