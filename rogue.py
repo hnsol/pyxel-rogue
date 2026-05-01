@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0234"
+UI_BUILD = "260502_0307"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -4026,6 +4026,10 @@ class Game:
         self.cact = aname; p = self.p
         if aname=="Take off":
             self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm or i is p.ring_l or i is p.ring_r]
+        elif aname=="Take off armor":
+            self.fitems=[p.arm] if p.arm is not None else []
+        elif aname=="Remove ring":
+            self.fitems=[i for i in (p.ring_l, p.ring_r) if i is not None]
         elif aname in("Throw","Drop"):
             self.fitems=list(p.inv)
         elif aname=="Call":
@@ -4049,6 +4053,10 @@ class Game:
             and aname in ("Throw", "Drop", "Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Zap", "Call")
         ):
             self.msg("pack.you_arent_carrying_anything"); self.close_menu(); return
+        if aname=="Take off armor" and not self.fitems:
+            self.msg("armor.you_arent_wearing_any_armor"); self.close_menu(); return
+        if aname=="Remove ring" and not self.fitems:
+            self.msg("rings.you_arent_wearing_any_rings"); self.close_menu(); return
         if not self.fitems:
             self.msg("pyxel.nothing_to_action", action=aname.lower()); self.close_menu(); return
         self.icur=0
@@ -4108,7 +4116,7 @@ class Game:
             if self.put_on_ring(it) is False:
                 self.close_menu()
                 return
-        elif a=="Take off":
+        elif a in ("Take off", "Take off armor", "Remove ring"):
             if self.takeoff(it) is False:
                 self.close_menu()
                 return
@@ -4412,11 +4420,13 @@ class Game:
         if self.key_lower(getattr(pyxel, "KEY_Q", None)): return "Quaff"
         if self.key_lower(pyxel.KEY_R): return "Read"
         if self.key_lower(getattr(pyxel, "KEY_E", None)): return "Eat"
+        if self.key_lower(getattr(pyxel, "KEY_D", None)): return "Drop"
         if self.key_lower(getattr(pyxel, "KEY_W", None)): return "Wear"
         if self.key_lower(pyxel.KEY_Z): return "Zap"
         if self.key_upper(getattr(pyxel, "KEY_W", None)): return "Wield"
-        if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off"
+        if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off armor"
         if self.key_upper(getattr(pyxel, "KEY_P", None)): return "Put on"
+        if self.key_upper(getattr(pyxel, "KEY_R", None)): return "Remove ring"
         if self.key_lower(pyxel.KEY_C): return "Call"
         return None
 
@@ -5340,9 +5350,10 @@ class Game:
         self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
         commands=[
             ". Wait   s Search   t Throw   ^ Trap",
-            "i Inv    ? Help",
+            "i Inv    ? Help     d Drop",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
+            "P Put on R Remove",
         ]
         for ln in commands:
             self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11

@@ -11641,10 +11641,13 @@ class RogueBaselineTest(unittest.TestCase):
             (rogue.pyxel.KEY_Q, set(), "Quaff"),
             (rogue.pyxel.KEY_R, set(), "Read"),
             (rogue.pyxel.KEY_E, set(), "Eat"),
+            (rogue.pyxel.KEY_D, set(), "Drop"),
             (rogue.pyxel.KEY_W, set(), "Wear"),
             (rogue.pyxel.KEY_Z, set(), "Zap"),
             (rogue.pyxel.KEY_W, {rogue.pyxel.KEY_SHIFT}, "Wield"),
-            (rogue.pyxel.KEY_T, {rogue.pyxel.KEY_SHIFT}, "Take off"),
+            (rogue.pyxel.KEY_T, {rogue.pyxel.KEY_SHIFT}, "Take off armor"),
+            (rogue.pyxel.KEY_P, {rogue.pyxel.KEY_SHIFT}, "Put on"),
+            (rogue.pyxel.KEY_R, {rogue.pyxel.KEY_SHIFT}, "Remove ring"),
         ]
         for key, modifiers, action in cases:
             game = new_game(seed=55)
@@ -11868,6 +11871,66 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_MENU)
         self.assertEqual(stick.charges, 1)
 
+    def test_rogue_544_remove_ring_action_filters_equipped_rings(self):
+        # Rogue 5.4.4 command.c:'R' calls rings.c:ring_off(), not armor.c:take_off().
+        import rogue_rings
+
+        game = new_game(seed=557)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        worn = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        unworn = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
+        game.p.inv = [armor, worn, unworn]
+        game.p.arm = armor
+        game.p.ring_l = worn
+
+        game.start_item_action("Remove ring")
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [worn])
+
+    def test_rogue_544_remove_ring_no_rings_uses_ring_off_message(self):
+        # Rogue 5.4.4 rings.c:ring_off() reports no rings and does not spend a turn.
+        game = new_game(seed=558)
+        game.p.inv = [rogue.Item(rogue.CAT_ARM, 0)]
+
+        game.start_item_action("Remove ring")
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("you aren't wearing any rings", game.msgs)
+
+    def test_rogue_544_take_off_armor_action_filters_current_armor(self):
+        # Rogue 5.4.4 command.c:'T' calls armor.c:take_off(), not rings.c:ring_off().
+        import rogue_rings
+
+        game = new_game(seed=559)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        game.p.inv = [armor, ring]
+        game.p.arm = armor
+        game.p.ring_l = ring
+
+        game.start_item_action("Take off armor")
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [armor])
+
+    def test_rogue_544_take_off_armor_no_armor_uses_take_off_message(self):
+        # Rogue 5.4.4 armor.c:take_off() reports no armor and sets after=FALSE.
+        import rogue_rings
+
+        game = new_game(seed=560)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        game.p.inv = [ring]
+        game.p.arm = None
+        game.p.ring_l = ring
+
+        game.start_item_action("Take off armor")
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("you aren't wearing any armor", game.msgs)
+
     def test_help_text_separates_gamepad_pad_style_and_rogue_commands(self):
         game = new_game(seed=56)
         calls = []
@@ -11881,6 +11944,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("--- Keyboard commands ---", text)
         self.assertIn("Enter+Esc", text)
         self.assertIn("q Quaff", text)
+        self.assertIn("d Drop", text)
+        self.assertIn("P Put on", text)
+        self.assertIn("R Remove", text)
         self.assertNotIn("Z / Enter", text)
         self.assertNotIn("Close overlays", text)
 
