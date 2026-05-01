@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_1159"
+UI_BUILD = "260501_2227"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -221,6 +221,15 @@ _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
 TITLE_FADE_FRAMES = 30
+LOGO_BGM_DELAY_FRAMES = 78
+LOGO_FADE_FRAMES = 78
+LOGO_HOLD_FRAMES = 157
+LOGO_TOTAL_FRAMES = LOGO_BGM_DELAY_FRAMES + LOGO_FADE_FRAMES + LOGO_HOLD_FRAMES + LOGO_FADE_FRAMES
+TITLE_BGM_MMLS = (
+    "Q100 T92 L16 @0 V91 @ENV1{0,9,127,37,76,122,76,6,0} @VIB0 @GLI0 O4 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,37,76,38,76,6,0} O5 E16&16&16&16&16&16&16&16 @ENV1{0,9,127,33,82,6,0} O4 E16&16&16&16 O5 E16&16&16&16 @ENV1{0,9,127,23,95,6,0} O4 E16&16&16 O5 E16&16&16 @ENV1{0,9,127,12,110,6,0} D16&16 @ENV1{0,9,127,23,95,6,0} C+16&16&16 E16&16&16 @ENV1{0,9,127,12,110,6,0} E16&16 @ENV1{0,9,127,37,76,59,76,6,0} G16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,12,110,6,0} C16&16 C16&16 E16&16 O4 E16&16 O5 E16&16 @ENV1{0,9,127,37,76,80,76,6,0} C16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,23,95,6,0} D16&16&16 D+16&16&16 @ENV1{0,9,127,12,110,6,0} O4 B16&16 @ENV1{0,9,127,37,76,38,76,6,0} G+16&16&16&16&16&16&16&16 @ENV1{0,9,127,23,95,6,0} O5 D+16&16&16 O4 B16&16&16 @ENV1{0,9,127,12,110,6,0} O5 D+16&16 @ENV1{0,9,127,37,76,38,76,6,0} D+16&16&16&16&16&16&16&16",
+    "Q100 T92 L16 R @2 V36 @ENV1{0,12,127,12,89,144,89,6,0} @VIB1{37,12,25} @GLI0 O4 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,60,89,6,0} O5 E16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,18,89,6,0} O4 E16&16&16&16 O5 E16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} O4 E16&16&16 O5 E16&16&16 @ENV1{0,12,127,9,99,6,0} D16&16 @ENV1{0,12,127,12,89,8,89,6,0} C+16&16&16 E16&16&16 @ENV1{0,12,127,9,99,6,0} E16&16 @ENV1{0,12,127,12,89,81,89,6,0} G16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,9,99,6,0} C16&16 C16&16 E16&16 O4 E16&16 O5 E16&16 @ENV1{0,12,127,12,89,102,89,6,0} C16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} D16&16&16 D+16&16&16 @ENV1{0,12,127,9,99,6,0} O4 B16&16 @ENV1{0,12,127,12,89,60,89,6,0} G+16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} O5 D+16&16&16 O4 B16&16&16 @ENV1{0,12,127,9,99,6,0} O5 D+16&16 @ENV1{0,12,127,12,89,50,89,6,0} D+16&16&16&16&16&16&16",
+    "Q100 T92 L16 @0 V109 @ENV1{127,23,127,6,0} @VIB1{37,12,25} @GLI0 O3 G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} O4 C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} O3 G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} O2 G+16&16 @ENV1{127,11,127,6,0} O3 G+ G+ @ENV1{127,23,127,6,0} O2 G+16&16 @ENV1{127,11,127,6,0} G+ G+",
+)
 TITLE_BG_PALETTE = (
     0x000000, 0x011447, 0x01081B, 0x010000, 0x0B4517, 0x27465F, 0x01091C, 0x01091B,
     0x013010, 0xDC8A04, 0x2B4965, 0x325B7F, 0x011758, 0x046C24, 0x081618, 0x000500,
@@ -1143,6 +1152,8 @@ class Game:
         self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
         self.init_frontend_state()
+        self.setup_title_bgm()
+        self.start_title_bgm()
         self.load_title_background()
         pyxel.run(self.update, self.draw)
 
@@ -1178,6 +1189,27 @@ class Game:
         self.b_menu_guard = False
         self.st = ST_LOGO
         self._loading_phase = 0
+        self.title_bgm_loaded = False
+        self.title_bgm_started = False
+
+    def setup_title_bgm(self):
+        for i, mml in enumerate(TITLE_BGM_MMLS):
+            pyxel.sounds[i].mml(mml)
+        self.title_bgm_loaded = True
+
+    def start_title_bgm(self):
+        if getattr(self, "title_bgm_started", False):
+            return
+        if not getattr(self, "title_bgm_loaded", False):
+            self.setup_title_bgm()
+        for ch in range(len(TITLE_BGM_MMLS)):
+            pyxel.play(ch, ch, loop=True)
+        self.title_bgm_started = True
+
+    def stop_title_bgm(self):
+        for ch in range(len(TITLE_BGM_MMLS)):
+            pyxel.stop(ch)
+        self.title_bgm_started = False
 
     def load_title_background(self):
         self.title_bg = None
@@ -1193,6 +1225,7 @@ class Game:
 
     def enter_title_screen(self):
         self.apply_title_palette()
+        self.start_title_bgm()
         self.title_fade_frames = 0
         self.st = ST_TITLE
 
@@ -4355,6 +4388,7 @@ class Game:
 
     def prepare_title_new_game(self):
         self.player_name = self.current_player_name()
+        self.stop_title_bgm()
         self.apply_palette()
         self.new_game()
         self.st = ST_PLAY
@@ -4521,14 +4555,16 @@ class Game:
         self.st = ST_NAME
 
     def upd_logo(self):
+        self.start_title_bgm()
         self.logo_frames = getattr(self, "logo_frames", 0) + 1
         if self.btn_any_key():
             self.enter_title_screen()
             return
-        if self.logo_frames >= 150:
+        if self.logo_frames >= LOGO_TOTAL_FRAMES:
             self.enter_title_screen()
 
     def upd_title(self):
+        self.start_title_bgm()
         if getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) < TITLE_FADE_FRAMES:
             if self.btn_any_key():
                 self.title_fade_frames = TITLE_FADE_FRAMES
@@ -4933,12 +4969,16 @@ class Game:
 
     def draw_logo_screen(self):
         frame = getattr(self, "logo_frames", 0)
-        if frame < 45:
-            alpha = max(0.0, min(1.0, frame / 45.0))
-        elif frame < 95:
+        logo_frame = frame - LOGO_BGM_DELAY_FRAMES
+        if logo_frame < 0:
+            alpha = 0.0
+        elif logo_frame < LOGO_FADE_FRAMES:
+            alpha = max(0.0, min(1.0, logo_frame / LOGO_FADE_FRAMES))
+        elif logo_frame < LOGO_FADE_FRAMES + LOGO_HOLD_FRAMES:
             alpha = 1.0
-        elif frame < 140:
-            alpha = max(0.0, min(1.0, (140 - frame) / 45.0))
+        elif logo_frame < LOGO_FADE_FRAMES + LOGO_HOLD_FRAMES + LOGO_FADE_FRAMES:
+            fade_frame = logo_frame - LOGO_FADE_FRAMES - LOGO_HOLD_FRAMES
+            alpha = max(0.0, min(1.0, (LOGO_FADE_FRAMES - fade_frame) / LOGO_FADE_FRAMES))
         else:
             alpha = 0.0
         lines = [

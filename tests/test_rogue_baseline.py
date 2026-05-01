@@ -47,6 +47,10 @@ def install_pyxel_mock():
     pyxel.blt = lambda *a, **kw: pyxel.blt_calls.append((a, kw))
     pyxel.dither_calls = []
     pyxel.dither = lambda alpha=1.0: pyxel.dither_calls.append(alpha)
+    pyxel.play_calls = []
+    pyxel.stop_calls = []
+    pyxel.play = lambda *a, **kw: pyxel.play_calls.append((a, kw))
+    pyxel.stop = lambda *a, **kw: pyxel.stop_calls.append((a, kw))
     pyxel.__file__ = os.path.join(os.getcwd(), "pyxel", "__init__.py")
     for i, key in enumerate([
         "KEY_NONE", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
@@ -79,6 +83,15 @@ def install_pyxel_mock():
             return len(str(s)) * 6
 
     pyxel.Font = MockFont
+
+    class MockSound:
+        def __init__(self):
+            self.mml_calls = []
+
+        def mml(self, code=None):
+            self.mml_calls.append(code)
+
+    pyxel.sounds = [MockSound() for _ in range(64)]
 
     class MockImage:
         def __init__(self, w, h):
@@ -9475,13 +9488,15 @@ class RogueBaselineTest(unittest.TestCase):
             "Ends in 4w 3d 03h 12m  UTC 2026-06-01 00:00",
         )
 
-    def test_logo_auto_fades_after_five_seconds_and_can_be_skipped(self):
+    def test_logo_auto_fades_on_bgm_bar_timing_and_can_be_skipped(self):
+        self.assertEqual(rogue.LOGO_BGM_DELAY_FRAMES, 78)
+        self.assertEqual(rogue.LOGO_TOTAL_FRAMES, 391)
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_LOGO
         game.logo_frames = 0
 
-        for _ in range(149):
+        for _ in range(rogue.LOGO_TOTAL_FRAMES - 1):
             rogue.pyxel.set_input()
             game.update()
         self.assertEqual(game.st, rogue.ST_LOGO)
@@ -9494,6 +9509,39 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
         self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_logo_and_title_bgm_starts_once_and_stops_on_new_game(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_LOGO
+        game.logo_frames = 0
+        rogue.pyxel.play_calls.clear()
+        rogue.pyxel.stop_calls.clear()
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(
+            rogue.pyxel.play_calls,
+            [
+                ((0, 0), {"loop": True}),
+                ((1, 1), {"loop": True}),
+                ((2, 2), {"loop": True}),
+            ],
+        )
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(len(rogue.pyxel.play_calls), 3)
+
+        game.title_cursor = 0
+        game.new_game = lambda: None
+        game.current_player_name = lambda: "ACE"
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
 
     def test_logo_does_not_request_dummy_seed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -9588,30 +9636,41 @@ class RogueBaselineTest(unittest.TestCase):
         game.txt = lambda x, y, s, c: None
 
         rogue.pyxel.dither_calls.clear()
-        game.logo_frames = 1
+        game.logo_frames = rogue.LOGO_BGM_DELAY_FRAMES - 1
+        game.draw_logo_screen()
+        delayed = rogue.pyxel.dither_calls[:]
+
+        rogue.pyxel.dither_calls.clear()
+        game.logo_frames = rogue.LOGO_BGM_DELAY_FRAMES + 1
         game.draw_logo_screen()
         early = rogue.pyxel.dither_calls[:]
 
         rogue.pyxel.dither_calls.clear()
-        game.logo_frames = 45
+        game.logo_frames = rogue.LOGO_BGM_DELAY_FRAMES + rogue.LOGO_FADE_FRAMES
         game.draw_logo_screen()
         hold = rogue.pyxel.dither_calls[:]
 
         rogue.pyxel.dither_calls.clear()
-        game.logo_frames = 135
+        game.logo_frames = (
+            rogue.LOGO_BGM_DELAY_FRAMES
+            + rogue.LOGO_FADE_FRAMES
+            + rogue.LOGO_HOLD_FRAMES
+            + rogue.LOGO_FADE_FRAMES // 2
+        )
         game.draw_logo_screen()
         late = rogue.pyxel.dither_calls[:]
 
         rogue.pyxel.dither_calls.clear()
-        game.logo_frames = 145
+        game.logo_frames = rogue.LOGO_TOTAL_FRAMES
         game.draw_logo_screen()
         black_hold = rogue.pyxel.dither_calls[:]
 
+        self.assertEqual(delayed[0], 0.0)
         self.assertLess(early[0], 1.0)
         self.assertEqual(hold[0], 1.0)
         self.assertLess(late[0], 1.0)
         self.assertEqual(black_hold[0], 0.0)
-        self.assertEqual((early[-1], hold[-1], late[-1], black_hold[-1]), (1.0, 1.0, 1.0, 1.0))
+        self.assertEqual((delayed[-1], early[-1], hold[-1], late[-1], black_hold[-1]), (1.0, 1.0, 1.0, 1.0, 1.0))
 
     def test_name_input_confirms_with_start_and_backspace_deletes(self):
         game = rogue.Game.__new__(rogue.Game)
