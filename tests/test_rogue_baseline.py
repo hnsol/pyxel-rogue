@@ -5750,6 +5750,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(food, game.p.inv)
         self.assertEqual(food.qty, 1)
 
+    def test_rogue_544_eat_clears_current_weapon_before_food_message(self):
+        # Rogue 5.4.4 misc.c:eat() clears cur_weapon before food messages/check_level().
+        game = new_game(seed=5066)
+        food = rogue.Item(rogue.CAT_FOOD, 0, qty=1)
+        game.p.inv.append(food)
+        game.p.wpn = food
+        seen = []
+        rolls = iter([0, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(rolls)
+            game.msg = lambda *args, **kwargs: seen.append(game.p.wpn)
+            game.eat(food)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(seen, [None])
+        self.assertIsNone(game.p.wpn)
+
     def test_rogue_544_eat_non_food_does_not_consume_pack_item(self):
         # Rogue 5.4.4 misc.c:eat() rejects obj->o_type != FOOD before leave_pack().
         game = new_game(seed=5062)
@@ -5812,6 +5831,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIsNone(game.p.wpn)
         self.assertIn(potion, game.p.inv)
         self.assertEqual(potion.qty, 1)
+
+    def test_rogue_544_quaff_clears_current_weapon_before_effect_branch(self):
+        # Rogue 5.4.4 potions.c:quaff() clears cur_weapon before the switch effects run.
+        kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        game = new_game(seed=5065)
+        potion = rogue.Item(rogue.CAT_POT, kind, qty=1)
+        game.p.inv.append(potion)
+        game.p.wpn = potion
+        seen = []
+        game.sight = lambda: seen.append(game.p.wpn)
+
+        game.use_pot(potion)
+
+        self.assertEqual(seen, [None])
+        self.assertIsNone(game.p.wpn)
 
     def test_rogue_544_read_scroll_stack_consumes_one(self):
         # Rogue 5.4.4 scrolls.c:read_scroll() calls pack.c:leave_pack(obj, FALSE, FALSE).

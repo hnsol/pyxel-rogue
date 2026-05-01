@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0316"
+UI_BUILD = "260502_0827"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2430,6 +2430,8 @@ class Game:
         if it.cat != CAT_POT:
             self.msg("potions.yuk_why_would_you_want_to_drink_that")
             return
+        if it is self.p.wpn:
+            self.p.wpn = None
         p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
             self.ident.pk[it.kind]=True
@@ -3199,6 +3201,8 @@ class Game:
             self.p.food, it.kind, RNG.rnd, RNG.rnd, HUNGERTIME, STOMACHSIZE
         )
         self.p.state="normal"
+        if it is self.p.wpn:
+            self.p.wpn = None
         if outcome == "slime-mold":
             self.msg("misc.my_that_was_a_yummy_value", value="slime-mold")
         elif outcome == "awful":
