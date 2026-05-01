@@ -12073,6 +12073,44 @@ class TestCallIt(unittest.TestCase):
         self.assertEqual(self.g.item_name(weapon), "mace called sting")
         self.assertEqual(self.g.item_name(armor), "ring mail called lucky")
 
+    def test_rogue_544_call_action_includes_weapon_armor_and_excludes_food_amulet(self):
+        # Rogue 5.4.4 pack.c:inventory(... CALLABLE) includes non-FOOD/non-AMULET items.
+        weapon = rogue.Item(rogue.CAT_WPN, 0)
+        armor = rogue.Item(rogue.CAT_ARM, 1)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        amulet = rogue.Item(rogue.CAT_AMULET, 0)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        self.g.p.inv = [weapon, armor, food, amulet, potion]
+
+        self.g.start_item_action("Call")
+
+        self.assertIn(weapon, self.g.fitems)
+        self.assertIn(armor, self.g.fitems)
+        self.assertIn(potion, self.g.fitems)
+        self.assertNotIn(food, self.g.fitems)
+        self.assertNotIn(amulet, self.g.fitems)
+
+    def test_rogue_544_call_known_type_rejects_without_clearing_guess(self):
+        # Rogue 5.4.4 command.c:call() returns "already identified" before editing oi_guess.
+        potion = rogue.Item(rogue.CAT_POT, 0, known=True)
+        self.g.ident.pk[0] = True
+        self.g.ident.pg[0] = "old"
+
+        self.assertFalse(self.g.apply_call_name(potion, "new"))
+
+        self.assertEqual(self.g.ident.pg[0], "old")
+        self.assertIn("that has already been identified", self.g.msgs)
+
+    def test_rogue_544_call_food_and_amulet_are_rejected(self):
+        # Rogue 5.4.4 CALLABLE excludes FOOD and AMULET from inventory().
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        amulet = rogue.Item(rogue.CAT_AMULET, 0)
+
+        self.assertFalse(self.g.apply_call_name(food, "snack"))
+        self.assertFalse(self.g.apply_call_name(amulet, "yendor"))
+
+        self.assertIn("you can't call that anything", self.g.msgs)
+
 
 class TestPrintDisc(unittest.TestCase):
     def setUp(self):

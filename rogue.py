@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_1024"
+UI_BUILD = "260501_1101"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2659,6 +2659,45 @@ class Game:
         elif it.cat in (CAT_WPN, CAT_ARM):
             it.o_label = val
 
+    def call_type_known(self, it):
+        # Rogue 5.4.4 command.c:call() checks oi_know only for type-level items.
+        if it.cat == CAT_POT:
+            return self.ident.pk[it.kind]
+        if it.cat == CAT_SCR:
+            return self.ident.sk[it.kind]
+        if it.cat == CAT_RING:
+            return self.ident.rk[it.kind]
+        if it.cat == CAT_STICK:
+            return self.ident.wk[it.kind]
+        return False
+
+    def call_result(self, it):
+        return rogue_things.call_result(
+            it.cat,
+            self.call_type_known(it),
+            (CAT_POT, CAT_SCR, CAT_RING, CAT_STICK),
+            (CAT_FOOD, CAT_AMULET),
+        )
+
+    def callable_items(self):
+        # Rogue 5.4.4 pack.c:inventory(... CALLABLE) excludes only FOOD and AMULET.
+        return [
+            it for it in self.p.inv
+            if self.call_result(it) != rogue_things.CALL_RESULT_UNCALLABLE
+        ]
+
+    def apply_call_name(self, it, name: str):
+        # Rogue 5.4.4 command.c:call() rejects known type-level items before call_it().
+        result = self.call_result(it)
+        if result == rogue_things.CALL_RESULT_UNCALLABLE:
+            self.msg("command.you_cant_call_that_anything")
+            return False
+        if result == rogue_things.CALL_RESULT_KNOWN:
+            self.msg("command.that_has_already_been_identified")
+            return False
+        self._call_it_apply(it, name)
+        return True
+
     def _disc_lines(self, rnd_func=None):
         # things.c:print_disc(*) — 全カテゴリの発見済みアイテム名を (color, text) リストで返す
         nothing = TextCatalog.msg(self.lang, "misc.nothing_discovered")
@@ -3953,7 +3992,7 @@ class Game:
         elif aname in("Throw","Drop"):
             self.fitems=list(p.inv)
         elif aname=="Call":
-            self.fitems=[i for i in p.inv if i.cat in (CAT_POT, CAT_SCR, CAT_RING, CAT_STICK)]
+            self.fitems=self.callable_items()
         elif cat:
             self.fitems=[i for i in p.inv if i.cat==cat]
         else:
@@ -4737,7 +4776,7 @@ class Game:
             self.call_input = self.call_input[:-1]
             return
         if self.btn_a() or pyxel.btnp(pyxel.KEY_RETURN):
-            self._call_it_apply(self.call_item, self.call_input)
+            self.apply_call_name(self.call_item, self.call_input)
             self.close_menu()
             # ターン消費なし (misc.c:call_it() 準拠)
             return

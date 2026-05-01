@@ -131,6 +131,7 @@
   - [x] Rogue 5.4.4 `things.c:print_disc()` 準拠で、発見リストの ring 補正値 / stick チャージを表示しない
   - [x] Rogue 5.4.4 `things.c:set_order()` 準拠で、発見リストを開く時にカテゴリごとの表示順を `rnd(i)` シャッフルする
   - [x] `command.c:call()` の weapon / armor 個体ラベル（`o_label`）接続
+  - [x] Rogue 5.4.4 `pack.c:inventory(... CALLABLE)` / `command.c:call()` 準拠で、Call 対象を FOOD / AMULET 以外にし、既知 type-level item を拒否
   - [x] `potions.c:quaff()/do_pot()` 準拠で、使用時に正式判明する/しない potion を分ける
   - [x] `scrolls.c:read_scroll()` 準拠で、使用時に正式判明する/しない scroll を分ける
   - [x] Rogue 5.4.4 `scrolls.c:S_ARMOR` 準拠で、鎧なし enchant armor は strange sense of loss を出さない

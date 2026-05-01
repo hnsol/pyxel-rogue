@@ -67,3 +67,17 @@ def dropcheck_result(is_current: bool, is_cursed: bool) -> str:
     if is_cursed:
         return "cursed"
     return "unequip"
+
+
+CALL_RESULT_OK = "ok"
+CALL_RESULT_KNOWN = "known"
+CALL_RESULT_UNCALLABLE = "uncallable"
+
+
+def call_result(cat: str, type_known: bool, type_level_cats, uncallable_cats) -> str:
+    """Rogue 5.4.4 command.c:call() with pack.c:inventory(... CALLABLE)."""
+    if cat in uncallable_cats:
+        return CALL_RESULT_UNCALLABLE
+    if cat in type_level_cats and type_known:
+        return CALL_RESULT_KNOWN
+    return CALL_RESULT_OK
