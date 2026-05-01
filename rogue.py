@@ -204,7 +204,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260501_1147"
+UI_BUILD = "260501_1159"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -4263,7 +4263,9 @@ class Game:
         # Rogue 5.4.4 pack.c:get_item() accepts a typed o_packch directly.
         for idx, ch in enumerate("abcdefghijklmnopqrstuvwxyz"):
             key = getattr(pyxel, f"KEY_{ch.upper()}", None)
-            if self.key_lower(key):
+            if key is not None and pyxel.btnp(key):
+                if self.shift_held():
+                    return ch.upper(), None
                 return ch, self.p.inv[idx] if idx < len(self.p.inv) else None
         return None
     def invalid_pack_letter(self, ch):

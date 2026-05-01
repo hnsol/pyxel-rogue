@@ -11634,6 +11634,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ITEM)
         self.assertIn("'m' is not a valid item", game.msgs)
 
+    def test_rogue_544_item_overlay_invalid_pack_letter_is_translated(self):
+        # Rogue 5.4.4 pack.c:get_item() invalid o_packch message goes through TextCatalog.
+        game = new_game(seed=5531, lang=rogue.LANG_JA)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        game.start_item_action("Quaff")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_M}, pressed={rogue.pyxel.KEY_M})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertIn("「m」は持ちものではない。", game.msgs)
+
+    def test_rogue_544_item_overlay_shift_letter_is_invalid_uppercase_packch(self):
+        # Rogue 5.4.4 pack.c:get_item() compares readchar() to lowercase o_packch;
+        # Shift+A is 'A', not pack letter 'a'.
+        game = new_game(seed=5532)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        game.start_item_action("Quaff")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_A},
+            pressed={rogue.pyxel.KEY_A},
+        )
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertIn("'A' is not a valid item", game.msgs)
+
     def test_rogue_544_keyboard_item_command_empty_pack_uses_get_item_message(self):
         # Rogue 5.4.4 pack.c:get_item() reports an empty pack before command type gates.
         game = new_game(seed=554)
