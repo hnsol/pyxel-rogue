@@ -1690,6 +1690,8 @@ class RogueBaselineTest(unittest.TestCase):
         ])
         self.assertEqual([p["prob"] for p in rogue.POTIONS],
                          [7, 8, 8, 13, 3, 13, 6, 6, 2, 5, 5, 13, 5, 6])
+        self.assertEqual([p["worth"] for p in rogue.POTIONS],
+                         [5, 5, 5, 150, 100, 130, 130, 105, 250, 200, 190, 130, 5, 75])
 
     def test_rogue_544_ring_generation_bonuses_and_curses(self):
         # Rogue 5.4.4 things.c:new_thing() ring case.
@@ -2589,6 +2591,8 @@ class RogueBaselineTest(unittest.TestCase):
         ])
         self.assertEqual([s["prob"] for s in rogue.SCROLLS],
                          [7, 4, 2, 3, 7, 10, 10, 6, 7, 10, 3, 2, 5, 8, 4, 7, 3, 2])
+        self.assertEqual([s["worth"] for s in rogue.SCROLLS],
+                         [140, 150, 180, 5, 160, 80, 80, 80, 100, 115, 200, 60, 165, 150, 75, 105, 20, 250])
 
     def test_rogue_544_identify_potion_scroll_only_identifies_matching_type(self):
         # Rogue 5.4.4 scrolls.c:S_ID_POTION calls whatis(TRUE, POTION).
@@ -7514,13 +7518,18 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.pack, [item])
 
     def test_rogue_544_weapon_table_audit_guards_init_dam_values(self):
-        # Rogue 5.4.4 weapons.c:init_dam[] stores "%dx%d" expressions.
+        # Rogue 5.4.4 weapons.c:init_dam[] and extern.c:weap_info[].
         self.assertEqual(rogue.WEAPONS[0]["damage"], "2x4")
         self.assertEqual(rogue.WEAPONS[0]["hurl_damage"], "1x3")
         self.assertEqual(rogue.WEAPONS[3]["damage"], "1x1")
         self.assertEqual(rogue.WEAPONS[3]["hurl_damage"], "2x3")
         self.assertEqual(rogue.WEAPONS[3]["launcher"], 2)
         self.assertTrue(rogue.WEAPONS[3]["missile"])
+        self.assertEqual([w["worth"] for w in rogue.WEAPONS], [8, 15, 15, 1, 3, 75, 2, 5, 5])
+
+    def test_rogue_544_armor_table_worth_matches_source(self):
+        # Rogue 5.4.4 extern.c:arm_info[] oi_worth values are needed by rip.c:total_winner().
+        self.assertEqual([a["worth"] for a in rogue.ARMORS], [5, 30, 15, 3, 75, 80, 90, 150])
 
     def test_rogue_544_weapons_helper_init_dam_table_matches_source(self):
         # Rogue 5.4.4 weapons.c:init_dam[] lives in rogue_weapons.py.

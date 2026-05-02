@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0946"
+UI_BUILD = "260502_1056"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -446,30 +446,30 @@ def in_play_area(x: int, y: int) -> bool:
 #  Item data  (Rogue 5.4.4)
 # ===========================================================
 POTIONS = [
-    {"name":"confusion","prob":7},{"name":"hallucination","prob":8},
-    {"name":"poison","prob":8},{"name":"gain strength","prob":13},
-    {"name":"see invisible","prob":3},{"name":"healing","prob":13},
-    {"name":"monster detection","prob":6},{"name":"magic detection","prob":6},
-    {"name":"raise level","prob":2},{"name":"extra healing","prob":5},
-    {"name":"haste self","prob":5},{"name":"restore strength","prob":13},
-    {"name":"blindness","prob":5},
-    {"name":"levitation","prob":6},
+    {"name":"confusion","prob":7,"worth":5},{"name":"hallucination","prob":8,"worth":5},
+    {"name":"poison","prob":8,"worth":5},{"name":"gain strength","prob":13,"worth":150},
+    {"name":"see invisible","prob":3,"worth":100},{"name":"healing","prob":13,"worth":130},
+    {"name":"monster detection","prob":6,"worth":130},{"name":"magic detection","prob":6,"worth":105},
+    {"name":"raise level","prob":2,"worth":250},{"name":"extra healing","prob":5,"worth":200},
+    {"name":"haste self","prob":5,"worth":190},{"name":"restore strength","prob":13,"worth":130},
+    {"name":"blindness","prob":5,"worth":5},
+    {"name":"levitation","prob":6,"worth":75},
 ]
 POT_COLORS = ["blue","red","green","grey","brown","clear",
               "pink","white","purple","yellow","plaid","amber",
               "black","orange"]
 
 SCROLLS = [
-    {"name":"monster confusion","prob":7},
-    {"name":"magic mapping","prob":4},{"name":"hold monster","prob":2},
-    {"name":"sleep","prob":3},{"name":"enchant armor","prob":7},
-    {"name":"identify potion","prob":10},{"name":"identify scroll","prob":10},
-    {"name":"identify weapon","prob":6},{"name":"identify armor","prob":7},
-    {"name":"identify ring, wand or staff","prob":10},
-    {"name":"scare monster","prob":3},{"name":"food detection","prob":2},
-    {"name":"teleportation","prob":5},{"name":"enchant weapon","prob":8},
-    {"name":"create monster","prob":4},{"name":"remove curse","prob":7},
-    {"name":"aggravate monsters","prob":3},{"name":"protect armor","prob":2},
+    {"name":"monster confusion","prob":7,"worth":140},
+    {"name":"magic mapping","prob":4,"worth":150},{"name":"hold monster","prob":2,"worth":180},
+    {"name":"sleep","prob":3,"worth":5},{"name":"enchant armor","prob":7,"worth":160},
+    {"name":"identify potion","prob":10,"worth":80},{"name":"identify scroll","prob":10,"worth":80},
+    {"name":"identify weapon","prob":6,"worth":80},{"name":"identify armor","prob":7,"worth":100},
+    {"name":"identify ring, wand or staff","prob":10,"worth":115},
+    {"name":"scare monster","prob":3,"worth":200},{"name":"food detection","prob":2,"worth":60},
+    {"name":"teleportation","prob":5,"worth":165},{"name":"enchant weapon","prob":8,"worth":150},
+    {"name":"create monster","prob":4,"worth":75},{"name":"remove curse","prob":7,"worth":105},
+    {"name":"aggravate monsters","prob":3,"worth":20},{"name":"protect armor","prob":2,"worth":250},
 ]
 SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
             "aimfiz","aefg","zorch","elam","isko","temov","gnik","snef",
@@ -478,25 +478,25 @@ SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
 FOODS = [{"name":"food ration","nut":900},{"name":"slime-mold","nut":700}]
 
 WEAPONS = [
-    rogue_weapons.apply_init_dam({"name":"mace","prob":11,"wield":True}, 0),
-    rogue_weapons.apply_init_dam({"name":"long sword","prob":11,"wield":True}, 1),
-    rogue_weapons.apply_init_dam({"name":"short bow","prob":12,"wield":True}, 2),
-    rogue_weapons.apply_init_dam({"name":"arrow","prob":12,"wield":False}, 3),
-    rogue_weapons.apply_init_dam({"name":"dagger","prob":8,"wield":True}, 4),
-    rogue_weapons.apply_init_dam({"name":"two-handed sword","prob":10,"wield":True}, 5),
-    rogue_weapons.apply_init_dam({"name":"dart","prob":12,"wield":False}, 6),
-    rogue_weapons.apply_init_dam({"name":"shuriken","prob":12,"wield":False}, 7),
-    rogue_weapons.apply_init_dam({"name":"spear","prob":12,"wield":True}, 8),
+    rogue_weapons.apply_init_dam({"name":"mace","prob":11,"worth":8,"wield":True}, 0),
+    rogue_weapons.apply_init_dam({"name":"long sword","prob":11,"worth":15,"wield":True}, 1),
+    rogue_weapons.apply_init_dam({"name":"short bow","prob":12,"worth":15,"wield":True}, 2),
+    rogue_weapons.apply_init_dam({"name":"arrow","prob":12,"worth":1,"wield":False}, 3),
+    rogue_weapons.apply_init_dam({"name":"dagger","prob":8,"worth":3,"wield":True}, 4),
+    rogue_weapons.apply_init_dam({"name":"two-handed sword","prob":10,"worth":75,"wield":True}, 5),
+    rogue_weapons.apply_init_dam({"name":"dart","prob":12,"worth":2,"wield":False}, 6),
+    rogue_weapons.apply_init_dam({"name":"shuriken","prob":12,"worth":5,"wield":False}, 7),
+    rogue_weapons.apply_init_dam({"name":"spear","prob":12,"worth":5,"wield":True}, 8),
 ]
 
 STR_PLUS = rogue_fight.STR_PLUS
 ADD_DAM = rogue_fight.ADD_DAM
 
 ARMORS = [
-    {"name":"leather armor","prob":20,"ac":8},{"name":"ring mail","prob":15,"ac":7},
-    {"name":"studded leather","prob":15,"ac":7},{"name":"scale mail","prob":13,"ac":6},
-    {"name":"chain mail","prob":12,"ac":5},{"name":"splint mail","prob":10,"ac":4},
-    {"name":"banded mail","prob":10,"ac":4},{"name":"plate mail","prob":5,"ac":3},
+    {"name":"leather armor","prob":20,"worth":5,"ac":8},{"name":"ring mail","prob":15,"worth":30,"ac":7},
+    {"name":"studded leather","prob":15,"worth":15,"ac":7},{"name":"scale mail","prob":13,"worth":3,"ac":6},
+    {"name":"chain mail","prob":12,"worth":75,"ac":5},{"name":"splint mail","prob":10,"worth":80,"ac":4},
+    {"name":"banded mail","prob":10,"worth":90,"ac":4},{"name":"plate mail","prob":5,"worth":150,"ac":3},
 ]
 RINGS = [{"name":r.name,"prob":r.prob,"worth":r.worth} for r in rogue_rings.RINGS]
 STICKS = [{"name":s.name,"prob":s.prob,"worth":s.worth} for s in rogue_sticks.STICKS]
