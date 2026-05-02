@@ -12854,6 +12854,21 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.no_move, 4 + rogue.BEARTIME)
 
+    def test_rogue_544_trap_trigger_clears_running_count_before_effect(self):
+        # Rogue 5.4.4 move.c:be_trapped() clears running/count before the trap switch.
+        game = new_game(seed=620)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        game.traps[(x, y)] = kind
+        game.dashing = True
+        game.dash_steps = 5
+
+        game.trigger_trap(x, y)
+
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.dash_steps, 0)
+
     def test_rogue_544_move_helper_simple_trap_state_additions_match_source(self):
         # Rogue 5.4.4 move.c:be_trapped() T_BEAR/T_SLEEP add fixed constants.
         import rogue_move

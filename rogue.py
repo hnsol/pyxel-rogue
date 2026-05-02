@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0125"
+UI_BUILD = "260503_0135"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -3679,7 +3679,7 @@ class Game:
         self.reveal_trap_at(x,y)
         kind=self.traps.get((x,y),0)
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
-        self.dashing=False
+        self.clear_running_count()
         if name=="trap door":
             self.msg("move.you_fell_into_a_trap")
             self.descend()
