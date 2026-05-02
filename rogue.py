@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_1234"
+UI_BUILD = "260502_1248"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -5237,19 +5237,19 @@ class Game:
                 exp = (mx,my) in self.explored and not blind
 
                 if vis:
-                    tile=self.tm[my][mx]; _,col=TILE_CH.get(tile,(" ",0)); ch=self.visible_tile_sym(mx,my,tile)
-                    if ch!=" ": self.txt(sx+1,sy+1,ch,col)
-                    # Ground item
-                    gi=self.gi_at(mx,my)
-                    if gi: self.txt(sx+1,sy+1,self.visible_item_sym(gi),ICOL.get(gi.cat,9))
-                    # Monster
                     mo=self.mon_at(mx,my)
-                    if mo and (self.can_see_monster(mo) or self.can_detect_monsters()):
-                        sym = self.visible_monster_sym(mo) if self.can_see_monster(mo) else self.detected_monster_sym(mo)
-                        self.txt(sx+1,sy+1,sym,self.monster_color(mo.sym))
-                    # Player
                     if mx==px and my==py:
                         self.txt(sx+1,sy+1,"@",30)
+                    elif mo and (self.can_see_monster(mo) or self.can_detect_monsters()):
+                        sym = self.visible_monster_sym(mo) if self.can_see_monster(mo) else self.detected_monster_sym(mo)
+                        self.txt(sx+1,sy+1,sym,self.monster_color(mo.sym))
+                    else:
+                        gi=self.gi_at(mx,my)
+                        if gi:
+                            self.txt(sx+1,sy+1,self.visible_item_sym(gi),ICOL.get(gi.cat,9))
+                        else:
+                            tile=self.tm[my][mx]; _,col=TILE_CH.get(tile,(" ",0)); ch=self.visible_tile_sym(mx,my,tile)
+                            if ch!=" ": self.txt(sx+1,sy+1,ch,col)
                 elif exp:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
                     if ch!=" " and self.should_draw_memory_tile(mx,my,tile):

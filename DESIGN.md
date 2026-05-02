@@ -289,6 +289,8 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 ポーションは `rogue.h:P_CONFUSE..P_LEVIT` / `MAXPOTIONS=14` / `potions.c:quaff()` / `extern.c:pot_info[]` を基準にする。現行 Pyxel 版は原作 14 種を実装済み。`P_LSD` は `ISHALU` 相当として `potions.c:do_pot()` / `daemons.c:come_down()` に合わせ、`misc.c:rnd_thing()` / `misc.c:look()` 相当の視覚混乱、`command.c:search()` の `probinc` 増加、invisible monster のランダム表示へ接続する。`P_LSD` 使用時に `SEEMONST` が有効なら原作は `turn_see(FALSE)` を呼ぶが、これは `SEEMONST` 解除ではなく再表示なので、Pyxel 版も monster detection の残り期間と `turn_see` fuse を維持する。`P_LEVIT` は `ISLEVIT` 相当として罠・階段の発動条件と床上アイテム拾得を抑止し、`daemons.c:land()` 相当で解除する。
 
+表示は `misc.c:look()` の `p_monst` 優先に合わせ、visible monster がいるセルでは床・通路・床上アイテムを重ねて描かず、monster glyph だけを描く。これは原作準拠であり、Pyxel 版の可読性改善でもある。床上アイテムや地形は monster が移動した後に通常の探索済み表示へ戻る。
+
 `potions.c:do_pot()` の共通処理は、未識別なら `knowit` で `oi_know` を更新し、対応フラグが未発動なら `fuse()`、発動中なら `lengthen()` する。Pyxel 版ではこの識別更新と fuse/lengthen 分岐を `rogue_potions.do_pot_known()` / `do_pot_fuse_action()` へ寄せ、`P_CONFUSE`, `P_LSD`, `P_BLIND`, `P_LEVIT` の分岐で使う。
 
 `potions.c:P_SEEINVIS` は `do_pot(P_SEEINVIS, FALSE)` のため正式識別せず、既に `CANSEE` の場合は `lengthen(unsee, t)` だけを試みる。Pyxel 版では see invisible ring による `CANSEE` と potion の残り期間を分け、ring-only 状態で quaff した場合は potion duration を増やさない分岐を `rogue_potions.see_invisible_duration()` で固定する。

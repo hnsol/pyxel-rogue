@@ -8900,6 +8900,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item.sym, calls)
         self.assertNotIn("Z", calls)
 
+    def test_rogue_544_visible_monster_cell_draws_only_monster_glyph(self):
+        # Rogue 5.4.4 misc.c:look() uses p_monst/t_disguise instead of stacking floor/item glyphs.
+        game = new_game(seed=35)
+        game.cam_x = 0
+        game.cam_y = 0
+        game.p.x, game.p.y = 1, 1
+        game.visible = {(5, 5)}
+        game.explored = {(5, 5)}
+        game.tm[5][5] = rogue.T_CORR
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = 5, 5
+        monster = monster_at(5, 5, "Z", "zombie")
+        game.gitems = [item]
+        game.mons = [monster]
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s)))
+
+        game.draw_zoom()
+
+        target_x = rogue.ZV_X + 5 * rogue.TILE_W + 1
+        target_y = rogue.ZV_Y + 5 * rogue.TILE_H + 1
+        glyphs = [s for x, y, s in calls if (x, y) == (target_x, target_y)]
+        self.assertEqual(glyphs, ["Z"])
+
     def test_dark_room_explored_floor_is_not_drawn_after_leaving_lamp_area(self):
         # Rogue 5.4.4 misc.c:erase_lamp()/rooms.c:leave_room() erase dark room FLOOR.
         game = new_game(seed=341)
