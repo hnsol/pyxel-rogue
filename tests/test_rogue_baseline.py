@@ -5664,6 +5664,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_init.initial_pack_order("food", "armor", "mace", "bow", "arrows"),
                          ["food", "armor", "mace", "bow", "arrows"])
 
+    def test_rogue_544_init_scroll_title_uses_source_word_and_syllable_rolls(self):
+        # Rogue 5.4.4 init.c:init_names() uses nwords=rnd(3)+2 and nsyl=rnd(3)+1.
+        import rogue_init
+
+        syllables = ["aa", "bb", "cc", "dd"]
+        rolls = iter([1, 0, 0, 1, 2, 0, 1, 3, 2])
+        calls = []
+
+        title = rogue_init.scroll_title(syllables, lambda n: calls.append(n) or next(rolls))
+
+        self.assertEqual(calls, [3, 3, 4, 3, 4, 4, 3, 4, 4])
+        self.assertEqual(title, "aa ccaa ddcc")
+
     def test_v5_item_names_plural_food_and_armor_protection(self):
         game = new_game(seed=8)
         food = rogue.Item(rogue.CAT_FOOD, 0, qty=2)

@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_2353"
+UI_BUILD = "260503_0020"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -726,11 +726,7 @@ class IdentTable:
     def __init__(s, lang=LANG_EN):
         s.lang = lang
         s.pcol=RNG.sample(POT_COLORS,len(POTIONS))
-        syls=list(SCR_SYLS); RNG.shuffle(syls)
-        s.snam=[]
-        for i in range(len(SCROLLS)):
-            n=RNG.randint(2,3); st=(i*3)%len(syls)
-            s.snam.append(" ".join(syls[(st+j)%len(syls)] for j in range(n)))
+        s.snam=[rogue_init.scroll_title(SCR_SYLS, RNG.rnd) for _ in range(len(SCROLLS))]
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
         s.pg=[None]*len(POTIONS); s.sg=[None]*len(SCROLLS)
         s.rstones=rogue_rings.init_stones(RNG)
