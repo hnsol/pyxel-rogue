@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0930"
+UI_BUILD = "260502_0931"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2069,7 +2069,7 @@ class Game:
         # C: fight.c:remove_mon()
         if rogue_fight.remove_monster_pack_should_fall(was_kill):
             for item in list(getattr(m, "pack", [])):
-                pos=(m.x,m.y) if self.walkable(m.x,m.y) and not self.gi_at(m.x,m.y) else self.fall_position(m.x,m.y)
+                pos=self.fall_position(m.x,m.y)
                 if pos:
                     item.x,item.y=pos
                     self.gitems.append(item)
@@ -3371,8 +3371,7 @@ class Game:
 
     def drop_thrown(self,it,x,y,around=True):
         # C: weapons.c:fall()
-        pos=self.fall_position(x,y) if around else None
-        pos=pos or ((x,y) if self.walkable(x,y) and not self.gi_at(x,y) else None)
+        pos = self.fall_position(x,y) if around else ((x,y) if self.walkable(x,y) and not self.gi_at(x,y) else None)
         result,pos=rogue_weapons.fall_result(pos, it.cat==CAT_WPN)
         if result!="drop":
             if it.cat==CAT_WPN: self.msg("pyxel.item_vanishes_as_hits_ground", item=it.data["name"])

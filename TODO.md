@@ -284,6 +284,8 @@
 - [x] Rogue 5.4.4 `pack.c:add_pack()` 準拠で matching weapon group は満杯packでも stack し、新規itemは同typeまとまりへ挿入
 - [x] Rogue 5.4.4 `weapons.c:fall()` / `fallpos()` / `init_weapon()` 相当の投擲落下・初期個数 helper を `rogue_weapons.py` へ小分割し、`fallpos()` 選択乱数を `RNG.rnd()` へ統一
 - [x] Rogue 5.4.4 `weapons.c:fallpos()` 準拠で投擲落下候補から monster square を除外しない
+- [x] Rogue 5.4.4 `fight.c:remove_mon()` / `weapons.c:fall()` 準拠で、monster pack 落下も `fallpos()` を通す
+- [x] Rogue 5.4.4 `weapons.c:fall(FALSE)` 準拠で、`fallpos()` 失敗時は impact 座標へ直置きしない
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `fight.c:fight(..., thrown=TRUE)` 準拠で、投擲攻撃時も `quiet` リセットと `runto()` を行う
 - [x] Rogue 5.4.4 `things.c:new_thing()` / `fight.c:roll_em()` 準拠で、非武器投擲の基礎 damage を `"0x0"` にする
 - [x] Rogue 5.4.4 `weapons.c:missile()` / `things.c:dropcheck()` 準拠で、装備品投擲時の armor waste_time / ring解除副作用 / cur_weapon解除を通す

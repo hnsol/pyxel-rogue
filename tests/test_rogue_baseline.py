@@ -6454,7 +6454,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
             game.save_vs_magic = old_save
 
-        self.assertEqual(events, ["rnd:80", "save"])
+        self.assertEqual(events[:2], ["rnd:80", "save"])
 
     def test_rogue_544_fight_helper_goldcalc_uses_level_scaled_roll(self):
         # Rogue 5.4.4 rogue.h:GOLDCALC is rnd(50 + 10 * level) + 2.
@@ -6577,7 +6577,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
             game.save_vs_magic = old_save
 
-        self.assertEqual(events, ["rnd:80", "save"])
+        self.assertEqual(events[:2], ["rnd:80", "save"])
 
     def test_rogue_544_leprechaun_disappears_even_when_purse_is_empty(self):
         # Rogue 5.4.4 fight.c:attack() always remove_mon()s a Leprechaun hit;
@@ -7347,21 +7347,29 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(events[:3], ["rnd:100", "choice", "randmonster"])
 
-    def test_rogue_544_killed_monster_drops_pack_items_at_monster_position(self):
-        # Rogue 5.4.4 fight.c:killed() calls remove_mon(..., TRUE), which falls t_pack items.
+    def test_rogue_544_killed_monster_pack_items_use_fallpos(self):
+        # Rogue 5.4.4 fight.c:remove_mon(..., TRUE) sets o_pos to t_pos,
+        # then calls weapons.c:fall(FALSE), which uses fallpos().
         game = new_game(seed=302)
         set_open_floor(game)
         monster = monster_at(game.p.x + 1, game.p.y)
         item = rogue.Item(rogue.CAT_FOOD, 0)
         monster.pack = [item]
         game.mons = [monster]
+        fall_calls = []
+        old_fall_position = game.fall_position
+        try:
+            game.fall_position = lambda x, y: fall_calls.append((x, y)) or (monster.x + 1, monster.y)
 
-        game.award_monster_kill(monster)
+            game.award_monster_kill(monster)
+        finally:
+            game.fall_position = old_fall_position
 
         self.assertNotIn(monster, game.mons)
         self.assertEqual(monster.pack, [])
         self.assertIn(item, game.gitems)
-        self.assertEqual((item.x, item.y), (monster.x, monster.y))
+        self.assertEqual(fall_calls, [(monster.x, monster.y)])
+        self.assertEqual((item.x, item.y), (monster.x + 1, monster.y))
 
     def test_rogue_544_polymorph_rebuilds_monster_and_preserves_pack(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH saves t_pack and restores it after new_monster().
@@ -12450,6 +12458,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotEqual((arrow.x, arrow.y), (game.p.x, game.p.y))
         self.assertLessEqual(abs(arrow.x - game.p.x), 1)
         self.assertLessEqual(abs(arrow.y - game.p.y), 1)
+
+    def test_rogue_544_arrow_trap_miss_vanishes_when_fallpos_has_no_candidate(self):
+        # Rogue 5.4.4 weapons.c:fall(FALSE) discards the object if fallpos() fails;
+        # it does not fall back to the impact coordinate.
+        game = new_game(seed=71)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 10, 10
+        game.tm[10][10] = rogue.T_FLOOR
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: False
+        game.gitems = []
+
+        game.trigger_trap(x, y)
+
+        self.assertEqual(game.gitems, [])
 
     def test_rogue_544_trap_hits_ignore_worn_armor(self):
         # Rogue 5.4.4 move.c:be_trapped() calls swing(..., pstats.s_arm, 1),
