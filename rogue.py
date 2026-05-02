@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_1119"
+UI_BUILD = "260502_1124"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1400,11 +1400,38 @@ class Game:
             return "killed_with_amulet"
         return outcome
 
+    def death_killer_name(self):
+        # C: rip.c:killname()
+        cause = (self.death_cause or "died").strip()
+        special = {
+            "hypothermia": "hypothermia",
+            "starved to death": "starvation",
+            "an arrow killed you": "arrow",
+            "a poisoned dart killed you": "dart",
+        }
+        if cause in special:
+            return special[cause]
+        for prefix in ("killed by an ", "killed by a ", "killed by "):
+            if cause.startswith(prefix):
+                return cause[len(prefix):]
+        return cause
+
+    def death_killer_article(self, killer):
+        if killer in ("hypothermia", "starvation"):
+            return ""
+        return "an" if killer and killer[0].lower() in "aeiou" else "a"
+
+    def tombstone_killed_by_line(self, killer):
+        article = self.death_killer_article(killer)
+        if article == "a":
+            return "    |  killed by a  |"
+        text = f"killed by {article}".strip()
+        return f"    | {text.center(14)} |"
+
     def result_killer(self, outcome):
         if outcome in ("quit", "winner"):
             return ""
-        killer = self.death_cause or "died"
-        return killer.replace("killed by a ", "").replace("killed by ", "")
+        return self.death_killer_name()
 
     def total_winner_item_data(self, it):
         data = it.data
@@ -1450,6 +1477,13 @@ class Game:
             self.st = ST_QUIT
         else:
             self.st = ST_DEAD
+
+    def death_display_gold(self):
+        # C: rip.c:death() reduces purse before tombstone() and score().
+        entry = getattr(self, "result_entry", None)
+        if entry and entry.get("result_flags") in ("killed", "killed_with_amulet"):
+            return int(entry.get("score", self.p.gold))
+        return self.p.gold
 
     def set_lang(self, lang):
         self.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
@@ -5460,7 +5494,7 @@ class Game:
             self.txt(x,y,f"Cause: {self.death_cause or 'died'}",UI_TEXT_COL); y+=18
             self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
             self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
-            self.txt(x,y,f"Gold:  {p.gold}",UI_HILITE_COL); y+=14
+            self.txt(x,y,f"Gold:  {self.death_display_gold()}",UI_HILITE_COL); y+=14
             next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
             self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
             self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=24
@@ -5470,7 +5504,7 @@ class Game:
         bx,by=88,30; bw=320; bh=232
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
         p=self.p; x=bx+18; y=by+24
-        killer=(self.death_cause or "died").replace("killed by ","")
+        killer=self.death_killer_name()
         name=self.options.get("name","rogue")
         year=time.localtime().tm_year
         rip=[
@@ -5481,8 +5515,8 @@ class Game:
             "    /     PEACE      \\",
             "    |                |",
             f"    | {name[:14].center(14)} |",
-            f"    | {str(p.gold) + ' Au':^14} |",
-            "    |  killed by a  |",
+            f"    | {str(self.death_display_gold()) + ' Au':^14} |",
+            self.tombstone_killed_by_line(killer),
             f"    | {killer[:14].center(14)} |",
             f"    | {str(year):^14} |",
             "   *|   *  *  *    |*",

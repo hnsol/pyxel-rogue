@@ -9182,6 +9182,65 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any("hobgoblin" in c for c in calls))
         self.assertTrue(any("123 Au" in c for c in calls))
 
+    def test_rogue_544_death_tombstone_uses_score_purse_after_penalty(self):
+        # Rogue 5.4.4 rip.c:death() subtracts 10% from purse before tombstone() and score().
+        game = new_game(seed=35)
+        game.p.gold = 123
+        game.death_cause = "killed by a hobgoblin"
+        saved = []
+        old_save = rogue.save_score_entry
+        old_load = rogue.load_score_entries
+        try:
+            rogue.save_score_entry = lambda entry: saved.append(entry)
+            rogue.load_score_entries = lambda: saved[:]
+            game.enter_result_state("killed")
+        finally:
+            rogue.save_score_entry = old_save
+            rogue.load_score_entries = old_load
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_dead()
+
+        self.assertEqual(saved[0]["score"], 110)
+        self.assertTrue(any("110 Au" in c for c in calls))
+        self.assertFalse(any("123 Au" in c for c in calls))
+
+    def test_rogue_544_death_killname_special_causes_match_rip(self):
+        # Rogue 5.4.4 rip.c:killname() maps death codes to score/tombstone names.
+        cases = {
+            "starved to death": "starvation",
+            "hypothermia": "hypothermia",
+            "an arrow killed you": "arrow",
+            "a poisoned dart killed you": "dart",
+            "killed by a bolt": "bolt",
+        }
+        for cause, killer in cases.items():
+            game = new_game(seed=35)
+            game.death_cause = cause
+            self.assertEqual(game.result_killer("killed"), killer)
+
+    def test_rogue_544_death_score_line_omits_article_for_starvation(self):
+        # Rogue 5.4.4 rip.c:killname(doart=TRUE) prints no article for starvation/hypothermia.
+        line = rogue.format_score_line(
+            1,
+            {"score": 90, "player_name": "ROGUE", "result_flags": "killed", "level": 12, "killer": "starvation"},
+        )
+
+        self.assertEqual(line, " 1    90 ROGUE: killed on level 12 by starvation.")
+
+    def test_rogue_544_death_tombstone_omits_article_for_starvation(self):
+        # Rogue 5.4.4 rip.c:death() blanks the tombstone article for starvation/hypothermia.
+        game = new_game(seed=35)
+        game.death_cause = "starved to death"
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_dead()
+
+        self.assertTrue(any("starvation" in c for c in calls))
+        self.assertFalse(any("killed by a" in c for c in calls))
+
     def test_rogue_544_score_entry_uses_ninety_percent_gold_on_death(self):
         entry = rogue.build_score_entry(
             score=0,

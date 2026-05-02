@@ -263,6 +263,9 @@ def score_reason(result_flags: str) -> str:
 def article_for(name: str) -> str:
     if not name:
         return ""
+    # Rogue 5.4.4 rip.c:killname() marks these deaths as no-article.
+    if name in ("hypothermia", "starvation"):
+        return ""
     return "an" if name[0].lower() in "aeiou" else "a"
 
 
@@ -275,7 +278,8 @@ def format_score_line(rank: int, entry: dict[str, Any]) -> str:
     if flags in ("killed", "killed_with_amulet"):
         killer = str(entry.get("killer", "")).strip()
         if killer:
-            line += f" by {article_for(killer)} {killer}"
+            article = article_for(killer)
+            line += f" by {article + ' ' if article else ''}{killer}"
     return line + "."
 
 
