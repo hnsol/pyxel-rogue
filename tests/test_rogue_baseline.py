@@ -4524,10 +4524,14 @@ class RogueBaselineTest(unittest.TestCase):
         )
 
     def test_rogue_544_daemons_helper_land_state_matches_source(self):
-        # Rogue 5.4.4 daemons.c:land() clears ISLEVIT and reports landing.
+        # Rogue 5.4.4 daemons.c:land() clears ISLEVIT and reports choose_str(pa_high, pa_straight).
         self.assertEqual(
-            rogue.rogue_daemons.land_state(),
+            rogue.rogue_daemons.land_state(hallucinating=False),
             (0, "daemons.you_float_gently_to_the_ground"),
+        )
+        self.assertEqual(
+            rogue.rogue_daemons.land_state(hallucinating=True),
+            (0, "daemons.bummer_you_ve_hit_the_ground"),
         )
 
     def test_rogue_544_stomach_faint_uses_rnd_8_plus_four(self):
@@ -4885,6 +4889,33 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("oh, wow!  You're floating in the air!", game.msgs)
         self.assertNotIn("you start to float in the air", game.msgs)
+
+    def test_rogue_544_land_while_hallucinating_uses_high_message(self):
+        # Rogue 5.4.4 daemons.c:land() uses choose_str("bummer!  You've hit the ground", ...).
+        game = new_game(seed=316)
+        game.p.levitating = 1
+        game.p.hallucinating = 10
+
+        game.land()
+
+        self.assertEqual(game.p.levitating, 0)
+        self.assertIn("bummer!  You've hit the ground", game.msgs)
+        self.assertNotIn("you float gently to the ground", game.msgs)
+
+    def test_rogue_544_legacy_levitation_counter_lands_with_high_message(self):
+        # Rogue 5.4.4 daemons.c:land() message branch also applies if no land fuse is present.
+        game = new_game(seed=317)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.levitating = 1
+        game.p.hallucinating = 10
+
+        game.end_turn()
+
+        self.assertEqual(game.p.levitating, 0)
+        self.assertIn("bummer!  You've hit the ground", game.msgs)
+        self.assertNotIn("you float gently to the ground", game.msgs)
 
     def test_rogue_544_potion_hallucination_uses_spread_seeduration_and_comes_down(self):
         # Rogue 5.4.4 potions.c:P_LSD uses do_pot(ISHALU, come_down, SEEDURATION).

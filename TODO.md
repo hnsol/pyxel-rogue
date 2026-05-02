@@ -401,6 +401,7 @@
   - [x] Rogue 5.4.4 `daemons.c:unsee()` の `CANSEE` 解除を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:come_down()` / `land()` の文言・状態分岐を `rogue_daemons.py` へ小分割
   - [x] Rogue 5.4.4 `daemons.c:come_down()` 準拠で、blind 中は hallucination 解除後の再表示メッセージを抑止
+  - [x] Rogue 5.4.4 `daemons.c:land()` 準拠で、hallucination 中の着地文言を high branch にする
   - [x] Rogue 5.4.4 `potions.c:P_HASTE` 準拠で、haste self quaff は `after=FALSE` として after-turn を進めない
   - [x] Rogue 5.4.4 `command.c:command()` 準拠で、haste 中の BEFORE daemon/fuse は2回行動ループ前の前半行動で実行する
   - [x] Rogue 5.4.4 `potions.c:do_pot()` 準拠で、blindness quaff 後の `look(FALSE)` と hallucinating levitation 文言を反映

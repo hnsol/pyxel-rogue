@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_1125"
+UI_BUILD = "260502_1210"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2716,7 +2716,7 @@ class Game:
 
     def land(self):
         # C: daemons.c:land()
-        self.p.levitating, message_key = rogue_daemons.land_state()
+        self.p.levitating, message_key = rogue_daemons.land_state(self.p.hallucinating > 0)
         self.msg(message_key)
 
     def unconfuse(self):
@@ -3874,7 +3874,8 @@ class Game:
         if self.p.levitating>0 and self.fuses.remaining("land")==0:
             self.p.levitating-=1
             if self.p.levitating==0:
-                self.msg("daemons.you_float_gently_to_the_ground")
+                _, message_key = rogue_daemons.land_state(self.p.hallucinating > 0)
+                self.msg(message_key)
         self.do_after_daemons()
         due_fuses = []
         self.fuses.tick_each(rogue_daemons.AFTER, lambda name: (due_fuses.append(name), self.run_fuse(name)))

@@ -139,8 +139,10 @@ def come_down_result(hallucinating: bool, blind: bool):
     return True, "daemons.everything_looks_so_boring_now"
 
 
-def land_state():
-    """Rogue 5.4.4 daemons.c:land() effect."""
+def land_state(hallucinating: bool = False):
+    """Rogue 5.4.4 daemons.c:land() effect and choose_str branch."""
+    if hallucinating:
+        return 0, "daemons.bummer_you_ve_hit_the_ground"
     return 0, "daemons.you_float_gently_to_the_ground"
 
 

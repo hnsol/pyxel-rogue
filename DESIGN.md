@@ -309,6 +309,8 @@ daemon / fuse 期間管理は `daemon.c`, `daemons.c`, `main.c:fuse()/lengthen()
 
 `daemons.c:unsee()` は invisible monster の画面復元後に `CANSEE` を解除する。Pyxel 版では描画を次フレームの視界更新へ委ね、ゲーム状態としての see invisible potion 期間だけを `rogue_daemons.unsee_state()` で解除する。see invisible ring は別条件として扱うため、potion fuse 終了後も ring 装備中なら不可視視認は残る。
 
+`daemons.c:land()` は levitation 解除時に hallucination 中かどうかで `choose_str()` の文言を分ける。Pyxel 版でも `rogue_daemons.land_state()` に分け、通常時は `you float gently to the ground`、hallucination 中は `bummer!  You've hit the ground` を出す。
+
 `potions.c:turn_see()` は `turn_off` で `SEEMONST` を解除し、それ以外では付与する。Pyxel 版では一時表示の残り期間を `see_monsters` に保持し、ON/OFF の状態変更は `rogue_potions.turn_see_state()` へ寄せる。`turn_see(FALSE)` の戻り値は、`see_monst()` でまだ見えていなかった monster を一時表示したかどうかなので、`P_MFIND` の感知メッセージは `rogue_potions.turn_see_adds_new()` で判定する。`P_MFIND` は `do_pot()` 経由ではなく、使用ごとに `fuse(turn_see, TRUE, HUHDURATION, AFTER)` を追加する。再使用時も `lengthen()` せず、原作の delayed action スロット重複を保つ。
 
 Wizard モード（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 系）とゲーム中セーブ（`save.c:save_game()/restore()`、`command.c` の `S`）は、忠実度監査・長時間プレイの成立に必要な周辺機能として `TODO.md` Phase 7 に記録する。Pyxel Web での永続化方式は実装時に決める。
