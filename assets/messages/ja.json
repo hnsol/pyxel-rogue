@@ -143,6 +143,8 @@
   "io.weak": "空腹のせいで力がなくなってきた。",
   "list.ran_out_of_memory_after_count_items": "{count}個の項目でメモリーが足りなくなった。",
   "main.really_quit": "本当にやめますか？",
+  "menu.call": "名付け",
+  "menu.discoveries": "発見",
   "menu.drop": "落とす",
   "menu.eat": "食べる",
   "menu.help": "ヘルプ",

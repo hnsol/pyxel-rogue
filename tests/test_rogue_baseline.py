@@ -239,6 +239,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.CALL_PRESETS, rogue_ui.CALL_PRESETS)
         self.assertEqual(rogue.MENU_ACTIONS, rogue_ui.MENU_ACTIONS)
         self.assertEqual(rogue.AUX_ACTIONS, rogue_ui.AUX_ACTIONS)
+        self.assertEqual(
+            rogue.PAD_ACTION_GRID,
+            (
+                ("Zap", "Throw", "Put on"),
+                ("Quaff", "Eat", "Read"),
+                ("Wield", "Wear", "Take off"),
+                ("Call", "Discoveries", "Drop"),
+            ),
+        )
+        self.assertEqual(
+            rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS),
+            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Eat"),
+        )
+        self.assertEqual(
+            rogue_ui.pad_menu_move(rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS), -1, 0, rogue.MENU_ACTIONS),
+            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Quaff"),
+        )
         self.assertEqual((rogue.B_TAP_FRAMES, rogue.BACK_TAP_FRAMES), (8, 8))
 
     def test_layout_constants_are_split_without_changing_screen_geometry(self):
@@ -9179,9 +9196,11 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(s.startswith("z)") for _, _, s, _ in inv_lines))
         self.assertEqual({x for x, _, _, _ in inv_lines}, {38})
         first_item = next(c for c in inv_lines if c[2].startswith("a)"))
+        second_item = next(c for c in inv_lines if c[2].startswith("b)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
         self.assertEqual(first_item[1] - calls[0][1], 15)
-        self.assertLessEqual(last_item[1], 275)
+        self.assertEqual(second_item[1] - first_item[1], 11)
+        self.assertLessEqual(last_item[1], 320)
 
     def test_hud_equipment_omits_inventory_worn_annotations(self):
         game = new_game(seed=36)
@@ -9333,14 +9352,26 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_HELP)
 
-    def test_keyboard_space_toggles_start_action(self):
+    def test_keyboard_space_holds_diagonal_assist_only_while_pressed(self):
         game = new_game(seed=35)
+        set_open_floor(game)
         self.assertFalse(game.diag_assist)
+        start = (game.p.x, game.p.y)
 
-        rogue.pyxel.set_input(held={rogue.pyxel.KEY_SPACE}, pressed={rogue.pyxel.KEY_SPACE})
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SPACE, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.KEY_SPACE, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
         game.update()
 
         self.assertTrue(game.diag_assist)
+        self.assertEqual((game.p.x, game.p.y), start)
+
+        rogue.pyxel.set_input()
+        game.update()
+
+        self.assertFalse(game.diag_assist)
+        self.assertEqual((game.p.x, game.p.y), start)
 
     def test_death_screen_draws_tombstone_by_default(self):
         game = new_game(seed=35)
@@ -11012,7 +11043,7 @@ class RogueBaselineTest(unittest.TestCase):
         set_open_floor(game)
         game.diag_assist = True
         rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_B, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            held={rogue.pyxel.GAMEPAD1_BUTTON_START, rogue.pyxel.GAMEPAD1_BUTTON_B, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_B, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
         )
         game.update()
@@ -11024,6 +11055,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.diag_assist = True
         rogue.pyxel.set_input(
             held={
+                rogue.pyxel.GAMEPAD1_BUTTON_START,
                 rogue.pyxel.GAMEPAD1_BUTTON_B,
                 rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT,
                 rogue.pyxel.GAMEPAD1_BUTTON_DPAD_UP,
@@ -11193,7 +11225,7 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
         )
         game.update()
-        self.assertEqual(game.mcur, 1)
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Wear")
 
         game.st = rogue.ST_ITEM
         game.fitems = [rogue.Item(rogue.CAT_FOOD, 0), rogue.Item(rogue.CAT_FOOD, 0)]
@@ -11212,6 +11244,82 @@ class RogueBaselineTest(unittest.TestCase):
         )
         game.update()
         self.assertEqual(game.acur, 1)
+
+    def test_pad_action_menu_uses_radial_grid_with_eat_initial_cursor(self):
+        game = new_game(seed=471)
+
+        game.open_menu()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Eat")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_LEFT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_LEFT},
+        )
+        game.update()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Quaff")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_UP},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_UP},
+        )
+        game.update()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Zap")
+
+        game.open_menu()
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Read")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+        )
+        game.update()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Take off")
+
+    def test_pad_action_menu_can_open_call_discoveries_and_drop(self):
+        game = new_game(seed=472)
+
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Call")
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_A}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_A})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_CALL)
+
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Discoveries")
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_A}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_A})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_DISC)
+
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Drop")
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_A}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_A})
+        game.update()
+        self.assertEqual(game.cact, "Drop")
+        self.assertEqual(game.st, rogue.ST_ITEM)
+
+    def test_select_tap_opens_inventory_then_select_tap_switches_to_assist(self):
+        game = new_game(seed=473)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_AUX)
 
     def test_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=48)
@@ -11804,8 +11912,9 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
         )
         game.update()
-        self.assertEqual(searched, [False])
-        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(searched, [])
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.cact, "Throw")
 
         rogue.pyxel.set_input()
         game = new_game(seed=47)
@@ -11838,19 +11947,23 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.KEY_RETURN},
         )
         game.update()
-        self.assertEqual(searched, [False])
-        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(searched, [])
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.cact, "Throw")
 
+        game = new_game(seed=47)
+        set_open_floor(game)
+        searched = []
+        game.do_search = lambda front_only=False: searched.append(front_only)
         rogue.pyxel.set_input(
             held={rogue.pyxel.KEY_TAB, rogue.pyxel.KEY_ESCAPE},
             pressed={rogue.pyxel.KEY_ESCAPE},
         )
         game.update()
-        self.assertEqual(game.st, rogue.ST_DIR)
-        self.assertEqual(game.cact, "Throw")
-        self.assertEqual(game.dact, "Throw")
+        self.assertEqual(searched, [False])
+        self.assertEqual(game.st, rogue.ST_PLAY)
 
-    def test_select_a_searches_and_select_b_prompts_throw_direction_before_item_selection(self):
+    def test_select_a_prompts_throw_and_select_b_searches(self):
         game = new_game(seed=48)
         set_open_floor(game)
         searched = []
@@ -11861,14 +11974,7 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
         )
         game.update()
-        self.assertEqual(searched, [False])
-        self.assertEqual(game.st, rogue.ST_PLAY)
-
-        rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_B},
-            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
-        )
-        game.update()
+        self.assertEqual(searched, [])
         self.assertEqual(game.st, rogue.ST_DIR)
         self.assertEqual(game.cact, "Throw")
         self.assertEqual(game.dact, "Throw")
@@ -11881,6 +11987,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ITEM)
         self.assertEqual(game.throw_dir, (1, 0))
         self.assertEqual(game.fitems, game.p.inv)
+
+        game = new_game(seed=49)
+        set_open_floor(game)
+        searched = []
+        game.do_search = lambda front_only=False: searched.append(front_only)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_B},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
+        )
+        game.update()
+        self.assertEqual(searched, [False])
+        self.assertEqual(game.st, rogue.ST_PLAY)
 
     def test_rogue_544_throw_direction_prompt_accepts_hjkl(self):
         # Rogue 5.4.4 misc.c:get_dir() accepts h/j/k/l as cardinal directions.
@@ -12170,6 +12289,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         rogue.pyxel.set_input(
             held={
+                rogue.pyxel.GAMEPAD1_BUTTON_START,
                 rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT,
                 rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
             },
@@ -12186,8 +12306,8 @@ class RogueBaselineTest(unittest.TestCase):
     def test_quick_throw_cancel_returns_to_play_after_direction_first_flow(self):
         game = new_game(seed=48)
         rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_B},
-            pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
+            held={rogue.pyxel.GAMEPAD1_BUTTON_BACK, rogue.pyxel.GAMEPAD1_BUTTON_A},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
         )
         game.update()
 

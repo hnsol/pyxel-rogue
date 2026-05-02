@@ -172,6 +172,9 @@ from rogue_ui import (
     B_TAP_FRAMES,
     CALL_PRESETS,
     MENU_ACTIONS,
+    PAD_ACTION_GRID,
+    pad_menu_initial_index,
+    pad_menu_move,
     ST_AUX,
     ST_CALL,
     ST_DEAD,
@@ -195,7 +198,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0058"
+UI_BUILD = "260503_0130"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -4111,7 +4114,7 @@ class Game:
 
     # ---------- Menu logic ----------
     def open_menu(self):
-        self.st=ST_MENU; self.mcur=0; self.dir_pending=None
+        self.st=ST_MENU; self.mcur=pad_menu_initial_index(MENU_ACTIONS); self.dir_pending=None
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
     def close_menu(self):
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
@@ -4121,6 +4124,9 @@ class Game:
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
+        if aname=="Discoveries":
+            self.open_discoveries()
+            return
         self.start_item_action(aname, cat)
 
     def start_item_action(self, aname, cat=None):
@@ -4259,6 +4265,7 @@ class Game:
     def begin_input(self):
         self.b_tap=False
         self.back_tap=False
+        self.diag_assist=self.start_held()
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
         back_now=self.back_held()
         if not self.dash_held():
@@ -4375,6 +4382,11 @@ class Game:
         if self.kp(pyxel.KEY_DOWN, pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): return 1
         return 0
 
+    def menu_horizontal_press(self):
+        if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): return -1
+        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): return 1
+        return 0
+
     def shift_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT)
     def btn_a(self): return self.kp(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
@@ -4453,6 +4465,7 @@ class Game:
     def btn_trap_inspect(self):
         return self.shift_held() and self.kp(getattr(pyxel,"KEY_6",None))
     def btn_inventory(self): return self.key_lower(pyxel.KEY_I)
+    def start_held(self): return self.kh(getattr(pyxel,"KEY_SPACE",None), pyxel.GAMEPAD1_BUTTON_START)
     def btn_start_tap(self): return self.kp(getattr(pyxel,"KEY_SPACE",None), pyxel.GAMEPAD1_BUTTON_START)
     def kp_back(self): return self.kp(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
     def back_held(self): return self.kh(pyxel.KEY_TAB, pyxel.GAMEPAD1_BUTTON_BACK)
@@ -4866,7 +4879,9 @@ class Game:
             if self.btn_any_key():
                 self.st=ST_PLAY
         elif self.st==ST_INVENTORY:
-            if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_back() or self.btn_r():
+            if self.btn_back():
+                self.open_aux()
+            elif self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
                 self.st=ST_PLAY
 
     def upd_play(self):
@@ -4893,15 +4908,15 @@ class Game:
             self.dir_pending=None
             return
         if self.btn_select_a():
-            self.do_search()
-            self.dir_pending=None
-            return
-        if self.btn_select_b():
             self.start_item_action("Throw")
             self.dir_pending=None
             return
+        if self.btn_select_b():
+            self.do_search()
+            self.dir_pending=None
+            return
         if self.btn_inventory(): self.st=ST_INVENTORY; return
-        if self.btn_back():  self.open_aux(); return
+        if self.btn_back():  self.st=ST_INVENTORY; return
         if self.btn_r():     self.st=ST_HELP; return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
@@ -4931,17 +4946,14 @@ class Game:
             self.try_move(*d)
             return
 
-        if self.btn_start_tap():
-            self.dir_pending=None
-            self.diag_assist = not self.diag_assist
-            self.msg("pyxel.diagonal_assist_on" if self.diag_assist else "pyxel.diagonal_assist_off")
-            return
         if self.btn_a(): self.do_action(); return
         if self.btn_menu(): self.open_menu(); return
 
     def upd_menu(self):
+        dx=self.menu_horizontal_press()
+        if dx: self.mcur=pad_menu_move(self.mcur,dx,0,MENU_ACTIONS); return
         dy=self.menu_vertical_press()
-        if dy: self.mcur=(self.mcur+dy)%len(MENU_ACTIONS); return
+        if dy: self.mcur=pad_menu_move(self.mcur,0,dy,MENU_ACTIONS); return
         if self.btn_a(): self.menu_select(); return
         if self.btn_overlay_cancel(): self.close_menu(); return
 
@@ -5346,12 +5358,20 @@ class Game:
         if title: self.txt(x+4,y+3,title,27)
 
     def draw_menu(self):
-        bx,by=ZV_X+20,ZV_Y+8; bw=130; bh=len(MENU_ACTIONS)*14+18
+        bx,by=ZV_X+20,ZV_Y+8; cell_w=82; cell_h=18
+        bw=cell_w*3+10; bh=cell_h*len(PAD_ACTION_GRID)+24
         self._box(bx,by,bw,bh,"-- Action --")
-        for i,(nm,_) in enumerate(MENU_ACTIONS):
-            ty=by+16+i*14; c=27 if i==self.mcur else 9
-            pre=">" if i==self.mcur else " "
-            self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
+        for gy,row in enumerate(PAD_ACTION_GRID):
+            for gx,nm in enumerate(row):
+                try:
+                    idx=next(i for i,(an,_cat) in enumerate(MENU_ACTIONS) if an==nm)
+                except StopIteration:
+                    continue
+                x=bx+5+gx*cell_w; y=by+17+gy*cell_h
+                selected=idx==self.mcur
+                c=27 if selected else 9
+                pre=">" if selected else " "
+                self.txt(x,y,f"{pre}{TextCatalog.menu(self.lang,nm)[:11]}",c)
 
     def draw_isel(self):
         bx,by=ZV_X+20,ZV_Y+8; n=min(len(self.fitems),10); bw=220; bh=n*14+20
@@ -5411,7 +5431,7 @@ class Game:
         inv_x0, inv_y0 = bx+8, by+18
         for i,it in enumerate(p.inv):
             lt=chr(ord('a')+i); ln=self.item_name(it)
-            self.txt(inv_x0,inv_y0+i*9,f"{lt}) {ln[:70]}",9)
+            self.txt(inv_x0,inv_y0+i*11,f"{lt}) {ln[:70]}",9)
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
@@ -5419,28 +5439,30 @@ class Game:
         gamepad=[
             "--- Gamepad ---",
             "D-pad       Move/Dir",
-            "Start       Diag assist",
+            "Hold Start  Diag assist",
             "A           Action",
             "A+B         Wait",
             "B+dir       Dash",
             "B           Menu/Cancel",
-            "Select      Assist menu",
-            "Select+A    Search around",
-            "Select+B    Quick throw",
+            "Select      Inventory",
+            "Inv+Select  Assist menu",
+            "Select+A    Quick throw",
+            "Select+B    Search around",
             "Select+dir  Inspect trap",
         ]
         keyboard=[
             "--- Keyboard: Pad ---",
             "Arrows/HJKL Move/Dir",
             "YUBN        Diagonal",
-            "Space       Diag assist",
+            "Hold Space  Diag assist",
             "Enter       Action",
             "Enter+Esc   Wait",
             "Shift+dir   Dash",
             "Esc         Menu/Cancel",
-            "Tab         Assist menu",
-            "Tab+Enter   Search around",
-            "Tab+Esc     Quick throw",
+            "Tab         Inventory",
+            "Inv+Tab     Assist menu",
+            "Tab+Enter   Quick throw",
+            "Tab+Esc     Search around",
             "Tab+dir     Inspect trap",
         ]
         y=by+18

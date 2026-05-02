@@ -42,5 +42,55 @@ MENU_ACTIONS = [
     ("Zap", CAT_STICK),
     ("Throw", None),
     ("Drop", None),
+    ("Call", None),
+    ("Discoveries", None),
 ]
 AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
+
+PAD_ACTION_GRID = (
+    ("Zap", "Throw", "Put on"),
+    ("Quaff", "Eat", "Read"),
+    ("Wield", "Wear", "Take off"),
+    ("Call", "Discoveries", "Drop"),
+)
+PAD_ACTION_INITIAL = "Eat"
+
+
+def action_index(actions, name):
+    for i, (action_name, _cat) in enumerate(actions):
+        if action_name == name:
+            return i
+    raise ValueError(name)
+
+
+def pad_action_positions(grid=PAD_ACTION_GRID):
+    return {
+        name: (x, y)
+        for y, row in enumerate(grid)
+        for x, name in enumerate(row)
+        if name is not None
+    }
+
+
+def pad_menu_initial_index(actions=MENU_ACTIONS):
+    return action_index(actions, PAD_ACTION_INITIAL)
+
+
+def pad_menu_move(current_index, dx, dy, actions=MENU_ACTIONS, grid=PAD_ACTION_GRID):
+    positions = pad_action_positions(grid)
+    current_name = actions[current_index][0]
+    if current_name not in positions:
+        return current_index
+    x, y = positions[current_name]
+    if dx:
+        row = grid[y]
+        for step in range(1, len(row) + 1):
+            name = row[(x + dx * step) % len(row)]
+            if name is not None:
+                return action_index(actions, name)
+    if dy:
+        for step in range(1, len(grid) + 1):
+            name = grid[(y + dy * step) % len(grid)][x]
+            if name is not None:
+                return action_index(actions, name)
+    return current_index

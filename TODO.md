@@ -85,7 +85,7 @@
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
-- [x] **search コマンド** — Select+A / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
+- [x] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
 - [x] **隠しドア・隠し通路**
 - [x] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
 - [x] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
@@ -420,7 +420,7 @@
   - [x] Web Launcher で確認する開発branch名は `/` なしにする（`codex/...` は path と誤解される場合あり）
 - [ ] ブラウザ / SteamDeck / 中華ゲーム機向け入力整理
 - [x] 通常8方向移動の整理
-- [x] Start短押しによる斜め補助モード / 8方向移動モード（通常モード）のトグル実装
+- [x] Start押下中だけ斜め補助モードにする
 - [x] 斜め補助モード中は左上/右上/右下/左下の同時押しだけを NW/NE/SE/SW として扱い、上下左右単体をOFFにする
 - [x] 斜め補助モード中でもメニュー / アイテム選択 / 補助メニューの上下カーソル操作は受け付ける
 - [x] 斜め補助モード ON/OFF をステータス欄に表示
@@ -441,7 +441,9 @@
 - [x] ゲームパッド XYLR / ショルダー依存の撤去（キーボード操作は正式対応として維持）
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
 - [x] Select(Back) 補助メニューから Map と Status を削除し、Inventory / Help / Search に整理
-- [x] Select+A search / Select+B quick throw を追加
+- [x] Select+A quick throw / Select+B search に整理
+- [x] Bメニューを移植UI層の3列×4行ラジアル風配置にし、初期カーソルを Eat にする
+- [x] Select単押しを持ちもの、持ちもの中Selectを補助メニューに整理
 - [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / Tab+方向 / 補助メニュー Trap / `^` then direction）
 - [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理

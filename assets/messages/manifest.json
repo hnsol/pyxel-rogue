@@ -1043,6 +1043,18 @@
     "ja_status": "manual",
     "origin": "msg()"
   },
+  "menu.call": {
+    "source": "rogue.py:287",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "menu.discoveries": {
+    "source": "rogue.py:287",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "menu.drop": {
     "source": "rogue.py:287",
     "params": [],

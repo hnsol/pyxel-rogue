@@ -85,29 +85,29 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 ゲームパッド:
 
 - D-pad: 8方向移動
-- Start短押し: 斜め補助モード / 通常8方向モードを切替
+- Start押下中: 斜め補助モード
 - A: 決定 / 拾う / 階段 / 正面1マスsearch
 - B短押し: メニュー / キャンセル
 - B長押し + D-pad: ダッシュ
 - A+B: 足踏み
-- Select: 補助メニュー
-- Select+A: 周囲8マスsearch
-- Select+B: quick throw（方向を選んでからアイテム選択）
+- Select: 持ちもの。持ちもの表示中にもう一度Selectで補助メニュー
+- Select+A: quick throw（方向を選んでからアイテム選択）
+- Select+B: 周囲8マスsearch
 - Select+D-pad: 発見済み罠の種類確認
 
 キーボード:
 
 - 矢印 / HJKL: 移動
 - YUBN: 斜め移動
-- Space: 斜め補助モード切替
+- Space押下中: 斜め補助モード
 - Enter: 決定 / 拾う / 階段 / 正面1マスsearch
 - Enter+Esc: 足踏み
 - Shift+方向: ダッシュ
 - Esc: メニュー / キャンセル
-- Tab: 補助メニュー
+- Tab: 持ちもの。持ちもの表示中にもう一度Tabで補助メニュー
 - 補助メニュー: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
-- Tab+Enter: 周囲8マスsearch
-- Tab+Esc: quick throw
+- Tab+Enter: quick throw
+- Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認
 - .: 足踏み
 - s: 周囲8マスsearch
