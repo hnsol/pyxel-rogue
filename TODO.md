@@ -381,6 +381,7 @@
   - [x] Rogue 5.4.4 `daemon.c:do_daemons()` 準拠で、daemon callback 中の kill/start が同じ tick で再実行されないことを固定
   - [x] Rogue 5.4.4 `daemon.c:do_daemons()` 準拠で、daemon callback 中に後続空き slot へ追加された daemon は同じ走査で実行する
   - [x] Rogue 5.4.4 `daemon.c:do_fuses()` 準拠で、fuse 発火前に slot を空けて callback 中の再登録を可能にする
+  - [x] Rogue 5.4.4 `daemon.c:do_fuses()` 準拠で、fuse callback 中に後続空き slot へ追加された fuse は同じ走査で実行する
   - [x] Rogue 5.4.4 `daemon.c:d_slot()` 準拠で、daemon/fuse 登録時に先頭の空きスロットを再利用する
   - [x] Rogue 5.4.4 `daemons.c:stomach()` の hungry_state 変化run停止と `misc.c:add_haste()` の nohaste 期間を helper 化
   - [x] Rogue 5.4.4 `daemons.c:doctor()` の自然回復量と HP cap / quiet reset を `rogue_daemons.py` へ小分割

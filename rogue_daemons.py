@@ -205,17 +205,18 @@ class FuseList:
 
     def tick_each(self, when: str, callback) -> None:
         """Decrement fuses and run each expired action immediately."""
-        for fuse in list(self._fuses):
-            if fuse not in self._fuses:
-                continue
+        idx = 0
+        while idx < len(self._fuses):
+            fuse = self._fuses[idx]
             if fuse.get("kind") != "fuse" or fuse["when"] != when or fuse["time"] <= 0:
+                idx += 1
                 continue
             fuse["time"] -= 1
             if fuse["time"] == 0:
                 name = fuse["name"]
-                if fuse in self._fuses:
-                    _empty_slot(fuse)
+                _empty_slot(fuse)
                 callback(name)
+            idx += 1
 
     def _find(self, name: str) -> dict | None:
         for fuse in self._fuses:

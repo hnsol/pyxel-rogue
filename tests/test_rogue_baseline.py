@@ -3392,6 +3392,26 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(fired, ["first", "second"])
 
+    def test_rogue_544_do_daemons_skips_reused_current_slot_but_runs_new_later_slot(self):
+        # Rogue 5.4.4 daemon.c:do_daemons() advances past the current slot after callback.
+        import rogue_daemons
+
+        daemons = rogue_daemons.DaemonList()
+        fired = []
+        daemons.start("first", rogue_daemons.BEFORE)
+
+        def run(name):
+            fired.append(name)
+            if name == "first":
+                daemons.kill("first")
+                daemons.start("current", rogue_daemons.BEFORE)
+                daemons.start("later", rogue_daemons.BEFORE)
+
+        daemons.tick_each(rogue_daemons.BEFORE, run)
+
+        self.assertEqual(fired, ["first", "later"])
+        self.assertEqual(daemons.tick(rogue_daemons.BEFORE), ["current", "later"])
+
     def test_rogue_544_fuse_table_keeps_duplicate_slots(self):
         # Rogue 5.4.4 daemon.c:fuse()/extinguish() use slots, not a unique map.
         import rogue_daemons
@@ -3452,6 +3472,25 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(fired, ["first", "second"])
         self.assertEqual(fuses.tick(rogue_daemons.AFTER), ["third"])
+
+    def test_rogue_544_do_fuses_runs_new_later_slot_but_not_reused_current_slot(self):
+        # Rogue 5.4.4 daemon.c:do_fuses() scans d_list live after clearing the current slot.
+        import rogue_daemons
+
+        fuses = rogue_daemons.FuseList()
+        fired = []
+        fuses.fuse("first", 1, rogue_daemons.AFTER)
+
+        def run(name):
+            fired.append(name)
+            if name == "first":
+                fuses.fuse("current", 1, rogue_daemons.AFTER)
+                fuses.fuse("later", 1, rogue_daemons.AFTER)
+
+        fuses.tick_each(rogue_daemons.AFTER, run)
+
+        self.assertEqual(fired, ["first", "later"])
+        self.assertEqual(fuses.tick(rogue_daemons.AFTER), ["current"])
 
     def test_rogue_544_daemon_and_fuse_share_maxdaemon_slots(self):
         # Rogue 5.4.4 daemon.c stores daemons and fuses in one MAXDAEMONS d_list.
