@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0036"
+UI_BUILD = "260503_0058"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -729,7 +729,7 @@ class IdentTable:
         s.snam=[rogue_init.scroll_title(SCR_SYLS, RNG.rnd) for _ in range(len(SCROLLS))]
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
         s.pg=[None]*len(POTIONS); s.sg=[None]*len(SCROLLS)
-        s.rstones=rogue_rings.init_stones(RNG)
+        s.rstones,s.rworth=rogue_rings.init_stones_and_worths(RNG)
         s.rk=[False]*len(RINGS)
         s.rg=[None]*len(RINGS)
         s.wtypes,s.wmades=rogue_sticks.init_materials(RNG)
@@ -1447,6 +1447,11 @@ class Game:
             out["type_known"] = self.ident.pk[it.kind]
         elif it.cat == CAT_SCR:
             out["type_known"] = self.ident.sk[it.kind]
+        elif it.cat == CAT_RING:
+            out["base_worth"] = self.ident.rworth[it.kind]
+            out["known"] = self.ident.rk[it.kind]
+        elif it.cat == CAT_STICK:
+            out["known"] = self.ident.wk[it.kind]
         return out
 
     def total_winner_score(self):

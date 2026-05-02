@@ -351,6 +351,8 @@
 - [x] 最小 baseline ロジックテスト整備
 - [x] Rogue 5.4.4 `extern.c:monsters[]` / `fight.c:swing` 準拠の戦闘値監査テスト追加
 - [x] Rogue 5.4.4 `extern.c:*_info[].oi_worth` 準拠の potion / scroll / weapon / armor worth 監査テスト追加
+- [x] Rogue 5.4.4 `extern.c:ring_info[]` / `ws_info[]` と `init.c:init_stones()` 準拠の ring / stick worth 監査テスト追加
+- [x] Rogue 5.4.4 `init.c:init_stones()` 準拠で ring worth に stone value を加算し勝利スコアへ反映
 - [x] Rogue 5.4.4 `rip.c:total_winner()` 準拠で、勝利スコアに所持品売却額を加算
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
 - [x] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）

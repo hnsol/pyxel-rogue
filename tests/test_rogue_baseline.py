@@ -358,6 +358,7 @@ class RogueBaselineTest(unittest.TestCase):
             "nothing", "teleport away", "teleport to", "cancellation",
         ])
         self.assertEqual([s.prob for s in rogue_sticks.STICKS], [12, 6, 3, 3, 3, 15, 10, 10, 11, 9, 1, 6, 6, 5])
+        self.assertEqual([s.worth for s in rogue_sticks.STICKS], [250, 5, 330, 330, 330, 310, 170, 5, 350, 300, 5, 340, 50, 280])
         self.assertEqual(rogue_sticks.METALS[:4], ["aluminum", "beryllium", "bone", "brass"])
         self.assertEqual(rogue_sticks.WOODS[:4], ["avocado wood", "balsa", "bamboo", "banyan"])
 
@@ -1619,14 +1620,37 @@ class RogueBaselineTest(unittest.TestCase):
             "stealth", "maintain armor",
         ])
         self.assertEqual([r.prob for r in rogue_rings.RINGS], [9, 9, 5, 10, 10, 1, 10, 8, 8, 4, 9, 5, 7, 5])
+        self.assertEqual([r.worth for r in rogue_rings.RINGS], [400, 400, 280, 420, 310, 10, 10, 440, 400, 460, 240, 30, 470, 380])
         self.assertEqual(rogue_rings.STONES[:4], ["agate", "alexandrite", "amethyst", "carnelian"])
         self.assertEqual(rogue_rings.STONES[-2:], ["taaffeite", "zircon"])
+        self.assertEqual(rogue_rings.STONE_VALUES[:4], [25, 40, 50, 40])
+        self.assertEqual(rogue_rings.STONE_VALUES[-2:], [300, 80])
 
         ident = rogue.IdentTable()
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2)
         self.assertEqual(ident.name(ring), f"{ident.rstones[rogue_rings.R_PROTECT]} ring")
         ident.rk[rogue_rings.R_PROTECT] = True
         self.assertEqual(ident.name(ring), "ring of protection [+2]")
+
+    def test_rogue_544_init_stones_uses_rnd_unique_order_and_adds_worth(self):
+        # Rogue 5.4.4 init.c:init_stones() retries rnd(NSTONES) and adds stone value to ring_info[].oi_worth.
+        import rogue_rings
+
+        class StoneRng:
+            def __init__(self):
+                self.rolls = iter([0, 0, 1, 4, 7, 2, 3, 5, 6, 8, 9, 10, 11, 12, 13])
+                self.calls = []
+
+            def rnd(self, n):
+                self.calls.append(n)
+                return next(self.rolls)
+
+        rng = StoneRng()
+        names, worths = rogue_rings.init_stones_and_worths(rng)
+
+        self.assertEqual(rng.calls, [26] * 15)
+        self.assertEqual(names[:5], ["agate", "alexandrite", "diamond", "granite", "amethyst"])
+        self.assertEqual(worths[:5], [425, 440, 580, 425, 360])
 
     def test_rogue_544_ring_num_and_stick_charges_require_item_isknow(self):
         # Rogue 5.4.4 things.c:nameit() calls rings.c:ring_num() and
@@ -9449,6 +9473,16 @@ class RogueBaselineTest(unittest.TestCase):
             "cat": rogue.CAT_STICK, "base_worth": 250, "charges": 3, "known": True,
         }), 310)
         self.assertEqual(rogue.total_winner_item_worth({"cat": rogue.CAT_AMULET}), 1000)
+
+    def test_rogue_544_winner_score_uses_init_stones_adjusted_ring_worth(self):
+        # Rogue 5.4.4 init.c:init_stones() mutates ring_info[].oi_worth before rip.c:total_winner().
+        game = new_game(seed=9446)
+        ring = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_SUSTSTR)
+        game.p.inv = [ring]
+        game.ident.rworth[rogue.rogue_rings.R_SUSTSTR] = 505
+
+        self.assertEqual(game.total_winner_item_data(ring)["base_worth"], 505)
+        self.assertEqual(game.total_winner_score(), 505 // 2)
 
     def test_rogue_544_winner_score_adds_pack_worth(self):
         # Rogue 5.4.4 rip.c:total_winner() adds pack worth to purse before score(purse, 2, ' ').

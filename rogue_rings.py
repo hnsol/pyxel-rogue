@@ -63,6 +63,10 @@ STONES = [
     "sapphire", "stibotantalite", "tiger eye", "topaz", "turquoise",
     "taaffeite", "zircon",
 ]
+STONE_VALUES = [
+    25, 40, 50, 40, 300, 300, 225, 5, 50, 150, 300, 50, 50,
+    15, 60, 200, 220, 63, 350, 285, 200, 50, 60, 70, 300, 80,
+]
 
 _RING_EAT_USES = [1, 1, 1, -3, -5, 0, 0, -3, -3, 2, -2, 0, 1, 1]
 _BONUS_RINGS = {R_PROTECT, R_ADDSTR, R_ADDHIT, R_ADDDAM}
@@ -90,10 +94,24 @@ def make_ring(rng, cat="ring"):
 
 
 def init_stones(rng):
-    """Rogue 5.4.4 init.c:init_stones() without worth mutation."""
-    stones = list(STONES)
-    rng.shuffle(stones)
-    return stones[:len(RINGS)]
+    """Rogue 5.4.4 init.c:init_stones() selected stone names."""
+    return init_stones_and_worths(rng)[0]
+
+
+def init_stones_and_worths(rng):
+    """Rogue 5.4.4 init.c:init_stones() stone names and mutated oi_worth."""
+    used = [False] * len(STONES)
+    names = []
+    worths = []
+    for ring in RINGS:
+        while True:
+            j = rng.rnd(len(STONES))
+            if not used[j]:
+                break
+        used[j] = True
+        names.append(STONES[j])
+        worths.append(ring.worth + STONE_VALUES[j])
+    return names, worths
 
 
 def is_ring(item, kind):
