@@ -5677,6 +5677,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [3, 3, 4, 3, 4, 4, 3, 4, 4])
         self.assertEqual(title, "aa ccaa ddcc")
 
+    def test_rogue_544_init_scroll_title_maxname_limits_whole_title(self):
+        # Rogue 5.4.4 init.c:init_names() checks cp against prbuf[MAXNAME], not each word.
+        import rogue_init
+
+        syllables = ["aaaa", "bbbb"]
+        rolls = iter([0, 0, 0, 0, 1])
+        calls = []
+
+        title = rogue_init.scroll_title(syllables, lambda n: calls.append(n) or next(rolls), max_name=7)
+
+        self.assertEqual(calls, [3, 3, 2, 3, 2])
+        self.assertEqual(title, "aaaa ")
+
     def test_v5_item_names_plural_food_and_armor_protection(self):
         game = new_game(seed=8)
         food = rogue.Item(rogue.CAT_FOOD, 0, qty=2)

@@ -14,13 +14,12 @@ def initial_pack_order(food, armor, mace, bow, arrows):
 
 def scroll_title(syllables, rnd, max_name: int = 40) -> str:
     """Rogue 5.4.4 init.c:init_names() scroll title generator."""
-    words = []
+    title = ""
     for _ in range(rnd(3) + 2):
-        word = ""
         for _ in range(rnd(3) + 1):
             syllable = syllables[rnd(len(syllables))]
-            if len(word) + len(syllable) > max_name:
+            if len(title) + len(syllable) > max_name:
                 break
-            word += syllable
-        words.append(word)
-    return " ".join(words)
+            title += syllable
+        title += " "
+    return title[:-1]

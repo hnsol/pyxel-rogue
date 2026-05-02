@@ -291,7 +291,7 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 `S_HOLD` は `scrolls.c:read_scroll()` と同じく周囲2マス内の `ISRUN` monster から `ISRUN` を外し、`ISHELD` を立てるだけにする。原作に duration roll はなく、解除は `chase.c:runto()` など `ISHELD` を外す入口に任せる。
 
-scroll の未識別タイトルは `init.c:init_names()` を基準にし、`rnd(3)+2` 語、各語 `rnd(3)+1` 音節、各音節 `sylls[rnd(count)]` で組み立てる。Pyxel 版では `rogue_init.scroll_title()` へ分離し、`IdentTable.snam` 生成で使う。
+scroll の未識別タイトルは `init.c:init_names()` を基準にし、`rnd(3)+2` 語、各語 `rnd(3)+1` 音節、各音節 `sylls[rnd(count)]` で組み立てる。`MAXNAME` 判定は単語ごとではなく `prbuf` 全体の書き込み位置に掛かるため、Pyxel 版の `rogue_init.scroll_title()` もタイトル全体の長さで判定し、`IdentTable.snam` 生成で使う。
 
 ポーションは `rogue.h:P_CONFUSE..P_LEVIT` / `MAXPOTIONS=14` / `potions.c:quaff()` / `extern.c:pot_info[]` を基準にする。現行 Pyxel 版は原作 14 種を実装済み。`P_LSD` は `ISHALU` 相当として `potions.c:do_pot()` / `daemons.c:come_down()` に合わせ、`misc.c:rnd_thing()` / `misc.c:look()` 相当の視覚混乱、`command.c:search()` の `probinc` 増加、invisible monster のランダム表示へ接続する。`P_LSD` 使用時に `SEEMONST` が有効なら原作は `turn_see(FALSE)` を呼ぶが、これは `SEEMONST` 解除ではなく再表示なので、Pyxel 版も monster detection の残り期間と `turn_see` fuse を維持する。`P_LEVIT` は `ISLEVIT` 相当として罠・階段の発動条件と床上アイテム拾得を抑止し、`daemons.c:land()` 相当で解除する。
 
