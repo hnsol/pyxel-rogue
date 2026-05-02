@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0020"
+UI_BUILD = "260503_0021"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -554,9 +554,9 @@ BESTIARY = [
     MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,"", carry=30),
     MonsterSpec("Z","zombie",2,8,"1x8",6,7,"mean"),
 ]
-MCOL = {"A":13,"B": 9,"C":14,"D":23,"E": 9,"F":13,"G":23,"H": 9,"I":27,
-        "J":23,"K": 9,"L":26,"M":22,"N":26,"O": 9,"P":26,"Q":14,"R":22,
-        "S": 9,"T":14,"U":26,"V":23,"W":26,"X":27,"Y":14,"Z": 9}
+MCOL = {"A":13,"B": 9,"C":14,"D":23,"E":14,"F":13,"G":23,"H": 6,"I":27,
+        "J":23,"K": 9,"L":26,"M":22,"N":26,"O": 6,"P":26,"Q":14,"R":22,
+        "S":14,"T":14,"U":26,"V":23,"W":26,"X":27,"Y":14,"Z": 6}
 PALETTE_MONSTER_COLORS = {
     PALETTE_FLEXOKI_LIGHT: {"K": 30},
 }
