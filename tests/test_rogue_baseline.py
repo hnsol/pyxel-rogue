@@ -9220,6 +9220,49 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(quit_entry["score"], 123)
         self.assertEqual(win_entry["score"], 456)
 
+    def test_rogue_544_total_winner_item_worth_matches_rip_source(self):
+        # Rogue 5.4.4 rip.c:total_winner() sells pack items before score().
+        self.assertEqual(rogue.total_winner_item_worth({"cat": rogue.CAT_FOOD, "qty": 3}), 6)
+        self.assertEqual(rogue.total_winner_item_worth({
+            "cat": rogue.CAT_WPN, "base_worth": 8, "hit_plus": 1, "dam_plus": 2, "qty": 1,
+        }), 80)
+        self.assertEqual(rogue.total_winner_item_worth({
+            "cat": rogue.CAT_ARM, "base_worth": 30, "base_ac": 7, "ench": 2,
+        }), 450)
+        self.assertEqual(rogue.total_winner_item_worth({
+            "cat": rogue.CAT_POT, "base_worth": 130, "qty": 2, "type_known": False,
+        }), 130)
+        self.assertEqual(rogue.total_winner_item_worth({
+            "cat": rogue.CAT_RING, "name": "add strength", "base_worth": 400, "ench": -1, "known": False,
+        }), 5)
+        self.assertEqual(rogue.total_winner_item_worth({
+            "cat": rogue.CAT_STICK, "base_worth": 250, "charges": 3, "known": True,
+        }), 310)
+        self.assertEqual(rogue.total_winner_item_worth({"cat": rogue.CAT_AMULET}), 1000)
+
+    def test_rogue_544_winner_score_adds_pack_worth(self):
+        # Rogue 5.4.4 rip.c:total_winner() adds pack worth to purse before score(purse, 2, ' ').
+        game = new_game(seed=352)
+        game.p.gold = 100
+        game.p.inv = [
+            rogue.Item(rogue.CAT_FOOD, 0, qty=2),
+            rogue.Item(rogue.CAT_POT, next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing"), qty=1),
+            rogue.Item(rogue.CAT_AMULET, 0),
+        ]
+        game.ident.pk[game.p.inv[1].kind] = False
+        saved = []
+        old_save = rogue.save_score_entry
+        old_load = rogue.load_score_entries
+        try:
+            rogue.save_score_entry = lambda entry: saved.append(entry)
+            rogue.load_score_entries = lambda: saved[:]
+            game.enter_result_state("winner")
+        finally:
+            rogue.save_score_entry = old_save
+            rogue.load_score_entries = old_load
+
+        self.assertEqual(saved[0]["score"], 100 + 4 + 65 + 1000)
+
     def test_score_entry_has_stable_id_for_online_deduplication(self):
         entry = rogue.build_score_entry(
             score=0,

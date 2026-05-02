@@ -144,6 +144,8 @@ from rogue_scores import (
     score_period_keys,
     submit_online_score,
     sync_missing_local_best,
+    total_winner_item_worth,
+    total_winner_score,
 )
 from rogue_timing import (
     AMULET_LEVEL,
@@ -193,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_1056"
+UI_BUILD = "260502_1119"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1404,9 +1406,34 @@ class Game:
         killer = self.death_cause or "died"
         return killer.replace("killed by a ", "").replace("killed by ", "")
 
+    def total_winner_item_data(self, it):
+        data = it.data
+        out = {
+            "cat": it.cat,
+            "qty": it.qty,
+            "name": data.get("name"),
+            "base_worth": data.get("worth", 0),
+            "known": getattr(it, "known", False),
+            "ench": getattr(it, "ench", 0),
+            "hit_plus": getattr(it, "hit_plus", 0),
+            "dam_plus": getattr(it, "dam_plus", 0),
+            "charges": getattr(it, "charges", 0),
+            "base_ac": data.get("ac", 10),
+        }
+        if it.cat == CAT_POT:
+            out["type_known"] = self.ident.pk[it.kind]
+        elif it.cat == CAT_SCR:
+            out["type_known"] = self.ident.sk[it.kind]
+        return out
+
+    def total_winner_score(self):
+        # C: rip.c:total_winner()
+        return total_winner_score(self.p.gold, [self.total_winner_item_data(it) for it in self.p.inv])
+
     def enter_result_state(self, outcome):
         self.result_outcome = outcome
         self.result_entry = build_score_entry(
+            score=self.total_winner_score() if outcome == "winner" else 0,
             result_flags=self.result_flags(outcome),
             level=self.result_level(outcome),
             killer=self.result_killer(outcome),

@@ -133,6 +133,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Amulet of Yendor、Amulet 所持での1階帰還勝利
 - 自動拾得ON/OFF、投擲アニメーション
 - 墓石つき死亡画面
+- Rogue 5.4.4 `total_winner()` 準拠の勝利時所持品売却スコア
 - 起動ロゴ、BGMつきタイトル画面、英数字8文字のプレイヤー名入力
 - Google Sheets + Apps Script 連携用の Daily Top Ten / Weekly Rivals / Season Legends オンラインランキング雛形
 - ゲームパッド向け A/B/Start/Select + D-pad 操作

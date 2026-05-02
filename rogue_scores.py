@@ -71,6 +71,47 @@ def score_value(gold: int, result_flags: str) -> int:
     return gold
 
 
+def total_winner_item_worth(item: dict[str, Any]) -> int:
+    """Rogue 5.4.4 rip.c:total_winner() pack item worth calculation."""
+    cat = item.get("cat")
+    qty = int(item.get("qty", 1) or 1)
+    worth = 0
+    if cat == "food":
+        worth = 2 * qty
+    elif cat == "wpn":
+        worth = int(item.get("base_worth", 0))
+        worth *= 3 * (int(item.get("hit_plus", 0)) + int(item.get("dam_plus", 0))) + qty
+    elif cat == "arm":
+        base_ac = int(item.get("base_ac", 10))
+        current_ac = base_ac - int(item.get("ench", 0))
+        worth = int(item.get("base_worth", 0))
+        worth += (9 - current_ac) * 100
+        worth += 10 * (base_ac - current_ac)
+    elif cat in ("scr", "pot"):
+        worth = int(item.get("base_worth", 0)) * qty
+        if not item.get("type_known", False):
+            worth //= 2
+    elif cat == "ring":
+        worth = int(item.get("base_worth", 0))
+        if item.get("name") in {"add strength", "increase damage", "protection", "dexterity"}:
+            ench = int(item.get("ench", 0))
+            worth = worth + ench * 100 if ench > 0 else 10
+        if not item.get("known", False):
+            worth //= 2
+    elif cat == "stick":
+        worth = int(item.get("base_worth", 0)) + 20 * int(item.get("charges", 0))
+        if not item.get("known", False):
+            worth //= 2
+    elif cat == "amulet":
+        worth = 1000
+    return max(0, worth)
+
+
+def total_winner_score(gold: int, items: list[dict[str, Any]]) -> int:
+    """Rogue 5.4.4 rip.c:total_winner() adds sold pack worth to purse."""
+    return max(0, int(gold)) + sum(total_winner_item_worth(item) for item in items)
+
+
 def build_score_entry(
     *,
     score: int = 0,

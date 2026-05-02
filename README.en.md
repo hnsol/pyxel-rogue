@@ -133,6 +133,7 @@ Implemented overview:
 - Amulet of Yendor and depth-1 return victory while carrying it
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
+- Victory score adds sold pack worth following Rogue 5.4.4 `total_winner()`
 - Startup logo, title screen with BGM, and 8-character alphanumeric player name entry
 - Daily Top Ten / Weekly Rivals / Season Legends online ranking scaffold for Google Sheets + Apps Script
 - Gamepad-oriented A/B/Start/Select + D-pad controls
