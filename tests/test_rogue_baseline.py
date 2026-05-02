@@ -8513,6 +8513,14 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertTrue(ident.name(item, rogue.LANG_EN))
             self.assertTrue(ident.name(item, rogue.LANG_JA))
 
+    def test_rogue_544_gold_inv_name_uses_gold_value(self):
+        # Rogue 5.4.4 things.c:inv_name() formats GOLD as "%d Gold pieces".
+        ident = rogue.IdentTable()
+        gold = rogue.Item(rogue.CAT_GOLD, 0)
+        gold.qty = 42
+
+        self.assertEqual(ident.name(gold, rogue.LANG_EN), "42 Gold pieces")
+
     def test_language_switch_changes_text_not_generated_state(self):
         en = new_game(seed=23, lang=rogue.LANG_EN)
         ja = new_game(seed=23, lang=rogue.LANG_JA)

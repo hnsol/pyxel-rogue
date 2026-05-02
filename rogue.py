@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0135"
+UI_BUILD = "260503_0145"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -763,6 +763,8 @@ class IdentTable:
                 nm = f"{nm}s"
             prefix = f"{it.qty} " if it.qty>1 else ""
             return f"{prefix}{nm}"
+        if it.cat==CAT_GOLD:
+            return f"{it.qty} Gold pieces" if lang==LANG_EN else f"{it.qty}個の金塊"
         if it.cat==CAT_WPN:
             nm=TextCatalog.item_kind(lang, CAT_WPN, it.data["name"])
             if it.stackable and it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
