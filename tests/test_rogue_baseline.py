@@ -597,13 +597,14 @@ class RogueBaselineTest(unittest.TestCase):
         set_open_floor(game)
         monster = monster_at(game.p.x + 3, game.p.y, sym="H", name="hobgoblin")
         game.mons = [monster]
-        old_choice = rogue.RNG.choice
+        old_rnd = rogue.RNG.rnd
         try:
-            rogue.RNG.choice = lambda seq: (game.p.x + 5, game.p.y + 4)
+            rolls = iter([0, game.p.x + 4, game.p.y + 2])
+            rogue.RNG.rnd = lambda n: next(rolls)
             away = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_TELAWAY, charges=1)
             game.zap_stick(away, 1, 0)
         finally:
-            rogue.RNG.choice = old_choice
+            rogue.RNG.rnd = old_rnd
 
         self.assertEqual(away.charges, 0)
         self.assertEqual((monster.x, monster.y), (game.p.x + 5, game.p.y + 4))
@@ -618,6 +619,43 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.x, monster.y), (game.p.x + 1, game.p.y))
         self.assertTrue(monster.running)
 
+    def test_rogue_544_zap_teleport_away_uses_find_floor_rnd_pos_not_choice(self):
+        # Rogue 5.4.4 sticks.c:WS_TELAWAY uses rooms.c:find_floor(NULL, ..., TRUE)
+        # and retries only if the result is hero.
+        import rogue_sticks
+
+        game = new_game(seed=2041)
+        set_two_room_floor(game)
+        game.mons = []
+        monster = monster_at(game.p.x + 3, game.p.y, sym="H", name="hobgoblin")
+        game.mons = [monster]
+        events = []
+
+        class TeleAwayRng:
+            def __init__(self):
+                self.values = iter([1, 2, 3])
+
+            def rnd(self, n):
+                events.append(f"rnd:{n}")
+                return next(self.values)
+
+            def choice(self, seq):
+                raise AssertionError("WS_TELAWAY should use rooms.c:find_floor(), not choice()")
+
+            def roll(self, dice, sides):
+                return dice
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = TeleAwayRng()
+            away = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_TELAWAY, charges=1)
+            game.zap_stick(away, 1, 0)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(events[:3], ["rnd:2", "rnd:8", "rnd:6"])
+        self.assertEqual((monster.x, monster.y), (23, 5))
+
     def test_rogue_544_zap_teleport_target_does_not_clear_monster_hold(self):
         # Rogue 5.4.4 sticks.c:WS_TELAWAY/WS_TELTO set ISRUN directly, not through chase.c:runto().
         import rogue_sticks
@@ -627,13 +665,14 @@ class RogueBaselineTest(unittest.TestCase):
         monster = monster_at(game.p.x + 3, game.p.y, sym="H", name="hobgoblin")
         monster.held = 4
         game.mons = [monster]
-        old_choice = rogue.RNG.choice
+        old_rnd = rogue.RNG.rnd
         try:
-            rogue.RNG.choice = lambda seq: (game.p.x + 5, game.p.y + 4)
+            rolls = iter([0, game.p.x + 4, game.p.y + 2])
+            rogue.RNG.rnd = lambda n: next(rolls)
             away = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_TELAWAY, charges=1)
             game.zap_stick(away, 1, 0)
         finally:
-            rogue.RNG.choice = old_choice
+            rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
@@ -644,16 +683,15 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=2061)
         set_two_room_floor(game)
         game.tm[12][12] = rogue.T_CORR
-        seen = []
-        old_choice = rogue.RNG.choice
+        old_rng = rogue.RNG
         try:
-            rogue.RNG.choice = lambda seq: seen.extend(seq) or seq[0]
-            game.random_monster_floor()
+            rogue.RNG = SequenceRng([1, 1, 2])
+            pos = game.random_monster_floor()
         finally:
-            rogue.RNG.choice = old_choice
+            rogue.RNG = old_rng
 
-        self.assertNotIn((12, 12), seen)
-        self.assertIn((22, 4), seen)
+        self.assertNotEqual(pos, (12, 12))
+        self.assertEqual(pos, (22, 4))
 
     def test_rogue_544_zap_teleport_away_find_floor_allows_room_stairs_and_traps(self):
         # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) accepts step_ok(), not only FLOOR/PASSAGE.
@@ -664,16 +702,17 @@ class RogueBaselineTest(unittest.TestCase):
         game.tm[stair[1]][stair[0]] = rogue.T_STAIR
         game.tm[trap[1]][trap[0]] = rogue.T_TRAP
         game.mons = []
-        seen = []
-        old_choice = rogue.RNG.choice
+        old_rng = rogue.RNG
         try:
-            rogue.RNG.choice = lambda seq: seen.extend(seq) or seq[0]
-            game.random_monster_floor()
+            rogue.RNG = SequenceRng([0, 1, 1])
+            stair_pos = game.random_monster_floor()
+            rogue.RNG = SequenceRng([0, 2, 1])
+            trap_pos = game.random_monster_floor()
         finally:
-            rogue.RNG.choice = old_choice
+            rogue.RNG = old_rng
 
-        self.assertIn(stair, seen)
-        self.assertIn(trap, seen)
+        self.assertEqual(stair_pos, stair)
+        self.assertEqual(trap_pos, trap)
 
     def test_rogue_544_sticks_helper_teleport_to_position(self):
         # Rogue 5.4.4 sticks.c:WS_TELTO sets new_pos to hero + delta.
@@ -2330,7 +2369,7 @@ class RogueBaselineTest(unittest.TestCase):
         # Rogue 5.4.4 monsters.c:wanderer() uses randmonster(TRUE).
         class WanderRng:
             def __init__(self):
-                self.rolls = iter([9, 6])
+                self.rolls = iter([1, 2, 3, 9, 6])
 
             def rnd(self, n):
                 return next(self.rolls)
@@ -2342,10 +2381,9 @@ class RogueBaselineTest(unittest.TestCase):
                 return dice
 
         game = new_game(seed=339)
-        set_open_floor(game)
+        set_two_room_floor(game)
         game.p.depth = 2
         game.mons = []
-        game.wanderer_floor_candidates = lambda: [(game.p.x + 3, game.p.y)]
         old_rng = rogue.RNG
         rogue.RNG = WanderRng()
         try:
@@ -2354,6 +2392,40 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG = old_rng
 
         self.assertEqual([mo.sym for mo in game.mons], ["B"])
+
+    def test_rogue_544_spawn_wanderer_find_floor_retries_player_room_before_randmonster(self):
+        # Rogue 5.4.4 monsters.c:wanderer() calls rooms.c:find_floor(NULL, ..., TRUE)
+        # until roomin(cp) != proom, then randmonster(TRUE).
+        game = new_game(seed=3391)
+        room_a, _ = set_two_room_floor(game)
+        game.p.depth = 2
+        game.p.x, game.p.y = room_a.x + 2, room_a.y + 2
+        game.mons = []
+        events = []
+
+        class WanderFloorRng:
+            def __init__(self):
+                self.values = iter([0, 1, 1, 1, 2, 3, 9, 6])
+
+            def rnd(self, n):
+                events.append(f"rnd:{n}")
+                return next(self.values)
+
+            def choice(self, seq):
+                raise AssertionError("monsters.c:wanderer() should use find_floor(), not choice()")
+
+            def roll(self, dice, sides):
+                return dice
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = WanderFloorRng()
+            self.assertTrue(game.spawn_wanderer())
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(events[:8], ["rnd:2", "rnd:8", "rnd:6", "rnd:2", "rnd:8", "rnd:6", "rnd:10", "rnd:10"])
+        self.assertEqual([(mo.x, mo.y, mo.sym) for mo in game.mons], [(23, 5, "B")])
 
     def test_rogue_544_wanderer_floor_candidates_skip_plain_corridors(self):
         # Rogue 5.4.4 monsters.c:wanderer() uses rooms.c:find_floor(NULL), which picks a room.
@@ -12322,7 +12394,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         class TrapRng:
             def __init__(self):
-                self.first = True
+                self.floor_rolls = iter([0, 0, 0, 0, 1, 0])
 
             def rnd(self, n):
                 events.append(f"rnd:{n}")
@@ -12330,14 +12402,12 @@ class RogueBaselineTest(unittest.TestCase):
                     return 0
                 if n == 2:
                     return 1
+                if n in (1, 3):
+                    return next(self.floor_rolls)
                 return 0
 
             def choice(self, seq):
-                events.append("choice")
-                if self.first:
-                    self.first = False
-                    return (6, 6)
-                return (6, 7)
+                raise AssertionError("new_level.c trap placement should use find_floor(), not choice()")
 
             def shuffle(self, seq):
                 events.append("shuffle")
@@ -12349,7 +12419,10 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG = old_rng
 
-        self.assertEqual(events[:6], ["rnd:10", "rnd:2", "choice", "rnd:8", "choice", "rnd:8"])
+        self.assertEqual(
+            events[:10],
+            ["rnd:10", "rnd:2", "rnd:1", "rnd:3", "rnd:3", "rnd:8", "rnd:1", "rnd:3", "rnd:3", "rnd:8"],
+        )
 
     def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
         game = new_game(seed=56)

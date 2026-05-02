@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0932"
+UI_BUILD = "260502_0946"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1555,10 +1555,10 @@ class Game:
 
     def spawn_wanderer(self):
         # C: monsters.c:wanderer()
-        cands=self.wanderer_floor_candidates()
-        if not cands:
+        pos = self.wanderer_floor_pos()
+        if pos is None:
             return False
-        x,y=RNG.choice(cands)
+        x,y=pos
         spec=self.monster_spec_for_sym(rogue_monsters.randmonster(self.p.depth, RNG.rnd, wander=True))
         monster=self.new_monster_from_spec(x,y,spec)
         self.mons.append(monster)
@@ -1617,6 +1617,18 @@ class Game:
             TILE_CH,
             excluded_room=player_room,
         )
+
+    def wanderer_floor_pos(self):
+        # C: monsters.c:wanderer() loops until roomin(cp) != proom.
+        player_room = self.room_containing(self.p.x, self.p.y)
+        occupied = {(m.x, m.y) for m in self.mons if m.alive}
+        for _ in range(MAP_W * MAP_H * max(1, len(self.rooms))):
+            pos = self.find_floor_pos(None, monst=True, occupied=occupied)
+            if pos is None:
+                return None
+            if self.room_containing(pos[0], pos[1]) is not player_room:
+                return pos
+        return None
 
     def _spawn_items(self):
         # C: new_level.c:put_things()
@@ -1736,19 +1748,19 @@ class Game:
         n=rogue_dungeon.trap_count_for_level(self.p.depth, RNG)
         if n <= 0:
             return
-        cands=[
-            (x,y)
-            for y,row in enumerate(self.tm)
-            for x,tile in enumerate(row)
-            if tile==T_FLOOR
-            and (x,y)!=(self.p.x,self.p.y)
-            and not self.gi_at(x,y)
-        ]
         for _ in range(n):
-            if not cands:
-                break
-            x,y=RNG.choice(cands)
-            self.traps[(x,y)]=rogue_dungeon.trap_kind(RNG)
+            for _ in range(MAP_W * MAP_H * max(1, len(self.rooms))):
+                pos = self.find_floor_pos(
+                    None,
+                    monst=False,
+                    occupied={(i.x,i.y) for i in self.gitems},
+                )
+                if pos is None:
+                    return
+                x,y=pos
+                if self.tm[y][x] == T_FLOOR:
+                    self.traps[(x,y)]=rogue_dungeon.trap_kind(RNG)
+                    break
 
     # ---------- Helpers ----------
     def mon_at(self,x,y):
@@ -3011,16 +3023,15 @@ class Game:
             m.pack=pack
 
     def random_monster_floor(self,avoid=None):
+        # C: rooms.c:find_floor(NULL, ..., monst=TRUE), used by sticks.c:WS_TELAWAY.
         avoid=set(avoid or ())
-        cands=rogue_dungeon.find_floor_monster_candidates(
-            self.tm,
-            self.room_at,
-            {(m.x,m.y) for m in self.mons if m.alive},
-            (self.p.x,self.p.y),
-            TILE_CH,
+        avoid.add((self.p.x,self.p.y))
+        return self.find_floor_pos(
+            None,
+            monst=True,
             avoid=avoid,
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
         )
-        return RNG.choice(cands) if cands else None
 
     def relocate_monster(self,m,pos):
         # C: chase.c:relocate()

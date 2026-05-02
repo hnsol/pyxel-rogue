@@ -15,6 +15,8 @@ class FixedRng:
         self.choice_index = -1
 
     def rnd(self, n):
+        if n == 2:
+            return 1
         return 0
 
     def roll(self, number, sides):

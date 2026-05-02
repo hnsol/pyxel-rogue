@@ -94,6 +94,7 @@
 - [x] Rogue 5.4.4 `daemons.c:swander()` / `rollwand()` と `monsters.c:wanderer()` 準拠の wandering monster spawn
 - [x] Rogue 5.4.4 `monsters.c:wanderer()` / `rooms.c:find_floor()` / `rnd_pos()` 準拠で wandering monster 候補を部屋内床に限定
 - [x] Rogue 5.4.4 `rooms.c:find_floor(..., monst=TRUE)` 準拠で、wandering monster と teleport away の候補は部屋内の stair / trap も許可
+- [x] Rogue 5.4.4 `monsters.c:wanderer()` / `sticks.c:WS_TELAWAY` 準拠で、床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `find_floor(rp, ..., monst=TRUE)` 準拠で、部屋モンスター配置も `io.c:step_ok()` 候補を先に選んでから `randmonster(FALSE)` する
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
 - [x] Rogue 5.4.4 `armor.c:wear()` / `command.c:command()` 準拠で armor wear 拒否時はターン非消費
@@ -114,6 +115,7 @@
 - [x] Rogue 5.4.4 `new_level.c` / `passages.c` / `command.c:search()` / `move.c:be_trapped()` 相当の trap・secret・search・単純trap状態分岐を helper 化
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`find_floor(..., FALSE)` と同じく monster square を候補から除外しない
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap ごとに `find_floor()` 後 `rnd(NTRAPS)` する乱数順へ修正
+- [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap 床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` 準拠で、階層生成時に Venus Flytrap hold を解除
 - [x] Rogue 5.4.4 `io.c:step_ok()` 相当の文字/地形判定を `rogue_io.py` へ小分割し、視界・杖照準の共通基準にする
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `pack_room()` 相当の scare monster scroll 拾得消滅と満杯時スタック拒否を helper 化
