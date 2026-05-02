@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0105"
+UI_BUILD = "260503_0125"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2460,7 +2460,7 @@ class Game:
             self.room_for_ai(m.x, m.y),
             self.room_for_ai(self.p.x, self.p.y, actor=True),
             (m.x, m.y) in self.visible and self.can_see_monster(m),
-            [item for item in self.gitems if item.cat!=CAT_GOLD],
+            self.gitems,
             {mo.dest for mo in self.mons if mo is not m},
             lambda item: self.room_for_ai(item.x, item.y),
             lambda item: (item.x, item.y),
@@ -2475,7 +2475,7 @@ class Game:
 
     def collect_monster_dest(self,m,dest):
         gi=self.gi_at(*dest)
-        if gi and gi.cat!=CAT_GOLD:
+        if gi:
             self.gitems.remove(gi)
             m.pack.append(gi)
             self.find_dest(m)

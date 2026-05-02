@@ -3965,8 +3965,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(dest, (25, 4))
         self.assertEqual(second.dest, (25, 4))
 
-    def test_rogue_544_game_find_dest_ignores_room_gold_for_carry_monsters(self):
-        # Rogue 5.4.4 chase.c:find_dest() scans lvl_obj; room gold is not a carried object target.
+    def test_rogue_544_game_find_dest_includes_room_gold_for_carry_monsters(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() attaches GOLD to lvl_obj; chase.c:find_dest() skips only S_SCARE.
         game = new_game(seed=514)
         set_two_room_floor(game)
         gold = rogue.Item(rogue.CAT_GOLD, 0)
@@ -3983,8 +3983,8 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.rnd = old_rnd
 
-        self.assertEqual(dest, (25, 4))
-        self.assertEqual(monster.dest, (25, 4))
+        self.assertEqual(dest, (24, 4))
+        self.assertEqual(monster.dest, (24, 4))
 
     def test_rogue_544_aggravate_uses_runto_find_dest_for_carry_monster(self):
         # Rogue 5.4.4 misc.c:aggravate() calls chase.c:runto(), which sets t_dest = find_dest().
@@ -4073,8 +4073,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.dest, (26, 4))
         self.assertTrue(monster.running)
 
-    def test_rogue_544_do_chase_greedy_gold_destination_is_not_collected(self):
-        # Rogue 5.4.4 monsters.c:wake_monster() uses room gold as t_dest; chase.c:do_chase() does not attach it to t_pack.
+    def test_rogue_544_do_chase_collects_reached_gold_destination(self):
+        # Rogue 5.4.4 chase.c:do_chase() attaches any reached lvl_obj, including GOLD, to t_pack.
         game = new_game(seed=513)
         set_two_room_floor(game)
         monster = monster_at(23, 4, "O", "orc", hp=10, armor=100, exp=5, flags="greed")
@@ -4088,10 +4088,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.do_chase(monster)
 
         self.assertEqual((monster.x, monster.y), (24, 4))
-        self.assertIn(gold, game.gitems)
-        self.assertNotIn(gold, monster.pack)
-        self.assertFalse(monster.running)
-        self.assertEqual(monster.dest, (24, 4))
+        self.assertNotIn(gold, game.gitems)
+        self.assertIn(gold, monster.pack)
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
 
     def test_rogue_544_do_chase_venus_flytrap_does_not_relocate_while_chasing(self):
         # Rogue 5.4.4 chase.c:do_chase() returns before relocate() when chase() continues for 'F'.

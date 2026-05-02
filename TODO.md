@@ -355,6 +355,7 @@
 - [x] Rogue 5.4.4 `init.c:init_stones()` 準拠で ring worth に stone value を加算し勝利スコアへ反映
 - [x] Rogue 5.4.4 `rip.c:total_winner()` 準拠で、勝利スコアに所持品売却額を加算
 - [x] Rogue 5.4.4 `rip.c:total_winner()` 準拠で、ring / stick の勝利売却半額判定を個体 `ISKNOW` に合わせる
+- [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `chase.c:find_dest()` / `do_chase()` 準拠で、monster の gold 目的地選択・収集を `lvl_obj` 扱いに合わせる
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
 - [x] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）
   - [x] `S_CONFUSE` monster confusion（次攻撃時にモンスター混乱、`your hands begin to glow red`）
