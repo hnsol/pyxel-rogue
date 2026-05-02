@@ -85,29 +85,29 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 Gamepad:
 
 - D-pad: Move in 8 directions
-- Start tap: Toggle diagonal assist / normal 8-direction mode
+- Hold Start: Diagonal assist
 - A: Confirm / pick up / stairs / search one tile ahead
 - B tap: Menu / cancel
 - B hold + D-pad: Dash
 - A+B: Wait a turn
-- Select: Assist menu
+- Select: Inventory; press Select again in inventory for the assist menu
 - Assist menu: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
-- Select+A: Search around all 8 neighboring tiles
-- Select+B: Quick throw (choose direction, then item)
+- Select+A: Quick throw (choose direction, then item)
+- Select+B: Search around all 8 neighboring tiles
 - Select+D-pad: Inspect a discovered trap
 
 Keyboard:
 
 - Arrow keys / HJKL: Move
 - YUBN: Diagonal movement
-- Space: Toggle diagonal assist
+- Hold Space: Diagonal assist
 - Enter: Confirm / pick up / stairs / search one tile ahead
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
 - Esc: Menu / cancel
-- Tab: Assist menu
-- Tab+Enter: Search around all 8 neighboring tiles
-- Tab+Esc: Quick throw
+- Tab: Inventory; press Tab again in inventory for the assist menu
+- Tab+Enter: Quick throw
+- Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap
 - .: Wait a turn
 - s: Search around all 8 neighboring tiles
