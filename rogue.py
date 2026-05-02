@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0058"
+UI_BUILD = "260503_0105"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1449,9 +1449,6 @@ class Game:
             out["type_known"] = self.ident.sk[it.kind]
         elif it.cat == CAT_RING:
             out["base_worth"] = self.ident.rworth[it.kind]
-            out["known"] = self.ident.rk[it.kind]
-        elif it.cat == CAT_STICK:
-            out["known"] = self.ident.wk[it.kind]
         return out
 
     def total_winner_score(self):

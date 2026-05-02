@@ -9477,12 +9477,33 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_winner_score_uses_init_stones_adjusted_ring_worth(self):
         # Rogue 5.4.4 init.c:init_stones() mutates ring_info[].oi_worth before rip.c:total_winner().
         game = new_game(seed=9446)
-        ring = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_SUSTSTR)
+        ring = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_SUSTSTR, known=False)
         game.p.inv = [ring]
         game.ident.rworth[rogue.rogue_rings.R_SUSTSTR] = 505
 
         self.assertEqual(game.total_winner_item_data(ring)["base_worth"], 505)
         self.assertEqual(game.total_winner_score(), 505 // 2)
+
+    def test_rogue_544_winner_ring_worth_halves_by_item_isknow_not_type_know(self):
+        # Rogue 5.4.4 rip.c:total_winner() checks obj->o_flags & ISKNOW for RING.
+        game = new_game(seed=9447)
+        ring = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_SUSTSTR, known=True)
+        game.p.inv = [ring]
+        game.ident.rworth[rogue.rogue_rings.R_SUSTSTR] = 505
+        game.ident.rk[rogue.rogue_rings.R_SUSTSTR] = False
+
+        self.assertTrue(game.total_winner_item_data(ring)["known"])
+        self.assertEqual(game.total_winner_score(), 505)
+
+    def test_rogue_544_winner_stick_worth_halves_by_item_isknow_not_type_know(self):
+        # Rogue 5.4.4 rip.c:total_winner() checks obj->o_flags & ISKNOW for STICK.
+        game = new_game(seed=9448)
+        stick = rogue.Item(rogue.CAT_STICK, rogue.rogue_sticks.WS_LIGHT, charges=3, known=False)
+        game.p.inv = [stick]
+        game.ident.wk[rogue.rogue_sticks.WS_LIGHT] = True
+
+        self.assertFalse(game.total_winner_item_data(stick)["known"])
+        self.assertEqual(game.total_winner_score(), (250 + 20 * 3) // 2)
 
     def test_rogue_544_winner_score_adds_pack_worth(self):
         # Rogue 5.4.4 rip.c:total_winner() adds pack worth to purse before score(purse, 2, ' ').
