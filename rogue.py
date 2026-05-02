@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_1124"
+UI_BUILD = "260502_1125"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -3844,13 +3844,13 @@ class Game:
         if self.p.haste > 0 and not self.haste_half_turn:
             # Rogue 5.4.4 command.c:command() gives ISHASTE two player actions
             # before do_fuses(AFTER) and monster/daemon work advance.
+            self.do_before_daemons()
             if self.p.no_command > 0:
-                self.do_before_daemons()
                 self.decrement_no_command()
                 self.haste_no_command_half_turn = True
             self.haste_half_turn = True
             return
-        skip_before_daemons = self.haste_half_turn and self.haste_no_command_half_turn
+        skip_before_daemons = self.haste_half_turn
         self.haste_half_turn = False
         self.haste_no_command_half_turn = False
         self.turn+=1

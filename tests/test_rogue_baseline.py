@@ -4741,6 +4741,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("you can move again", game.msgs)
 
+    def test_rogue_544_hasted_turn_runs_before_daemons_on_first_half_action(self):
+        # Rogue 5.4.4 command.c:command() runs do_daemons(BEFORE) before the hasted two-action loop.
+        game = new_game(seed=322)
+        game.p.haste = 5
+        seen = []
+        game.daemons.start("rollwand", rogue.rogue_daemons.BEFORE)
+        game.roll_wanderer = lambda: seen.append(game.turn)
+        turn = game.turn
+
+        game.end_turn()
+
+        self.assertEqual(seen, [turn])
+        self.assertEqual(game.turn, turn)
+        self.assertTrue(game.haste_half_turn)
+
+    def test_rogue_544_hasted_turn_runs_before_fuses_on_first_half_action(self):
+        # Rogue 5.4.4 command.c:command() runs do_fuses(BEFORE) before the hasted two-action loop.
+        game = new_game(seed=323)
+        game.p.haste = 5
+        seen = []
+        game.fuses.fuse("swander", 1, rogue.rogue_daemons.BEFORE)
+        game.swander = lambda: seen.append(game.turn)
+        turn = game.turn
+
+        game.end_turn()
+
+        self.assertEqual(seen, [turn])
+        self.assertEqual(game.turn, turn)
+        self.assertTrue(game.haste_half_turn)
+
     def test_rogue_544_haste_self_does_not_spend_after_turn_from_item_confirm(self):
         # Rogue 5.4.4 potions.c:P_HASTE sets after=FALSE before add_haste(TRUE).
         game = new_game(seed=313)
