@@ -663,6 +663,7 @@ class RogueBaselineTest(unittest.TestCase):
         trap = (room_a.x + 3, room_a.y + 2)
         game.tm[stair[1]][stair[0]] = rogue.T_STAIR
         game.tm[trap[1]][trap[0]] = rogue.T_TRAP
+        game.mons = []
         seen = []
         old_choice = rogue.RNG.choice
         try:
@@ -6867,7 +6868,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.depth = 7
         game.max_depth = 7
         room = game.rooms[0]
-        positions = iter((x, game.p.y + 2) for x in range(2, 8))
+        x_rolls = iter(range(1, 7))
+        y_rolls = iter([game.p.y + 1] * 6)
         pack_depths = []
         old_make_item = rogue.make_item
         old_random_room_tile = game.random_room_tile
@@ -6878,11 +6880,16 @@ class RogueBaselineTest(unittest.TestCase):
         try:
             def rnd(n):
                 rnd_calls.append(n)
-                return 8 if n == 10 else 0
+                if n == 10:
+                    return 8
+                if n == 78:
+                    return next(x_rolls)
+                if n == 20:
+                    return next(y_rolls)
+                return 0
 
             rogue.RNG.rnd = rnd
             rogue.make_item = lambda depth: rogue.Item(rogue.CAT_FOOD, 0)
-            game.random_room_tile = lambda room_arg, tiles: next(positions)
             game.random_monster_spec = lambda depth: (_ for _ in ()).throw(AssertionError("random_monster_spec used"))
             game.give_pack = lambda monster, depth=None: pack_depths.append(depth) or monster.pack.append(rogue.Item(rogue.CAT_FOOD, 0))
 
@@ -6966,7 +6973,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG = old_rng
             game.make_game_item = old_make_game_item
 
-        self.assertEqual(events[:4], ["rnd:20", "rnd:100", "new_thing", "choice"])
+        self.assertEqual(events[:6], ["rnd:20", "rnd:100", "new_thing", "rnd:1", "rnd:78", "rnd:20"])
 
     def test_rogue544_put_things_skips_when_returning_up_with_amulet(self):
         # Rogue 5.4.4 new_level.c:put_things() returns when amulet && level < max_level.
@@ -7014,7 +7021,45 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG = old_rng
             game.usable_rooms = old_usable_rooms
 
-        self.assertEqual(events[:3], ["rnd:2", "rnd:80", "choice"])
+        self.assertEqual(events[:4], ["rnd:2", "rnd:80", "rnd:78", "rnd:20"])
+
+    def test_rogue544_room_gold_find_floor_uses_rnd_pos_not_candidate_choice(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() calls rooms.c:find_floor(),
+        # which consumes rnd_pos() rolls instead of choosing from a candidate list.
+        game = new_game(seed=30421)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(6, 9):
+            for x in range(6, 9):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.p.depth = 3
+        game.p.x, game.p.y = 1, 1
+        game.gitems = []
+        game.mons = []
+
+        class FindFloorRng:
+            def __init__(self):
+                self.values = [0, 0, 1, 2]
+                self.calls = []
+
+            def rnd(self, n):
+                self.calls.append(n)
+                return self.values.pop(0)
+
+            def choice(self, seq):
+                raise AssertionError("rooms.c:find_floor() should use rnd_pos(), not choice()")
+
+        old_rng = rogue.RNG
+        try:
+            rng = FindFloorRng()
+            rogue.RNG = rng
+            game._spawn_room_gold()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(rng.calls, [2, 80, 3, 3])
+        self.assertEqual([(item.x, item.y) for item in game.gitems if item.cat == rogue.CAT_GOLD], [(7, 8)])
 
     def test_rogue544_room_gold_find_floor_uses_maze_passage(self):
         # Rogue 5.4.4 rooms.c:do_rooms() room gold uses find_floor(rp, ..., monst=FALSE).
@@ -7029,7 +7074,12 @@ class RogueBaselineTest(unittest.TestCase):
         game.mons = []
 
         class GoldRng:
+            seen_x = False
+
             def rnd(self, n):
+                if n == 3 and not self.seen_x:
+                    self.seen_x = True
+                    return 1
                 return 0
 
             def choice(self, seq):
@@ -7066,6 +7116,9 @@ class RogueBaselineTest(unittest.TestCase):
                 if n == 100:
                     self.attempts += 1
                     return 0 if self.attempts == 1 else 99
+                if n == 3 and not getattr(self, "seen_x", False):
+                    self.seen_x = True
+                    return 1
                 return 0
 
             def choice(self, seq):
@@ -7292,11 +7345,11 @@ class RogueBaselineTest(unittest.TestCase):
             game.random_monster_spec = lambda depth: spec
             game.give_pack = lambda monster: None
             rogue.RNG.choice = lambda seq: next(pos for pos in seq if pos != (game.p.x, game.p.y))
-            rogue.RNG.rnd = lambda n: 25
+            rogue.RNG.rnd = lambda n: 25 if n == 100 else 0
             game._spawn_mons()
             self.assertEqual(game.mons, [])
 
-            rogue.RNG.rnd = lambda n: 24
+            rogue.RNG.rnd = lambda n: 24 if n == 100 else 0
             game._spawn_mons()
             self.assertEqual([m.sym for m in game.mons], ["E"])
         finally:
@@ -7345,7 +7398,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.random_monster_spec = old_random_monster_spec
             game.give_pack = old_give_pack
 
-        self.assertEqual(events[:3], ["rnd:100", "choice", "randmonster"])
+        self.assertEqual(events[:4], ["rnd:100", "rnd:78", "rnd:20", "randmonster"])
 
     def test_rogue_544_killed_monster_pack_items_use_fallpos(self):
         # Rogue 5.4.4 fight.c:remove_mon(..., TRUE) sets o_pos to t_pos,

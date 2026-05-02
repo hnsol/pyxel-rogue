@@ -104,6 +104,7 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` / `put_things()` 相当の `no_food` 強制 food、`MAXOBJ=9` × 36% 物資生成、Amulet 上昇中の物資生成停止を helper 化
 - [x] Rogue 5.4.4 `new_level.c:put_things()` 準拠で、各36%成功時に `new_thing()` と床選択を即時実行する乱数順へ修正
 - [x] Rogue 5.4.4 `rooms.c:find_floor(..., monst=FALSE)` 準拠で、通常部屋は floor、maze room は passage を物資 / gold / treasure room / Amulet 候補にする
+- [x] Rogue 5.4.4 `rooms.c:find_floor()` / `rnd_pos()` 準拠で、room gold / 物資 / treasure room / Amulet / 部屋モンスター配置を候補一覧 choice ではなく乱数試行式へ修正
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 相当の room gold、部屋モンスター発生、gone/dark/maze room 選択を helper 化
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 準拠で、room gold は `GOLDCALC` 後に `find_floor()` する乱数順へ修正
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の Leprechaun 死亡時 gold drop を helper 化

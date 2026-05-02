@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0931"
+UI_BUILD = "260502_0932"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -1468,6 +1468,56 @@ class Game:
             return RNG.choice(cands)
         return room.inner()
 
+    def source_rnd_room(self):
+        # C: new_level.c:rnd_room() / rooms.c:find_floor().
+        rooms = self.rooms or []
+        usable = [room for room in rooms if room.usable]
+        if not rooms:
+            return None
+        if not usable:
+            return rooms[0]
+        for _ in range(max(1, len(rooms) * 4)):
+            room = rooms[RNG.rnd(len(rooms))]
+            if room.usable:
+                return room
+        return usable[0]
+
+    def source_rnd_pos(self, room):
+        # C: rooms.c:rnd_pos().
+        if room.w <= 2 or room.h <= 2:
+            return room.inner()
+        return room.x + RNG.rnd(room.w - 2) + 1, room.y + RNG.rnd(room.h - 2) + 1
+
+    def find_floor_pos(self, room=None, limit=0, monst=False, avoid=(), occupied=()):
+        # C: rooms.c:find_floor().
+        pickroom = room is None
+        avoid = set(avoid or ())
+        occupied = set(occupied or ())
+        count = limit
+        attempts = 0
+        while True:
+            if limit:
+                if count == 0:
+                    return None
+                count -= 1
+            elif attempts > MAP_W * MAP_H * max(1, len(self.rooms)):
+                return None
+            attempts += 1
+            test_room = self.source_rnd_room() if pickroom else room
+            if test_room is None:
+                return None
+            x, y = self.source_rnd_pos(test_room)
+            if not in_map(x, y) or (x, y) in avoid:
+                continue
+            tile = self.tm[y][x]
+            if monst:
+                if (x, y) not in occupied and rogue_io.step_ok_tile(tile, TILE_CH):
+                    return x, y
+            else:
+                compchar = T_CORR if test_room.is_maze else T_FLOOR
+                if tile == compchar and (x, y) not in occupied:
+                    return x, y
+
     def _center_cam(self):
         max_x = max(0, MAP_W - ZV_COLS)
         min_y = PLAY_Y_MIN
@@ -1481,17 +1531,15 @@ class Game:
         for rm in self.usable_rooms():
             if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(rm)):
                 continue
-            cands=rogue_dungeon.find_floor_monster_candidates(
-                self.tm,
-                self.room_at,
-                {(m.x,m.y) for m in self.mons if m.alive},
-                (self.p.x,self.p.y),
-                TILE_CH,
-                only_room=rm,
+            pos = self.find_floor_pos(
+                rm,
+                monst=True,
+                avoid={(self.p.x,self.p.y)},
+                occupied={(m.x,m.y) for m in self.mons if m.alive},
             )
-            if not cands:
+            if pos is None:
                 continue
-            mx,my=RNG.choice(cands)
+            mx,my=pos
             e=self.random_monster_spec(d)
             monster=self.new_monster_from_spec(mx,my,e)
             self.give_pack(monster)
@@ -1575,25 +1623,20 @@ class Game:
         d=self.p.depth
         if not rogue_dungeon.should_put_things(self.p.has_amulet, d, getattr(self, "max_depth", d)):
             return
-        rooms=self.usable_rooms()
         if rogue_dungeon.should_place_treasure_room(RNG):
             self._spawn_treasure_room()
         for _ in range(rogue_dungeon.MAXOBJ):
             if not rogue_dungeon.should_put_thing_attempt(RNG):
                 continue
             it=self.make_game_item(d)
-            rm=RNG.choice(rooms)
-            cands=rogue_dungeon.find_floor_object_candidates(
-                self.tm,
-                self.room_at,
-                T_FLOOR,
-                T_CORR,
+            pos = self.find_floor_pos(
+                None,
+                monst=False,
                 avoid={(self.p.x,self.p.y)},
                 occupied={(i.x,i.y) for i in self.gitems},
-                only_room=rm,
             )
-            if cands:
-                ix,iy=RNG.choice(cands)
+            if pos is not None:
+                ix,iy=pos
                 it.x,it.y=ix,iy; self.gitems.append(it)
 
     def _spawn_room_gold(self):
@@ -1603,17 +1646,14 @@ class Game:
             if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
                 continue
             qty=goldcalc(d)
-            cands=rogue_dungeon.find_floor_object_candidates(
-                self.tm,
-                self.room_at,
-                T_FLOOR,
-                T_CORR,
+            pos = self.find_floor_pos(
+                rm,
+                monst=False,
                 avoid={(self.p.x,self.p.y)},
                 occupied={(i.x,i.y) for i in self.gitems},
-                only_room=rm,
             )
-            if cands:
-                ix,iy=RNG.choice(cands)
+            if pos is not None:
+                ix,iy=pos
                 g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
                 self.gitems.append(g)
 
@@ -1624,30 +1664,33 @@ class Game:
         inner_area=max(0,(room.w-2)*(room.h-2))
         treasure_count, monster_count = rogue_dungeon.treasure_room_counts(inner_area,RNG)
         for _ in range(treasure_count):
-            cands=rogue_dungeon.find_floor_object_candidates(
-                self.tm,
-                self.room_at,
-                T_FLOOR,
-                T_CORR,
+            pos = self.find_floor_pos(
+                room,
+                limit=2 * rogue_dungeon.MAXTRIES,
+                monst=False,
                 avoid={(self.p.x,self.p.y)},
-                occupied={(i.x,i.y) for i in self.gitems} | {(m.x,m.y) for m in self.mons if m.alive},
-                only_room=room,
+                occupied={(i.x,i.y) for i in self.gitems},
             )
-            if cands:
-                ix,iy=RNG.choice(cands)
+            if pos is not None:
+                ix,iy=pos
                 it=self.make_game_item(self.p.depth); it.x,it.y=ix,iy; self.gitems.append(it)
         monster_depth=self.p.depth+1
         for _ in range(monster_count):
-            for _ in range(rogue_dungeon.MAXTRIES):
-                mx,my=self.random_room_tile(room,{T_FLOOR,T_CORR})
-                if (self.tm[my][mx] in (T_FLOOR,T_CORR) and not self.gi_at(mx,my)
-                        and not self.mon_at(mx,my) and (mx,my)!=(self.p.x,self.p.y)):
-                    spec=self.monster_spec_for_sym(rogue_monsters.randmonster(monster_depth, RNG.rnd, wander=False))
-                    monster=self.new_monster_from_spec(mx,my,spec,depth=monster_depth)
-                    rogue_monsters.force_mean(monster)
-                    self.give_pack(monster,depth=monster_depth)
-                    self.mons.append(monster)
-                    break
+            pos = self.find_floor_pos(
+                room,
+                limit=rogue_dungeon.MAXTRIES,
+                monst=True,
+                avoid={(self.p.x,self.p.y)},
+                occupied={(m.x,m.y) for m in self.mons if m.alive},
+            )
+            if pos is None:
+                continue
+            mx,my=pos
+            spec=self.monster_spec_for_sym(rogue_monsters.randmonster(monster_depth, RNG.rnd, wander=False))
+            monster=self.new_monster_from_spec(mx,my,spec,depth=monster_depth)
+            rogue_monsters.force_mean(monster)
+            self.give_pack(monster,depth=monster_depth)
+            self.mons.append(monster)
 
     def _spawn_amulet(self):
         # Rogue 5.4.4 new_level.c: level >= AMULETLEVEL && !amulet.
@@ -1655,17 +1698,15 @@ class Game:
             return
         if any(item.cat==CAT_AMULET for item in self.p.inv + self.gitems):
             return
-        cands=rogue_dungeon.find_floor_object_candidates(
-            self.tm,
-            self.room_at,
-            T_FLOOR,
-            T_CORR,
+        pos = self.find_floor_pos(
+            None,
+            monst=False,
             avoid={(self.p.x,self.p.y)},
-            occupied={(i.x,i.y) for i in self.gitems} | {(m.x,m.y) for m in self.mons if m.alive},
+            occupied={(i.x,i.y) for i in self.gitems},
         )
-        if not cands:
+        if pos is None:
             return
-        x,y=RNG.choice(cands)
+        x,y=pos
         amulet=Item(CAT_AMULET,0)
         amulet.x,amulet.y=x,y
         self.gitems.append(amulet)
