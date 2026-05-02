@@ -221,6 +221,8 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` 相当の Nymph 盗み対象選択を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Nymph 盗み表示を `she stole %s!` にする
 - [x] Rogue 5.4.4 `fight.c:attack()` / `misc.c:chg_str()` 準拠で Strength 下限3の poison bite も弱化結果にする
+- [x] Rogue 5.4.4 `potions.c:P_POISON` 準拠で poison potion Strength 低下を `rnd(3)+1` にする
+- [x] Rogue 5.4.4 `scrolls.c:S_HOLD` 準拠で hold monster は duration roll ではなく `ISHELD` flag にする
 - [x] Rogue 5.4.4 `fight.c:attack()` / `potions.c:is_magic()` 準拠で Nymph は非魔法武器/防具を盗まない
 - [x] Rogue 5.4.4 `potions.c:is_magic()` を `rogue_potions.is_magic_item()` へ小分割
 - [x] Rogue 5.4.4 `fight.c:attack()` 準拠で Leprechaun 盗み時は初回 `GOLDCALC` 後に `save(VS_MAGIC)` する

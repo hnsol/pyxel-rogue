@@ -195,7 +195,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_1210"
+UI_BUILD = "260502_1234"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2565,7 +2565,7 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.randint(1,3); p.st=rogue_potions.poison_strength(p.st,l); self.msg("potions.you_feel_very_sick_now")
+                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st,p.max_st=rogue_potions.gain_strength(p.st,p.max_st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
@@ -2973,7 +2973,7 @@ class Game:
                     if self.tm[y][x]!=T_VOID: self.explored.add((x,y))
             self.msg("scrolls.oh_now_this_scroll_has_a_map_on_it")
         elif nm=="hold monster":
-            held_count = rogue_scrolls.hold_monsters(p, self.mons, lambda mo: RNG.randint(10,20))
+            held_count = rogue_scrolls.hold_monsters(p, self.mons)
             if held_count:
                 self.ident.sk[it.kind]=True
                 self.msg("scrolls.the_monster_freezes" if held_count == 1 else "scrolls.the_monsters_around_you_freeze")

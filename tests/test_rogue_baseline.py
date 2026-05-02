@@ -1972,9 +1972,28 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_scrolls.hold_monsters(hero, [near, far, sleeping], lambda n: 7), 1)
         self.assertFalse(near.running)
-        self.assertEqual(near.held, 7)
+        self.assertEqual(near.held, 1)
         self.assertTrue(far.running)
         self.assertEqual(sleeping.held, 0)
+
+    def test_rogue_544_scroll_hold_monster_does_not_roll_duration(self):
+        # Rogue 5.4.4 scrolls.c:S_HOLD sets ISHELD without a duration roll.
+        import rogue_scrolls
+
+        hero = rogue.Player()
+        hero.x = 10
+        hero.y = 10
+        monster = monster_at(11, 10)
+        monster.running = True
+
+        held_count = rogue_scrolls.hold_monsters(
+            hero,
+            [monster],
+            lambda n: (_ for _ in ()).throw(AssertionError("duration rolled")),
+        )
+
+        self.assertEqual(held_count, 1)
+        self.assertEqual(monster.held, 1)
 
     def test_rogue_544_scrolls_helper_create_monster_pick_matches_s_create(self):
         # Rogue 5.4.4 scrolls.c:S_CREATE chooses candidate squares with rnd(++i) == 0.
@@ -5335,17 +5354,38 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.inv.append(potion)
         game.p.st = 10
 
-        old_randint = rogue.RNG.randint
+        old_rnd = rogue.RNG.rnd
         try:
-            rogue.RNG.randint = lambda a, b: 2
+            rogue.RNG.rnd = lambda n: 1
             game.use_pot(potion)
         finally:
-            rogue.RNG.randint = old_randint
+            rogue.RNG.rnd = old_rnd
 
         self.assertEqual(game.p.st, 8)
         self.assertTrue(game.ident.pk[poison])
         self.assertIn("you feel very sick now", game.msgs)
         self.assertNotIn("You feel sick. (Str -2)", game.msgs)
+
+    def test_rogue_544_poison_potion_strength_loss_uses_rnd_3_plus_one(self):
+        # Rogue 5.4.4 potions.c:P_POISON calls chg_str(-(rnd(3) + 1)).
+        game = new_game(seed=215)
+        poison = next(i for i, spec in enumerate(rogue.POTIONS) if spec["name"] == "poison")
+        potion = rogue.Item(rogue.CAT_POT, poison)
+        game.p.inv.append(potion)
+        game.p.st = 10
+        calls = []
+        old_rnd = rogue.RNG.rnd
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.RNG.rnd = lambda n: calls.append(n) or 1
+            rogue.RNG.randint = lambda a, b: (_ for _ in ()).throw(AssertionError("randint used"))
+            game.use_pot(potion)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randint = old_randint
+
+        self.assertEqual(calls, [3])
+        self.assertEqual(game.p.st, 8)
 
     def test_rogue_544_poison_potion_strength_floor_is_three(self):
         # Rogue 5.4.4 misc.c:add_str() floors Strength at 3.
@@ -5354,12 +5394,12 @@ class RogueBaselineTest(unittest.TestCase):
         potion = rogue.Item(rogue.CAT_POT, poison)
         game.p.inv.append(potion)
         game.p.st = 4
-        old_randint = rogue.RNG.randint
+        old_rnd = rogue.RNG.rnd
         try:
-            rogue.RNG.randint = lambda a, b: 3
+            rogue.RNG.rnd = lambda n: 2
             game.use_pot(potion)
         finally:
-            rogue.RNG.randint = old_randint
+            rogue.RNG.rnd = old_rnd
 
         self.assertEqual(game.p.st, 3)
 
