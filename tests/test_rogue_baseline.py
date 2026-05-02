@@ -4014,6 +4014,40 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(chased, [(15, 10)])
 
+    def test_rogue_544_do_chase_door_chaser_keeps_room_exit_candidate(self):
+        # Rogue 5.4.4 chase.c:do_chase() checks th->t_room exits before
+        # switching a door chaser to passages[F_PNUM], without resetting mindist.
+        game = new_game(seed=523)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room = rogue.Room(10, 5, 10, 8)
+        target_room = rogue.Room(24, 5, 8, 8)
+        game.rooms = [room, target_room]
+        for r in game.rooms:
+            for y in range(r.y, r.y + r.h):
+                for x in range(r.x, r.x + r.w):
+                    game.tm[y][x] = rogue.T_FLOOR
+        left_door = (room.x, 8)
+        right_door = (room.x + room.w - 1, 8)
+        game.tm[left_door[1]][left_door[0]] = rogue.T_DOOR
+        game.tm[right_door[1]][right_door[0]] = rogue.T_DOOR
+        for x in range(5, left_door[0]):
+            game.tm[8][x] = rogue.T_CORR
+        game.tm[8][5] = rogue.T_DOOR
+        game.p.x, game.p.y = target_room.x + 2, 8
+        monster = monster_at(left_door[0], left_door[1], "H", "hobgoblin", hp=10)
+        monster.running = True
+        monster.dest = rogue.DEST_PLAYER
+        game.mons = [monster]
+        chased = []
+        old_chase = game.chase
+        try:
+            game.chase = lambda m, dest: chased.append(dest) or "move"
+            game.do_chase(monster)
+        finally:
+            game.chase = old_chase
+
+        self.assertEqual(chased, [right_door])
+
     def test_rogue_544_room_exits_include_hidden_secret_doors(self):
         # Rogue 5.4.4 passages.c:door() stores secret doors in room.r_exit before hiding them.
         game = new_game(seed=522)
@@ -6484,6 +6518,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(rogue_fight.leprechaun_kill_gold_allowed(level=7, max_level=7, has_fallpos=True))
         self.assertFalse(rogue_fight.leprechaun_kill_gold_allowed(level=6, max_level=7, has_fallpos=True))
         self.assertFalse(rogue_fight.leprechaun_kill_gold_allowed(level=7, max_level=7, has_fallpos=False))
+
+    def test_rogue_544_fallpos_can_choose_monster_occupied_places(self):
+        # Rogue 5.4.4 weapons.c:fallpos() tests chat()==FLOOR/PASSAGE
+        # while monsters live in p_monst; fall() updates t_oldch if needed.
+        game = new_game(seed=3010)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 20, 20
+        game.tm[10][9] = rogue.T_FLOOR
+        game.tm[10][11] = rogue.T_FLOOR
+        game.mons = [monster_at(9, 10, "O", "orc", hp=10)]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rolls = iter([0, 1])
+            rogue.RNG.rnd = lambda n: next(rolls)
+            pos = game.fall_position(10, 10)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(pos, (9, 10))
 
     def test_rogue_544_killed_leprechaun_drops_gold_at_max_depth(self):
         # Rogue 5.4.4 fight.c:killed() attaches Leprechaun gold to t_pack before remove_mon(..., TRUE).

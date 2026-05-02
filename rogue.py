@@ -193,7 +193,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260502_0929"
+UI_BUILD = "260502_0930"
 NAME_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_DAILY, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 SCOREBOARD_HILITE_COL = 23
@@ -2255,19 +2255,18 @@ class Game:
     def do_chase(self,m):
         # C: chase.c:do_chase()
         dest=self.current_chase_dest(m)
-        rer=self.room_for_ai(m.x,m.y,actor=True)
+        door = self.tm[m.y][m.x] == T_DOOR
+        rer=self.room_for_ai(m.x,m.y,actor=False) if door else self.room_for_ai(m.x,m.y,actor=True)
         ree=rogue_chase.destination_room(
             dest == (self.p.x, self.p.y),
             self.room_for_ai(self.p.x,self.p.y,actor=True),
             self.room_for_ai(dest[0],dest[1],actor=False),
         )
         chase_dest=dest
-        door_same_room = (
-            self.tm[m.y][m.x] == T_DOOR
-            and self.room_for_ai(m.x,m.y,actor=False) == ree
-        )
-        if rer!=ree and not door_same_room:
+        if rer!=ree:
             exits = self.room_exits(rer) if hasattr(rer,"x") else self.passage_exits(rer)
+            if door:
+                exits = exits + self.passage_exits(self.passage_component(m.x,m.y))
             chase_dest = rogue_chase.nearest_exit_to_dest(
                 exits,
                 dest,
