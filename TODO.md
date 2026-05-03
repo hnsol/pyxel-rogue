@@ -226,6 +226,7 @@
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、Phantom / Bat のランダム移動後も混乱解除用 `rnd(20)` を消費する
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、候補マス走査順を x外側/y内側に合わせる
+- [x] Rogue 5.4.4 `chase.c:chase()` / `winat()` 準拠で、item 目的地追跡中も hero マスを候補評価し、足元の scare scroll より PLAYER を優先する
 - [x] Rogue 5.4.4 `monsters.c:save_throw()` / `save()` 相当の player/monster セーヴ式と protection ring 補正を helper 化
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:rndmove()` / `rogue.h:winat()` 準拠で、混乱/Phantom/Bat のランダム追跡移動は item 擬態 Xeroc を `step_ok()` として扱う

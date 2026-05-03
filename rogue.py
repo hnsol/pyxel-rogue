@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0044"
+UI_BUILD = "260504_0100"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2785,20 +2785,19 @@ class Game:
             diagonal_ok=self.diag_ok(m.x,m.y,nx,ny)
             if not diagonal_ok:
                 continue
-            if (nx,ny)==(px,py):
-                if dest==(px,py):
-                    self.m_attack(m); return "attack"
-                continue
+            is_hero_pos = (nx,ny)==(px,py)
             gi=self.gi_at(nx,ny)
             if not rogue_chase.is_chase_candidate(
                 diagonal_ok,
                 self.walkable(nx,ny) and not self.mon_at(nx,ny),
-                bool(gi and self.is_scare_monster(gi)),
+                bool(not is_hero_pos and gi and self.is_scare_monster(gi)),
                 False,
             ):
                 continue
             d=self.dist2((nx,ny),dest)
             best,bestd,ties=rogue_chase.choose_chase_step(best,bestd,ties,(nx,ny),d,rnd)
+        if best==(px,py):
+            self.m_attack(m); return "attack"
         if best!=(m.x,m.y):
             m.x,m.y=best
         return "move" if rogue_chase.chase_continues(bestd, best, (px, py)) else "arrived"

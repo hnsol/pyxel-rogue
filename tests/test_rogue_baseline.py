@@ -13485,6 +13485,42 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((monster.x, monster.y), (4, 5))
 
+    def test_rogue_544_chase_attacks_hero_when_blocking_item_destination(self):
+        # Rogue 5.4.4 chase.c:chase() lets PLAYER be chosen even when t_dest is not hero.
+        game = new_game(seed=528)
+        set_open_floor(game)
+        game.p.x, game.p.y = 6, 5
+        monster = monster_at(5, 5, hp=10, armor=100, exp=5)
+        game.mons = [monster]
+        attacks = []
+        game.m_attack = lambda mo: attacks.append(mo)
+
+        result = game.chase(monster, (7, 5))
+
+        self.assertEqual(result, "attack")
+        self.assertEqual(attacks, [monster])
+        self.assertEqual((monster.x, monster.y), (5, 5))
+
+    def test_rogue_544_chase_attacks_hero_standing_on_scare_scroll(self):
+        # Rogue 5.4.4 rogue.h:winat() returns PLAYER before the SCROLL under the hero.
+        game = new_game(seed=529)
+        set_open_floor(game)
+        game.p.x, game.p.y = 6, 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = game.p.x, game.p.y
+        monster = monster_at(5, 5, hp=10, armor=100, exp=5)
+        game.gitems = [scroll]
+        game.mons = [monster]
+        attacks = []
+        game.m_attack = lambda mo: attacks.append(mo)
+
+        result = game.chase(monster, (game.p.x, game.p.y))
+
+        self.assertEqual(result, "attack")
+        self.assertEqual(attacks, [monster])
+        self.assertEqual((monster.x, monster.y), (5, 5))
+
     def test_rogue_544_chase_helper_continues_unless_at_goal_or_hero(self):
         # Rogue 5.4.4 chase.c:chase() returns curdist != 0 && !ce(ch_ret, hero).
         import rogue_chase
