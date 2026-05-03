@@ -14824,6 +14824,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.tm[py][px - 1], rogue.T_FLOOR)
         self.assertIn("You find nothing.", game.msgs)
 
+    def test_rogue544_search_does_not_reveal_hidden_trap_under_item(self):
+        # Rogue 5.4.4 command.c:search() reveals hidden traps only when chat() is FLOOR.
+        game = new_game(seed=584)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.traps[(px + 1, py)] = 3
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = px + 1, py
+        game.gitems = [item]
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.do_search()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(game.tm[py][px + 1], rogue.T_FLOOR)
+        self.assertEqual(game.gitems, [item])
+        self.assertNotIn("You found something!", game.msgs)
+
     def test_rogue544_search_does_not_reveal_hidden_trap_under_stairs(self):
         # Rogue 5.4.4 command.c:search() reveals hidden traps only when chat() is FLOOR.
         game = new_game(seed=583)
@@ -14853,6 +14873,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreater(game.p.stuck, 0)
         self.assertEqual(game.turn, 1)
         self.assertIn("you are caught in a bear trap", game.msgs)
+
+    def test_rogue544_hidden_trap_under_item_does_not_trigger_on_move(self):
+        # Rogue 5.4.4 move.c:do_move() reveals hidden traps only when winat() is FLOOR.
+        game = new_game(seed=592)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        x, y = game.p.x + 1, game.p.y
+        game.traps[(x, y)] = 3
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = x, y
+        game.gitems = [item]
+        food_qty = sum(i.qty for i in game.p.inv if i.cat == rogue.CAT_FOOD and i.kind == 0)
+
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (x, y))
+        self.assertEqual(game.tm[y][x], rogue.T_FLOOR)
+        self.assertEqual(game.p.stuck, 0)
+        self.assertEqual(game.gitems, [])
+        self.assertEqual(
+            sum(i.qty for i in game.p.inv if i.cat == rogue.CAT_FOOD and i.kind == 0),
+            food_qty + 1,
+        )
+        self.assertNotIn("you are caught in a bear trap", game.msgs)
 
     def test_rogue544_hidden_trap_under_stairs_does_not_trigger_on_move(self):
         # Rogue 5.4.4 move.c:do_move() reveals hidden traps only when winat() is FLOOR.

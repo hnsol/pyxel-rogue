@@ -125,6 +125,7 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`chat()==FLOOR` まで固定回数fallbackせず再試行する
 - [x] Rogue 5.4.4 `wizard.c:teleport()` / `scrolls.c:S_TELEP` 準拠で、player teleport を `find_floor(..., monst=TRUE)` 乱数試行式へ修正
 - [x] Rogue 5.4.4 `move.c:do_move()` / `command.c:search()` 準拠で、hidden trap は表示文字が floor の時だけ発見・発動する
+- [x] Rogue 5.4.4 `move.c:do_move()` / `command.c:search()` 準拠で、item 表示マス上の hidden trap は発見・発動しない
 - [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、不正斜め移動はターン非消費のまま run を停止する
 - [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、hidden floor trap は Venus Flytrap held gate より先に発動する
 - [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、held 中でも目的地表示が `F` なら保持者以外の Venus Flytrap へ攻撃できる

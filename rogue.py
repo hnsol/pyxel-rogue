@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0226"
+UI_BUILD = "260504_0746"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3878,7 +3878,13 @@ class Game:
             self.dashing = False
             return False
         m = self.mon_at(nx, ny)
-        hidden_floor_trap = m is None and (nx, ny) in self.traps and self.tm[ny][nx] == T_FLOOR
+        gi = self.gi_at(nx, ny)
+        hidden_floor_trap = (
+            m is None
+            and gi is None
+            and (nx, ny) in self.traps
+            and self.tm[ny][nx] == T_FLOOR
+        )
         target_is_flytrap = m is not None and m.sym == "F"
         if (
             not hidden_floor_trap
@@ -3889,14 +3895,13 @@ class Game:
             return True
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
-            gi = self.gi_at(nx,ny)
             if self.tm[ny][nx] in (T_DOOR, T_STAIR) or gi:
                 self.dashing = False
             old_pos = (p.x, p.y)
             p.x, p.y = nx, ny
             if self.tm[ny][nx] == T_STAIR:
                 self.seen_stairs = True
-            trapped = (nx,ny) in self.traps and self.tm[ny][nx] in (T_FLOOR, T_TRAP)
+            trapped = gi is None and (nx,ny) in self.traps and self.tm[ny][nx] in (T_FLOOR, T_TRAP)
             if trapped and p.levitating <= 0:
                 self.trigger_trap(nx, ny, arrow_origin=old_pos)
                 if not self.p.alive or self.st!=ST_PLAY:
@@ -3927,6 +3932,7 @@ class Game:
                 elif (
                     (nx,ny) in self.traps
                     and self.tm[ny][nx] == T_FLOOR
+                    and not self.gi_at(nx, ny)
                     and rogue_search.reveals_trap(rnd(2+probinc), probinc)
                 ):
                     trap = self.traps[(nx,ny)]
