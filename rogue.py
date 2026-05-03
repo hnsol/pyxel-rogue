@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1348"
+UI_BUILD = "260503_1424"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -953,7 +953,7 @@ class DGen:
                 DGen._room(tm,r)
         for a,b in DGen._passage_edges():
             DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1)
-        DGen._ensure(tm,rooms); return tm,rooms
+        return tm,rooms
 
     @staticmethod
     def _passage_edges(audit=False):
@@ -1155,23 +1155,6 @@ class DGen:
             if not(PLAY_Y_MIN<=y<=PLAY_Y_MAX): continue
             v=t[y][x]
             if v==T_VOID or v==T_CORR: t[y][x]=T_CORR
-    @staticmethod
-    def _ensure(t,rooms):
-        rooms=[r for r in rooms if r.usable]
-        if len(rooms)<=1: return
-        def flood(sx,sy):
-            vis=set();stk=[(sx,sy)]
-            while stk:
-                x,y=stk.pop()
-                if (x,y) in vis or not(0<=x<MAP_W and 0<=y<MAP_H): continue
-                if t[y][x]==T_VOID: continue
-                vis.add((x,y))
-                for dx,dy in((-1,0),(1,0),(0,-1),(0,1)): stk.append((x+dx,y+dy))
-            return vis
-        base=flood(rooms[0].cx,rooms[0].cy)
-        for r in rooms[1:]:
-            if(r.cx,r.cy) not in base:
-                DGen._conn(t,rooms[0],r); base=flood(rooms[0].cx,rooms[0].cy)
 
 # ===========================================================
 #  Item factory

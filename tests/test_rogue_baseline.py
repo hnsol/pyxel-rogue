@@ -8423,6 +8423,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(audit["extra"], [(2, 1), (8, 7)])
         self.assertEqual(audit["edges"], audit["tree"] + audit["extra"])
 
+    def test_rogue544_dungeon_generation_does_not_add_non_source_ensure_passages(self):
+        # Rogue 5.4.4 new_level.c:new_level() calls rooms.c:do_rooms(), then passages.c:do_passages();
+        # it does not dig a post-passages repair connection.
+        random.seed(3)
+        edge_counts = []
+        conn_calls = []
+        old_edges = rogue.DGen._passage_edges
+        old_conn = rogue.DGen._conn
+
+        def record_edges(*args, **kwargs):
+            edges = old_edges(*args, **kwargs)
+            edge_counts.append(len(edges))
+            return edges
+
+        def record_conn(tm, r1, r2, horiz=None):
+            conn_calls.append((r1, r2, horiz))
+            return old_conn(tm, r1, r2, horiz)
+
+        try:
+            rogue.DGen._passage_edges = record_edges
+            rogue.DGen._conn = record_conn
+            rogue.DGen.gen(depth=5)
+        finally:
+            rogue.DGen._passage_edges = old_edges
+            rogue.DGen._conn = old_conn
+
+        self.assertEqual(len(conn_calls), edge_counts[0])
+
     def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
         random.seed(0)
         _tm, rooms = rogue.DGen.gen(depth=1)
