@@ -404,10 +404,12 @@
   - [x] `see invisible` potion の `unsee` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_SEEINVIS` の potion duration と ring-only `CANSEE` 分岐を `rogue_potions.py` へ小分割
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `potions.c:P_LSD` / `daemons.c:come_down()` 準拠で、`visuals` BEFORE daemon の登録と解除を delayed action table に反映
   - [x] Rogue 5.4.4 `potions.c:P_LSD` 準拠で、`turn_see(FALSE)` 時に monster detection 表示を維持
   - [x] Rogue 5.4.4 `potions.c:seen_stairs()` / `misc.c:trip_ch()` 準拠で、既知の階段は hallucination 中も実階段表示にする
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `main.c` 準拠で、初期 shared slot 登録順を `runners` / `doctor` / `swander` fuse / `stomach` にする
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:turn_see()` の `SEEMONST` ON/OFF を `rogue_potions.py` へ小分割
   - [x] Rogue 5.4.4 `potions.c:turn_see(FALSE)` の新規 monster 感知判定を `rogue_potions.py` へ小分割

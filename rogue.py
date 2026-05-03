@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0801"
+UI_BUILD = "260504_0922"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1573,7 +1573,6 @@ class Game:
         self.daemons = self.delayed_actions.daemons
         self.daemons.start("runners", rogue_daemons.AFTER)
         self.daemons.start("doctor", rogue_daemons.AFTER)
-        self.daemons.start("stomach", rogue_daemons.AFTER)
         self.haste_half_turn = False
         self.haste_no_command_half_turn = False
         self.result_scores = []
@@ -1582,6 +1581,7 @@ class Game:
         self.result_outcome = None
         self.descend()
         self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
+        self.daemons.start("stomach", rogue_daemons.AFTER)
         self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
 
@@ -2869,6 +2869,7 @@ class Game:
                 self.seen_stairs = self.stairs_seen_on_map()
                 if p.see_monsters > 0:
                     p.see_monsters = rogue_potions.turn_see_state(False, p.see_monsters)
+                self.daemons.start("visuals", rogue_daemons.BEFORE)
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
@@ -2986,6 +2987,7 @@ class Game:
         )
         if not should_clear:
             return
+        self.daemons.kill("visuals")
         self.p.hallucinating = 0
         if message_key:
             self.msg(message_key)
@@ -4254,6 +4256,8 @@ class Game:
             self.run_stomach()
         elif name == "runners":
             self.run_runners()
+        elif name == "visuals":
+            pass
 
     def run_runners(self):
         # C: chase.c:runners()

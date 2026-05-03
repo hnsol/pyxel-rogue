@@ -5053,6 +5053,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(seen, [1])
         self.assertEqual(game.p.no_command, 0)
 
+    def test_rogue_544_initial_daemon_fuse_slot_order_matches_main_c(self):
+        # Rogue 5.4.4 main.c starts runners, doctor, swander fuse, then stomach in the shared d_list.
+        game = new_game(seed=319)
+
+        self.assertEqual(
+            [
+                (slot.get("kind"), slot.get("name"), slot.get("when"))
+                for slot in game.delayed_actions._slots[:4]
+            ],
+            [
+                ("daemon", "runners", rogue.rogue_daemons.AFTER),
+                ("daemon", "doctor", rogue.rogue_daemons.AFTER),
+                ("fuse", "swander", rogue.rogue_daemons.AFTER),
+                ("daemon", "stomach", rogue.rogue_daemons.AFTER),
+            ],
+        )
+
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
         game = new_game(seed=311)
@@ -5352,6 +5369,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hallucinating, 0)
         self.assertEqual(game.fuses.remaining("come_down"), 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
+
+    def test_rogue_544_hallucination_starts_visuals_before_daemon(self):
+        # Rogue 5.4.4 potions.c:P_LSD starts daemons.c:visuals as a BEFORE daemon on first trip.
+        game = new_game(seed=2141)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+
+        game.use_pot(potion)
+
+        self.assertTrue(game.daemons.running("visuals", rogue.rogue_daemons.BEFORE))
+
+    def test_rogue_544_come_down_kills_visuals_daemon(self):
+        # Rogue 5.4.4 daemons.c:come_down() calls kill_daemon(visuals).
+        game = new_game(seed=2142)
+        game.p.hallucinating = 10
+        game.daemons.start("visuals", rogue.rogue_daemons.BEFORE)
+
+        game.come_down()
+
+        self.assertFalse(game.daemons.running("visuals"))
 
     def test_rogue_544_hallucination_preserves_detect_monster_display(self):
         # Rogue 5.4.4 potions.c:P_LSD calls turn_see(FALSE), which keeps SEEMONST on.
