@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1435"
+UI_BUILD = "260503_1515"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -653,6 +653,7 @@ class Room:
     def __init__(s,x,y,w,h,flags=None):
         s.x,s.y,s.w,s.h=x,y,w,h
         s.flags=set(flags or ())
+        s.exits=[]
     @property
     def cx(s): return s.x+s.w//2
     @property
@@ -1068,11 +1069,21 @@ class DGen:
             return None,p
         if r.is_maze:
             p=DGen._maze_exit(t,r,side)
+            DGen._record_exit(r,p)
             return None,p
         door=DGen._pick_wall_door(t,r,side)
+        DGen._record_exit(r,door)
         x,y=door
         dx,dy={"L":(-1,0),"R":(1,0),"U":(0,-1),"D":(0,1)}[side]
         return door,(x+dx,y+dy) if outward else door
+    @staticmethod
+    def _record_exit(r,p):
+        exits=getattr(r,"exits",None)
+        if exits is None:
+            r.exits=[]
+            exits=r.exits
+        if p not in exits:
+            exits.append(p)
     @staticmethod
     def _passage_side_point(r,side):
         if side=="L": return r.x,r.cy
@@ -1081,6 +1092,25 @@ class DGen:
         return r.cx,r.y+r.h-1
     @staticmethod
     def _maze_exit(t,r,side):
+        # Rogue 5.4.4 passages.c:conn() retries random side-wall
+        # coordinates until an ISMAZE room coordinate already has F_PASS.
+        if side in ("L","R"):
+            limit = max(1, r.h - 2)
+            x = r.x if side == "L" else r.x + r.w - 1
+            for _ in range(limit * 4):
+                y = r.y + RNG.rnd(limit) + 1
+                if in_play_area(x,y) and t[y][x] == T_CORR:
+                    DGen._corr(t,(x,y))
+                    return (x,y)
+        else:
+            limit = max(1, r.w - 2)
+            y = r.y if side == "U" else r.y + r.h - 1
+            for _ in range(limit * 4):
+                x = r.x + RNG.rnd(limit) + 1
+                if in_play_area(x,y) and t[y][x] == T_CORR:
+                    DGen._corr(t,(x,y))
+                    return (x,y)
+
         if side in ("L","R"):
             xs=range(r.x+1,r.x+r.w-1)
             target_x = r.x if side=="L" else r.x+r.w-1
@@ -2032,7 +2062,7 @@ class Game:
             if r: return r
         return None
     def room_exits(self,room):
-        exits=[]
+        exits=list(getattr(room,"exits",[]))
         for x in range(room.x,room.x+room.w):
             for y in (room.y,room.y+room.h-1):
                 if self.is_passage_exit_cell(x,y):

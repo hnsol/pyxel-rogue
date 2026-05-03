@@ -8501,6 +8501,41 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
         self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
 
+    def test_rogue544_passage_conn_maze_exit_uses_wall_rnd_retry(self):
+        # Rogue 5.4.4 passages.c:conn() retries rnd(room size - 2) wall positions
+        # while an ISMAZE room side coordinate is not F_PASS.
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        tm[maze.y + 2][maze.x + maze.w - 1] = rogue.T_CORR
+        rnd_values = iter([0, 1])
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: next(rnd_values)
+            rogue.RNG.choice = lambda seq: (_ for _ in ()).throw(AssertionError("choice used"))
+
+            self.assertEqual(rogue.DGen._maze_exit(tm, maze, "R"), (maze.x + maze.w - 1, maze.y + 2))
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
+    def test_rogue544_passage_conn_records_maze_room_exit_for_ai(self):
+        # Rogue 5.4.4 passages.c:door() records room.r_exit before returning for ISMAZE.
+        game = new_game(seed=524)
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [maze]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[maze.y + 2][maze.x + maze.w - 1] = rogue.T_CORR
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+
+            rogue.DGen._exit(game.tm, maze, "R")
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn((maze.x + maze.w - 1, maze.y + 2), game.room_exits(maze))
+
     def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
         random.seed(0)
         _tm, rooms = rogue.DGen.gen(depth=1)
