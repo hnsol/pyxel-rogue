@@ -535,10 +535,8 @@ function dummyValue(period, key, offset, salt, max) {
 }
 
 function dummyScore(period, key, offset, targetCount) {
-  if (period === "weekly") {
-    return 900 + dummyValue(period, key, offset, "score", 600);
-  }
-  return 80 + dummyValue(period, key, offset, "score", 950);
+  const depth = dummyDepth(period, key, offset);
+  return depth * 70 + dummyValue(period, key, offset, "score", 351);
 }
 
 function dummyDepth(period, key, offset) {

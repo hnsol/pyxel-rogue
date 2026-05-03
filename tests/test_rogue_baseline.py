@@ -9936,6 +9936,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn('if (period === "weekly")', script)
         self.assertIn("dummyDepth(period, key, i)", script)
         self.assertIn('dummyValue(period, key, offset, "depth", 16)', script)
+        self.assertIn("const depth = dummyDepth(period, key, offset)", script)
+        self.assertIn('return depth * 70 + dummyValue(period, key, offset, "score", 351)', script)
         self.assertIn("dummyKiller(period, key, i)", script)
         self.assertIn("function dummyKillersForDepth(depth)", script)
         killers = script[script.index("function dummyKillersForDepth"):]
