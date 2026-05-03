@@ -10323,7 +10323,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_LOCAL)
         self.assertFalse(game.online_sync_pending)
 
-    def test_title_online_ranking_entry_starts_first_authenticated_sync(self):
+    def test_title_online_ranking_entry_does_not_start_first_authenticated_sync(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_TITLE
@@ -10336,7 +10336,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
         self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_LOCAL)
-        self.assertTrue(game.online_sync_pending)
+        self.assertFalse(game.online_sync_pending)
 
     def test_logo_enters_online_confirm_after_logo_when_profile_missing(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -10682,7 +10682,50 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
         self.assertFalse(game.online_sync_pending)
-        self.assertIn("Already synced", game.online_sync_result)
+        self.assertEqual(getattr(game, "online_sync_result", ""), "")
+
+    def test_online_score_select_with_cooldown_loads_scoreboard_without_post(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_period = rogue.SCOREBOARD_PERIOD_LOCAL
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.online_sync_pending = False
+        game.online_syncing = False
+        game.online_sync_wait = 0
+        game.online_profile = {
+            "user_name": "ace",
+            "local_only": False,
+            "server_token": "tok",
+            "next_sync_at": "2999-01-01T00:00:00Z",
+        }
+        loaded = []
+        old_sync = rogue.sync_online_scoreboard
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [{"score": 42, "player_name": "ace", "period_week": "2026-W18"}]
+            rogue.sync_online_scoreboard = lambda profile, entries: self.fail("cooldown select must not POST sync")
+            game.load_online_period_scores = lambda period, force=False: loaded.append((period, force)) or []
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_TAB}, pressed={rogue.pyxel.KEY_TAB})
+            game.update()
+            rogue.pyxel.set_input()
+            game.update()
+            rogue.pyxel.set_input()
+            game.update()
+            rogue.pyxel.set_input()
+            game.update()
+        finally:
+            rogue.sync_online_scoreboard = old_sync
+            rogue.load_score_entries = old_load
+
+        self.assertEqual(loaded, [
+            (rogue.SCOREBOARD_PERIOD_WEEKLY, True),
+            (rogue.SCOREBOARD_PERIOD_SEASON, True),
+        ])
+        self.assertEqual(game.online_sync_result, "Score sync available later. Ranking updated.")
 
     def test_online_score_screen_cancel_is_safe_before_new_game_initializes_input_guards(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -10830,7 +10873,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.sync_online_scoreboard = old_sync
             rogue.load_score_entries = old_load
 
-        self.assertEqual(game.online_sync_result, "No local scores yet.")
+        self.assertEqual(game.online_sync_result, "Ranking updated. No local scores yet.")
         self.assertEqual(loaded, [(rogue.SCOREBOARD_PERIOD_WEEKLY, True)])
 
     def test_online_scoreboard_load_failure_does_not_overwrite_sync_success(self):
@@ -10855,6 +10898,30 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.online_sync_result, "Score synced.")
         self.assertEqual(game.online_score_load_result, "Could not load scoreboard.")
+
+    def test_online_score_server_cooldown_loads_scoreboard_without_sync_success(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_WEEKLY]
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        loaded = []
+        old_sync = rogue.sync_online_scoreboard
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [{"score": 42, "player_name": "ace", "period_week": "2026-W18"}]
+            rogue.sync_online_scoreboard = lambda profile, entries: {"ok": False, "status": "cooldown"}
+            game.load_online_period_scores = lambda period, force=False: loaded.append((period, force)) or []
+
+            game.perform_online_scoreboard_sync()
+        finally:
+            rogue.sync_online_scoreboard = old_sync
+            rogue.load_score_entries = old_load
+
+        self.assertEqual(game.online_sync_result, "Score sync available later. Ranking updated.")
+        self.assertEqual(loaded, [(rogue.SCOREBOARD_PERIOD_WEEKLY, True)])
 
     def test_online_score_tabs_do_not_sync_and_refresh_syncs_all_periods(self):
         game = rogue.Game.__new__(rogue.Game)
