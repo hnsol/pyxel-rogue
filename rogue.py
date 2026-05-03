@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1616"
+UI_BUILD = "260503_1626"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1665,11 +1665,25 @@ class Game:
         self.visible=set(); self.explored=set()
         self.seen_stairs = False
         self.wander_timer=self.fuses.remaining("swander")
-        px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
-        self.p.x,self.p.y = px,py
-        sr=RNG.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
         self._spawn_room_gold(); self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
         self._hide_secret_features(); self._spawn_traps()
+        stair_pos = self.find_floor_pos(
+            None,
+            monst=False,
+            occupied={(i.x,i.y) for i in self.gitems},
+        )
+        if stair_pos is None:
+            stair_pos = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
+        sx,sy=stair_pos
+        self.tm[sy][sx]=T_STAIR
+        hero_pos = self.find_floor_pos(
+            None,
+            monst=True,
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
+        )
+        if hero_pos is None:
+            hero_pos = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
+        self.p.x,self.p.y = hero_pos
         self._center_cam(); self.update_fov()
 
     def usable_rooms(self):

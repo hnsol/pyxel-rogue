@@ -366,6 +366,33 @@ class RogueBaselineTest(unittest.TestCase):
             for x, y in game.traps:
                 self.assert_in_rogue_544_play_area(x, y)
 
+    def test_rogue544_new_level_places_traps_stairs_then_hero_after_objects(self):
+        # Rogue 5.4.4 new_level.c:new_level() runs put_things(), traps, stairs, then hero.
+        game = new_game(seed=35)
+        order = []
+        positions = [(5, 5), (6, 5)]
+
+        game._spawn_room_gold = lambda: order.append("room_gold")
+        game._spawn_mons = lambda: order.append("room_monsters")
+        game._spawn_items = lambda: order.append("put_things")
+        game._spawn_amulet = lambda: order.append("amulet")
+        game._hide_secret_features = lambda: None
+        game._spawn_traps = lambda: order.append("traps")
+
+        def fake_find_floor_pos(room=None, limit=0, monst=False, **kwargs):
+            order.append("hero" if monst else "stairs")
+            return positions.pop(0)
+
+        game.find_floor_pos = fake_find_floor_pos
+        game.descend()
+
+        self.assertEqual(
+            order,
+            ["room_gold", "room_monsters", "put_things", "amulet", "traps", "stairs", "hero"],
+        )
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertEqual(game.tm[5][5], rogue.T_STAIR)
+
     def test_rogue_544_stick_table_materials_and_names_audit(self):
         # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
         import rogue_sticks
