@@ -10017,6 +10017,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.st = rogue.ST_TITLE
         game.title_cursor = 2
         game.player_name = "ACE"
+        game.online_profile = {"user_id": "ace", "display_name": "ACE", "local_only": True}
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
