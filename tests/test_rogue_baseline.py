@@ -8536,6 +8536,26 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn((maze.x + maze.w - 1, maze.y + 2), game.room_exits(maze))
 
+    def test_rogue544_maze_room_uses_even_rnd_start_not_choice(self):
+        # Rogue 5.4.4 rooms.c:do_maze() starts at (rnd(r_max)/2)*2 from room origin.
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_FLOOR for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        values = iter([0, 0, 0, 1])
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: next(values, 0)
+            rogue.RNG.choice = lambda seq: (_ for _ in ()).throw(AssertionError("choice used"))
+
+            rogue.DGen._maze_room(tm, maze)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
+        self.assertEqual(tm[maze.y][maze.x], rogue.T_CORR)
+        self.assertEqual(tm[maze.y + 1][maze.x], rogue.T_CORR)
+        self.assertEqual(tm[maze.y + 2][maze.x], rogue.T_CORR)
+
     def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
         random.seed(0)
         _tm, rooms = rogue.DGen.gen(depth=1)

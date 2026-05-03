@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1515"
+UI_BUILD = "260503_1527"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1015,30 +1015,48 @@ class DGen:
             for x in range(r.x,r.x+r.w):
                 if in_play_area(x,y):
                     t[y][x]=T_VOID
-        cells=[
-            (x,y)
-            for y in range(r.y+1,r.y+r.h-1,2)
-            for x in range(r.x+1,r.x+r.w-1,2)
-        ]
-        if not cells:
+        if r.w <= 0 or r.h <= 0:
             return
-        start=RNG.choice(cells)
-        t[start[1]][start[0]]=T_CORR
-        seen={start}; stack=[start]
-        while stack:
-            x,y=stack[-1]
-            nxt=[]
-            for dx,dy in ((2,0),(-2,0),(0,2),(0,-2)):
-                nx,ny=x+dx,y+dy
-                if r.x<nx<r.x+r.w-1 and r.y<ny<r.y+r.h-1 and (nx,ny) not in seen:
-                    nxt.append((nx,ny,dx,dy))
-            if not nxt:
-                stack.pop()
-                continue
-            nx,ny,dx,dy=RNG.choice(nxt)
-            t[y+dy//2][x+dx//2]=T_CORR
-            t[ny][nx]=T_CORR
-            seen.add((nx,ny)); stack.append((nx,ny))
+        max_y=r.h-1
+        max_x=r.w-1
+        start_y=(RNG.rnd(r.h)//2)*2
+        start_x=(RNG.rnd(r.w)//2)*2
+
+        def put(oy,ox):
+            x,y=r.x+ox,r.y+oy
+            if in_play_area(x,y):
+                t[y][x]=T_CORR
+
+        def is_pass(oy,ox):
+            x,y=r.x+ox,r.y+oy
+            return in_play_area(x,y) and t[y][x]==T_CORR
+
+        def dig(oy,ox):
+            # Rogue 5.4.4 rooms.c:dig() uses reservoir choice via rnd(++cnt).
+            while True:
+                cnt=0
+                picked=None
+                for dy,dx in ((2,0),(-2,0),(0,2),(0,-2)):
+                    ny,nx=oy+dy,ox+dx
+                    if ny < 0 or ny > max_y or nx < 0 or nx > max_x:
+                        continue
+                    if is_pass(ny,nx):
+                        continue
+                    cnt+=1
+                    if RNG.rnd(cnt)==0:
+                        picked=(ny,nx)
+                if picked is None:
+                    return
+                ny,nx=picked
+                if ny==oy:
+                    put(oy, nx + 1 if nx - ox < 0 else nx - 1)
+                else:
+                    put(ny + 1 if ny - oy < 0 else ny - 1, ox)
+                put(ny,nx)
+                dig(ny,nx)
+
+        put(start_y,start_x)
+        dig(start_y,start_x)
     @staticmethod
     def _conn(t,r1,r2,horiz=None):
         """Connect two rooms by choosing wall doors first, like Rogue's conn()."""
