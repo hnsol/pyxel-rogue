@@ -13350,6 +13350,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_chase.confusion_clears_after_random_move(0, rng.rnd))
         self.assertEqual(rng.calls, [20])
 
+    def test_rogue_544_confused_chase_rndmove_uses_winat_for_item_disguised_xeroc(self):
+        # Rogue 5.4.4 move.c:rndmove() uses winat()/step_ok() and does not apply chase.c's Xeroc moat skip.
+        game = new_game(seed=524)
+        set_open_floor(game)
+        game.p.x, game.p.y = 20, 20
+        monster = monster_at(5, 5)
+        monster.confused = 1
+        xeroc = monster_at(6, 5, "X", "xeroc")
+        xeroc.disguise = "?"
+        game.mons = [monster, xeroc]
+        rng = SequenceRng([1, 1, 2, 1])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.chase(monster, (10, 5))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(rng.calls, [5, 3, 3, 20])
+        self.assertEqual((monster.x, monster.y), (6, 5))
+        self.assertEqual(xeroc.disguise, "?")
+
     def test_rogue_544_chase_helper_choose_chase_step_matches_tie_roll(self):
         # Rogue 5.4.4 chase.c:chase() replaces equal-distance candidates only when rnd(++plcnt)==0.
         import rogue_chase
