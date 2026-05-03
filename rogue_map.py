@@ -17,10 +17,10 @@ TILE_CH = {
     T_VOID:  (" ",  0),
     T_FLOOR: (".", 12),
     T_HWALL: ("-",  4),
-    T_VWALL: ("|",  3),
+    T_VWALL: ("|",  4),
     T_DOOR:  ("+", 18),
     T_CORR:  ("#",  5),
-    T_STAIR: ("%", 29),
+    T_STAIR: ("%", 18),
     T_TRAP:  ("^", 28),
 }
 MEMORY_TILE_COLOR = 2

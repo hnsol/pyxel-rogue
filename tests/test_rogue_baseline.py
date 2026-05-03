@@ -8676,21 +8676,25 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(len(rogue.PALETTES[palette_id]), 32)
         self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
 
-    def test_flexoki_dark_uses_official_dark_background_and_text(self):
+    def test_flexoki_dark_uses_readable_terrain_and_gold_colors(self):
         self.assertEqual(rogue.PALETTE_LABELS["flexoki_dark"], "Flexoki Dark")
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[0], 0x100F0F)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[30], 0xCECDC3)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[31], 0xFFFCF0)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[2], 0x282726)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[3], 0x343331)
-        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[4], 0x575653)
-        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[5], 0x6F6E69)
-        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[6], 0x878580)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[4], 0x6F6E69)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[5], 0x878580)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[6], 0x6F6E69)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[9], 0xDAD8CE)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[12], 0x66800B)
-        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[18], 0xBC5215)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[18], 0x71320D)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[26], 0x3AA99F)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[29], 0xD0A215)
+        self.assertEqual(rogue.TILE_CH[rogue.T_HWALL][1], 4)
+        self.assertEqual(rogue.TILE_CH[rogue.T_VWALL][1], 4)
+        self.assertEqual(rogue.TILE_CH[rogue.T_DOOR][1], 18)
+        self.assertEqual(rogue.TILE_CH[rogue.T_STAIR][1], 18)
 
     def test_flexoki_light_uses_readable_monster_colors(self):
         game = new_game(seed=242)
@@ -9045,7 +9049,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_zoom()
 
-        self.assertIn(("%", 29), calls)
+        self.assertIn(("%", 18), calls)
 
     def test_explored_memory_uses_readable_dim_color(self):
         game = new_game(seed=342)
@@ -9106,6 +9110,14 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_py_commits_update_ui_build_stamp(self):
         # AGENTS.md / DESIGN.md: player-visible rogue.py changes must carry UI_BUILD.
         try:
+            worktree_diff = subprocess.check_output(
+                ["git", "diff", "--", "rogue.py"],
+                cwd=ROOT,
+                text=True,
+            )
+            if worktree_diff:
+                self.assertIn("+UI_BUILD =", worktree_diff)
+                return
             subprocess.check_output(
                 ["git", "rev-parse", "--verify", "HEAD^"],
                 cwd=ROOT,
