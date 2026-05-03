@@ -13247,6 +13247,50 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertEqual((monster.x, monster.y), (7, 5))
 
+    def test_rogue_544_move_wakes_monsters_visible_before_command(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before move.c:do_move().
+        game = new_game(seed=5011)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 6, 5
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.update_fov()
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.try_move(-1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (6, 5))
+
+    def test_rogue_544_move_does_not_wake_newly_visible_monster_until_next_command(self):
+        # Rogue 5.4.4 move.c:do_move() does not call look(TRUE) after hero movement.
+        game = new_game(seed=5012)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.update_fov()
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.try_move(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(monster.running)
+        self.assertEqual((monster.x, monster.y), (7, 5))
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)

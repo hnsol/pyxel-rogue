@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0836"
+UI_BUILD = "260504_0841"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3875,6 +3875,7 @@ class Game:
         p = self.p
         if p.held_by and not p.held_by.alive:
             p.held_by=None
+        self.wake_visible_monsters()
         if p.no_move>0:
             p.no_move-=1
             self.msg("move.you_are_still_stuck_in_the_bear_trap")
@@ -3931,7 +3932,7 @@ class Game:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
                 self.msg("pyxel.see_item_here", item=self.ident.name(gi))
-            self.update_fov(); self.wake_visible_monsters()
+            self.update_fov()
             self.update_cam(); self.end_turn(); return True
         return False
 
