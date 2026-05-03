@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1210"
+UI_BUILD = "260503_1348"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1390,9 +1390,27 @@ class Game:
         return self.random_thing_sym()
 
     def visible_tile_sym(self, x, y, tile):
-        if self.p.hallucinating > 0 and tile == T_STAIR:
+        # Rogue 5.4.4 misc.c:trip_ch() keeps STAIRS real after seenstairs is set.
+        if self.p.hallucinating > 0 and tile == T_STAIR and not getattr(self, "seen_stairs", False):
             return self.hallucination_thing_sym()
         return TILE_CH.get(tile, (" ", 0))[0]
+
+    def stairs_seen_on_map(self):
+        # Rogue 5.4.4 potions.c:seen_stairs().
+        if self.tm[self.p.y][self.p.x] == T_STAIR:
+            return True
+        for y, row in enumerate(self.tm):
+            for x, tile in enumerate(row):
+                if tile == T_STAIR and ((x, y) in self.visible or (x, y) in self.explored):
+                    return True
+        for monster in self.mons:
+            if not getattr(monster, "alive", False) or self.tm[monster.y][monster.x] != T_STAIR:
+                continue
+            if self.monster_is_seen(monster) and getattr(monster, "running", False):
+                return True
+            if self.can_detect_monsters():
+                return True
+        return False
 
     def visible_item_sym(self, item):
         if self.p.hallucinating > 0:
@@ -1482,6 +1500,7 @@ class Game:
         self.options = {"tombstone": True, "name": self.player_name}
         self.max_depth = 0
         self.no_food = 0
+        self.seen_stairs = False
         self.wander_timer = 0
         self.wander_between = 0
         self.delayed_actions = rogue_daemons.DelayedActionTable()
@@ -1615,6 +1634,7 @@ class Game:
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
+        self.seen_stairs = False
         self.wander_timer=self.fuses.remaining("swander")
         px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = px,py
@@ -2702,6 +2722,7 @@ class Game:
             if rogue_potions.do_pot_fuse_action(p.hallucinating > 0) == "lengthen":
                 self.fuses.lengthen("come_down", duration)
             else:
+                self.seen_stairs = self.stairs_seen_on_map()
                 if p.see_monsters > 0:
                     p.see_monsters = rogue_potions.turn_see_state(False, p.see_monsters)
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
@@ -3717,6 +3738,8 @@ class Game:
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
             p.x, p.y = nx, ny
+            if self.tm[ny][nx] == T_STAIR:
+                self.seen_stairs = True
             trapped = (nx,ny) in self.traps
             if trapped and p.levitating <= 0:
                 self.trigger_trap(nx,ny)

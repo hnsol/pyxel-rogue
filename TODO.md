@@ -379,6 +379,7 @@
   - [x] Rogue 5.4.4 `potions.c:P_SEEINVIS` の potion duration と ring-only `CANSEE` 分岐を `rogue_potions.py` へ小分割
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_LSD` 準拠で、`turn_see(FALSE)` 時に monster detection 表示を維持
+  - [x] Rogue 5.4.4 `potions.c:seen_stairs()` / `misc.c:trip_ch()` 準拠で、既知の階段は hallucination 中も実階段表示にする
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続

@@ -5134,6 +5134,50 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.rnd = old_rnd
 
+    def test_rogue_544_hallucination_keeps_seen_stairs_real(self):
+        # Rogue 5.4.4 misc.c:trip_ch() leaves STAIRS real while ISHALU if seenstairs is true.
+        game = new_game(seed=3162)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_STAIR
+        game.p.hallucinating = 10
+        game.seen_stairs = True
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            self.assertEqual(game.visible_tile_sym(px + 1, py, rogue.T_STAIR), rogue.TILE_CH[rogue.T_STAIR][0])
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+    def test_rogue_544_stepping_on_stairs_marks_seenstairs_and_new_level_resets_it(self):
+        # Rogue 5.4.4 move.c:do_move() sets seenstairs on STAIRS; new_level.c:new_level() clears it.
+        game = new_game(seed=3163)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_STAIR
+        game.seen_stairs = False
+
+        game.try_move(1, 0)
+        self.assertTrue(game.seen_stairs)
+
+        game.descend()
+        self.assertFalse(game.seen_stairs)
+
+    def test_rogue_544_hallucination_potion_records_seen_stairs(self):
+        # Rogue 5.4.4 potions.c:P_LSD records seenstairs = seen_stairs() before visuals starts.
+        game = new_game(seed=3164)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_STAIR
+        game.visible.add((px + 1, py))
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+
+        game.use_pot(rogue.Item(rogue.CAT_POT, potion_kind))
+
+        self.assertTrue(game.seen_stairs)
+        self.assertEqual(game.visible_tile_sym(px + 1, py, rogue.T_STAIR), rogue.TILE_CH[rogue.T_STAIR][0])
+
     def test_rogue_544_xeroc_new_monster_uses_rnd_thing_disguise(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets X t_disguise = misc.c:rnd_thing().
         game = new_game(seed=306)
