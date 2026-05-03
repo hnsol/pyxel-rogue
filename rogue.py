@@ -129,6 +129,8 @@ from rogue_scores import (
     SCOREBOARD_PERIOD_LOCAL,
     SCOREBOARD_PERIOD_SEASON,
     SCOREBOARD_PERIOD_WEEKLY,
+    USER_NAME_MAX,
+    check_online_user,
     fetch_online_scores,
     fetch_online_rank,
     build_score_entry,
@@ -201,6 +203,8 @@ from rogue_ui import (
     ST_ONLINE_SCORE,
     ST_ONLINE_REGISTER,
     ST_ONLINE_PIN,
+    ST_ONLINE_CONFIRM,
+    ST_ONLINE_LOCAL_CONFIRM,
     ST_PLAY,
     ST_QUIT,
     ST_QUIT_CONFIRM,
@@ -211,10 +215,68 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_0955"
+UI_BUILD = "260503_1210"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
+ONLINE_UI_TEXT = {
+    LANG_EN: {
+        "confirm_title": "Online Scoreboard",
+        "confirm_prompt": "Register a name for online scores?",
+        "confirm_register": "A/Start register",
+        "confirm_local": "B local only",
+        "confirm_mark": "Local-only names show a trailing *.",
+        "register_title": "Online Registration",
+        "register_prompt": "Register an 8-char lowercase name.",
+        "register_cancel": "B cancels.",
+        "register_local": "B keeps local-only mode. Local names show *.",
+        "register_hint": "A NEXT/END  START OK  B LOCAL ONLY",
+        "register_cancel_hint": "A NEXT/END  START OK  B CANCEL",
+        "local_confirm_title": "Local Only",
+        "local_confirm_prompt": "Save this name for local play only?",
+        "local_confirm_ok": "A/Start save local-only",
+        "local_confirm_cancel": "B cancel",
+        "pin_title": "6-Digit PIN",
+        "pin_server": "This PIN is stored on the server",
+        "pin_reuse": "without encryption. Do not reuse it.",
+        "pin_hint": "A NEXT/END  START OK  B BACK",
+        "sync_title": "sync",
+        "checking user...": "checking user...",
+        "registering user...": "registering user...",
+        "linking user...": "linking user...",
+        "posting local scores...": "posting local scores...",
+        "loading scoreboard...": "loading scoreboard...",
+        "searching scoreboard...": "searching scoreboard...",
+    },
+    LANG_JA: {
+        "confirm_title": "オンラインスコア",
+        "confirm_prompt": "オンラインスコアに名前を登録しますか?",
+        "confirm_register": "A/Start 登録",
+        "confirm_local": "B ローカルのみ",
+        "confirm_mark": "ローカル名には * が付きます。",
+        "register_title": "オンライン登録",
+        "register_prompt": "8文字の小文字名を登録し、通信で確認します。",
+        "register_cancel": "B キャンセル",
+        "register_local": "Bでローカルのみ。ローカル名は * 付き。",
+        "register_hint": "A 次/END  START 決定  B ローカルのみ",
+        "register_cancel_hint": "A 次/END  START 決定  B キャンセル",
+        "local_confirm_title": "ローカル専用",
+        "local_confirm_prompt": "この名前をローカル専用で保存しますか?",
+        "local_confirm_ok": "A/Start 保存",
+        "local_confirm_cancel": "B キャンセル",
+        "pin_title": "6桁PIN",
+        "pin_server": "PINはサーバに平文保存されます。",
+        "pin_reuse": "他の場所のパスワードを使わないでください。",
+        "pin_hint": "A 次/END  START 決定  B 戻る",
+        "sync_title": "通信",
+        "checking user...": "ユーザを確認中...",
+        "registering user...": "登録通信中...",
+        "linking user...": "リンク通信中...",
+        "posting local scores...": "ローカルスコア送信中...",
+        "loading scoreboard...": "スコアボード読込中...",
+        "searching scoreboard...": "スコアボード検索中...",
+    },
+}
 SCOREBOARD_HILITE_COL = 23
 SCOREBOARD_TEXT_COL = 30
 SCOREBOARD_DIM_COL = 30
@@ -1165,11 +1227,8 @@ class Game:
         pyxel.run(self.update, self.draw)
 
     def init_frontend_state(self):
-        default_name = os.environ.get("USER", "rogue54")
         self.online_profile = load_online_profile()
-        self.player_name = load_player_name(default_name).lower()
-        if self.online_profile.get("display_name"):
-            self.player_name = self.online_profile["display_name"]
+        self.player_name = self.online_profile.get("user_name", "rogue54")
         self.title_cursor = 0
         self.name_chars = list(self.player_name[:8])
         self.name_pos = min(len(self.name_chars), 7)
@@ -1189,8 +1248,8 @@ class Game:
         self.online_sync_result = ""
         self.online_register_prompt = False
         self.online_password_chars = []
-        self.online_pending_user_id = ""
-        self.online_pending_display_name = ""
+        self.online_pending_user_name = ""
+        self.online_original_user_name = ""
         self.online_password_mode = "register"
         self.online_return_state = ST_TITLE
         self.title_bg = None
@@ -1249,6 +1308,14 @@ class Game:
         self.title_fade_frames = 0
         self.st = ST_TITLE
 
+    def enter_post_logo(self):
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        if not profile.get("profile_exists", False):
+            self.apply_palette()
+            self.st = ST_ONLINE_CONFIRM
+            return
+        self.enter_title_screen()
+
     def ensure_settings(self):
         if "settings" not in self.__dict__:
             self.settings = Settings()
@@ -1280,9 +1347,11 @@ class Game:
     def apply_palette_values(self, palette):
         if not hasattr(pyxel, 'colors'):
             return
-        color_count = len(pyxel.colors)
-        for i, rgb in enumerate(palette[:color_count]):
-            pyxel.colors[i] = rgb
+        for i, rgb in enumerate(palette):
+            if i < len(pyxel.colors):
+                pyxel.colors[i] = rgb
+            elif hasattr(pyxel.colors, "append"):
+                pyxel.colors.append(rgb)
 
     def run_step_interval(self):
         return DASH_INTERVAL if self.ensure_settings().show_run_steps else 1
@@ -1291,21 +1360,21 @@ class Game:
         if "online_profile" not in self.__dict__:
             return str(getattr(self, "player_name", "rogue54"))[:16] or "rogue54"
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        if profile.get("display_name"):
-            return display_score_name(profile, profile.get("local_only", True))
+        if profile.get("user_name"):
+            return display_score_name(profile)
         return str(getattr(self, "player_name", "rogue54"))[:16] or "rogue54"
 
     def current_user_id(self):
         if "online_profile" not in self.__dict__:
             return sanitize_user_id(getattr(self, "player_name", "rogue54"))
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        return sanitize_user_id(profile.get("user_id") or getattr(self, "player_name", "rogue54"))
+        return sanitize_user_id(profile.get("user_name") or getattr(self, "player_name", "rogue54"))
 
     def current_score_player_name(self):
         if "online_profile" not in self.__dict__:
             return str(getattr(self, "player_name", "rogue54"))[:16]
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        return str(profile.get("display_name") or getattr(self, "player_name", "rogue54"))[:16]
+        return str(profile.get("user_name") or getattr(self, "player_name", "rogue54"))[:16]
 
     def monster_color(self, sym):
         overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
@@ -4704,11 +4773,62 @@ class Game:
             self.online_sync_status = ""
         if not hasattr(self, "online_sync_result"):
             self.online_sync_result = ""
+        if not hasattr(self, "online_score_load_result"):
+            self.online_score_load_result = ""
         if not hasattr(self, "online_register_prompt"):
             self.online_register_prompt = False
+        if not hasattr(self, "online_pending_action"):
+            self.online_pending_action = ""
+        if not hasattr(self, "online_pending_wait"):
+            self.online_pending_wait = 0
+
+    def online_text(self, key):
+        lang = self.lang if getattr(self, "lang", LANG_EN) in (LANG_EN, LANG_JA) else LANG_EN
+        table = ONLINE_UI_TEXT.get(lang, ONLINE_UI_TEXT[LANG_EN])
+        return table.get(key, ONLINE_UI_TEXT[LANG_EN].get(key, key))
+
+    def online_sync_due(self, profile):
+        next_sync = str(normalize_online_profile(profile).get("next_sync_at", ""))
+        if not next_sync:
+            return True
+        try:
+            due = datetime.fromisoformat(next_sync.replace("Z", "+00:00"))
+        except ValueError:
+            return True
+        if due.tzinfo is None:
+            due = due.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) >= due.astimezone(timezone.utc)
+
+    def schedule_online_action(self, action):
+        self.ensure_online_score_state()
+        self.online_pending_action = action
+        self.online_pending_wait = 0
+
+    def run_pending_online_action(self):
+        self.ensure_online_score_state()
+        action = getattr(self, "online_pending_action", "")
+        if not action:
+            return False
+        if getattr(self, "online_pending_wait", 0) > 0:
+            self.online_pending_wait -= 1
+            return True
+        self.online_pending_action = ""
+        if action == "check_user":
+            self.perform_online_user_check()
+        elif action in ("register_user", "link_user"):
+            self.perform_online_password_submit(action)
+        return True
 
     def request_online_period_scores(self, force=False):
         self.ensure_online_score_state()
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        if not self.online_sync_due(profile):
+            self.online_sync_result = "Already synced today."
+            self.online_sync_pending = False
+            self.online_syncing = False
+            self.online_sync_wait = 0
+            self.online_sync_periods = []
+            return False
         periods = [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]
         if force:
             self.online_score_loaded.difference_update(periods)
@@ -4717,8 +4837,9 @@ class Game:
         self.online_sync_wait = 1
         self.online_sync_force = bool(force)
         self.online_sync_periods = periods
-        self.online_sync_status = "searching scoreboard..."
+        self.online_sync_status = "loading scoreboard..."
         self.online_sync_result = ""
+        return True
 
     def cancel_online_sync(self):
         self.ensure_online_score_state()
@@ -4735,66 +4856,115 @@ class Game:
         if submit_online_score(entry):
             self.result_online_submitted = True
 
-    def enter_online_register(self):
+    def enter_online_register(self, reset_to_default=False):
         self.apply_palette()
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        self.online_pending_user_id = profile.get("user_id", "rogue54")
-        self.online_pending_display_name = profile.get("display_name", self.online_pending_user_id)
-        self.name_chars = list(self.online_pending_user_id[:16])
-        self.name_pos = min(len(self.name_chars), 15)
+        user_name = "rogue54" if reset_to_default else profile.get("user_name", "rogue54")
+        self.online_pending_user_name = user_name
+        self.online_original_user_name = user_name
+        self.name_chars = list(user_name[:USER_NAME_MAX])
+        self.name_pos = min(len(self.name_chars), USER_NAME_MAX - 1)
         self.online_sync_result = ""
+        self.online_sync_status = ""
         self.st = ST_ONLINE_REGISTER
 
     def confirm_online_user_id(self):
-        user_id = sanitize_user_id("".join(getattr(self, "name_chars", [])))
-        if not can_register_user_id(user_id):
-            self.online_sync_result = "That name is reserved."
+        user_name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
+        if not can_register_user_id(user_name):
+            self.online_sync_result = "That user name is already registered."
             return
-        self.online_pending_user_id = user_id
-        self.online_pending_display_name = user_id
+        self.online_pending_user_name = user_name
+        self.online_sync_status = "checking user..."
+        self.online_sync_result = ""
+        self.schedule_online_action("check_user")
+
+    def perform_online_user_check(self):
+        user_name = getattr(self, "online_pending_user_name", "rogue54")
+        result = check_online_user(user_name)
+        if not result.get("ok"):
+            self.online_sync_result = "Could not check user. Try again."
+            return
         self.online_password_chars = ["0"] * 6
         self.name_pos = 0
-        self.online_password_mode = "register"
+        self.online_password_mode = "link" if result.get("exists") else "register"
         self.online_sync_result = ""
         self.st = ST_ONLINE_PIN
 
     def save_local_only_online_profile(self):
-        user_id = sanitize_user_id("".join(getattr(self, "name_chars", [])) or self.current_user_id())
-        self.online_profile = save_local_only_profile(user_id, user_id)
-        self.player_name = self.online_profile["display_name"]
+        user_name = sanitize_user_id("".join(getattr(self, "name_chars", [])) or self.current_user_id())
+        self.online_profile = save_local_only_profile(user_name)
+        self.player_name = self.online_profile["user_name"]
         self.online_register_prompt = False
         self.st = ST_ONLINE_SCORE
 
-    def finish_online_password(self):
-        pin = "".join(getattr(self, "online_password_chars", []))
-        user_id = getattr(self, "online_pending_user_id", "rogue54")
-        display_name = getattr(self, "online_pending_display_name", user_id)
-        self.online_sync_status = "registering user..."
-        if getattr(self, "online_password_mode", "register") == "link":
-            result = link_online_user(user_id, pin)
+    def online_register_name_changed(self):
+        current = sanitize_user_id("".join(getattr(self, "name_chars", [])))
+        original = sanitize_user_id(getattr(self, "online_original_user_name", current))
+        return current != original
+
+    def cancel_or_confirm_local_only_name(self):
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        if profile.get("local_only", True):
+            self.save_local_only_online_profile()
+        elif self.online_register_name_changed():
+            self.st = ST_ONLINE_LOCAL_CONFIRM
         else:
-            result = register_online_user(user_id, display_name, pin)
+            self.enter_title_screen()
+
+    def upd_online_local_confirm(self):
+        if self.btn_a() or self.btn_start_tap():
+            self.save_local_only_online_profile()
+            return
+        if self.btn_b() or self.btn_back():
+            self.st = ST_ONLINE_REGISTER
+            return
+
+    def decline_online_registration(self):
+        self.online_profile = save_local_only_profile("rogue54")
+        self.player_name = self.online_profile["user_name"]
+        self.online_register_prompt = False
+        self.enter_title_screen()
+
+    def finish_online_password(self):
+        if getattr(self, "online_password_mode", "register") == "link":
+            self.online_sync_status = "linking user..."
+            self.schedule_online_action("link_user")
+        else:
+            self.online_sync_status = "registering user..."
+            self.schedule_online_action("register_user")
+        self.online_sync_result = ""
+
+    def perform_online_password_submit(self, action):
+        pin = "".join(getattr(self, "online_password_chars", []))
+        user_name = getattr(self, "online_pending_user_name", "rogue54")
+        if action == "link_user":
+            result = link_online_user(user_name, pin)
+        else:
+            result = register_online_user(user_name, pin)
             if result.get("status") in ("exists", "name_used"):
                 self.online_password_mode = "link"
-                self.online_sync_result = "Name exists. Enter its 6 digit password."
+                self.online_sync_result = "Name exists. Enter its 6-digit PIN."
                 return
         if result.get("ok"):
             self.online_profile = save_online_profile({
-                "user_id": user_id,
-                "display_name": result.get("display_name", display_name),
+                "user_name": result.get("user_name", user_name),
                 "local_only": False,
                 "server_token": result.get("server_token", ""),
                 "last_sync_at": result.get("last_sync_at", ""),
                 "next_sync_at": result.get("next_sync_at", ""),
+                "profile_exists": True,
             })
-            self.player_name = self.online_profile["display_name"]
+            self.player_name = self.online_profile["user_name"]
             self.online_register_prompt = False
             self.st = ST_ONLINE_SCORE
             self.request_online_period_scores(force=True)
             return
+        if getattr(self, "online_password_mode", "register") == "link" and result.get("status") == "auth_failed":
+            self.online_sync_result = "That name belongs to another player."
+            return
         self.online_sync_result = str(result.get("message") or result.get("status") or "Registration failed.")
 
-    def enter_online_scoreboard(self):
+    def enter_online_scoreboard(self, auto_sync=False):
         self.apply_palette()
         self.ensure_online_score_state()
         if not hasattr(self, "online_profile"):
@@ -4805,8 +4975,12 @@ class Game:
         self.st = ST_ONLINE_SCORE
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         self.online_register_prompt = profile.get("local_only", True)
-        if not profile.get("local_only", True) and not profile.get("last_sync_at"):
-            self.online_sync_result = "Not synced yet. Press Select."
+        if not auto_sync:
+            return
+        if not profile.get("local_only", True) and not self.online_sync_due(profile):
+            self.online_sync_result = "Already synced today."
+        elif not profile.get("local_only", True) and not profile.get("last_sync_at"):
+            self.request_online_period_scores(force=True)
 
     def load_online_period_scores(self, period=None, force=False):
         self.ensure_online_score_state()
@@ -4843,66 +5017,72 @@ class Game:
     def perform_online_scoreboard_sync(self):
         self.ensure_online_score_state()
         self.online_sync_status = "posting local scores..."
+        entries = local_best_sync_entries(load_score_entries())
         result = sync_online_scoreboard(
             getattr(self, "online_profile", None),
-            local_best_sync_entries(load_score_entries()),
+            entries,
         )
         status = str(result.get("status", "success" if result.get("ok") else "failed"))
         if result.get("ok"):
-            self.online_sync_result = "Sync succeeded."
+            self.online_sync_result = "Score synced." if entries else "Profile synced. No local scores yet."
         elif status == "cooldown":
             self.online_sync_result = "Already synced today."
         elif status == "auth_failed":
             self.online_sync_result = "Authentication failed. Register again."
             self.online_register_prompt = True
         else:
-            self.online_sync_result = "Sync failed."
+            self.online_sync_result = f"Sync failed: {status}."
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if result.get("last_sync_at") or result.get("next_sync_at"):
             profile["last_sync_at"] = result.get("last_sync_at", profile.get("last_sync_at", ""))
             profile["next_sync_at"] = result.get("next_sync_at", profile.get("next_sync_at", ""))
             self.online_profile = save_online_profile(profile)
-        scores = result.get("scores", {})
-        if isinstance(scores, dict):
-            for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
-                rows = scores.get(period)
-                if isinstance(rows, list):
-                    self.online_score_cache[period] = get_period_scores(rows, period, self.scoreboard_period_key(period), limit=10)
-                    self.online_score_loaded.add(period)
+        self.online_score_load_result = ""
+        if result.get("ok"):
+            self.online_sync_status = "loading scoreboard..."
+            for period in getattr(self, "online_sync_periods", []) or [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]:
+                try:
+                    self.load_online_period_scores(period, force=True)
+                except Exception:
+                    self.online_score_load_result = "Could not load scoreboard."
+                    break
         return result
 
     def format_score_line_for_board(self, rank, entry, period):
         row = dict(entry)
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if period == SCOREBOARD_PERIOD_LOCAL and profile.get("local_only", True):
-            if str(row.get("player_name", ""))[:16] == str(profile.get("display_name", ""))[:16]:
-                row["player_name"] = display_score_name(profile, True)
+            if str(row.get("player_name", ""))[:16] == str(profile.get("user_name", ""))[:16]:
+                row["player_name"] = display_score_name(profile)
         return format_score_line(rank, row)
 
     def confirm_name_input(self):
         name = "".join(getattr(self, "name_chars", [])).strip()
         self.player_name = save_player_name(name)
-        self.online_profile = save_local_only_profile(self.player_name, self.player_name)
+        self.online_profile = save_local_only_profile(self.player_name)
         self.name_chars = list(self.player_name)
         self.name_pos = min(len(self.name_chars), 7)
         self.enter_title_screen()
 
     def open_name_input(self):
-        self.apply_palette()
-        self.player_name = self.current_player_name()
-        self.name_chars = list(self.player_name[:8])
-        self.name_pos = min(len(self.name_chars), 7)
-        self.name_pick = 0
-        self.st = ST_NAME
+        self.enter_online_register()
+
+    def upd_online_confirm(self):
+        if self.btn_a() or self.btn_start_tap():
+            self.enter_online_register(reset_to_default=True)
+            return
+        if self.btn_b() or self.btn_back():
+            self.decline_online_registration()
+            return
 
     def upd_logo(self):
         self.start_title_bgm()
         self.logo_frames = getattr(self, "logo_frames", 0) + 1
         if self.btn_any_key():
-            self.enter_title_screen()
+            self.enter_post_logo()
             return
         if self.logo_frames >= LOGO_TOTAL_FRAMES:
-            self.enter_title_screen()
+            self.enter_post_logo()
 
     def upd_title(self):
         if getattr(self, "title_bgm_stop_wait", 0) > 0:
@@ -4924,7 +5104,7 @@ class Game:
             if self.title_cursor == 0:
                 self.request_title_new_game()
             elif self.title_cursor == 1:
-                self.enter_online_scoreboard()
+                self.enter_online_scoreboard(auto_sync=True)
             else:
                 self.open_name_input()
 
@@ -4959,8 +5139,10 @@ class Game:
                 self.name_pos = min(8, getattr(self, "name_pos", 0) + 1)
 
     def upd_online_register(self):
+        if self.run_pending_online_action():
+            return
         if self.btn_b():
-            self.save_local_only_online_profile()
+            self.cancel_or_confirm_local_only_name()
             return
         if self.btn_start_tap():
             self.confirm_online_user_id()
@@ -4968,23 +5150,25 @@ class Game:
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
             self.name_pos = max(0, getattr(self, "name_pos", 0) - 1)
         if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
-            self.name_pos = min(16, getattr(self, "name_pos", 0) + 1)
+            self.name_pos = min(USER_NAME_MAX, getattr(self, "name_pos", 0) + 1)
         d = self.menu_vertical_press()
         if d:
             chars = getattr(self, "name_chars", [])
-            pos = min(getattr(self, "name_pos", 0), 15)
+            pos = min(getattr(self, "name_pos", 0), USER_NAME_MAX - 1)
             while len(chars) <= pos:
                 chars.append(" ")
             idx = NAME_ALPHABET.index(chars[pos]) if chars[pos] in NAME_ALPHABET else 0
             chars[pos] = NAME_ALPHABET[(idx + d) % len(NAME_ALPHABET)]
-            self.name_chars = chars[:16]
+            self.name_chars = chars[:USER_NAME_MAX]
         if self.btn_a():
-            if getattr(self, "name_pos", 0) >= 16:
+            if getattr(self, "name_pos", 0) >= USER_NAME_MAX:
                 self.confirm_online_user_id()
             else:
-                self.name_pos = min(16, getattr(self, "name_pos", 0) + 1)
+                self.name_pos = min(USER_NAME_MAX, getattr(self, "name_pos", 0) + 1)
 
     def upd_online_pin(self):
+        if self.run_pending_online_action():
+            return
         if self.btn_b():
             self.enter_online_register()
             return
@@ -5015,7 +5199,7 @@ class Game:
                 return
             if self.btn_b():
                 profile = normalize_online_profile(getattr(self, "online_profile", None))
-                self.online_profile = save_local_only_profile(profile.get("user_id", "rogue54"), profile.get("display_name", "rogue54"))
+                self.online_profile = save_local_only_profile(profile.get("user_name", "rogue54"))
                 self.online_register_prompt = False
                 self.online_sync_result = "Local only."
                 return
@@ -5054,7 +5238,7 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
-        if self.st in (ST_LOGO, ST_TITLE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN):
+        if self.st in (ST_LOGO, ST_TITLE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
             elif self.st == ST_TITLE: self.upd_title()
@@ -5062,6 +5246,8 @@ class Game:
             elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
             elif self.st == ST_ONLINE_REGISTER: self.upd_online_register()
             elif self.st == ST_ONLINE_PIN: self.upd_online_pin()
+            elif self.st == ST_ONLINE_CONFIRM: self.upd_online_confirm()
+            elif self.st == ST_ONLINE_LOCAL_CONFIRM: self.upd_online_local_confirm()
             return
         if self.st == ST_LOADING:
             if self._loading_phase == 0:
@@ -5342,6 +5528,12 @@ class Game:
         if self.st == ST_ONLINE_PIN:
             self.draw_online_pin_screen()
             return
+        if self.st == ST_ONLINE_LOCAL_CONFIRM:
+            self.draw_online_local_confirm_screen()
+            return
+        if self.st == ST_ONLINE_CONFIRM:
+            self.draw_online_confirm_screen()
+            return
         if self.st == ST_LOADING:
             msg = "Loading..." if self.lang == LANG_EN else "ロード中..."
             self.txt(SCR_W // 2 - 30, SCR_H // 2, msg, 10)
@@ -5429,6 +5621,13 @@ class Game:
         self.txt(154, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
         self.txt(184, 226, "A NEXT/END  START OK  B DEL", UI_TEXT_COL)
 
+    def draw_online_confirm_screen(self):
+        self._box(116, 84, 348, 132, self.online_text("confirm_title"))
+        self.txt(140, 110, self.online_text("confirm_prompt"), UI_TEXT_COL)
+        self.txt(140, 132, self.online_text("confirm_register"), UI_HILITE_COL)
+        self.txt(140, 150, self.online_text("confirm_local"), UI_TEXT_COL)
+        self.txt(140, 174, self.online_text("confirm_mark"), SCOREBOARD_DIM_COL)
+
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
@@ -5441,8 +5640,9 @@ class Game:
         if getattr(self, "online_syncing", False):
             if (pyxel.frame_count // 12) % 2 == 0 if hasattr(pyxel, "frame_count") else True:
                 self.txt(410, 55, "SYNCING...", SCOREBOARD_HILITE_COL)
-            self._box(202, 130, 176, 54, "sync")
-            self.txt(230, 152, getattr(self, "online_sync_status", "syncing...")[:24], SCOREBOARD_HILITE_COL)
+            self._box(156, 116, 268, 82, self.online_text("sync_title"))
+            status = self.online_text(getattr(self, "online_sync_status", "loading scoreboard..."))
+            self.txt(184, 150, status[:34], SCOREBOARD_HILITE_COL)
         scores = self.online_score_cache.get(period, [])
         if period == SCOREBOARD_PERIOD_LOCAL:
             scores = self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
@@ -5464,6 +5664,8 @@ class Game:
         self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
             self.txt(114, 236, self.online_sync_result[:58], SCOREBOARD_HILITE_COL)
+        if getattr(self, "online_score_load_result", ""):
+            self.txt(114, 224, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
         self.txt(114, 268, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
         if getattr(self, "online_register_prompt", False):
             self._box(148, 104, 282, 92, "Online Scoreboard")
@@ -5472,28 +5674,32 @@ class Game:
             self.txt(168, 162, "Local-only names show a trailing *.", UI_TEXT_COL)
 
     def draw_online_register_screen(self):
-        self._box(112, 58, 356, 210, "Online Registration")
-        self.txt(138, 84, "Register a lowercase id for online scores.", UI_TEXT_COL)
-        self.txt(138, 102, "B keeps local-only mode. Local names show *.", UI_TEXT_COL)
+        self._box(112, 58, 356, 210, self.online_text("register_title"))
+        self.txt(138, 84, self.online_text("register_prompt"), UI_TEXT_COL)
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        local_hint = profile.get("local_only", True) or self.online_register_name_changed()
+        self.txt(138, 102, self.online_text("register_local" if local_hint else "register_cancel"), UI_TEXT_COL)
         chars = getattr(self, "name_chars", [])
-        display = "".join(chars).ljust(16)[:16]
-        base_x, y = 138, 138
+        display = "".join(chars).ljust(USER_NAME_MAX)[:USER_NAME_MAX]
+        base_x, y = 174, 138
         for i, ch in enumerate(display):
             col = UI_HILITE_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
-            self.txt(base_x + i * 10, y, ch if ch != " " else "_", col)
-        end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 16 else UI_TEXT_COL
-        self.txt(base_x + 172, y, "END", end_col)
+            self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
+        end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
+        self.txt(base_x + 126, y, "END", end_col)
         self.txt(138, 200, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
-        self.txt(138, 216, "A NEXT/END  START OK  B LOCAL ONLY", UI_HILITE_COL)
+        self.txt(138, 216, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_HILITE_COL)
+        if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
+            self.txt(138, 236, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
             self.txt(138, 236, self.online_sync_result[:48], UI_HILITE_COL)
 
     def draw_online_pin_screen(self):
-        self._box(126, 58, 328, 210, "6 Digit Password")
-        user_id = getattr(self, "online_pending_user_id", "rogue54")
-        self.txt(150, 84, f"User: {user_id}", UI_TEXT_COL)
-        self.txt(150, 104, "This password is stored on the server", UI_TEXT_COL)
-        self.txt(150, 118, "without encryption. Do not reuse it.", UI_TEXT_COL)
+        self._box(126, 58, 328, 210, self.online_text("pin_title"))
+        user_name = getattr(self, "online_pending_user_name", "rogue54")
+        self.txt(150, 84, f"User: {user_name}", UI_TEXT_COL)
+        self.txt(150, 104, self.online_text("pin_server"), UI_TEXT_COL)
+        self.txt(150, 118, self.online_text("pin_reuse"), UI_TEXT_COL)
         chars = getattr(self, "online_password_chars", ["0"] * 6)
         base_x, y = 206, 152
         for i, ch in enumerate(chars):
@@ -5502,9 +5708,19 @@ class Game:
         end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
         self.txt(base_x + 122, y, "END", end_col)
         self.txt(150, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
-        self.txt(150, 226, "A NEXT/END  START OK  B BACK", UI_HILITE_COL)
+        self.txt(150, 226, self.online_text("pin_hint"), UI_HILITE_COL)
+        if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
+            self.txt(150, 244, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
             self.txt(150, 244, self.online_sync_result[:46], UI_HILITE_COL)
+
+    def draw_online_local_confirm_screen(self):
+        self._box(112, 86, 356, 130, self.online_text("local_confirm_title"))
+        name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
+        self.txt(138, 112, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
+        self.txt(138, 132, f"Name: {name}*", UI_HILITE_COL)
+        self.txt(138, 160, self.online_text("local_confirm_ok"), UI_HILITE_COL)
+        self.txt(138, 178, self.online_text("local_confirm_cancel"), UI_TEXT_COL)
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)
@@ -5644,6 +5860,7 @@ class Game:
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
+        pyxel.dither(1.0)
         pyxel.rect(x,y,w,h,0); pyxel.rectb(x,y,w,h,5)
         if title: self.txt(x+4,y+3,title,27)
 

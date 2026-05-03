@@ -15,7 +15,7 @@ from typing import Any
 
 SCORE_STORAGE_KEY = "pyxel-rogue-scores-v2"
 PLAYER_NAME_STORAGE_KEY = "pyxel-rogue-player-name-v2"
-ONLINE_PROFILE_STORAGE_KEY = "pyxel-rogue-online-profile-v1"
+ONLINE_PROFILE_STORAGE_KEY = "pyxel-rogue-online-profile-v3"
 SCORE_FILE = os.environ.get(
     "PYXEL_ROGUE_SCORE_FILE",
     os.path.join(os.path.expanduser("~"), ".pyxel_rogue_scores_v2.json"),
@@ -26,14 +26,16 @@ PLAYER_NAME_FILE = os.environ.get(
 )
 ONLINE_PROFILE_FILE = os.environ.get(
     "PYXEL_ROGUE_ONLINE_PROFILE_FILE",
-    os.path.join(os.path.expanduser("~"), ".pyxel_rogue_online_profile_v1.json"),
+    os.path.join(os.path.expanduser("~"), ".pyxel_rogue_online_profile_v3.json"),
 )
 DEFAULT_ONLINE_SCORE_URL = "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec"
 ONLINE_SCORE_URL = os.environ.get("PYXEL_ROGUE_SCORE_URL", DEFAULT_ONLINE_SCORE_URL)
+ONLINE_HTTP_TIMEOUT_SECONDS = 15
 SCOREBOARD_PERIOD_LOCAL = "local"
 SCOREBOARD_PERIOD_WEEKLY = "weekly"
 SCOREBOARD_PERIOD_SEASON = "season"
 SCOREBOARD_PERIODS = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
+USER_NAME_MAX = 8
 DUMMY_PLAYER_NAMES = [
     "RODNEY", "YENDOR", "WIZRODNY", "AMULETYN", "HJKLUSER",
     "LEVEL26", "CHMOD777", "DEADBEEF", "SIGSEGV", "NULLPTR",
@@ -200,13 +202,14 @@ def get_period_scores(entries: list[dict[str, Any]], period: str, key: str, limi
         entry = with_score_periods(raw)
         if str(entry.get(field, "")) != str(key):
             continue
-        name = str(entry.get("player_name", "ROGUE")).strip().upper()[:8] or "ROGUE"
+        name = str(entry.get("player_name", "rogue54")).strip()[:16] or "rogue54"
+        name_key = name.upper()
         score = int(entry.get("score", 0))
-        old = best.get(name)
+        old = best.get(name_key)
         if old is None or score > int(old.get("score", 0)):
             copy = dict(entry)
             copy["player_name"] = name
-            best[name] = copy
+            best[name_key] = copy
     return get_top_scores(list(best.values()), limit=limit)
 
 
@@ -346,12 +349,12 @@ def _write_file_scores(entries: list[dict[str, Any]]) -> None:
 
 
 def sanitize_player_name(name: str) -> str:
-    out = "".join(ch for ch in str(name).lower() if ch == " " or ch.isalnum())[:16].strip()
+    out = "".join(ch for ch in str(name).lower() if "a" <= ch <= "z" or "0" <= ch <= "9")[:USER_NAME_MAX]
     return out or "rogue54"
 
 
 def sanitize_user_id(user_id: str) -> str:
-    out = "".join(ch for ch in str(user_id).lower() if "a" <= ch <= "z" or "0" <= ch <= "9")[:16]
+    out = "".join(ch for ch in str(user_id).lower() if "a" <= ch <= "z" or "0" <= ch <= "9")[:USER_NAME_MAX]
     return out or "rogue54"
 
 
@@ -371,27 +374,33 @@ def validate_user_password(user_password: str) -> str:
     return text
 
 
-def display_score_name(entry: dict[str, Any], local_only: bool = False) -> str:
-    name = str(entry.get("display_name") or entry.get("player_name") or entry.get("user_id") or "rogue54")
-    name = name[:16]
-    return f"{name}*" if local_only and not name.endswith("*") else name
+def display_score_name(entry: dict[str, Any], local_only: bool | None = None) -> str:
+    profile = normalize_online_profile(entry)
+    name = profile["user_name"]
+    unverified = (
+        profile.get("local_only", True)
+        or not profile.get("server_token", "")
+        or not profile.get("last_sync_at", "")
+    )
+    mark = unverified if local_only is None else bool(local_only)
+    return f"{name}*" if mark and not name.endswith("*") else name
 
 
-def _token_key(user_id: str) -> bytes:
-    return hashlib.sha256(("pyxel-rogue:" + sanitize_user_id(user_id)).encode("utf-8")).digest()
+def _token_key(user_name: str) -> bytes:
+    return hashlib.sha256(("pyxel-rogue:" + sanitize_user_id(user_name)).encode("utf-8")).digest()
 
 
-def obfuscate_server_token(server_token: str, user_id: str) -> str:
+def obfuscate_server_token(server_token: str, user_name: str) -> str:
     raw = str(server_token).encode("utf-8")
-    key = _token_key(user_id)
+    key = _token_key(user_name)
     masked = bytes(b ^ key[i % len(key)] for i, b in enumerate(raw))
     return base64.urlsafe_b64encode(masked).decode("ascii")
 
 
-def deobfuscate_server_token(encoded_token: str, user_id: str) -> str:
+def deobfuscate_server_token(encoded_token: str, user_name: str) -> str:
     try:
         raw = base64.urlsafe_b64decode(str(encoded_token).encode("ascii"))
-        key = _token_key(user_id)
+        key = _token_key(user_name)
         return bytes(b ^ key[i % len(key)] for i, b in enumerate(raw)).decode("utf-8")
     except Exception:
         return ""
@@ -399,17 +408,18 @@ def deobfuscate_server_token(encoded_token: str, user_id: str) -> str:
 
 def normalize_online_profile(profile: dict[str, Any] | None) -> dict[str, Any]:
     profile = dict(profile or {})
-    user_id = sanitize_user_id(profile.get("user_id", "rogue54"))
-    token = str(profile.get("server_token", ""))
+    has_v3_name = "user_name" in profile
+    user_name = sanitize_user_id(profile.get("user_name", "rogue54")) if has_v3_name else "rogue54"
+    token = str(profile.get("server_token", "")) if has_v3_name else ""
     if not token and profile.get("server_token_obf"):
-        token = deobfuscate_server_token(str(profile.get("server_token_obf", "")), user_id)
+        token = deobfuscate_server_token(str(profile.get("server_token_obf", "")), user_name)
     return {
-        "user_id": user_id,
-        "display_name": sanitize_display_name(profile.get("display_name", user_id)),
+        "user_name": user_name,
         "local_only": bool(profile.get("local_only", False if token else True)),
         "server_token": token,
         "last_sync_at": str(profile.get("last_sync_at", "")),
         "next_sync_at": str(profile.get("next_sync_at", "")),
+        "profile_exists": bool(profile.get("profile_exists", has_v3_name)),
     }
 
 
@@ -430,9 +440,10 @@ def load_online_profile() -> dict[str, Any]:
 
 def save_online_profile(profile: dict[str, Any]) -> dict[str, Any]:
     normalized = normalize_online_profile(profile)
+    normalized["profile_exists"] = True
     stored = dict(normalized)
     token = stored.pop("server_token", "")
-    stored["server_token_obf"] = obfuscate_server_token(token, normalized["user_id"]) if token else ""
+    stored["server_token_obf"] = obfuscate_server_token(token, normalized["user_name"]) if token else ""
     try:
         if sys.platform == "emscripten":
             from js import localStorage
@@ -449,9 +460,9 @@ def save_online_profile(profile: dict[str, Any]) -> dict[str, Any]:
 def save_local_only_profile(user_id: str, display_name: str | None = None) -> dict[str, Any]:
     clean_id = sanitize_user_id(user_id)
     return save_online_profile({
-        "user_id": clean_id,
-        "display_name": sanitize_display_name(display_name or clean_id),
+        "user_name": clean_id,
         "local_only": True,
+        "profile_exists": True,
     })
 
 
@@ -525,7 +536,7 @@ def _http_json(url: str, payload: dict[str, Any] | None = None) -> Any:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, headers=headers)
-    with urllib.request.urlopen(req, timeout=4) as res:
+    with urllib.request.urlopen(req, timeout=ONLINE_HTTP_TIMEOUT_SECONDS) as res:
         return json.loads(res.read().decode("utf-8"))
 
 
@@ -541,18 +552,16 @@ def submit_online_score(entry: dict[str, Any], url: str | None = None) -> bool:
 
 
 def register_online_user(
-    user_id: str,
-    display_name: str,
+    user_name: str,
     user_password: str,
     url: str | None = None,
 ) -> dict[str, Any]:
-    clean_id = sanitize_user_id(user_id)
+    clean_id = sanitize_user_id(user_name)
     if not can_register_user_id(clean_id):
         return {"ok": False, "status": "reserved"}
     payload = {
         "action": "registerUser",
-        "user_id": clean_id,
-        "display_name": sanitize_display_name(display_name),
+        "user_name": clean_id,
         "user_password": validate_user_password(user_password),
     }
     try:
@@ -563,14 +572,14 @@ def register_online_user(
 
 
 def link_online_user(
-    user_id: str,
+    user_name: str,
     user_password: str,
     url: str | None = None,
 ) -> dict[str, Any]:
-    clean_id = sanitize_user_id(user_id)
+    clean_id = sanitize_user_id(user_name)
     payload = {
         "action": "linkUser",
-        "user_id": clean_id,
+        "user_name": clean_id,
         "user_password": validate_user_password(user_password),
     }
     try:
@@ -578,6 +587,16 @@ def link_online_user(
         return data if isinstance(data, dict) else {"ok": False, "status": "failed"}
     except Exception:
         return {"ok": False, "status": "failed"}
+
+
+def check_online_user(user_name: str, url: str | None = None) -> dict[str, Any]:
+    clean = sanitize_user_id(user_name)
+    payload = {"action": "checkUser", "user_name": clean}
+    try:
+        data = _http_json(url if url is not None else ONLINE_SCORE_URL, payload)
+        return data if isinstance(data, dict) else {"ok": False, "status": "failed", "exists": False}
+    except Exception:
+        return {"ok": False, "status": "failed", "exists": False}
 
 
 def sync_online_scoreboard(
@@ -590,7 +609,7 @@ def sync_online_scoreboard(
         return {"ok": False, "status": "auth_failed", "scores": {}}
     payload = {
         "action": "syncScoreboard",
-        "user_id": clean["user_id"],
+        "user_name": clean["user_name"],
         "server_token": clean["server_token"],
         "entries": [with_score_periods(entry) for entry in entries],
         "periods": [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON],

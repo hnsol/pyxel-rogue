@@ -1,112 +1,113 @@
 const SHEET_NAME = "scores";
 const USER_SHEET_NAME = "users";
 const DUMMY_TARGET_COUNT = 10;
-const DUMMY_PAST_WEEKS = 4;
+const DUMMY_PAST_WEEKS = 10;
 const DUMMY_BACKFILL_COUNT = 1;
+const USER_NAME_MAX = 8;
 const SYNC_COOLDOWN_HOURS = 24;
 const USER_PASSWORD_FAIL_LIMIT = 5;
 const USER_PASSWORD_LOCK_MINUTES = 10;
 const DUMMY_NAMES = [
-  "RODNEY",
-  "YENDOR",
-  "WIZRODNY",
-  "AMULETYN",
-  "HJKLUSER",
-  "LEVEL26",
-  "CHMOD777",
-  "DEADBEEF",
-  "SIGSEGV",
-  "NULLPTR",
-  "ROOT",
-  "SUDO",
-  "BINSH",
-  "DEVNULL",
-  "TARBALL",
-  "PDP11",
-  "VAX1178",
-  "VT100",
-  "BSD43",
-  "V7UNIX",
-  "KENTOMP",
-  "DMR",
-  "BJOY",
-  "WICHMAN",
-  "KENARNLD",
-  "KESTREL",
-  "GRIFFON",
-  "JABBERWK",
-  "DRAGON",
-  "GRIDBUG",
-  "RNGGOD",
-  "RNGHATER",
-  "PERMADTH",
-  "FOODLESS",
-  "SPEEDRUN",
-  "SAVE_SC",
-  "LVL26F",
-  "RIPPER",
-  "RETRY",
-  "GAMEOVER",
-  "MALLOC",
-  "FREE",
-  "STACKOVF",
-  "BITSHIFT",
-  "XOR",
-  "GOTO10",
-  "EXIT0",
-  "STDOUT",
-  "STDIN",
-  "STDERR",
-  "ASCII",
-  "HEXDUMP",
-  "BINARY",
-  "BYTE",
-  "OPCODE",
-  "TTY0",
-  "ANSI80",
-  "CRLF",
-  "EOF",
-  "SOF",
-  "PYXELDEV",
-  "8BITLUV",
-  "PIXELART",
-  "SPRITE",
-  "PALETTE",
-  "X86",
-  "Z80A",
+  "rodney",
+  "yendor",
+  "wizrodny",
+  "amuletyn",
+  "hjkluser",
+  "level26",
+  "chmod777",
+  "deadbeef",
+  "sigsegv",
+  "nullptr",
+  "root",
+  "sudo",
+  "binsh",
+  "devnull",
+  "tarball",
+  "pdp11",
+  "vax1178",
+  "vt100",
+  "bsd43",
+  "v7unix",
+  "kentomp",
+  "dmr",
+  "bjoy",
+  "wichman",
+  "kenarnld",
+  "kestrel",
+  "griffon",
+  "jabberwk",
+  "dragon",
+  "gridbug",
+  "rnggod",
+  "rnghater",
+  "permadth",
+  "foodless",
+  "speedrun",
+  "savesc",
+  "lvl26f",
+  "ripper",
+  "retry",
+  "gameover",
+  "malloc",
+  "free",
+  "stackovf",
+  "bitshift",
+  "xor",
+  "goto10",
+  "exit0",
+  "stdout",
+  "stdin",
+  "stderr",
+  "ascii",
+  "hexdump",
+  "binary",
+  "byte",
+  "opcode",
+  "tty0",
+  "ansi80",
+  "crlf",
+  "eof",
+  "sof",
+  "pyxeldev",
+  "8bitluv",
+  "pixelart",
+  "sprite",
+  "palette",
+  "x86",
+  "z80a",
   "6502",
-  "MOTOROLA",
-  "C64",
-  "PASCAL",
-  "FORTRAN",
-  "COBOL",
-  "ALGOL",
-  "B_LANG",
-  "LOBOLTO",
-  "UMORIA",
-  "NETHACK",
-  "ANGBAND",
-  "DUNGEON",
-  "XYZZY",
-  "PLUGH",
-  "FROB",
-  "FOOBAR",
-  "BAZQUX",
-  "STR0",
-  "CHAR1",
-  "VOID",
-  "CONST",
-  "STATIC",
-  "VOLATILE",
-  "REGISTER",
-  "STRUCT",
-  "UNION",
-  "TYPEDEF",
-  "MAXINT",
-  "MININT",
-  "ID001",
-  "USER99",
-  "GUEST",
+  "motorola",
+  "c64",
+  "pascal",
+  "fortran",
+  "cobol",
+  "algol",
+  "blang",
+  "lobolto",
+  "umoria",
+  "nethack",
+  "angband",
+  "dungeon",
+  "xyzzy",
+  "plugh",
+  "frob",
+  "foobar",
+  "bazqux",
+  "str0",
+  "char1",
+  "void",
+  "const",
+  "static",
+  "volatile",
+  "register",
+  "struct",
+  "union",
+  "typedef",
+  "maxint",
+  "minint",
+  "id001",
+  "user99",
+  "guest",
 ];
 
 function doGet(e) {
@@ -117,15 +118,19 @@ function doGet(e) {
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
   if (period === "weekly") {
-    ensureDummyRows(period, key, DUMMY_BACKFILL_COUNT);
+    ensureDummyRows(period, key, DUMMY_TARGET_COUNT);
   }
-  if (period === "season") ensureHistoricalWeeklyRows();
+  if (period === "season") {
+    ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT);
+    ensureHistoricalWeeklyRows(new Date(), key);
+  }
   return json({ scores: topScores(period, key) });
 }
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents || "{}");
   if (body.action === "seedDummy") return json({ rows: seedDummy() });
+  if (body.action === "checkUser") return json(checkUser(body));
   if (body.action === "registerUser") return json(registerUser(body));
   if (body.action === "linkUser") return json(linkUser(body));
   if (body.action === "syncScoreboard") return json(syncScoreboard(body));
@@ -142,8 +147,7 @@ function userSheet() {
   if (!sh) sh = ss.insertSheet(USER_SHEET_NAME);
   if (sh.getLastRow() === 0) {
     sh.appendRow([
-      "user_id",
-      "display_name",
+      "user_name",
       "user_password",
       "server_token",
       "last_sync_at",
@@ -166,15 +170,21 @@ function findUser(userId) {
   const data = sh.getDataRange().getValues();
   const idx = userIndex(data);
   for (let r = 1; r < data.length; r++) {
-    if (String(data[r][idx.user_id]) === clean) {
+    if (String(data[r][idx.user_name]) === clean) {
       return { sheet: sh, row: r + 1, values: data[r], idx: idx };
     }
   }
   return null;
 }
 
+function checkUser(body) {
+  const userName = cleanUserId(body.user_name);
+  if (isReservedUserId(userName)) return { ok: true, exists: true, reserved: true };
+  return { ok: true, exists: Boolean(findUser(userName)), reserved: false };
+}
+
 function registerUser(body) {
-  const userId = cleanUserId(body.user_id);
+  const userId = cleanUserId(body.user_name);
   const password = cleanUserPassword(body.user_password);
   if (isReservedUserId(userId)) return { ok: false, status: "reserved" };
   if (!password) return { ok: false, status: "bad_password" };
@@ -182,7 +192,6 @@ function registerUser(body) {
   const token = makeServerToken();
   userSheet().appendRow([
     userId,
-    cleanDisplayName(body.display_name || userId),
     password,
     token,
     "",
@@ -193,8 +202,7 @@ function registerUser(body) {
   return {
     ok: true,
     status: "registered",
-    user_id: userId,
-    display_name: cleanDisplayName(body.display_name || userId),
+    user_name: userId,
     server_token: token,
     last_sync_at: "",
     next_sync_at: "",
@@ -202,7 +210,7 @@ function registerUser(body) {
 }
 
 function linkUser(body) {
-  const user = findUser(body.user_id);
+  const user = findUser(body.user_name);
   const password = cleanUserPassword(body.user_password);
   if (!user || !password) return { ok: false, status: "auth_failed" };
   const lockedUntil = user.values[user.idx.locked_until];
@@ -224,8 +232,7 @@ function linkUser(body) {
   return {
     ok: true,
     status: "linked",
-    user_id: String(user.values[user.idx.user_id]),
-    display_name: String(user.values[user.idx.display_name]),
+    user_name: String(user.values[user.idx.user_name]),
     server_token: String(user.values[user.idx.server_token]),
     last_sync_at: String(user.values[user.idx.last_sync_at] || ""),
     next_sync_at: nextSyncAt(user.values[user.idx.last_sync_at]),
@@ -233,9 +240,9 @@ function linkUser(body) {
 }
 
 function syncScoreboard(body) {
-  const user = findUser(body.user_id);
+  const user = findUser(body.user_name);
   if (!user || String(user.values[user.idx.server_token]) !== String(body.server_token || "")) {
-    return { ok: false, status: "auth_failed", scores: scorePayload() };
+    return { ok: false, status: "auth_failed" };
   }
   const last = String(user.values[user.idx.last_sync_at] || "");
   const next = nextSyncAt(last);
@@ -245,32 +252,22 @@ function syncScoreboard(body) {
       status: "cooldown",
       last_sync_at: last,
       next_sync_at: next,
-      scores: scorePayload(),
     };
   }
   const entries = Array.isArray(body.entries) ? body.entries : [];
+  let posted = 0;
   entries.forEach((entry) => appendScore(Object.assign({}, entry, {
-    user_id: String(user.values[user.idx.user_id]),
-    player_name: String(user.values[user.idx.display_name]),
-  })));
+    user_name: String(user.values[user.idx.user_name]),
+    player_name: String(user.values[user.idx.user_name]),
+  })) && posted++);
   const now = new Date().toISOString();
   user.sheet.getRange(user.row, user.idx.last_sync_at + 1).setValue(now);
   return {
     ok: true,
     status: "success",
+    posted_count: posted,
     last_sync_at: now,
     next_sync_at: nextSyncAt(now),
-    scores: scorePayload(),
-  };
-}
-
-function scorePayload() {
-  const periods = currentPeriods();
-  ensureDummyRows("weekly", periods.period_week, DUMMY_BACKFILL_COUNT);
-  ensureHistoricalWeeklyRows(new Date());
-  return {
-    weekly: topScores("weekly", periods.period_week),
-    season: topScores("season", periods.period_season),
   };
 }
 
@@ -443,17 +440,19 @@ function ensureScoreboardDummyContext() {
   const now = new Date();
   let rows = 0;
   rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT);
-  rows += ensureHistoricalWeeklyRows(now);
+  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season);
   return rows;
 }
 
-function ensureHistoricalWeeklyRows(now) {
+function ensureHistoricalWeeklyRows(now, seasonKey) {
   const base = now || new Date();
   let rows = 0;
   for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
+    const p = periodsFor(addUtcDays(base, historicalWeeklyDayOffset(i)));
+    if (seasonKey && p.period_season !== seasonKey) continue;
     rows += ensureSeededDummyRows(
       "weekly",
-      periodsFor(addUtcDays(base, historicalWeeklyDayOffset(i))).period_week,
+      p.period_week,
       DUMMY_BACKFILL_COUNT,
     );
   }
@@ -486,21 +485,22 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly) {
   const offset = dummyNameOffset(period, key);
   for (let i = 0; i < DUMMY_NAMES.length && out.length < needed; i++) {
     const name = DUMMY_NAMES[(offset + i) % DUMMY_NAMES.length];
-    if (used.has(cleanName(name))) continue;
+    const clean = cleanName(name);
+    if (used.has(clean)) continue;
     const p = periodsFromKey(period, key, i);
     out.push([
       timestampForPeriod(period, key, i),
       p.period_day,
       p.period_week,
       p.period_season,
-      name,
+      clean,
       dummyScore(period, key, i, targetCount),
       dummyDepth(period, key, i),
       "killed",
       dummyKiller(period, key, i),
       "dummy",
       true,
-      "dummy-" + period + "-" + key + "-" + name,
+      "dummy-" + period + "-" + key + "-" + clean,
     ]);
   }
   if (out.length > 0) {
@@ -664,26 +664,26 @@ function seasonName(month) {
 }
 
 function cleanName(name) {
-  const s = String(name || "ROGUE")
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, "")
+  const s = String(name || "rogue54")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
     .trim()
-    .slice(0, 8);
-  return s || "ROGUE";
+    .slice(0, USER_NAME_MAX);
+  return s || "rogue54";
 }
 
 function cleanUserId(userId) {
   const id = String(userId || "rogue54")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
-    .slice(0, 16);
+    .slice(0, USER_NAME_MAX);
   return id || "rogue54";
 }
 
 function cleanDisplayName(displayName) {
   return String(displayName || "rogue54")
     .replace(/[^\x20-\x7e]/g, "")
-    .slice(0, 16) || "rogue54";
+    .slice(0, USER_NAME_MAX) || "rogue54";
 }
 
 function cleanUserPassword(password) {
