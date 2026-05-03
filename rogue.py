@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0830"
+UI_BUILD = "260504_0836"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1741,6 +1741,8 @@ class Game:
             hero_pos = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
         self.p.x,self.p.y = hero_pos
         self._center_cam(); self.update_fov()
+        if self.p.hallucinating > 0:
+            self.run_visuals()
 
     def usable_rooms(self):
         return [room for room in self.rooms if room.usable] or self.rooms

@@ -423,6 +423,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("room", 7), events)
         self.assertIn(("put_things", 8), events)
 
+    def test_rogue_544_new_level_refreshes_hallucination_visuals_after_enter_room(self):
+        # Rogue 5.4.4 new_level.c:new_level() calls visuals() after placing hero and enter_room().
+        game = new_game(seed=3052)
+        calls = []
+        positions = iter([(5, 5), (6, 5)])
+        game._populate_initial_room = lambda room: None
+        game._spawn_items = lambda: None
+        game._spawn_amulet = lambda: None
+        game._spawn_traps = lambda: None
+        game.find_floor_pos = lambda *a, **kw: next(positions)
+        game.p.hallucinating = 10
+        game.run_visuals = lambda: calls.append((game.p.x, game.p.y, bool(game.visible)))
+
+        game.descend()
+
+        self.assertEqual(calls, [(6, 5, True)])
+
     def test_rogue_544_stick_table_materials_and_names_audit(self):
         # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
         import rogue_sticks
