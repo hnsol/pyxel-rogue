@@ -5386,10 +5386,12 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=2142)
         game.p.hallucinating = 10
         game.daemons.start("visuals", rogue.rogue_daemons.BEFORE)
+        game.hallu_item_syms = {1: "!"}
 
         game.come_down()
 
         self.assertFalse(game.daemons.running("visuals"))
+        self.assertEqual(game.hallu_item_syms, {})
 
     def test_rogue_544_hallucination_preserves_detect_monster_display(self):
         # Rogue 5.4.4 potions.c:P_LSD calls turn_see(FALSE), which keeps SEEMONST on.
@@ -5518,6 +5520,37 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(game.visible_monster_sym(phantom), "A")
         finally:
             rogue.RNG.rnd = old_rnd
+
+    def test_rogue_544_visuals_daemon_refreshes_hallucination_cache_in_source_order(self):
+        # Rogue 5.4.4 daemons.c:visuals() randomizes visible objects, stairs, then monsters.
+        game = new_game(seed=2161)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = px + 1, py
+        game.gitems = [potion]
+        visible_monster = monster_at(px + 2, py, "O", "orc")
+        detected_monster = monster_at(px + 5, py, "B", "bat")
+        game.mons = [visible_monster, detected_monster]
+        game.tm[py][px - 1] = rogue.T_STAIR
+        game.visible.update({(px + 1, py), (px + 2, py), (px - 1, py)})
+        game.visible.discard((px + 5, py))
+        game.p.hallucinating = 10
+        game.p.see_monsters = 10
+        rng = SequenceRng([1, 2, 3, 4])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.run_visuals()
+            rogue.RNG.rnd = lambda n: (_ for _ in ()).throw(AssertionError("draw-time RNG"))
+            self.assertEqual(game.visible_item_sym(potion), rogue.HALLU_THINGS[1])
+            self.assertEqual(game.visible_tile_sym(px - 1, py, rogue.T_STAIR), rogue.HALLU_THINGS[2])
+            self.assertEqual(game.visible_monster_sym(visible_monster), "D")
+            self.assertEqual(game.detected_monster_sym(detected_monster), "E")
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(rng.calls, [len(rogue.HALLU_THINGS) - 1, len(rogue.HALLU_THINGS) - 1, 26, 26])
 
     def test_rogue_544_hallucination_keeps_seen_stairs_real(self):
         # Rogue 5.4.4 misc.c:trip_ch() leaves STAIRS real while ISHALU if seenstairs is true.

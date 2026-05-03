@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0922"
+UI_BUILD = "260504_0826"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1457,6 +1457,8 @@ class Game:
     def visible_tile_sym(self, x, y, tile):
         # Rogue 5.4.4 misc.c:trip_ch() keeps STAIRS real after seenstairs is set.
         if self.p.hallucinating > 0 and tile == T_STAIR and not getattr(self, "seen_stairs", False):
+            if (x, y) in self.hallu_tile_syms:
+                return self.hallu_tile_syms[(x, y)]
             return self.hallucination_thing_sym()
         return TILE_CH.get(tile, (" ", 0))[0]
 
@@ -1479,16 +1481,22 @@ class Game:
 
     def visible_item_sym(self, item):
         if self.p.hallucinating > 0:
+            if id(item) in self.hallu_item_syms:
+                return self.hallu_item_syms[id(item)]
             return self.hallucination_thing_sym()
         return item.sym
 
     def visible_monster_sym(self, monster):
         if self.p.hallucinating > 0:
+            if id(monster) in self.hallu_monster_syms:
+                return self.hallu_monster_syms[id(monster)]
             return chr(ord("A") + rnd(26))
         return getattr(monster, "disguise", monster.sym)
 
     def detected_monster_sym(self, monster):
         if self.p.hallucinating > 0:
+            if id(monster) in self.hallu_detected_monster_syms:
+                return self.hallu_detected_monster_syms[id(monster)]
             return chr(ord("A") + rnd(26))
         return monster.sym
 
@@ -1566,6 +1574,10 @@ class Game:
         self.max_depth = 0
         self.no_food = 0
         self.seen_stairs = False
+        self.hallu_item_syms = {}
+        self.hallu_tile_syms = {}
+        self.hallu_monster_syms = {}
+        self.hallu_detected_monster_syms = {}
         self.wander_timer = 0
         self.wander_between = 0
         self.delayed_actions = rogue_daemons.DelayedActionTable()
@@ -1707,6 +1719,7 @@ class Game:
         usable_rooms = self.usable_rooms()
         self.visible=set(); self.explored=set()
         self.seen_stairs = False
+        self.clear_hallucination_visuals()
         self.wander_timer=self.fuses.remaining("swander")
         self._spawn_items(); self._spawn_amulet()
         self._spawn_traps()
@@ -2988,6 +3001,7 @@ class Game:
         if not should_clear:
             return
         self.daemons.kill("visuals")
+        self.clear_hallucination_visuals()
         self.p.hallucinating = 0
         if message_key:
             self.msg(message_key)
@@ -4257,11 +4271,39 @@ class Game:
         elif name == "runners":
             self.run_runners()
         elif name == "visuals":
-            pass
+            self.run_visuals()
 
     def run_runners(self):
         # C: chase.c:runners()
         rogue_chase.runners(self.mons, self.m_turn)
+
+    def clear_hallucination_visuals(self):
+        self.hallu_item_syms = {}
+        self.hallu_tile_syms = {}
+        self.hallu_monster_syms = {}
+        self.hallu_detected_monster_syms = {}
+
+    def run_visuals(self):
+        # C: daemons.c:visuals()
+        self.clear_hallucination_visuals()
+        if self.p.hallucinating <= 0 or self.p.blind > 0:
+            return
+        for item in self.gitems:
+            if (item.x, item.y) in self.visible:
+                self.hallu_item_syms[id(item)] = self.hallucination_thing_sym()
+        if not getattr(self, "seen_stairs", False):
+            for y, row in enumerate(self.tm):
+                for x, tile in enumerate(row):
+                    if tile == T_STAIR and (x, y) in self.visible:
+                        self.hallu_tile_syms[(x, y)] = self.hallucination_thing_sym()
+        for monster in self.mons:
+            if self.monster_is_seen(monster):
+                if monster.sym == "X" and getattr(monster, "disguise", monster.sym) != "X":
+                    self.hallu_monster_syms[id(monster)] = self.hallucination_thing_sym()
+                else:
+                    self.hallu_monster_syms[id(monster)] = chr(ord("A") + rnd(26))
+            elif self.can_detect_monsters():
+                self.hallu_detected_monster_syms[id(monster)] = chr(ord("A") + rnd(26))
 
     def run_stomach(self):
         # C: daemons.c:stomach()

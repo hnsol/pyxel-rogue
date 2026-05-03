@@ -405,6 +405,7 @@
   - [x] Rogue 5.4.4 `potions.c:P_SEEINVIS` の potion duration と ring-only `CANSEE` 分岐を `rogue_potions.py` へ小分割
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_LSD` / `daemons.c:come_down()` 準拠で、`visuals` BEFORE daemon の登録と解除を delayed action table に反映
+  - [x] Rogue 5.4.4 `daemons.c:visuals()` 準拠で、hallucination 表示乱数を draw 時ではなく BEFORE daemon の表示キャッシュ更新に寄せる
   - [x] Rogue 5.4.4 `potions.c:P_LSD` 準拠で、`turn_see(FALSE)` 時に monster detection 表示を維持
   - [x] Rogue 5.4.4 `potions.c:seen_stairs()` / `misc.c:trip_ch()` 準拠で、既知の階段は hallucination 中も実階段表示にする
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
