@@ -123,6 +123,7 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap ごとに `find_floor()` 後 `rnd(NTRAPS)` する乱数順へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap 床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`chat()==FLOOR` まで固定回数fallbackせず再試行する
+- [x] Rogue 5.4.4 `wizard.c:teleport()` / `scrolls.c:S_TELEP` 準拠で、player teleport を `find_floor(..., monst=TRUE)` 乱数試行式へ修正
 - [x] Rogue 5.4.4 `move.c:do_move()` / `command.c:search()` 準拠で、hidden trap は表示文字が floor の時だけ発見・発動する
 - [x] Rogue 5.4.4 `new_level.c:new_level()` 準拠で、階層生成時に Venus Flytrap hold を解除
 - [x] Rogue 5.4.4 `io.c:step_ok()` 相当の文字/地形判定を `rogue_io.py` へ小分割し、視界・杖照準の共通基準にする

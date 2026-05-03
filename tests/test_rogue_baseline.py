@@ -2377,8 +2377,8 @@ class RogueBaselineTest(unittest.TestCase):
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "teleportation")
         same_room_scroll = rogue.Item(rogue.CAT_SCR, kind)
         game.p.inv.append(same_room_scroll)
-        game.usable_rooms = lambda: [room_a]
-        game.random_room_tile = lambda room, tiles: room.inner()
+        same_pos = room_a.inner()
+        game.find_floor_pos = lambda *args, **kwargs: same_pos
 
         game.use_scr(same_room_scroll)
 
@@ -2395,7 +2395,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.no_move = 5
         game.dashing = True
         game.dash_steps = 3
-        game.usable_rooms = lambda: [room_b]
+        other_pos = room_b.inner()
+        game.find_floor_pos = lambda *args, **kwargs: other_pos
 
         game.use_scr(other_room_scroll)
 
@@ -2408,6 +2409,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.dashing)
         self.assertEqual(game.dash_steps, 0)
         self.assertNotIn("You are teleported!", game.msgs)
+
+    def test_rogue_544_teleport_scroll_uses_find_floor_not_room_choice(self):
+        # Rogue 5.4.4 scrolls.c:S_TELEP calls wizard.c:teleport(),
+        # which relocates the hero through rooms.c:find_floor(..., monst=TRUE).
+        game = new_game(seed=326)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room_a = rogue.Room(1, 1, 8, 6)
+        room_b = rogue.Room(20, 1, 8, 6)
+        game.rooms = [room_a, room_b]
+        for room in game.rooms:
+            for y in range(room.y + 1, room.y + room.h - 1):
+                for x in range(room.x + 1, room.x + room.w - 1):
+                    game.tm[y][x] = rogue.T_FLOOR
+        game.p.x, game.p.y = room_a.inner()
+        game.usable_rooms = lambda: [room_a]
+        game.random_room_tile = lambda room, tiles: room.inner()
+        calls = []
+        target = room_b.inner()
+        game.find_floor_pos = lambda *args, **kwargs: calls.append((args, kwargs)) or target
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "teleportation")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertEqual((game.p.x, game.p.y), target)
+        self.assertEqual(calls[0][1]["monst"], True)
+        self.assertTrue(game.ident.sk[kind])
 
     def test_rogue_544_create_monster_uses_eight_neighbors_and_does_not_identify(self):
         # Rogue 5.4.4 scrolls.c:S_CREATE scans the full 3x3 ring and does not set oi_know.

@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1953"
+UI_BUILD = "260503_2010"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3189,10 +3189,9 @@ class Game:
             rogue_scrolls.sleep_scroll(p, rnd, SLEEPTIME); self.dashing=False; self.msg("scrolls.you_fall_asleep")
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
-            r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
+            self.teleport_player()
             if rogue_scrolls.teleport_identifies(old_room, self.room_at(p.x, p.y)):
                 self.ident.sk[it.kind]=True
-            self.finish_teleport()
         elif nm=="create monster":
             candidates = []
             for dy in (-1,0,1):
@@ -3920,15 +3919,14 @@ class Game:
         self.drop_thrown(arrow,self.p.x,self.p.y)
 
     def teleport_player(self):
-        # C: scrolls.c (teleportation)
-        cands=[
-            (x,y)
-            for y,row in enumerate(self.tm)
-            for x,tile in enumerate(row)
-            if tile in WALKABLE and tile!=T_TRAP and not self.mon_at(x,y)
-        ]
-        if cands:
-            self.p.x,self.p.y=RNG.choice(cands)
+        # C: wizard.c:teleport() via scrolls.c:S_TELEP / move.c:T_TEL.
+        pos = self.find_floor_pos(
+            None,
+            monst=True,
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
+        )
+        if pos is not None:
+            self.p.x,self.p.y=pos
             self.update_fov(); self._center_cam()
             self.finish_teleport()
 
