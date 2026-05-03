@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_2010"
+UI_BUILD = "260503_2011"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3469,7 +3469,11 @@ class Game:
                         else:
                             self.hit_monster_with_bolt(target,name)
                         return True
-                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(hero_started)
+                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
+                        hero_started,
+                        self.zap_winat_char(x, y),
+                        getattr(target, "disguise", target.sym),
+                    )
                     if wake_miss:
                         self.runto(target)
                     if show_miss:

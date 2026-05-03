@@ -1553,6 +1553,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(orc.running)
         self.assertIn("the flame whizzes past the orc", game.msgs)
 
+    def test_rogue_544_bolt_saved_miss_suppresses_mismatched_magic_m_glyph(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() saved-miss feedback is gated by
+        # winat() != 'M' || t_disguise == 'M'.
+        game = new_game(seed=2261)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        orc = monster_at(12, 10, sym="O", name="orc")
+        game.mons = [orc]
+        game.monster_save_throw = lambda which, monster: True
+        game.zap_winat_char = lambda x, y: "M" if (x, y) == (orc.x, orc.y) else "."
+
+        hit = game.fire_bolt(1, 0, "flame")
+
+        self.assertFalse(hit)
+        self.assertFalse(orc.running)
+        self.assertNotIn("the flame whizzes past the orc", game.msgs)
+
     def test_rogue_544_bolt_miss_reports_disguised_xeroc_name(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses winat(); item-disguised Xeroc still passes ch != 'M'.
         game = new_game(seed=227)
@@ -1575,6 +1592,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True), (True, True))
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False), (False, True))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, "M", "O"), (False, False))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, "M", "M"), (True, True))
 
     def test_rogue_544_sticks_helper_bolt_death_cause(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses death('b') for hero-started bolt deaths.

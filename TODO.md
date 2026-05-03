@@ -202,6 +202,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、door 上の hero は bolt 反射ではなく命中判定にする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、saved monster miss の `runto()` は hero 発射時だけにする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、擬態中 Xeroc の saved monster miss は表示/追跡しない
+- [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、saved monster miss の `ch != 'M' || t_disguise == 'M'` 表示/追跡ゲートを反映
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` 準拠で、hero 自身の反射 bolt 死亡原因を `bolt` にする
 - [x] Rogue 5.4.4 `rip.c:death()` 準拠で、墓石Gold表示も死亡時10%減後の purse にする
 - [x] Rogue 5.4.4 `rip.c:killname()` 準拠で、score/墓石の starvation・hypothermia・trap projectile 死因名と冠詞を合わせる
