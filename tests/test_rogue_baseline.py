@@ -8671,6 +8671,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(stairs), 1)
         self.assertIn(stairs[0], seen)
 
+    def test_rogue544_generated_seed_sample_has_one_reachable_stair(self):
+        # Rogue 5.4.4 new_level.c:new_level() places stairs after passages/traps,
+        # and passages.c:do_passages() connects the 3x3 room graph.
+        for seed in range(64):
+            with self.subTest(seed=seed):
+                game = new_game(seed=seed)
+                start = (game.p.x, game.p.y)
+                seen = reachable_tiles(game.tm, start)
+                stairs = [
+                    (x, y)
+                    for y, row in enumerate(game.tm)
+                    for x, tile in enumerate(row)
+                    if tile == rogue.T_STAIR
+                ]
+
+                self.assertEqual(len(stairs), 1)
+                self.assertIn(stairs[0], seen)
+
     def test_v5_dungeon_generation_can_create_dark_and_maze_rooms(self):
         dark_seen = False
         maze_seen = False

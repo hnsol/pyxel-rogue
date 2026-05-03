@@ -471,6 +471,7 @@
 - [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、maze room 通路出口の固定回数fallbackを削除
 - [x] Rogue 5.4.4 `passages.c:door()` 準拠で、maze room 出口も AI 用 room exit に記録する
 - [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、逆順 edge でも door RNG を左→右 / 上→下に正規化する
+- [x] Rogue 5.4.4 `new_level.c:new_level()` / `passages.c:do_passages()` 準拠で、固定 seed 群の階段1個・到達可能性を監査
 - [x] Rogue 5.4.4 `rooms.c:do_maze()` / `dig()` 準拠で、maze room 本体を偶数 offset と `rnd(++cnt)` で掘る
 - [x] Rogue 5.4.4 `chase.c:roomin()` 準拠で、部屋所属の右下境界を包含判定にする
 - [x] 旧コンパクトレイアウト（512×320化で置き換え済み）
