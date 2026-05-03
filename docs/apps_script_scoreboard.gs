@@ -244,9 +244,12 @@ function syncScoreboard(body) {
   if (!user || String(user.values[user.idx.server_token]) !== String(body.server_token || "")) {
     return { ok: false, status: "auth_failed" };
   }
+  const userName = String(user.values[user.idx.user_name]);
+  const entries = Array.isArray(body.entries) ? body.entries : [];
   const last = String(user.values[user.idx.last_sync_at] || "");
   const next = nextSyncAt(last);
-  if (next && new Date(next).getTime() > Date.now()) {
+  const firstScorePost = entries.length > 0 && !hasUserScore(userName);
+  if (next && new Date(next).getTime() > Date.now() && !firstScorePost) {
     return {
       ok: false,
       status: "cooldown",
@@ -254,11 +257,19 @@ function syncScoreboard(body) {
       next_sync_at: next,
     };
   }
-  const entries = Array.isArray(body.entries) ? body.entries : [];
+  if (entries.length === 0 && !last) {
+    return {
+      ok: true,
+      status: "success",
+      posted_count: 0,
+      last_sync_at: "",
+      next_sync_at: "",
+    };
+  }
   let posted = 0;
   entries.forEach((entry) => appendScore(Object.assign({}, entry, {
-    user_name: String(user.values[user.idx.user_name]),
-    player_name: String(user.values[user.idx.user_name]),
+    user_name: userName,
+    player_name: userName,
   })) && posted++);
   const now = new Date().toISOString();
   user.sheet.getRange(user.row, user.idx.last_sync_at + 1).setValue(now);
@@ -269,6 +280,16 @@ function syncScoreboard(body) {
     last_sync_at: now,
     next_sync_at: nextSyncAt(now),
   };
+}
+
+function hasUserScore(userName) {
+  const clean = cleanName(userName);
+  const data = sheet().getDataRange().getValues();
+  const header = data.shift();
+  const idx = Object.fromEntries(header.map((h, i) => [h, i]));
+  return data.some((row) =>
+    cleanName(row[idx.player_name]) === clean && row[idx.is_dummy] !== true
+  );
 }
 
 function nextSyncAt(lastSyncAt) {
@@ -535,10 +556,8 @@ function dummyValue(period, key, offset, salt, max) {
 }
 
 function dummyScore(period, key, offset, targetCount) {
-  if (period === "weekly") {
-    return 900 + dummyValue(period, key, offset, "score", 600);
-  }
-  return 80 + dummyValue(period, key, offset, "score", 950);
+  const depth = dummyDepth(period, key, offset);
+  return depth * 70 + dummyValue(period, key, offset, "score", 351);
 }
 
 function dummyDepth(period, key, offset) {

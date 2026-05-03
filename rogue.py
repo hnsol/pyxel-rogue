@@ -4683,9 +4683,18 @@ class Game:
         if period == SCOREBOARD_PERIOD_LOCAL:
             return "Local"
         key = self.scoreboard_period_key(period, timestamp)
-        if period == SCOREBOARD_PERIOD_WEEKLY:
-            return f"UTC {key}"
         return key
+
+    def format_utc_minute(self, value):
+        text = str(value or "")
+        if not text:
+            return "-"
+        try:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return text
+        dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        return f"UTC {dt:%Y-%m-%d %H:%M}"
 
     def scoreboard_period_end(self, period, now=None):
         if period == SCOREBOARD_PERIOD_LOCAL:
@@ -4734,26 +4743,20 @@ class Game:
         minutes, seconds = divmod(rem, 60)
         if period == SCOREBOARD_PERIOD_WEEKLY:
             remain = f"{days}d {hours:02d}h {minutes:02d}m"
+            label = "This Week"
         else:
             weeks, days = divmod(days, 7)
             remain = f"{weeks}w {days}d {hours:02d}h {minutes:02d}m"
-        return f"Ends in {remain}  UTC {end:%Y-%m-%d %H:%M}"
+            label = "This Season"
+        return f"{label} ends in {remain} at UTC {end:%Y-%m-%d %H:%M}"
 
     def online_sync_hint_line(self):
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if profile.get("local_only", True):
             return "Local only. Select opens online registration."
         last_sync = profile.get("last_sync_at", "")
-        next_sync = profile.get("next_sync_at", "")
-        if next_sync:
-            try:
-                dt = datetime.fromisoformat(str(next_sync).replace("Z", "+00:00"))
-                if dt > datetime.now(timezone.utc):
-                    return f"Last sync {last_sync or '-'}  Next {next_sync}"
-            except ValueError:
-                pass
         if last_sync:
-            return "Sync available. Press Select."
+            return f"Last sync {self.format_utc_minute(last_sync)}"
         return "Not synced yet. Press Select."
 
     def ensure_online_score_state(self):
@@ -4974,7 +4977,10 @@ class Game:
         if not hasattr(self, "online_profile"):
             self.online_profile = load_online_profile()
         self.online_period = SCOREBOARD_PERIOD_LOCAL
-        self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(load_score_entries(), limit=10)
+        local_entries = load_score_entries()
+        self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10)
+        if getattr(self, "online_sync_result", "") == "No local scores yet." and local_entries:
+            self.online_sync_result = ""
         self.online_return_state = ST_TITLE
         self.st = ST_ONLINE_SCORE
         profile = normalize_online_profile(getattr(self, "online_profile", None))
@@ -4998,7 +5004,7 @@ class Game:
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
         if online:
-            scores = get_period_scores(online, period, key, limit=10)
+            scores = get_period_scores(online + local, period, key, limit=10)
         else:
             scores = get_period_scores(local, period, key, limit=10)
         self.online_scores = scores
@@ -5018,10 +5024,30 @@ class Game:
                 self.online_rank_cache[period] = rank
         return scores
 
+    def display_online_period_scores(self, period):
+        scores = self.online_score_cache.get(period, [])
+        if period == SCOREBOARD_PERIOD_LOCAL:
+            return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
+        if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+            key = self.scoreboard_period_key(period)
+            return get_period_scores(scores + load_score_entries(), period, key, limit=10)
+        return scores
+
     def perform_online_scoreboard_sync(self):
         self.ensure_online_score_state()
         self.online_sync_status = "posting local scores..."
         entries = local_best_sync_entries(load_score_entries())
+        if not entries:
+            self.online_sync_result = "No local scores yet."
+            self.online_score_load_result = ""
+            self.online_sync_status = "loading scoreboard..."
+            for period in getattr(self, "online_sync_periods", []) or [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]:
+                try:
+                    self.load_online_period_scores(period, force=True)
+                except Exception:
+                    self.online_score_load_result = "Could not load scoreboard."
+                    break
+            return {"ok": True, "status": "no_local_scores", "posted_count": 0}
         result = sync_online_scoreboard(
             getattr(self, "online_profile", None),
             entries,
@@ -5134,7 +5160,7 @@ class Game:
             while len(chars) <= pos:
                 chars.append(" ")
             idx = NAME_ALPHABET.index(chars[pos]) if chars[pos] in NAME_ALPHABET else 0
-            chars[pos] = NAME_ALPHABET[(idx + d) % len(NAME_ALPHABET)]
+            chars[pos] = NAME_ALPHABET[(idx - d) % len(NAME_ALPHABET)]
             self.name_chars = chars[:8]
         if self.btn_a():
             if getattr(self, "name_pos", 0) >= 8:
@@ -5162,7 +5188,7 @@ class Game:
             while len(chars) <= pos:
                 chars.append(" ")
             idx = NAME_ALPHABET.index(chars[pos]) if chars[pos] in NAME_ALPHABET else 0
-            chars[pos] = NAME_ALPHABET[(idx + d) % len(NAME_ALPHABET)]
+            chars[pos] = NAME_ALPHABET[(idx - d) % len(NAME_ALPHABET)]
             self.name_chars = chars[:USER_NAME_MAX]
         if self.btn_a():
             if getattr(self, "name_pos", 0) >= USER_NAME_MAX:
@@ -5188,7 +5214,7 @@ class Game:
             chars = getattr(self, "online_password_chars", ["0"] * 6)
             pos = min(getattr(self, "name_pos", 0), 5)
             idx = PIN_ALPHABET.index(chars[pos]) if chars[pos] in PIN_ALPHABET else 0
-            chars[pos] = PIN_ALPHABET[(idx + d) % len(PIN_ALPHABET)]
+            chars[pos] = PIN_ALPHABET[(idx - d) % len(PIN_ALPHABET)]
             self.online_password_chars = chars[:6]
         if self.btn_a():
             if getattr(self, "name_pos", 0) >= 6:
@@ -5640,20 +5666,15 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: "Weekly Rivals",
             SCOREBOARD_PERIOD_SEASON: "Season Legends",
         }.get(period, "My Rogue Chronicle")
-        self._box(98, 48, 380, 244, f"{title} - {self.scoreboard_period_label(period)}")
-        if getattr(self, "online_syncing", False):
-            if (pyxel.frame_count // 12) % 2 == 0 if hasattr(pyxel, "frame_count") else True:
-                self.txt(410, 55, "SYNCING...", SCOREBOARD_HILITE_COL)
-            self._box(156, 116, 268, 82, self.online_text("sync_title"))
-            status = self.online_text(getattr(self, "online_sync_status", "loading scoreboard..."))
-            self.txt(184, 150, status[:34], SCOREBOARD_HILITE_COL)
-        scores = self.online_score_cache.get(period, [])
-        if period == SCOREBOARD_PERIOD_LOCAL:
-            scores = self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
+        self._box(98, 48, 380, 286, f"{title} - {self.scoreboard_period_label(period)}")
+        scores = self.display_online_period_scores(period)
         self.txt(120, 74, "   Score Name", SCOREBOARD_TEXT_COL)
         y = 90
         player_name = str(self.current_score_player_name()).upper()[:16]
-        for i, entry in enumerate(scores[:10], start=1):
+        result_entry = getattr(self, "result_entry", None)
+        rank = self.online_rank_cache.get(period)
+        display_scores = scores[:10]
+        for i, entry in enumerate(display_scores, start=1):
             name = str(entry.get("player_name", "")).upper()[:16]
             col = SCOREBOARD_HILITE_COL if name == player_name else SCOREBOARD_TEXT_COL
             self.txt(120, y, self.format_score_line_for_board(i, entry, period)[:56], col)
@@ -5661,16 +5682,21 @@ class Game:
         if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
-        entry = getattr(self, "result_entry", None)
-        rank = self.online_rank_cache.get(period)
-        if entry and rank and rank > 10:
-            self.txt(120, 242, self.format_score_line_for_board(rank, entry, period)[:56], SCOREBOARD_TEXT_COL)
-        self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
+        if result_entry and rank and rank > 10:
+            self.txt(120, 222, self.format_score_line_for_board(rank, result_entry, period)[:56], SCOREBOARD_TEXT_COL)
+        self.txt(114, 268, self.online_sync_hint_line()[:58], SCOREBOARD_DIM_COL)
+        if period != SCOREBOARD_PERIOD_LOCAL:
+            self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(114, 236, self.online_sync_result[:58], SCOREBOARD_HILITE_COL)
+            msg = self.online_sync_result[:34]
+            self.txt(max(286, 468 - len(msg) * 6), 56, msg, SCOREBOARD_HILITE_COL)
         if getattr(self, "online_score_load_result", ""):
-            self.txt(114, 224, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
-        self.txt(114, 268, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
+            self.txt(114, 236, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
+        self.txt(114, 312, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
+        if getattr(self, "online_syncing", False):
+            self._box(156, 116, 268, 82, self.online_text("sync_title"))
+            status = self.online_text(getattr(self, "online_sync_status", "loading scoreboard..."))
+            self.txt(184, 150, status[:34], SCOREBOARD_HILITE_COL)
         if getattr(self, "online_register_prompt", False):
             self._box(148, 104, 282, 92, "Online Scoreboard")
             self.txt(168, 126, "Register a name to sync once per day.", UI_TEXT_COL)
