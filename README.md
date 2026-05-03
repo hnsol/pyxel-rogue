@@ -66,6 +66,8 @@ pyxel run rogue.py
 PYXEL_ROGUE_LANG=ja pyxel run rogue.py
 ```
 
+初回オンライン登録中は、操作ヒント下の `Select/L Change Language（言語切替）` から日英を切り替えられ、切り替え後の言語はスコアボードにも反映されます。
+
 開発者向けの簡易チェック:
 
 ```bash

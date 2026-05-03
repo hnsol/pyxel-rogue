@@ -66,6 +66,8 @@ To start with Japanese text:
 PYXEL_ROGUE_LANG=ja pyxel run rogue.py
 ```
 
+During first-time online registration, use the `Select/L Change Language（言語切替）` hint below the action line to switch languages; the scoreboard follows the selected language.
+
 Basic developer checks:
 
 ```bash

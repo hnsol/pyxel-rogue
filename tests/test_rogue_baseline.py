@@ -10242,6 +10242,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertTrue(game.online_profile["profile_exists"])
 
+    def test_online_confirm_select_toggles_language_without_declining_registration(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_CONFIRM
+        game.online_profile = {"user_name": "rogue54", "local_only": True, "profile_exists": False}
+        old_save = rogue.save_local_only_profile
+        try:
+            rogue.save_local_only_profile = lambda user_name: self.fail("Select must not choose local-only")
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_TAB}, pressed={rogue.pyxel.KEY_TAB})
+            game.update()
+        finally:
+            rogue.save_local_only_profile = old_save
+
+        self.assertEqual(game.lang, rogue.LANG_JA)
+        self.assertEqual(game.st, rogue.ST_ONLINE_CONFIRM)
+
     def test_online_confirm_accept_opens_registration_with_rogue54_initial_name(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -10253,6 +10270,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
         self.assertEqual("".join(game.name_chars).strip(), "rogue54")
+
+    def test_online_register_keyboard_l_toggles_language_without_moving_cursor(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.online_profile = {"user_name": "rogue54", "local_only": True, "profile_exists": True}
+        game.name_chars = list("rogue54")
+        game.name_pos = 0
+        game.online_pending_action = ""
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_L}, pressed={rogue.pyxel.KEY_L})
+        game.update()
+
+        self.assertEqual(game.lang, rogue.LANG_JA)
+        self.assertEqual(game.name_pos, 0)
+        self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
 
     def test_online_registered_name_b_without_edit_cancels_to_title(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -10585,6 +10618,47 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("オンラインスコア", text)
         self.assertIn("名前を登録", text)
         self.assertIn("通信", text)
+
+    def test_online_registration_language_hint_is_bilingual_and_action_hints_are_short(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.online_profile = {"user_name": "rogue54", "local_only": True, "profile_exists": True}
+        game.name_chars = list("rogue54")
+        game.name_pos = 0
+        game.online_pending_action = ""
+        game.online_password_mode = "register"
+        game.online_password_chars = list("000000")
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_online_confirm_screen()
+        game.draw_online_register_screen()
+        game.draw_online_pin_screen()
+        game.draw_online_local_confirm_screen()
+
+        text = "\n".join(calls)
+        self.assertIn("Select/L Change Language（言語切替）", text)
+        self.assertIn("A/Start OK  B LOCAL ONLY", text)
+        self.assertIn("A/Start OK  B BACK", text)
+        self.assertIn("A/Start save", text)
+        self.assertNotIn("A NEXT/END", text)
+        self.assertNotIn("UP/DOWN CHANGE", text)
+
+    def test_online_registration_language_hint_is_below_action_hint(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.online_profile = {"user_name": "rogue54", "local_only": True, "profile_exists": True}
+        game.name_chars = list("rogue54")
+        game.name_pos = 0
+        game.online_pending_action = ""
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_online_register_screen()
+
+        self.assertIn((138, 216, "A/Start 決定  B ローカルのみ", rogue.UI_HILITE_COL), calls)
+        self.assertIn((138, 230, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
+        self.assertNotIn((314, 42, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
 
     def test_online_score_skips_sync_when_next_sync_is_in_future(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -11207,6 +11281,46 @@ class RogueBaselineTest(unittest.TestCase):
             if text in ("Ranking refreshed.", "POST once per 24h."):
                 self.assertLessEqual(x + len(text) * 6, 468)
 
+    def test_online_score_japanese_result_messages_split_on_sentence_end(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+
+        cases = {
+            "Ranking refreshed. POST once per 24h.": ["ランキング更新。", "POSTは24時間に1回。"],
+            "Ranking refreshed. No local scores yet.": ["ランキング更新。", "ローカルスコアなし。"],
+            "Score posted. Ranking refreshed.": ["スコア投稿。", "ランキング更新。"],
+            "Refresh failed. POST once per 24h.": ["更新失敗。", "POSTは24時間に1回。"],
+            "Refresh failed. No local scores yet.": ["更新失敗。", "ローカルスコアなし。"],
+            "Authentication failed. Register again.": ["認証失敗。", "再登録してください。"],
+            "Score posted. Ranking refresh failed.": ["スコア投稿。", "ランキング更新失敗。"],
+            "Name exists. Enter its 6-digit PIN.": ["登録済み名です。", "6桁PINを入力。"],
+        }
+        for key, expected in cases.items():
+            self.assertEqual(game.online_result_lines(key), expected)
+
+    def test_online_score_japanese_result_lines_fit_inside_scoreboard_box(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        game.online_period = rogue.SCOREBOARD_PERIOD_LOCAL
+        game.online_score_cache = {rogue.SCOREBOARD_PERIOD_LOCAL: []}
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_LOCAL}
+        game.online_syncing = False
+        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.load_online_period_scores = lambda *args, **kwargs: []
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        for item in drawn:
+            if len(item) != 4:
+                continue
+            text, _c, x, _y = item
+            if text in ("ランキング更新。", "POSTは24時間に1回。"):
+                self.assertLessEqual(x + game.ui_text_width(text), 468)
+
     def test_enter_online_scoreboard_clears_stale_no_local_scores_when_local_score_exists(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -11264,9 +11378,53 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ace*: quit on level 3.", text)
         self.assertIn("Local only. Select opens online registration.", text)
 
+    def test_online_scoreboard_uses_current_language_after_registration_toggle(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.online_profile = {"user_name": "ace", "local_only": True, "profile_exists": True}
+        game.name_chars = list("ace")
+        game.name_pos = 0
+        game.online_pending_action = ""
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_L}, pressed={rogue.pyxel.KEY_L})
+        game.update()
+        game.online_period = rogue.SCOREBOARD_PERIOD_LOCAL
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_LOCAL: [
+                {"score": 194, "player_name": "ace", "result_flags": "quit", "level": 3, "killer": ""},
+            ]
+        }
+        game.online_syncing = False
+        game.online_register_prompt = True
+        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.load_online_period_scores = lambda period=None, force=False: game.online_score_cache[rogue.SCOREBOARD_PERIOD_LOCAL]
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        text = "\n".join(str(item) for item in drawn)
+        self.assertIn("冒険の記録 - ローカル", text)
+        self.assertIn("得点 名前", text)
+        self.assertIn("ace*: 3階で中断。", text)
+        self.assertIn("ローカルのみ。Selectでオンライン登録。", text)
+        self.assertIn("左右:ボード  Select:通信/登録  B:戻る", text)
+        self.assertIn("名前登録で1日1回投稿できます。", text)
+        self.assertIn("ランキング更新。", text)
+        self.assertIn("POSTは24時間に1回。", text)
+
+    def test_online_scoreboard_japanese_period_titles_keep_rival_and_legend_tone(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+
+        self.assertEqual(game.online_text("score_title_weekly"), "週間ライバル")
+        self.assertEqual(game.online_text("score_title_season"), "シーズンレジェンド")
+
     def test_online_score_period_end_lines_use_utc_rank_windows(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
 
         self.assertEqual(
             game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_WEEKLY, "2026-04-30T20:47:15Z"),
@@ -11279,7 +11437,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_online_sync_hint_line_uses_compact_utc_last_sync_for_all_boards(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.online_profile = {
             "user_name": "ace",
             "local_only": False,
@@ -11295,7 +11453,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_online_sync_hint_line_omits_post_after_without_next_sync(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.online_profile = {
             "user_name": "ace",
             "local_only": False,
