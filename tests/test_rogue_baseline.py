@@ -8656,7 +8656,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.settings = rogue.Settings(palette="gbc_high_contrast")
         old_colors = getattr(rogue.pyxel, "colors", None)
         try:
-            rogue.pyxel.colors = []
+            rogue.pyxel.colors = [0] * len(rogue.GBC_HIGH_CONTRAST_PALETTE)
             game.apply_palette()
             self.assertEqual(
                 rogue.pyxel.colors[: len(rogue.GBC_HIGH_CONTRAST_PALETTE)],
@@ -8694,7 +8694,7 @@ class RogueBaselineTest(unittest.TestCase):
         )
         old_colors = getattr(rogue.pyxel, "colors", None)
         try:
-            rogue.pyxel.colors = []
+            rogue.pyxel.colors = [0] * len(rogue.FLEXOKI_LIGHT_PALETTE)
             game.st = rogue.ST_AUX
             game.acur = rogue.AUX_ACTIONS.index("Palette")
             rogue.pyxel.set_input(
@@ -10484,7 +10484,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_title_screen_uses_dedicated_palette_and_restores_game_palette_on_exit(self):
         old_colors = getattr(rogue.pyxel, "colors", None)
         try:
-            rogue.pyxel.colors = []
+            rogue.pyxel.colors = [0] * len(rogue.TITLE_BG_PALETTE)
             game = rogue.Game.__new__(rogue.Game)
             game.settings = rogue.Settings()
             game.title_fade_frames = 0
@@ -10498,6 +10498,32 @@ class RogueBaselineTest(unittest.TestCase):
                 rogue.pyxel.colors[: len(rogue.GBC_HIGH_CONTRAST_PALETTE)],
                 rogue.GBC_HIGH_CONTRAST_PALETTE,
             )
+        finally:
+            if old_colors is None:
+                del rogue.pyxel.colors
+            else:
+                rogue.pyxel.colors = old_colors
+
+    def test_palette_application_does_not_append_to_fixed_pyxel_colors(self):
+        class FixedColors:
+            def __init__(self, size):
+                self.values = [0] * size
+
+            def __len__(self):
+                return len(self.values)
+
+            def __getitem__(self, index):
+                return self.values[index]
+
+            def __setitem__(self, index, value):
+                self.values[index] = value
+
+        game = rogue.Game.__new__(rogue.Game)
+        old_colors = getattr(rogue.pyxel, "colors", None)
+        try:
+            rogue.pyxel.colors = FixedColors(16)
+            game.apply_palette_values(rogue.TITLE_BG_PALETTE)
+            self.assertEqual(rogue.pyxel.colors.values, list(rogue.TITLE_BG_PALETTE[:16]))
         finally:
             if old_colors is None:
                 del rogue.pyxel.colors
