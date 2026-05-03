@@ -14920,6 +14920,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_move.bear_trap_no_move(4, rogue.BEARTIME), 4 + rogue.BEARTIME)
         self.assertEqual(rogue_move.sleep_trap_no_command(7, rogue.SLEEPTIME), 7 + rogue.SLEEPTIME)
 
+    def test_rogue_544_stepping_arrow_trap_miss_drops_from_old_hero_position(self):
+        # Rogue 5.4.4 move.c:do_move() calls be_trapped(&nh) before hero = nh.
+        game = new_game(seed=630)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(11, 10)] = kind
+        game.trap_hits = lambda bonus=0: False
+        drops = []
+        game.drop_thrown = lambda item, x, y, around=True: drops.append((item.cat, item.kind, item.qty, x, y, around))
+
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (11, 10))
+        self.assertEqual(drops, [(rogue.CAT_WPN, 3, 1, 10, 10, True)])
+
     def test_rogue_544_arrow_trap_miss_drops_one_arrow_with_fallpos(self):
         # Rogue 5.4.4 move.c:T_ARROW uses weapons.c:fall()/fallpos() on a miss.
         game = new_game(seed=63)

@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0143"
+UI_BUILD = "260504_0226"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3892,12 +3892,13 @@ class Game:
             gi = self.gi_at(nx,ny)
             if self.tm[ny][nx] in (T_DOOR, T_STAIR) or gi:
                 self.dashing = False
+            old_pos = (p.x, p.y)
             p.x, p.y = nx, ny
             if self.tm[ny][nx] == T_STAIR:
                 self.seen_stairs = True
             trapped = (nx,ny) in self.traps and self.tm[ny][nx] in (T_FLOOR, T_TRAP)
             if trapped and p.levitating <= 0:
-                self.trigger_trap(nx,ny)
+                self.trigger_trap(nx, ny, arrow_origin=old_pos)
                 if not self.p.alive or self.st!=ST_PLAY:
                     self.end_turn()
                     return True
@@ -3950,10 +3951,11 @@ class Game:
     def save_vs_poison(self):
         return rogue_monsters.save_throw(0,self.p.level,RNG.roll)
 
-    def drop_arrow_at_player(self):
+    def drop_arrow_at_player(self, origin=None):
         arrow=Item(CAT_WPN,3,qty=1)
         # C: move.c:T_ARROW falls via weapons.c:fall()/fallpos().
-        self.drop_thrown(arrow,self.p.x,self.p.y)
+        x, y = origin if origin is not None else (self.p.x, self.p.y)
+        self.drop_thrown(arrow, x, y)
 
     def teleport_player(self):
         # C: wizard.c:teleport() via scrolls.c:S_TELEP / move.c:T_TEL.
@@ -3967,7 +3969,7 @@ class Game:
             self.update_fov(); self._center_cam()
             self.finish_teleport()
 
-    def trigger_trap(self,x,y):
+    def trigger_trap(self, x, y, arrow_origin=None):
         # C: move.c:be_trapped()
         self.reveal_trap_at(x,y)
         kind=self.traps.get((x,y),0)
@@ -3991,7 +3993,7 @@ class Game:
                 else:
                     self.msg("move.oh_no_an_arrow_shot_you")
             else:
-                self.drop_arrow_at_player()
+                self.drop_arrow_at_player(arrow_origin)
                 self.msg("move.an_arrow_shoots_past_you")
         elif name=="teleport trap":
             self.teleport_player()

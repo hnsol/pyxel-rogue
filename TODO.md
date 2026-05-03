@@ -380,6 +380,7 @@
 - [x] Rogue 5.4.4 `rip.c:total_winner()` 準拠で、ring / stick の勝利売却半額判定を個体 `ISKNOW` に合わせる
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `chase.c:find_dest()` / `do_chase()` 準拠で、monster の gold 目的地選択・収集を `lvl_obj` 扱いに合わせる
 - [x] Rogue 5.4.4 `move.c:be_trapped()` 準拠で、trap 発動時に `running/count` 相当を trap 効果前にクリア
+- [x] Rogue 5.4.4 `move.c:do_move()` / `be_trapped()` 準拠で、移動で踏んだ arrow trap miss の矢は移動前 hero 位置から `fall()` する
 - [x] Rogue 5.4.4 `things.c:inv_name()` 準拠で、`GOLD` の inventory name を gold value 表示にする
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
 - [x] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）
