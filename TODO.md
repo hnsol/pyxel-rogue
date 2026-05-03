@@ -190,6 +190,7 @@
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 相当の carry 目的地選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runto()` / `find_dest()` / `do_chase()` 準拠で、carry monster の item 目的地保持と到達時 pack 移動を接続
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、carry monster の item 目的地から room gold を除外
+- [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、呼び出し元自身の既存 `t_dest` も目的地重複判定に含める
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` を毎ターン `find_dest()` で再選択しない
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` は床 `lvl_obj` から消えても到着まで追跡する
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、greedy monster は room gold 消失後に stale gold destination より hero を優先する

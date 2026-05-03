@@ -4154,6 +4154,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(dest, (25, 4))
         self.assertEqual(second.dest, (25, 4))
 
+    def test_rogue_544_game_find_dest_treats_own_destination_as_claimed(self):
+        # Rogue 5.4.4 chase.c:find_dest() scans mlist including the caller's current t_dest.
+        game = new_game(seed=527)
+        set_two_room_floor(game)
+        claimed = rogue.Item(rogue.CAT_POT, 0)
+        claimed.x, claimed.y = 24, 4
+        target = rogue.Item(rogue.CAT_POT, 1)
+        target.x, target.y = 25, 4
+        monster = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.dest = (24, 4)
+        game.mons = [monster]
+        game.gitems = [claimed, target]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            dest = game.find_dest(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(dest, (25, 4))
+        self.assertEqual(monster.dest, (25, 4))
+
     def test_rogue_544_game_find_dest_includes_room_gold_for_carry_monsters(self):
         # Rogue 5.4.4 rooms.c:do_rooms() attaches GOLD to lvl_obj; chase.c:find_dest() skips only S_SCARE.
         game = new_game(seed=514)

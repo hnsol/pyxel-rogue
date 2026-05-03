@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0011"
+UI_BUILD = "260504_0044"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2711,10 +2711,6 @@ class Game:
 
     def find_dest(self,m):
         # C: chase.c:find_dest()
-        if isinstance(m.dest, tuple):
-            if self.gi_at(*m.dest):
-                return m.dest
-            m.dest=DEST_PLAYER
         if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:
@@ -2729,7 +2725,7 @@ class Game:
             self.room_for_ai(self.p.x, self.p.y, actor=True),
             (m.x, m.y) in self.visible and self.can_see_monster(m),
             self.gitems,
-            {mo.dest for mo in self.mons if mo is not m},
+            {mo.dest for mo in self.mons},
             lambda item: self.room_for_ai(item.x, item.y),
             lambda item: (item.x, item.y),
             self.is_scare_monster,
