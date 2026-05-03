@@ -5552,6 +5552,32 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rng.calls, [len(rogue.HALLU_THINGS) - 1, len(rogue.HALLU_THINGS) - 1, 26, 26])
 
+    def test_rogue_544_visuals_blind_still_randomizes_detected_monsters(self):
+        # Rogue 5.4.4 daemons.c:visuals() skips cansee() cells while blind but still uses SEEMONST.
+        game = new_game(seed=2162)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = px + 1, py
+        monster = monster_at(px + 5, py, "B", "bat")
+        game.gitems = [potion]
+        game.mons = [monster]
+        game.visible.update({(px + 1, py)})
+        game.p.hallucinating = 10
+        game.p.blind = 10
+        game.p.see_monsters = 10
+        rng = SequenceRng([5])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.run_visuals()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.hallu_item_syms, {})
+        self.assertEqual(game.detected_monster_sym(monster), "F")
+        self.assertEqual(rng.calls, [26])
+
     def test_rogue_544_hallucination_keeps_seen_stairs_real(self):
         # Rogue 5.4.4 misc.c:trip_ch() leaves STAIRS real while ISHALU if seenstairs is true.
         game = new_game(seed=3162)

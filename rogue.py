@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0826"
+UI_BUILD = "260504_0830"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4286,12 +4286,13 @@ class Game:
     def run_visuals(self):
         # C: daemons.c:visuals()
         self.clear_hallucination_visuals()
-        if self.p.hallucinating <= 0 or self.p.blind > 0:
+        if self.p.hallucinating <= 0:
             return
+        can_see_cells = self.p.blind <= 0
         for item in self.gitems:
-            if (item.x, item.y) in self.visible:
+            if can_see_cells and (item.x, item.y) in self.visible:
                 self.hallu_item_syms[id(item)] = self.hallucination_thing_sym()
-        if not getattr(self, "seen_stairs", False):
+        if can_see_cells and not getattr(self, "seen_stairs", False):
             for y, row in enumerate(self.tm):
                 for x, tile in enumerate(row):
                     if tile == T_STAIR and (x, y) in self.visible:
