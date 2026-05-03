@@ -7342,8 +7342,21 @@ class RogueBaselineTest(unittest.TestCase):
         old_spawn_treasure_room = getattr(game, "_spawn_treasure_room", None)
         old_rnd = rogue.RNG.rnd
         old_randint = rogue.RNG.randint
+        class TreasureGateRng:
+            def __init__(self):
+                self.treasure_gate = True
+
+            def rnd(self, n):
+                if n == rogue.rogue_dungeon.TREAS_ROOM and self.treasure_gate:
+                    self.treasure_gate = False
+                    return 0
+                if n == 100:
+                    return 99
+                return 0
+
         try:
-            rogue.RNG.rnd = lambda n: 0
+            rng = TreasureGateRng()
+            rogue.RNG.rnd = rng.rnd
             rogue.RNG.randint = lambda a, b: 0
             game._spawn_treasure_room = lambda room=None: calls.append(room)
             game._spawn_items()
@@ -7485,6 +7498,33 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rng.calls, [2, 80, 3, 3])
         self.assertEqual([(item.x, item.y) for item in game.gitems if item.cat == rogue.CAT_GOLD], [(7, 8)])
+
+    def test_rogue544_find_floor_unlimited_has_no_fixed_retry_fallback(self):
+        # Rogue 5.4.4 rooms.c:find_floor(..., limit=FALSE) loops until a matching square is found.
+        game = new_game(seed=30423)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[7][7] = rogue.T_FLOOR
+
+        class FindFloorRng:
+            def __init__(self):
+                self.rolls = 0
+
+            def rnd(self, n):
+                self.rolls += 1
+                if self.rolls <= (rogue.MAP_W * rogue.MAP_H + 1) * 2:
+                    return 0
+                return 1
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = FindFloorRng()
+            pos = game.find_floor_pos(room, limit=0, monst=False)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(pos, (7, 7))
 
     def test_rogue544_rnd_room_retries_gone_rooms_until_usable(self):
         # Rogue 5.4.4 new_level.c:rnd_room() retries while the picked room has ISGONE.
@@ -14177,6 +14217,34 @@ class RogueBaselineTest(unittest.TestCase):
             events[:10],
             ["rnd:10", "rnd:2", "rnd:1", "rnd:3", "rnd:3", "rnd:8", "rnd:1", "rnd:3", "rnd:3", "rnd:8"],
         )
+
+    def test_rogue544_trap_placement_floor_gate_has_no_fixed_retry_fallback(self):
+        # Rogue 5.4.4 new_level.c:new_level() repeats find_floor() until chat() == FLOOR.
+        game = new_game(seed=3049)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_CORR
+        game.tm[7][7] = rogue.T_FLOOR
+        game.p.depth = 4
+        game.gitems = []
+        game.traps = {}
+        cap = rogue.MAP_W * rogue.MAP_H * len(game.rooms)
+        positions = iter([(6, 6)] * (cap + 1) + [(7, 7)])
+        game.find_floor_pos = lambda *args, **kwargs: next(positions)
+
+        class TrapRng:
+            def rnd(self, n):
+                return 0
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = TrapRng()
+            game._spawn_traps()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(game.traps, {(7, 7): 0})
 
     def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
         game = new_game(seed=56)

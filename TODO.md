@@ -109,6 +109,7 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` 準拠で、通常物資 / Amulet、traps、stairs、hero の配置順へ修正
 - [x] Rogue 5.4.4 `rooms.c:find_floor(..., monst=FALSE)` 準拠で、通常部屋は floor、maze room は passage を物資 / gold / treasure room / Amulet 候補にする
 - [x] Rogue 5.4.4 `rooms.c:find_floor()` / `rnd_pos()` 準拠で、room gold / 物資 / treasure room / Amulet / 部屋モンスター配置を候補一覧 choice ではなく乱数試行式へ修正
+- [x] Rogue 5.4.4 `rooms.c:find_floor(..., limit=FALSE)` 準拠で、固定回数fallbackせず該当床まで再試行する
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 相当の room gold、部屋モンスター発生、gone/dark/maze room 選択を helper 化
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 準拠で、room gold は `GOLDCALC` 後に `find_floor()` する乱数順へ修正
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `new_level.c:new_level()` 準拠で、各部屋の gold / monster 配置を `do_passages()` と `no_food++` より前へ修正
@@ -121,6 +122,7 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`find_floor(..., FALSE)` と同じく monster square を候補から除外しない
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap ごとに `find_floor()` 後 `rnd(NTRAPS)` する乱数順へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap 床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正
+- [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`chat()==FLOOR` まで固定回数fallbackせず再試行する
 - [x] Rogue 5.4.4 `move.c:do_move()` / `command.c:search()` 準拠で、hidden trap は表示文字が floor の時だけ発見・発動する
 - [x] Rogue 5.4.4 `new_level.c:new_level()` 準拠で、階層生成時に Venus Flytrap hold を解除
 - [x] Rogue 5.4.4 `io.c:step_ok()` 相当の文字/地形判定を `rogue_io.py` へ小分割し、視界・杖照準の共通基準にする

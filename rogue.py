@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1934"
+UI_BUILD = "260503_1953"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1762,21 +1762,40 @@ class Game:
             return room.inner()
         return room.x + RNG.rnd(room.w - 2) + 1, room.y + RNG.rnd(room.h - 2) + 1
 
+    def find_floor_has_candidate(self, room=None, monst=False, avoid=(), occupied=()):
+        rooms = [room] if room is not None else self.usable_rooms()
+        avoid = set(avoid or ())
+        occupied = set(occupied or ())
+        for test_room in rooms:
+            if test_room is None:
+                continue
+            for y in range(test_room.y + 1, test_room.y + max(1, test_room.h - 1)):
+                for x in range(test_room.x + 1, test_room.x + max(1, test_room.w - 1)):
+                    if not in_map(x, y) or (x, y) in avoid:
+                        continue
+                    tile = self.tm[y][x]
+                    if monst:
+                        if (x, y) not in occupied and rogue_io.step_ok_tile(tile, TILE_CH):
+                            return True
+                    else:
+                        compchar = T_CORR if test_room.is_maze else T_FLOOR
+                        if tile == compchar and (x, y) not in occupied:
+                            return True
+        return False
+
     def find_floor_pos(self, room=None, limit=0, monst=False, avoid=(), occupied=()):
         # C: rooms.c:find_floor().
         pickroom = room is None
         avoid = set(avoid or ())
         occupied = set(occupied or ())
         count = limit
-        attempts = 0
+        if not limit and not self.find_floor_has_candidate(room, monst, avoid, occupied):
+            return None
         while True:
             if limit:
                 if count == 0:
                     return None
                 count -= 1
-            elif attempts > MAP_W * MAP_H * max(1, len(self.rooms)):
-                return None
-            attempts += 1
             test_room = self.source_rnd_room() if pickroom else room
             if test_room is None:
                 return None
@@ -2040,7 +2059,7 @@ class Game:
         if n <= 0:
             return
         for _ in range(n):
-            for _ in range(MAP_W * MAP_H * max(1, len(self.rooms))):
+            while True:
                 pos = self.find_floor_pos(
                     None,
                     monst=False,
