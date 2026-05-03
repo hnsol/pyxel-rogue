@@ -2491,6 +2491,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(events[:8], ["rnd:2", "rnd:8", "rnd:6", "rnd:2", "rnd:8", "rnd:6", "rnd:10", "rnd:10"])
         self.assertEqual([(mo.x, mo.y, mo.sym) for mo in game.mons], [(23, 5, "B")])
 
+    def test_rogue_544_wanderer_floor_pos_retries_player_room_without_fixed_cap(self):
+        # Rogue 5.4.4 monsters.c:wanderer() has no fixed retry cap around the proom check.
+        game = new_game(seed=3392)
+        room_a, room_b = set_two_room_floor(game)
+        player_room_pos = (room_a.x + 2, room_a.y + 2)
+        other_room_pos = (room_b.x + 2, room_b.y + 2)
+        game.p.x, game.p.y = player_room_pos
+        positions = [player_room_pos, player_room_pos, other_room_pos]
+        calls = []
+
+        old_map_w = rogue.MAP_W
+        old_map_h = rogue.MAP_H
+        old_find_floor_pos = game.find_floor_pos
+        try:
+            rogue.MAP_W = 1
+            rogue.MAP_H = 1
+
+            def fake_find_floor_pos(*args, **kwargs):
+                calls.append((args, kwargs))
+                return positions.pop(0)
+
+            game.find_floor_pos = fake_find_floor_pos
+            self.assertEqual(game.wanderer_floor_pos(), other_room_pos)
+        finally:
+            game.find_floor_pos = old_find_floor_pos
+            rogue.MAP_W = old_map_w
+            rogue.MAP_H = old_map_h
+
+        self.assertEqual(len(calls), 3)
+
     def test_rogue_544_wanderer_floor_candidates_skip_plain_corridors(self):
         # Rogue 5.4.4 monsters.c:wanderer() uses rooms.c:find_floor(NULL), which picks a room.
         game = new_game(seed=340)
@@ -7351,6 +7381,33 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rng.calls, [2, 80, 3, 3])
         self.assertEqual([(item.x, item.y) for item in game.gitems if item.cat == rogue.CAT_GOLD], [(7, 8)])
+
+    def test_rogue544_rnd_room_retries_gone_rooms_until_usable(self):
+        # Rogue 5.4.4 new_level.c:rnd_room() retries while the picked room has ISGONE.
+        game = new_game(seed=30422)
+        gone = rogue.Room(1, 1, 5, 5, flags={rogue.ROOM_GONE})
+        usable = rogue.Room(10, 1, 5, 5)
+        game.rooms = [gone, usable]
+
+        class RndRoomRng:
+            def __init__(self):
+                self.values = [0] * 8 + [1]
+                self.calls = []
+
+            def rnd(self, n):
+                self.calls.append(n)
+                return self.values.pop(0)
+
+        old_rng = rogue.RNG
+        try:
+            rng = RndRoomRng()
+            rogue.RNG = rng
+            picked = game.source_rnd_room()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertIs(picked, usable)
+        self.assertEqual(rng.calls, [2] * 9)
 
     def test_rogue544_room_gold_find_floor_uses_maze_passage(self):
         # Rogue 5.4.4 rooms.c:do_rooms() room gold uses find_floor(rp, ..., monst=FALSE).

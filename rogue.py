@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1545"
+UI_BUILD = "260503_1616"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1697,11 +1697,10 @@ class Game:
             return None
         if not usable:
             return rooms[0]
-        for _ in range(max(1, len(rooms) * 4)):
+        while True:
             room = rooms[RNG.rnd(len(rooms))]
             if room.usable:
                 return room
-        return usable[0]
 
     def source_rnd_pos(self, room):
         # C: rooms.c:rnd_pos().
@@ -1843,13 +1842,14 @@ class Game:
         # C: monsters.c:wanderer() loops until roomin(cp) != proom.
         player_room = self.room_containing(self.p.x, self.p.y)
         occupied = {(m.x, m.y) for m in self.mons if m.alive}
-        for _ in range(MAP_W * MAP_H * max(1, len(self.rooms))):
+        if not self.wanderer_floor_candidates():
+            return None
+        while True:
             pos = self.find_floor_pos(None, monst=True, occupied=occupied)
             if pos is None:
                 return None
             if self.room_containing(pos[0], pos[1]) is not player_room:
                 return pos
-        return None
 
     def _spawn_items(self):
         # C: new_level.c:put_things()
