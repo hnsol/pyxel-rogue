@@ -380,7 +380,6 @@ def display_score_name(entry: dict[str, Any], local_only: bool | None = None) ->
     unverified = (
         profile.get("local_only", True)
         or not profile.get("server_token", "")
-        or not profile.get("last_sync_at", "")
     )
     mark = unverified if local_only is None else bool(local_only)
     return f"{name}*" if mark and not name.endswith("*") else name
