@@ -4480,6 +4480,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.passage_exits(passage), [(10, 11), (10, 9), (11, 10), (9, 10)])
 
+    def test_rogue_544_passage_exits_use_passnum_room_exit_root(self):
+        # Rogue 5.4.4 passages.c:passnum() starts numpass() from rooms[].r_exit order.
+        game = new_game(seed=523)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = [rogue.Room(0, 0, 4, 4)]
+        game.rooms[0].exits = [(9, 10)]
+        game.tm[10][10] = rogue.T_CORR
+        for x, y in ((10, 11), (10, 9), (11, 10), (9, 10)):
+            game.tm[y][x] = rogue.T_DOOR
+
+        passage = game.passage_component(10, 10)
+
+        self.assertEqual(game.passage_exits(passage), [(9, 10), (10, 11), (10, 9), (11, 10)])
+
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
         import rogue_chase

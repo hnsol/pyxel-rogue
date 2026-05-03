@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_2015"
+UI_BUILD = "260503_2016"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2190,7 +2190,16 @@ class Game:
     def passage_exits(self,passage):
         if not (isinstance(passage, tuple) and len(passage) == 2 and passage[0] == "passage"):
             return []
-        return rogue_passages.passage_exits(passage[1], self.is_passage_exit_cell)
+        roots = []
+        for room in self.rooms:
+            roots.extend(getattr(room, "exits", []))
+        return rogue_passages.passage_exits(
+            passage[1],
+            self.is_passage_exit_cell,
+            roots,
+            lambda px, py: 0<=px<MAP_W and 0<=py<MAP_H,
+            self.is_passage_number_cell,
+        )
     def dist2(self,a,b):
         # C: chase.c:dist()
         return rogue_chase.dist_points(a, b)

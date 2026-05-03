@@ -58,7 +58,15 @@ def passage_component(start, in_bounds, is_number_cell_at):
     return PassageComponent(seen, order)
 
 
-def passage_exits(component, is_exit_cell_at):
-    """Return visible/secret door exits in a numbered passage component."""
+def passage_exits(component, is_exit_cell_at, roots=None, in_bounds=None, is_number_cell_at=None):
+    """Return visible/secret door exits in passages.c:passnum()/numpass() order."""
+    cells = getattr(component, "cells", component)
+    if roots is not None and in_bounds is not None and is_number_cell_at is not None:
+        for root in roots:
+            if root not in cells:
+                continue
+            rooted = passage_component(root, in_bounds, is_number_cell_at)
+            if rooted is not None and getattr(rooted, "cells", rooted) == cells:
+                return [pos for pos in rooted.order if is_exit_cell_at(pos[0], pos[1])]
     cells = getattr(component, "order", component)
     return [pos for pos in cells if is_exit_cell_at(pos[0], pos[1])]
