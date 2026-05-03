@@ -216,7 +216,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1835"
+UI_BUILD = "260503_1931"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -227,15 +227,30 @@ ONLINE_UI_TEXT = {
         "confirm_register": "A/Start register",
         "confirm_local": "B local only",
         "confirm_mark": "Local-only names show a trailing *.",
+        "language_hint": "Select/L Change Language（言語切替）",
+        "score_title_local": "My Rogue Chronicle",
+        "score_title_weekly": "Weekly Rivals",
+        "score_title_season": "Season Legends",
+        "score_period_local": "Local",
+        "score_header": "   Score Name",
+        "score_hint": "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK",
+        "score_register_prompt": "Register a name to sync once per day.",
+        "score_register_hint": "A/Select register   B local only",
+        "score_register_mark": "Local-only names show a trailing *.",
+        "period_week": "This Week",
+        "period_season": "This Season",
+        "local_only_hint": "Local only. Select opens online registration.",
+        "posted": "Posted",
+        "post_after": "POST after",
         "register_title": "Online Registration",
         "register_prompt": "Register an 8-char lowercase name.",
         "register_cancel": "B cancels.",
         "register_local": "B keeps local-only mode. Local names show *.",
-        "register_hint": "A NEXT/END  START OK  B LOCAL ONLY",
-        "register_cancel_hint": "A NEXT/END  START OK  B CANCEL",
+        "register_hint": "A/Start OK  B LOCAL ONLY",
+        "register_cancel_hint": "A/Start OK  B CANCEL",
         "local_confirm_title": "Local Only",
         "local_confirm_prompt": "Save this name for local play only?",
-        "local_confirm_ok": "A/Start save local-only",
+        "local_confirm_ok": "A/Start save",
         "local_confirm_cancel": "B cancel",
         "pin_title": "6-Digit PIN",
         "pin_server": "This PIN is stored on the server",
@@ -243,7 +258,7 @@ ONLINE_UI_TEXT = {
         "pin_link_title": "Verify PIN",
         "pin_link_server": "This name exists on the server.",
         "pin_link_reuse": "Enter its PIN to link this device.",
-        "pin_hint": "A NEXT/END  START OK  B BACK",
+        "pin_hint": "A/Start OK  B BACK",
         "sync_title": "sync",
         "sync_scores": "Syncing scores...",
         "refresh_ranking": "Refreshing ranking...",
@@ -254,6 +269,19 @@ ONLINE_UI_TEXT = {
         "posting local scores...": "posting local scores...",
         "loading scoreboard...": "loading scoreboard...",
         "searching scoreboard...": "searching scoreboard...",
+        "Local only.": "Local only.",
+        "Ranking refreshed. POST once per 24h.": "Ranking refreshed. POST once per 24h.",
+        "Ranking refreshed. No local scores yet.": "Ranking refreshed. No local scores yet.",
+        "Score posted. Ranking refreshed.": "Score posted. Ranking refreshed.",
+        "Refresh failed. POST once per 24h.": "Refresh failed. POST once per 24h.",
+        "Refresh failed. No local scores yet.": "Refresh failed. No local scores yet.",
+        "Authentication failed. Register again.": "Authentication failed. Register again.",
+        "Score posted. Ranking refresh failed.": "Score posted. Ranking refresh failed.",
+        "That user name is already registered.": "That user name is already registered.",
+        "Could not check user. Try again.": "Could not check user. Try again.",
+        "Name exists. Enter its 6-digit PIN.": "Name exists. Enter its 6-digit PIN.",
+        "That name belongs to another player.": "That name belongs to another player.",
+        "Registration failed.": "Registration failed.",
     },
     LANG_JA: {
         "confirm_title": "オンラインスコア",
@@ -261,12 +289,27 @@ ONLINE_UI_TEXT = {
         "confirm_register": "A/Start 登録",
         "confirm_local": "B ローカルのみ",
         "confirm_mark": "ローカル名には * が付きます。",
+        "language_hint": "Select/L Change Language（言語切替）",
+        "score_title_local": "冒険の記録",
+        "score_title_weekly": "週間ライバル",
+        "score_title_season": "シーズンレジェンド",
+        "score_period_local": "ローカル",
+        "score_header": "   得点 名前",
+        "score_hint": "左右:ボード  Select:通信/登録  B:戻る",
+        "score_register_prompt": "名前登録で1日1回投稿できます。",
+        "score_register_hint": "A/Select 登録  B ローカルのみ",
+        "score_register_mark": "ローカル名には * が付きます。",
+        "period_week": "今週",
+        "period_season": "今シーズン",
+        "local_only_hint": "ローカルのみ。Selectでオンライン登録。",
+        "posted": "投稿",
+        "post_after": "POST可能",
         "register_title": "オンライン登録",
         "register_prompt": "8文字の小文字名を登録し、通信で確認します。",
         "register_cancel": "B キャンセル",
         "register_local": "Bでローカルのみ。ローカル名は * 付き。",
-        "register_hint": "A 次/END  START 決定  B ローカルのみ",
-        "register_cancel_hint": "A 次/END  START 決定  B キャンセル",
+        "register_hint": "A/Start 決定  B ローカルのみ",
+        "register_cancel_hint": "A/Start 決定  B キャンセル",
         "local_confirm_title": "ローカル専用",
         "local_confirm_prompt": "この名前をローカル専用で保存しますか?",
         "local_confirm_ok": "A/Start 保存",
@@ -277,7 +320,7 @@ ONLINE_UI_TEXT = {
         "pin_link_title": "PIN確認",
         "pin_link_server": "この名前はサーバにあります。",
         "pin_link_reuse": "本人ならPINを入力してください。",
-        "pin_hint": "A 次/END  START 決定  B 戻る",
+        "pin_hint": "A/Start 決定  B 戻る",
         "sync_title": "通信",
         "sync_scores": "スコア同期中...",
         "refresh_ranking": "ランキング更新中...",
@@ -288,6 +331,19 @@ ONLINE_UI_TEXT = {
         "posting local scores...": "ローカルスコア送信中...",
         "loading scoreboard...": "スコアボード読込中...",
         "searching scoreboard...": "スコアボード検索中...",
+        "Local only.": "ローカルのみ。",
+        "Ranking refreshed. POST once per 24h.": "ランキング更新。POSTは24時間に1回。",
+        "Ranking refreshed. No local scores yet.": "ランキング更新。ローカルスコアなし。",
+        "Score posted. Ranking refreshed.": "スコア投稿。ランキング更新。",
+        "Refresh failed. POST once per 24h.": "更新失敗。POSTは24時間に1回。",
+        "Refresh failed. No local scores yet.": "更新失敗。ローカルスコアなし。",
+        "Authentication failed. Register again.": "認証失敗。再登録してください。",
+        "Score posted. Ranking refresh failed.": "スコア投稿。ランキング更新失敗。",
+        "That user name is already registered.": "その名前は登録済みです。",
+        "Could not check user. Try again.": "ユーザ確認に失敗しました。",
+        "Name exists. Enter its 6-digit PIN.": "登録済み名です。6桁PINを入力。",
+        "That name belongs to another player.": "その名前は別プレイヤーのものです。",
+        "Registration failed.": "登録失敗。",
     },
 }
 SCOREBOARD_HILITE_COL = 23
@@ -1432,6 +1488,12 @@ class Game:
     def txt(self, x, y, s, c):
         pyxel.text(x, y, str(s), c, self.font)
 
+    def ui_text_width(self, s):
+        width = 0
+        for ch in str(s):
+            width += 6 if ord(ch) < 128 else 10
+        return width
+
     def item_name(self,it, describe=True):
         name=self.ident.name(it)
         if describe and it is self.p.wpn: return f"{name} (weapon in hand)"
@@ -1657,6 +1719,17 @@ class Game:
     def toggle_lang(self):
         self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN)
         self.msg("pyxel.language_japanese" if self.lang == LANG_JA else "pyxel.language_english")
+
+    def toggle_online_language(self):
+        self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN)
+
+    def online_language_toggle_pressed(self):
+        if self.key_lower(pyxel.KEY_L):
+            return True
+        if self.kp_back():
+            self.back_used = True
+            return True
+        return False
 
     def descend(self):
         # C: new_level.c:new_level() clears ISHELD before generating the level.
@@ -4730,7 +4803,7 @@ class Game:
 
     def scoreboard_period_label(self, period, timestamp=None):
         if period == SCOREBOARD_PERIOD_LOCAL:
-            return "Local"
+            return self.online_text("score_period_local")
         key = self.scoreboard_period_key(period, timestamp)
         return key
 
@@ -4803,23 +4876,23 @@ class Game:
         minutes, seconds = divmod(rem, 60)
         if period == SCOREBOARD_PERIOD_WEEKLY:
             remain = f"{days}d {hours:02d}h {minutes:02d}m"
-            label = "This Week"
+            label = self.online_text("period_week")
         else:
             weeks, days = divmod(days, 7)
             remain = f"{weeks}w {days}d {hours:02d}h {minutes:02d}m"
-            label = "This Season"
+            label = self.online_text("period_season")
         return f"{label} ends in {remain} at UTC {end:%Y-%m-%d %H:%M}"
 
     def online_sync_hint_line(self):
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if profile.get("local_only", True):
-            return "Local only. Select opens online registration."
+            return self.online_text("local_only_hint")
         last_sync = profile.get("last_sync_at", "")
         if last_sync:
             next_sync = profile.get("next_sync_at", "")
             if next_sync:
-                return f"Posted UTC {self.format_utc_short_minute(last_sync)} / POST after {self.format_utc_short_minute(next_sync)}"
-            return f"Posted {self.format_utc_minute(last_sync)}"
+                return f"{self.online_text('posted')} UTC {self.format_utc_short_minute(last_sync)} / {self.online_text('post_after')} {self.format_utc_short_minute(next_sync)}"
+            return f"{self.online_text('posted')} {self.format_utc_minute(last_sync)}"
         return ""
 
     def ensure_online_score_state(self):
@@ -4984,10 +5057,13 @@ class Game:
             self.enter_title_screen()
 
     def upd_online_local_confirm(self):
+        if self.online_language_toggle_pressed():
+            self.toggle_online_language()
+            return
         if self.btn_a() or self.btn_start_tap():
             self.save_local_only_online_profile()
             return
-        if self.btn_b() or self.btn_back():
+        if self.btn_b():
             self.st = ST_ONLINE_REGISTER
             return
 
@@ -5163,7 +5239,28 @@ class Game:
         if period == SCOREBOARD_PERIOD_LOCAL and profile.get("local_only", True):
             if str(row.get("player_name", ""))[:16] == str(profile.get("user_name", ""))[:16]:
                 row["player_name"] = display_score_name(profile)
+        if self.lang == LANG_JA:
+            return self.format_score_line_for_board_ja(rank, row)
         return format_score_line(rank, row)
+
+    def format_score_line_for_board_ja(self, rank, entry):
+        score = int(entry.get("score", 0))
+        name = str(entry.get("player_name", "rogue"))
+        flags = str(entry.get("result_flags", ""))
+        level = int(entry.get("level", entry.get("depth", 0)) or 0)
+        if flags == "winner":
+            reason = "勝利者"
+        elif flags == "quit":
+            reason = f"{level}階で中断"
+        elif flags == "killed_with_amulet":
+            killer = str(entry.get("killer", "")).strip() or "何者か"
+            reason = f"アミュレット所持中、{level}階で{killer}に倒された"
+        elif flags == "killed":
+            killer = str(entry.get("killer", "")).strip() or "何者か"
+            reason = f"{level}階で{killer}に倒された"
+        else:
+            reason = flags
+        return f"{rank:2d} {score:5d} {name}: {reason}。"
 
     def is_current_result_score(self, entry):
         current = getattr(self, "result_entry", None)
@@ -5183,11 +5280,19 @@ class Game:
         return ">" + line[1:] if str(line).startswith(" ") else ">" + str(line)
 
     def online_result_lines(self, message, limit=27):
-        text = str(message or "").strip()
+        text = self.online_text(str(message or "").strip())
         if ". " in text:
             head, tail = text.split(". ", 1)
             head = f"{head}."
             if len(head) <= limit and len(tail) <= limit:
+                return [head, tail]
+        if "。" in text:
+            head, tail = text.split("。", 1)
+            head = f"{head}。"
+            tail = tail.strip()
+            if tail:
+                tail = tail if tail.endswith("。") else f"{tail}。"
+            if tail and len(head) <= limit and len(tail) <= limit:
                 return [head, tail]
         words = text.split()
         if not words:
@@ -5220,10 +5325,13 @@ class Game:
         self.enter_online_register()
 
     def upd_online_confirm(self):
+        if self.online_language_toggle_pressed():
+            self.toggle_online_language()
+            return
         if self.btn_a() or self.btn_start_tap():
             self.enter_online_register(reset_to_default=True)
             return
-        if self.btn_b() or self.btn_back():
+        if self.btn_b():
             self.decline_online_registration()
             return
 
@@ -5293,6 +5401,9 @@ class Game:
     def upd_online_register(self):
         if self.run_pending_online_action():
             return
+        if self.online_language_toggle_pressed():
+            self.toggle_online_language()
+            return
         if self.btn_b():
             self.cancel_or_confirm_local_only_name()
             return
@@ -5320,6 +5431,9 @@ class Game:
 
     def upd_online_pin(self):
         if self.run_pending_online_action():
+            return
+        if self.online_language_toggle_pressed():
+            self.toggle_online_language()
             return
         if self.btn_b():
             self.enter_online_register()
@@ -5779,18 +5893,22 @@ class Game:
         self.txt(140, 132, self.online_text("confirm_register"), UI_HILITE_COL)
         self.txt(140, 150, self.online_text("confirm_local"), UI_TEXT_COL)
         self.txt(140, 174, self.online_text("confirm_mark"), SCOREBOARD_DIM_COL)
+        self.draw_online_language_hint(140, 192)
+
+    def draw_online_language_hint(self, x, y):
+        self.txt(x, y, self.online_text("language_hint"), UI_HILITE_COL)
 
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
         title = {
-            SCOREBOARD_PERIOD_LOCAL: "My Rogue Chronicle",
-            SCOREBOARD_PERIOD_WEEKLY: "Weekly Rivals",
-            SCOREBOARD_PERIOD_SEASON: "Season Legends",
-        }.get(period, "My Rogue Chronicle")
+            SCOREBOARD_PERIOD_LOCAL: self.online_text("score_title_local"),
+            SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_title_weekly"),
+            SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
+        }.get(period, self.online_text("score_title_local"))
         self._box(98, 48, 380, 286, f"{title} - {self.scoreboard_period_label(period)}")
         scores = self.display_online_period_scores(period)
-        self.txt(120, 74, "   Score Name", SCOREBOARD_TEXT_COL)
+        self.txt(120, 74, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
         y = 90
         player_name = str(self.current_score_player_name()).upper()[:16]
         display_scores = scores[:10]
@@ -5813,20 +5931,20 @@ class Game:
             self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
             for i, msg in enumerate(self.online_result_lines(self.online_sync_result)):
-                self.txt(max(114, 468 - len(msg) * 6), 56 + i * 13, msg, SCOREBOARD_HILITE_COL)
+                self.txt(max(114, 468 - self.ui_text_width(msg)), 56 + i * 13, msg, SCOREBOARD_HILITE_COL)
         if getattr(self, "online_score_load_result", ""):
             self.txt(114, 236, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
-        self.txt(114, 312, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
+        self.txt(114, 312, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
             self._box(156, 116, 268, 82, self.online_text("sync_title"))
             lines = self.online_sync_box_lines()
             self.txt(184, 146, lines[0][:34], SCOREBOARD_HILITE_COL)
             self.txt(184, 160, lines[1][:34], SCOREBOARD_HILITE_COL)
         if getattr(self, "online_register_prompt", False):
-            self._box(148, 104, 282, 92, "Online Scoreboard")
-            self.txt(168, 126, "Register a name to sync once per day.", UI_TEXT_COL)
-            self.txt(168, 144, "A/Select register   B local only", UI_HILITE_COL)
-            self.txt(168, 162, "Local-only names show a trailing *.", UI_TEXT_COL)
+            self._box(148, 104, 282, 92, self.online_text("confirm_title"))
+            self.txt(168, 126, self.online_text("score_register_prompt"), UI_TEXT_COL)
+            self.txt(168, 144, self.online_text("score_register_hint"), UI_HILITE_COL)
+            self.txt(168, 162, self.online_text("score_register_mark"), UI_TEXT_COL)
 
     def draw_online_register_screen(self):
         self._box(112, 58, 356, 210, self.online_text("register_title"))
@@ -5842,12 +5960,12 @@ class Game:
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(138, 200, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
         self.txt(138, 216, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_HILITE_COL)
+        self.draw_online_language_hint(138, 230)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
-            self.txt(138, 236, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
+            self.txt(138, 246, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(138, 236, self.online_sync_result[:48], UI_HILITE_COL)
+            self.txt(138, 246, self.online_sync_result[:48], UI_HILITE_COL)
 
     def draw_online_pin_screen(self):
         is_link = getattr(self, "online_password_mode", "register") == "link"
@@ -5863,12 +5981,12 @@ class Game:
             self.txt(base_x + i * 18, y, ch, col)
         end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
         self.txt(base_x + 122, y, "END", end_col)
-        self.txt(150, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
         self.txt(150, 226, self.online_text("pin_hint"), UI_HILITE_COL)
+        self.draw_online_language_hint(150, 240)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
-            self.txt(150, 244, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
+            self.txt(150, 254, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(150, 244, self.online_sync_result[:46], UI_HILITE_COL)
+            self.txt(150, 254, self.online_sync_result[:46], UI_HILITE_COL)
 
     def draw_online_local_confirm_screen(self):
         self._box(112, 86, 356, 130, self.online_text("local_confirm_title"))
@@ -5877,6 +5995,7 @@ class Game:
         self.txt(138, 132, f"Name: {name}*", UI_HILITE_COL)
         self.txt(138, 160, self.online_text("local_confirm_ok"), UI_HILITE_COL)
         self.txt(138, 178, self.online_text("local_confirm_cancel"), UI_TEXT_COL)
+        self.draw_online_language_hint(138, 196)
 
     def draw_title(self):
         self.txt(HUD_X, 3, "Rogue V5", 10)

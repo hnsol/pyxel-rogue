@@ -242,7 +242,7 @@ Rogue2.Official の `mesg_E` / `mesg_J` / `COPYING` は `vendor/rogue2_official_
 
 現行実装では `assets/messages/en.json` / `ja.json` / `manifest.json` を実行時メッセージ辞書とし、`TextCatalog` が起動時に一度だけ読み込む。英語カタログは Rogue 5.4.4 C ソースの `msg()` / `addmsg()` 文字列と、Pyxel版固有の UI/ログ文言を持つ。日本語カタログは Rogue2.Official の `mesg_J` に寄せ、対応がない文言は `manual` として補完している。Pyxel Web launcher が JSON 資産を同梱しない場合は、同内容を Python module 化した `rogue_message_catalogs.py` へフォールバックする。欠損キーは日本語から英語へフォールバックし、英語にもない場合は `[missing:key]` を返して stderr に一度だけ警告する。
 
-`PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べ、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名などの表示だけが現在言語に従う。
+`PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べ、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。初回オンライン登録導線では操作ヒント行の下に `Select/L Change Language（言語切替）` を表示し、ゲームパッドSelectまたはキーボードLで日英を切り替えられる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名、オンラインスコアボード表示などが現在言語に従う。
 
 ゲームログ、補助メニュー、罠名表示は JSON 駆動の `TextCatalog` へ移行した。HUD の一部、Inventory、Help、Death などの固定表示文言は後続タスクで用途別 API に寄せる。
 
