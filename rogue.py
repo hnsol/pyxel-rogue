@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_2012"
+UI_BUILD = "260503_2013"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1073,6 +1073,9 @@ class DGen:
         """Connect two rooms by choosing wall doors first, like Rogue's conn()."""
         if horiz is None:
             horiz = abs(r1.cx-r2.cx) >= abs(r1.cy-r2.cy)
+        # C: passages.c:conn() normalizes r1/r2 to the lower sector before drawing right/down.
+        if (horiz and r1.cx > r2.cx) or (not horiz and r1.cy > r2.cy):
+            r1, r2 = r2, r1
         if horiz:
             if r1.cx <= r2.cx:
                 d1,s=DGen._exit(t,r1,"R",outward=True,hidden_tiles=hidden_tiles)

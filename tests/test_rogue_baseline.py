@@ -8809,6 +8809,46 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
         self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
 
+    def test_rogue544_passage_conn_normalizes_reversed_horizontal_edges(self):
+        # Rogue 5.4.4 passages.c:conn() normalizes r1/r2 to the lower room index,
+        # so reversed horizontal edges still consume door RNG left-to-right.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        values = iter([0, 2, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values)
+
+            rogue.DGen._conn(tm, right, left, True)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
+        self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
+
+    def test_rogue544_passage_conn_normalizes_reversed_vertical_edges(self):
+        # Rogue 5.4.4 passages.c:conn() normalizes r1/r2 before a down connection,
+        # so reversed vertical edges still consume door RNG top-to-bottom.
+        top = rogue.Room(10, 2, 5, 5)
+        bottom = rogue.Room(10, 12, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, top)
+        rogue.DGen._room(tm, bottom)
+        values = iter([0, 2, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values)
+
+            rogue.DGen._conn(tm, bottom, top, False)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(tm[top.y + top.h - 1][top.x + 1], rogue.T_DOOR)
+        self.assertEqual(tm[bottom.y][bottom.x + 3], rogue.T_DOOR)
+
     def test_rogue544_passage_conn_hides_secret_doors_during_door_call(self):
         # Rogue 5.4.4 passages.c:door() runs the secret-door gate during conn(), not in a later map scan.
         left = rogue.Room(2, 2, 5, 5)
