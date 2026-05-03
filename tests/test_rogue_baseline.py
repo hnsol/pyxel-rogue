@@ -11122,6 +11122,44 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(" 3   624 rogue54b: quit on level 5.", text)
         self.assertIn(" 4   480 fortran: killed on level 3 by a hobgoblin.", text)
 
+    def test_local_scoreboard_highlights_only_current_result_row(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        game.online_period = rogue.SCOREBOARD_PERIOD_LOCAL
+        current = {
+            "score": 624,
+            "player_name": "ace",
+            "result_flags": "quit",
+            "level": 5,
+            "killer": "",
+            "timestamp": "2026-05-03T08:00:00Z",
+            "score_id": "current-score",
+        }
+        game.result_entry = current
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_LOCAL: [
+                {"score": 740, "player_name": "ace", "result_flags": "killed", "level": 8, "killer": "troll", "score_id": "old-score"},
+                current,
+                {"score": 480, "player_name": "ace", "result_flags": "killed", "level": 3, "killer": "hobgoblin", "score_id": "older-score"},
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_LOCAL}
+        game.online_syncing = False
+        game.online_rank_cache = {}
+        game.load_online_period_scores = lambda *args, **kwargs: game.online_score_cache[rogue.SCOREBOARD_PERIOD_LOCAL]
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 90), drawn)
+        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 103), drawn)
+        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 116), drawn)
+
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -11174,6 +11212,22 @@ class RogueBaselineTest(unittest.TestCase):
         game.settings = rogue.Settings()
         game.apply_palette = lambda: None
         game.online_sync_result = "No local scores yet."
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [{"score": 730, "player_name": "ace", "period_week": "2026-W18"}]
+            game.enter_online_scoreboard(auto_sync=False)
+        finally:
+            rogue.load_score_entries = old_load
+
+        self.assertEqual(game.online_sync_result, "")
+
+    def test_enter_online_scoreboard_clears_stale_refresh_result(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.apply_palette = lambda: None
+        game.st = rogue.ST_DEAD
+        game.online_sync_result = "Ranking refreshed. POST once per 24h."
         game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
         old_load = rogue.load_score_entries
         try:

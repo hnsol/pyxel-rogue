@@ -216,7 +216,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1716"
+UI_BUILD = "260503_1815"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5017,7 +5017,9 @@ class Game:
             "No local scores yet.",
             "Ranking updated. No local scores yet.",
             "Ranking refreshed. No local scores yet.",
-        ) and local_entries:
+            "Ranking refreshed. POST once per 24h.",
+            "Score posted. Ranking refreshed.",
+        ):
             self.online_sync_result = ""
         self.online_return_state = ST_TITLE
         self.st = ST_ONLINE_SCORE
@@ -5122,6 +5124,23 @@ class Game:
             if str(row.get("player_name", ""))[:16] == str(profile.get("user_name", ""))[:16]:
                 row["player_name"] = display_score_name(profile)
         return format_score_line(rank, row)
+
+    def is_current_result_score(self, entry):
+        current = getattr(self, "result_entry", None)
+        if not current:
+            return False
+        entry_id = str(entry.get("score_id", ""))
+        current_id = str(current.get("score_id", ""))
+        if entry_id and current_id:
+            return entry_id == current_id
+        return (
+            str(entry.get("timestamp", "")) == str(current.get("timestamp", ""))
+            and str(entry.get("player_name", "")).upper() == str(current.get("player_name", "")).upper()
+            and int(entry.get("score", 0)) == int(current.get("score", 0))
+        )
+
+    def mark_current_score_line(self, line):
+        return ">" + line[1:] if str(line).startswith(" ") else ">" + str(line)
 
     def online_result_lines(self, message, limit=27):
         text = str(message or "").strip()
@@ -5737,8 +5756,12 @@ class Game:
         display_scores = scores[:10]
         for i, entry in enumerate(display_scores, start=1):
             name = str(entry.get("player_name", "")).upper()[:16]
-            col = SCOREBOARD_HILITE_COL if name == player_name else SCOREBOARD_TEXT_COL
-            self.txt(120, y, self.format_score_line_for_board(i, entry, period)[:56], col)
+            current_result = period == SCOREBOARD_PERIOD_LOCAL and self.is_current_result_score(entry)
+            col = SCOREBOARD_HILITE_COL if current_result or (period != SCOREBOARD_PERIOD_LOCAL and name == player_name) else SCOREBOARD_TEXT_COL
+            line = self.format_score_line_for_board(i, entry, period)
+            if current_result:
+                line = self.mark_current_score_line(line)
+            self.txt(120, y, line[:56], col)
             y += 13
         if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
