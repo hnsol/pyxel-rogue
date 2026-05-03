@@ -13358,6 +13358,114 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster.running)
         self.assertEqual(monster.x, 7)
 
+    def test_rogue_544_pickup_command_wakes_visible_monsters_before_runners(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ',': pick_up().
+        game = new_game(seed=5016)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.p.inv = []
+        game.gitems = [item]
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.do_pickup()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+        self.assertIn(item, game.p.inv)
+
+    def test_rogue_544_pack_command_wakes_visible_monsters_before_drop(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before pack commands such as drop().
+        game = new_game(seed=5017)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        game.gitems = []
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.cact = "Drop"
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.confirm_item(item)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+        self.assertEqual([(it.x, it.y) for it in game.gitems], [(5, 5)])
+
+    def test_rogue_544_throw_command_wakes_visible_monsters_before_missile(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before weapons.c:missile().
+        game = new_game(seed=5019)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        game.gitems = []
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.cact = "Throw"
+        game.throw_dir = (0, -1)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.confirm_item(item)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+
+    def test_rogue_544_zap_command_wakes_visible_monsters_before_do_zap(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before sticks.c:do_zap().
+        game = new_game(seed=5018)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        nothing = next(i for i, stick in enumerate(rogue.STICKS) if stick["name"] == "nothing")
+        stick = rogue.Item(rogue.CAT_STICK, nothing, charges=1)
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.zap_item = stick
+        game.dact = "Zap"
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.dir_confirm(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+        self.assertEqual(stick.charges, 0)
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)

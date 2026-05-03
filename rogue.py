@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0851"
+UI_BUILD = "260504_0857"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4095,6 +4095,7 @@ class Game:
         self.do_search(front_only=True)
 
     def do_pickup(self):
+        self.wake_visible_monsters()
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR:
             self.use_stairs(); return
@@ -4537,6 +4538,7 @@ class Game:
         a=self.cact
         if a=="Throw":
             if self.throw_dir:
+                self.wake_visible_monsters()
                 dx,dy=self.throw_dir
                 self.p.facing=(dx,dy)
                 animating = self.throw(it,dx,dy)
@@ -4557,6 +4559,7 @@ class Game:
             self.msg("pyxel.it_is_item", item=self.ident.name(it))
             self.close_menu(); self.end_turn()
             return
+        self.wake_visible_monsters()
         if a=="Quaff":
             if self.use_pot(it) is False:
                 self.close_menu()
@@ -4600,6 +4603,7 @@ class Game:
         if self.dact=="Zap":
             if self.zap_item:
                 self.p.facing=(dx,dy)
+                self.wake_visible_monsters()
                 spent_turn = self.zap_stick(self.zap_item,dx,dy)
                 self.close_menu()
                 if spent_turn:
