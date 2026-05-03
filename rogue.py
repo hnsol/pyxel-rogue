@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_2017"
+UI_BUILD = "260504_0002"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2668,9 +2668,7 @@ class Game:
     def current_chase_dest(self,m):
         # C: chase.c:do_chase() uses the existing t_dest; find_dest() is called by runto()/relocate().
         if isinstance(m.dest, tuple):
-            if self.gi_at(*m.dest):
-                return m.dest
-            m.dest=DEST_PLAYER
+            return m.dest
         if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:

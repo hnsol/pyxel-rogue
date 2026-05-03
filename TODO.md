@@ -191,6 +191,7 @@
 - [x] Rogue 5.4.4 `chase.c:runto()` / `find_dest()` / `do_chase()` 準拠で、carry monster の item 目的地保持と到達時 pack 移動を接続
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、carry monster の item 目的地から room gold を除外
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` を毎ターン `find_dest()` で再選択しない
+- [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` は床 `lvl_obj` から消えても到着まで追跡する
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Venus Flytrap は追跡継続時に `relocate()` しない
 - [x] Rogue 5.4.4 `chase.c:do_chase()` / `passages.c:numpass()` 準拠で、passage 内 chaser は nearest passage exit へ向かう
 - [x] Rogue 5.4.4 `chase.c:do_chase()` / `roomin()` 準拠で、maze passage item 回収後も `F_PASS` 相当の AI passage 所属を維持

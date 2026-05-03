@@ -4237,6 +4237,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item, monster.pack)
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
 
+    def test_rogue_544_do_chase_keeps_stale_item_destination_until_reached(self):
+        # Rogue 5.4.4 chase.c:do_chase() does not validate t_dest against lvl_obj before chase().
+        game = new_game(seed=525)
+        set_two_room_floor(game)
+        game.p.x, game.p.y = 3, 4
+        monster = monster_at(23, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (24, 4)
+        game.mons = [monster]
+        game.gitems = []
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (24, 4))
+        self.assertEqual(monster.dest, (24, 4))
+        self.assertFalse(monster.running)
+
     def test_rogue_544_do_chase_collecting_maze_item_restores_floor_tile(self):
         # Rogue 5.4.4 chase.c:do_chase() restores chat(obj->o_pos) to
         # FLOOR unless th->t_room has ISGONE, even when the item was on PASSAGE.
