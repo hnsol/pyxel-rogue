@@ -305,6 +305,7 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 巻物は `rogue.h:S_CONFUSE..S_PROTECT` / `MAXSCROLLS=18` / `scrolls.c:read_scroll()` / `extern.c:scr_info[]` を基準にする。Pyxel 版の `SCROLLS` は原作 18 種の順序と確率へ更新し、identify は Rogue 5.4.4 では `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の 5 種へ分離されている。今後はこの5種類仕様を劣化差分として扱い、5.4.5p の `idscrl` 実装をリファレンスに1種類化する方針を検討する。`S_ID_*` は `scrolls.c:read_scroll()` の `id_type[]` と `wizard.c:set_know()` 相当に合わせ、対象カテゴリだけを正式鑑定する。現時点では携帯機UI向けの暫定として該当カテゴリの未鑑定品から自動選択するため、原作 `whatis(TRUE, type)` の対象選択プロンプトは後続の「鑑定・命名・発見リスト忠実度」で実装する。`S_CONFUSE` は `fight.c:attack()` の `CANHUH` 付与、`S_FDET` は `scrolls.c:S_FDET` の全食料一時表示、`S_PROTECT` は `scrolls.c:S_PROTECT` の防具呪い・錆び防止として接続する。
 
 `S_HOLD` は `scrolls.c:read_scroll()` と同じく周囲2マス内の `ISRUN` monster から `ISRUN` を外し、`ISHELD` を立てるだけにする。原作に duration roll はなく、解除は `chase.c:runto()` など `ISHELD` を外す入口に任せる。
+`S_CREATE` は `scrolls.c:read_scroll()` と同じく周囲8マスを `winat()` / `io.c:step_ok()` で候補化する。通常 monster 文字は候補外だが、item 文字に擬態した Xeroc は `step_ok()` を通る。生成は `monsters.c:new_monster()` の `attach(mlist, tp)` に合わせ、同座標に既存 monster がある場合でも新 monster を mlist head 相当に置く。
 
 scroll の未識別タイトルは `init.c:init_names()` を基準にし、`rnd(3)+2` 語、各語 `rnd(3)+1` 音節、各音節 `sylls[rnd(count)]` で組み立てる。`MAXNAME` 判定は単語ごとではなく `prbuf` 全体の書き込み位置に掛かるため、Pyxel 版の `rogue_init.scroll_title()` もタイトル全体の長さで判定し、`IdentTable.snam` 生成で使う。
 

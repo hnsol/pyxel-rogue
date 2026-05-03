@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0746"
+UI_BUILD = "260504_0801"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3225,7 +3225,8 @@ class Game:
                     if dx==0 and dy==0:
                         continue
                     nx,ny=p.x+dx,p.y+dy
-                    if self.walkable(nx,ny) and not self.mon_at(nx,ny):
+                    ch = self.zap_winat_char(nx, ny)
+                    if self.zap_step_ok_char(ch):
                         gi=self.gi_at(nx,ny)
                         if gi and self.is_scare_scroll(gi):
                             continue
@@ -3235,7 +3236,8 @@ class Game:
                 nx,ny=pick
                 spec = self.monster_spec_for_sym(rogue_monsters.randmonster(p.depth, RNG.rnd, wander=False))
                 if spec:
-                    self.mons.append(self.new_monster_from_spec(nx,ny,spec))
+                    # C: monsters.c:new_monster() attach(mlist, tp) puts the new monster at list head.
+                    self.mons.insert(0, self.new_monster_from_spec(nx,ny,spec))
             else:
                 self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":

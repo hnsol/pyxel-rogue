@@ -2545,6 +2545,44 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([mo.sym for mo in game.mons], ["B"])
 
+    def test_rogue_544_create_monster_uses_winat_for_item_disguised_xeroc(self):
+        # Rogue 5.4.4 scrolls.c:S_CREATE uses step_ok(winat()), then monsters.c:new_monster() attaches at mlist head.
+        class CreateMonsterRng:
+            def __init__(self):
+                self.rolls = iter([0, 0, 2])
+
+            def rnd(self, n):
+                return next(self.rolls)
+
+            def choice(self, seq):
+                raise AssertionError("choice used")
+
+            def roll(self, dice, sides):
+                return dice
+
+        game = new_game(seed=338)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = [rogue.Room(1, 1, 8, 8)]
+        game.p.x, game.p.y = 4, 4
+        game.tm[game.p.y][game.p.x] = rogue.T_FLOOR
+        game.tm[game.p.y - 1][game.p.x - 1] = rogue.T_FLOOR
+        xeroc = monster_at(game.p.x - 1, game.p.y - 1, sym="X", name="xeroc")
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "create monster")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        old_rng = rogue.RNG
+        rogue.RNG = CreateMonsterRng()
+        try:
+            game.use_scr(scroll)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual([mo.sym for mo in game.mons], ["B", "X"])
+        self.assertIs(game.mon_at(game.p.x - 1, game.p.y - 1), game.mons[0])
+
     def test_rogue_544_random_monster_spec_uses_randmonster_false_table(self):
         # Rogue 5.4.4 rooms.c:do_rooms() uses monsters.c:randmonster(FALSE).
         class MonsterRng:

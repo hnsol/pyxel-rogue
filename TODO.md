@@ -246,6 +246,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` / `misc.c:chg_str()` 準拠で Strength 下限3の poison bite も弱化結果にする
 - [x] Rogue 5.4.4 `potions.c:P_POISON` 準拠で poison potion Strength 低下を `rnd(3)+1` にする
 - [x] Rogue 5.4.4 `scrolls.c:S_HOLD` 準拠で hold monster は duration roll ではなく `ISHELD` flag にする
+- [x] Rogue 5.4.4 `scrolls.c:S_CREATE` / `monsters.c:new_monster()` 準拠で、create monster 候補を `winat()` / `step_ok()` 基準にし、生成 monster を mlist head 相当にする
 - [x] Rogue 5.4.4 `misc.c:look()` 準拠で、同一セルの visible monster は床・通路・アイテムと重ねず monster glyph だけ描く
 - [x] Rogue 5.4.4 `init.c:init_names()` 準拠で scroll 未識別タイトルを `rnd(3)+2` words / `rnd(3)+1` syllables 生成にする
 - [x] Rogue 5.4.4 `init.c:init_names()` 準拠で scroll 未識別タイトルの `MAXNAME` 判定をタイトル全体へ適用する
