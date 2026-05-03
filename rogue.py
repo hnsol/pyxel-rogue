@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1450"
+UI_BUILD = "260503_1835"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1531,11 +1531,51 @@ class Game:
         return "an" if killer and killer[0].lower() in "aeiou" else "a"
 
     def tombstone_killed_by_line(self, killer):
+        lines = self.rogue_544_tombstone_lines("rogue", 0, killer, 1980)
+        return lines[8]
+
+    def rogue_544_tombstone_lines(self, name, gold, killer, year):
+        # C: rip.c:rip[] and death() overlay whoami, purse, killer, article, year.
+        lines = [
+            "              __________",
+            "             /          \\",
+            "            /    REST    \\",
+            "           /      IN      \\",
+            "          /     PEACE      \\",
+            "         /                  \\",
+            "         |                  |",
+            "         |                  |",
+            "         |   killed by a    |",
+            "         |                  |",
+            "         |       1980       |",
+            "        *|     *  *  *      | *",
+            "________)/\\\\_//(\\/(/\\)/\\//\\/|_)_______",
+        ]
+        base_col = 9
+
+        def center_col(text):
+            return 28 - ((len(text) + 1) // 2) - base_col
+
+        def put(row, col, text):
+            chars = list(lines[row])
+            end = col + len(text)
+            if end > len(chars):
+                chars.extend(" " for _ in range(end - len(chars)))
+            for i, ch in enumerate(text):
+                chars[col + i] = ch
+            lines[row] = "".join(chars)
+
+        put(6, center_col(name), name)
+        gold_text = f"{gold} Au"
+        put(7, center_col(gold_text), gold_text)
         article = self.death_killer_article(killer)
-        if article == "a":
-            return "    |  killed by a  |"
-        text = f"killed by {article}".strip()
-        return f"    | {text.center(14)} |"
+        if article == "":
+            put(8, 32 - base_col, " ")
+        elif article == "an":
+            put(8, 33 - base_col, "n")
+        put(9, center_col(killer), killer)
+        put(10, 26 - base_col, f"{year:4d}")
+        return lines
 
     def result_killer(self, outcome):
         if outcome in ("quit", "winner"):
@@ -5839,13 +5879,11 @@ class Game:
         sy+=11
         self.txt(sx,sy,f"Arm {p.ac}",9); sy+=11
         self.txt(sx,sy,f"Gold {p.gold}",29); sy+=11
+        self.txt(sx,sy,"Move Corner" if self.diag_assist else "Move 8-way",27 if self.diag_assist else 9); sy+=11
+        self.txt(sx,sy,"Pick Auto" if self.auto_pickup else "Pick Manual",9 if self.auto_pickup else 23); sy+=11
         state = p.state if p.state else "normal"
         if state != "normal":
             self.txt(sx,sy,f"Food {state}",22); sy+=11
-        if self.diag_assist:
-            self.txt(sx,sy,"Diag ON",27); sy+=11
-        if not self.auto_pickup:
-            self.txt(sx,sy,"Pickup OFF",23); sy+=11
         sy+=6
         self.txt(sx,sy,"-- Equip --",27); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
@@ -6056,40 +6094,24 @@ class Game:
             next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
             self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
             self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=24
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL); y+=14
-            self.txt(x,y,"B          Stay here",UI_TEXT_COL)
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
             return
-        bx,by=88,30; bw=320; bh=232
+        bx,by=88,24; bw=340; bh=292
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
         p=self.p; x=bx+18; y=by+24
         killer=self.death_killer_name()
         name=self.options.get("name","rogue")
         year=time.localtime().tm_year
-        rip=[
-            "        __________",
-            "       /          \\",
-            "      /    REST    \\",
-            "     /      IN      \\",
-            "    /     PEACE      \\",
-            "    |                |",
-            f"    | {name[:14].center(14)} |",
-            f"    | {str(self.death_display_gold()) + ' Au':^14} |",
-            self.tombstone_killed_by_line(killer),
-            f"    | {killer[:14].center(14)} |",
-            f"    | {str(year):^14} |",
-            "   *|   *  *  *    |*",
-            "____)/\\_//(\\/(/\\)/\\//\\|_)____",
-        ]
+        rip=self.rogue_544_tombstone_lines(name, self.death_display_gold(), killer, year)
         for ln in rip:
-            self.txt(x,y,ln,UI_TEXT_COL); y+=11
+            self.txt(x,y,ln,UI_TEXT_COL); y+=10
         y+=4
         self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
         self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
         next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
         self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=18
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL); y+=14
-        self.txt(x,y,"B          Stay here",UI_TEXT_COL)
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_win(self):
         bx,by=82,50; bw=334; bh=176

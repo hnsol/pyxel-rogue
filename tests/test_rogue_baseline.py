@@ -9175,13 +9175,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any("Diag OFF" in c for c in calls))
         self.assertFalse(any("Pickup ON" in c for c in calls))
         self.assertFalse(any("Lang EN" in c for c in calls))
+        self.assertIn("Move 8-way", calls)
+        self.assertIn("Pick Auto", calls)
 
         game.diag_assist = True
         game.auto_pickup = False
         calls.clear()
         game.draw_stat()
-        self.assertTrue(any("Diag ON" in c for c in calls))
-        self.assertTrue(any("Pickup OFF" in c for c in calls))
+        self.assertIn("Move Corner", calls)
+        self.assertIn("Pick Manual", calls)
+        self.assertFalse(any("Diag ON" in c for c in calls))
+        self.assertFalse(any("Pickup OFF" in c for c in calls))
+
+    def test_hud_mode_lines_do_not_shift_equipment(self):
+        game = new_game(seed=35)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s)))
+
+        game.diag_assist = False
+        game.auto_pickup = True
+        game.draw_stat()
+        normal_equip_y = next(y for _x, y, s in calls if s == "-- Equip --")
+        normal_effect_y = next(y for _x, y, s in calls if s == "-- Effect --")
+
+        calls.clear()
+        game.diag_assist = True
+        game.auto_pickup = False
+        game.draw_stat()
+
+        self.assertEqual(next(y for _x, y, s in calls if s == "-- Equip --"), normal_equip_y)
+        self.assertEqual(next(y for _x, y, s in calls if s == "-- Effect --"), normal_effect_y)
 
     def test_inventory_overlay_lists_pack_without_status_or_equipment_sections(self):
         game = new_game(seed=35)
@@ -9392,10 +9415,29 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_dead()
 
         self.assertTrue(game.options["tombstone"])
-        self.assertIn("      /    REST    \\", calls)
-        self.assertIn("    |  killed by a  |", calls)
+        self.assertIn("            /    REST    \\", calls)
+        self.assertIn("         |   killed by a    |", calls)
+        self.assertIn("        *|     *  *  *      | *", calls)
+        self.assertIn("________)/\\\\_//(\\/(/\\)/\\//\\/|_)_______", calls)
         self.assertTrue(any("hobgoblin" in c for c in calls))
         self.assertTrue(any("123 Au" in c for c in calls))
+
+    def test_death_screen_tombstone_contents_fit_inside_box(self):
+        game = new_game(seed=35)
+        box = []
+        drawn = []
+        game._box = lambda bx, by, bw, bh, title=None: box.append((bx, by, bw, bh, title))
+        game.txt = lambda x, y, s, c: drawn.append((x, y, str(s)))
+
+        game.draw_dead()
+
+        bx, by, bw, bh, _title = box[0]
+        self.assertFalse(any("Stay here" in s or s.startswith("B ") for _x, _y, s in drawn))
+        for x, y, s in drawn:
+            self.assertGreaterEqual(x, bx)
+            self.assertLessEqual(x + len(s) * 6, bx + bw)
+            self.assertGreaterEqual(y, by)
+            self.assertLessEqual(y + 10, by + bh)
 
     def test_rogue_544_death_tombstone_uses_score_purse_after_penalty(self):
         # Rogue 5.4.4 rip.c:death() subtracts 10% from purse before tombstone() and score().
