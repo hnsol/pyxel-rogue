@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1424"
+UI_BUILD = "260503_1435"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1059,7 +1059,7 @@ class DGen:
                 d2,e=DGen._exit(t,r2,"D",outward=True)
         if d1 is not None: DGen._door(t,d1)
         if d2 is not None: DGen._door(t,d2)
-        DGen._dig_pass(t,s,e,horiz)
+        DGen._dig_pass(t,d1 or s,d2 or e,horiz)
     @staticmethod
     def _exit(t,r,side,outward=True):
         if r.is_gone:
@@ -1096,24 +1096,14 @@ class DGen:
         return p
     @staticmethod
     def _pick_wall_door(t,r,side):
+        # Rogue 5.4.4 passages.c:conn() selects a wall coordinate directly
+        # with rnd(width/height - 2) + 1; it does not avoid adjacent doors.
         if side in ("L","R"):
             x = r.x if side=="L" else r.x+r.w-1
-            cands=[(x,y) for y in range(r.y+1,r.y+r.h-1)]
+            return x, r.y + RNG.rnd(r.h - 2) + 1
         else:
             y = r.y if side=="U" else r.y+r.h-1
-            cands=[(x,y) for x in range(r.x+1,r.x+r.w-1)]
-        RNG.shuffle(cands)
-        for p in cands:
-            if DGen._door_ok(t,p): return p
-        return cands[0]
-    @staticmethod
-    def _door_ok(t,p):
-        x,y=p
-        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-            nx,ny=x+dx,y+dy
-            if in_map(nx,ny) and t[ny][nx]==T_DOOR:
-                return False
-        return True
+            return r.x + RNG.rnd(r.w - 2) + 1, y
     @staticmethod
     def _door(t,p):
         x,y=p
@@ -1124,23 +1114,31 @@ class DGen:
         if in_play_area(x,y): t[y][x]=T_CORR
     @staticmethod
     def _dig_pass(t,s,e,first_horiz):
+        # Rogue 5.4.4 passages.c:conn() moves one step at a time and
+        # turns when the remaining straight-line distance reaches turn_spot.
         x,y=s; ex,ey=e
         if first_horiz:
-            turn_x=DGen._turn_coord(x,ex)
-            DGen._hl(t,x,turn_x,y)
-            DGen._vl(t,y,ey,turn_x)
-            DGen._hl(t,turn_x,ex,ey)
+            dx,dy=(1 if x < ex else -1),0
+            tx,ty=0,(1 if y < ey else -1)
+            distance=abs(x-ex)-1
+            turn_distance=abs(y-ey)
         else:
-            turn_y=DGen._turn_coord(y,ey)
-            DGen._vl(t,y,turn_y,x)
-            DGen._hl(t,x,ex,turn_y)
-            DGen._vl(t,turn_y,ey,ex)
-    @staticmethod
-    def _turn_coord(a,b):
-        lo,hi=min(a,b),max(a,b)
-        if hi-lo <= 2:
-            return RNG.randint(lo,hi) if a!=b else a
-        return RNG.randint(lo+1,hi-1)
+            dx,dy=0,(1 if y < ey else -1)
+            tx,ty=(1 if x < ex else -1),0
+            distance=abs(y-ey)-1
+            turn_distance=abs(x-ex)
+        turn_spot = RNG.rnd(distance - 1) + 1
+        while distance > 0:
+            x += dx
+            y += dy
+            if distance == turn_spot:
+                while turn_distance > 0:
+                    DGen._corr(t,(x,y))
+                    x += tx
+                    y += ty
+                    turn_distance -= 1
+            DGen._corr(t,(x,y))
+            distance -= 1
     @staticmethod
     def _hl(t,x1,x2,y):
         if not(PLAY_Y_MIN<=y<=PLAY_Y_MAX): return

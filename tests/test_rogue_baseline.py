@@ -8451,6 +8451,56 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(len(conn_calls), edge_counts[0])
 
+    def test_rogue544_passage_conn_uses_rnd_turn_spot_not_randint(self):
+        # Rogue 5.4.4 passages.c:conn() uses turn_spot = rnd(distance - 1) + 1.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        old_pick = rogue.DGen._pick_wall_door
+        old_rnd = rogue.RNG.rnd
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.DGen._pick_wall_door = staticmethod(
+                lambda _tm, room, side: (room.x + room.w - 1, room.y + 2)
+                if side == "R"
+                else (room.x, room.y + 4)
+            )
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.randint = lambda a, b: (_ for _ in ()).throw(AssertionError("randint used"))
+
+            rogue.DGen._conn(tm, left, right, True)
+        finally:
+            rogue.DGen._pick_wall_door = old_pick
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randint = old_randint
+
+        self.assertEqual(tm[left.y + 2][left.x + left.w], rogue.T_CORR)
+        self.assertEqual(tm[left.y + 4][right.x - 1], rogue.T_CORR)
+
+    def test_rogue544_passage_conn_uses_rnd_door_positions_not_shuffle(self):
+        # Rogue 5.4.4 passages.c:conn() picks door offsets with rnd(room size - 2), not shuffle/retry.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        values = iter([0, 2, 0])
+        old_rnd = rogue.RNG.rnd
+        old_shuffle = rogue.RNG.shuffle
+        try:
+            rogue.RNG.rnd = lambda n: next(values)
+            rogue.RNG.shuffle = lambda seq: (_ for _ in ()).throw(AssertionError("shuffle used"))
+
+            rogue.DGen._conn(tm, left, right, True)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.shuffle = old_shuffle
+
+        self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
+        self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
+
     def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
         random.seed(0)
         _tm, rooms = rogue.DGen.gen(depth=1)
