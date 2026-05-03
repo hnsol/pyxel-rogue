@@ -12938,6 +12938,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(attacked, [])
         self.assertEqual(game.turn, 0)
 
+    def test_rogue_544_invalid_diagonal_move_stops_running_without_turn(self):
+        # Rogue 5.4.4 move.c:do_move() clears running and after=FALSE on !diag_ok().
+        game = new_game(seed=489)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[4][5] = rogue.T_HWALL
+        game.dashing = True
+        game.dash_steps = 2
+
+        self.assertFalse(game.try_move(1, -1))
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+
     def test_monster_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=49)
         set_open_floor(game)
@@ -13382,6 +13396,59 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(moved)
         self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you are being held", game.msgs)
+
+    def test_rogue_544_hidden_trap_preempts_held_move_gate(self):
+        # Rogue 5.4.4 move.c:do_move() reveals hidden FLOOR traps before the ISHELD gate.
+        game = new_game(seed=519)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        flytrap = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        game.traps[(10, 9)] = kind
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 9))
+        self.assertEqual(game.tm[9][10], rogue.T_TRAP)
+        self.assertEqual(game.p.no_move, rogue.BEARTIME)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you are caught in a bear trap", game.msgs)
+        self.assertNotIn("you are being held", game.msgs)
+
+    def test_rogue_544_hidden_trap_under_monster_does_not_preempt_held_gate(self):
+        # Rogue 5.4.4 move.c:do_move() only takes the hidden trap branch when winat() is FLOOR.
+        game = new_game(seed=520)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        flytrap = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        hobgoblin = monster_at(10, 9, hp=10)
+        game.p.held_by = flytrap
+        game.mons = [flytrap, hobgoblin]
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        game.traps[(10, 9)] = kind
+        attacks = []
+        game.p_attack = lambda monster: attacks.append(monster)
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual(attacks, [])
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.tm[9][10], rogue.T_FLOOR)
+        self.assertEqual(game.p.no_move, 0)
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("you are being held", game.msgs)
 

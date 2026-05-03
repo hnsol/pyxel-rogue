@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0115"
+UI_BUILD = "260504_0125"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3875,13 +3875,18 @@ class Game:
             p.facing=(dx,dy)
         nx, ny = p.x+dx, p.y+dy
         if not self.diag_ok(p.x,p.y,nx,ny):
+            self.dashing = False
             return False
+        m = self.mon_at(nx, ny)
+        hidden_floor_trap = m is None and (nx, ny) in self.traps and self.tm[ny][nx] == T_FLOOR
         target_is_holder = p.held_by is not None and (nx, ny) == (p.held_by.x, p.held_by.y)
-        if rogue_move.held_move_blocked(p.held_by is not None, target_is_holder):
+        if (
+            not hidden_floor_trap
+            and rogue_move.held_move_blocked(p.held_by is not None, target_is_holder)
+        ):
             self.msg("move.you_are_being_held")
             self.end_turn()
             return True
-        m = self.mon_at(nx, ny)
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
             p.x, p.y = nx, ny
