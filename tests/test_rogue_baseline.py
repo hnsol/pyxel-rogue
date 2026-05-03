@@ -367,13 +367,12 @@ class RogueBaselineTest(unittest.TestCase):
                 self.assert_in_rogue_544_play_area(x, y)
 
     def test_rogue544_new_level_places_traps_stairs_then_hero_after_objects(self):
-        # Rogue 5.4.4 new_level.c:new_level() runs put_things(), traps, stairs, then hero.
+        # Rogue 5.4.4 new_level.c:new_level() runs do_rooms(), do_passages(), put_things(), traps, stairs, then hero.
         game = new_game(seed=35)
         order = []
         positions = [(5, 5), (6, 5)]
 
-        game._spawn_room_gold = lambda: order.append("room_gold")
-        game._spawn_mons = lambda: order.append("room_monsters")
+        game._populate_initial_room = lambda room: order.append(f"room:{len(order)}")
         game._spawn_items = lambda: order.append("put_things")
         game._spawn_amulet = lambda: order.append("amulet")
         game._hide_secret_features = lambda: None
@@ -386,12 +385,43 @@ class RogueBaselineTest(unittest.TestCase):
         game.find_floor_pos = fake_find_floor_pos
         game.descend()
 
-        self.assertEqual(
-            order,
-            ["room_gold", "room_monsters", "put_things", "amulet", "traps", "stairs", "hero"],
-        )
+        self.assertTrue(order[0].startswith("room:"))
+        self.assertEqual(order[order.index("put_things"):], ["put_things", "amulet", "traps", "stairs", "hero"])
+        self.assertTrue(all(entry.startswith("room:") for entry in order[:order.index("put_things")]))
         self.assertEqual((game.p.x, game.p.y), (6, 5))
         self.assertEqual(game.tm[5][5], rogue.T_STAIR)
+
+    def test_rogue544_dgen_room_callback_runs_before_do_passages(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() populates each real room before passages.c:do_passages().
+        events = []
+        old_edges = rogue.DGen._passage_edges
+        try:
+            rogue.DGen._passage_edges = staticmethod(lambda *a, **kw: events.append("passages") or [])
+
+            rogue.DGen.gen(depth=1, room_callback=lambda _tm, _rooms, room: events.append("room"))
+        finally:
+            rogue.DGen._passage_edges = old_edges
+
+        self.assertTrue(events)
+        self.assertEqual(events[-1], "passages")
+        self.assertNotIn("room", events[events.index("passages"):])
+
+    def test_rogue544_new_level_increments_no_food_after_do_passages_before_put_things(self):
+        # Rogue 5.4.4 new_level.c:new_level() calls no_food++ after do_passages(), before put_things().
+        game = new_game(seed=3051)
+        events = []
+        game.no_food = 7
+        game._populate_initial_room = lambda room: events.append(("room", game.no_food))
+        game._spawn_items = lambda: events.append(("put_things", game.no_food))
+        game._spawn_amulet = lambda: None
+        game._spawn_traps = lambda: None
+        positions = iter([(5, 5), (6, 5)])
+        game.find_floor_pos = lambda *a, **kw: next(positions)
+
+        game.descend()
+
+        self.assertIn(("room", 7), events)
+        self.assertIn(("put_things", 8), events)
 
     def test_rogue_544_stick_table_materials_and_names_audit(self):
         # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
@@ -8679,6 +8709,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=3050)
         game._spawn_room_gold = lambda: None
         game._spawn_mons = lambda: None
+        game._populate_initial_room = lambda room: None
         game._spawn_items = lambda: None
         game._spawn_amulet = lambda: None
         game._spawn_traps = lambda: None

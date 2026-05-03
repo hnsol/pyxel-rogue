@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1848"
+UI_BUILD = "260503_1915"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -909,7 +909,7 @@ class DGen:
     )
 
     @staticmethod
-    def gen(depth, with_hidden=False):
+    def gen(depth, with_hidden=False, room_callback=None):
         # C: new_level.c:new_level()
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
         hidden_tiles = {} if with_hidden else None
@@ -953,6 +953,8 @@ class DGen:
                 DGen._maze_room(tm,r,depth=depth,hidden_tiles=hidden_tiles)
             else:
                 DGen._room(tm,r)
+            if room_callback is not None:
+                room_callback(tm, rooms, r)
         for a,b in DGen._passage_edges():
             if with_hidden:
                 DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1,depth=depth,hidden_tiles=hidden_tiles)
@@ -1710,15 +1712,21 @@ class Game:
         self.p.held_by = None
         self.p.depth += 1
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
-        self.tm, self.rooms, level_hidden_tiles = DGen.gen(self.p.depth, with_hidden=True)
+        self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
+        def populate_room(tm, rooms, room):
+            self.tm = tm
+            self.rooms = rooms
+            self._populate_initial_room(room)
+        self.tm, self.rooms, level_hidden_tiles = DGen.gen(
+            self.p.depth, with_hidden=True, room_callback=populate_room
+        )
+        self.hidden_tiles.update(level_hidden_tiles)
         self.no_food = rogue_things.no_food_after_new_level(getattr(self, "no_food", 0))
         usable_rooms = self.usable_rooms()
-        self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
-        self.hidden_tiles.update(level_hidden_tiles)
         self.visible=set(); self.explored=set()
         self.seen_stairs = False
         self.wander_timer=self.fuses.remaining("swander")
-        self._spawn_room_gold(); self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
+        self._spawn_items(); self._spawn_amulet()
         self._spawn_traps()
         stair_pos = self.find_floor_pos(
             None,
@@ -1816,21 +1824,31 @@ class Game:
         # C: rooms.c:do_rooms()
         d=self.p.depth
         for rm in self.usable_rooms():
-            if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(rm)):
-                continue
-            pos = self.find_floor_pos(
-                rm,
-                monst=True,
-                avoid={(self.p.x,self.p.y)},
-                occupied={(m.x,m.y) for m in self.mons if m.alive},
-            )
-            if pos is None:
-                continue
-            mx,my=pos
-            e=self.random_monster_spec(d)
-            monster=self.new_monster_from_spec(mx,my,e)
-            self.give_pack(monster)
-            self.mons.append(monster)
+            self._spawn_mon_for_room(rm, d)
+
+    def _populate_initial_room(self, room):
+        # C: rooms.c:do_rooms() places room gold and monster before do_passages().
+        self._spawn_room_gold_for_room(room)
+        self._spawn_mon_for_room(room, self.p.depth)
+
+    def _spawn_mon_for_room(self, room, depth):
+        if not room.usable:
+            return
+        if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(room)):
+            return
+        pos = self.find_floor_pos(
+            room,
+            monst=True,
+            avoid={(self.p.x,self.p.y)},
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
+        )
+        if pos is None:
+            return
+        mx,my=pos
+        e=self.random_monster_spec(depth)
+        monster=self.new_monster_from_spec(mx,my,e)
+        self.give_pack(monster)
+        self.mons.append(monster)
 
     def room_has_gold(self, room):
         return any(
@@ -1941,21 +1959,27 @@ class Game:
 
     def _spawn_room_gold(self):
         # C: rooms.c:do_rooms()
-        d=self.p.depth
         for rm in self.usable_rooms():
-            if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
-                continue
-            qty=goldcalc(d)
-            pos = self.find_floor_pos(
-                rm,
-                monst=False,
-                avoid={(self.p.x,self.p.y)},
-                occupied={(i.x,i.y) for i in self.gitems},
-            )
-            if pos is not None:
-                ix,iy=pos
-                g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
-                self.gitems.append(g)
+            self._spawn_room_gold_for_room(rm)
+
+    def _spawn_room_gold_for_room(self, room):
+        # C: rooms.c:do_rooms()
+        if not room.usable:
+            return
+        d=self.p.depth
+        if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
+            return
+        qty=goldcalc(d)
+        pos = self.find_floor_pos(
+            room,
+            monst=False,
+            avoid={(self.p.x,self.p.y)},
+            occupied={(i.x,i.y) for i in self.gitems},
+        )
+        if pos is not None:
+            ix,iy=pos
+            g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
+            self.gitems.append(g)
 
     def _spawn_treasure_room(self, room=None):
         # Rogue 5.4.4 new_level.c:treas_room().
