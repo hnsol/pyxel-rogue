@@ -458,6 +458,7 @@
 - [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、maze room の通路出口を wall `rnd()` 再試行にする
 - [x] Rogue 5.4.4 `passages.c:door()` 準拠で、maze room 出口も AI 用 room exit に記録する
 - [x] Rogue 5.4.4 `rooms.c:do_maze()` / `dig()` 準拠で、maze room 本体を偶数 offset と `rnd(++cnt)` で掘る
+- [x] Rogue 5.4.4 `chase.c:roomin()` 準拠で、部屋所属の右下境界を包含判定にする
 - [x] 旧コンパクトレイアウト（512×320化で置き換え済み）
 - [x] 512×320 基準レイアウトへ変更（旧方針。80桁化で暫定640×320へ移行）
 - [x] 内部論理マップを Rogue 5.4.4 準拠の 80×24 座標系へ変更

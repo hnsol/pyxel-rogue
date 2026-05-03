@@ -3865,7 +3865,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIs(rogue_chase.roomin(10, 4, [room]), room)
         self.assertIs(rogue_chase.roomin(15, 8, [room]), room)
-        self.assertIsNone(rogue_chase.roomin(16, 8, [room]))
+        self.assertIs(rogue_chase.roomin(16, 8, [room]), room)
+        self.assertIs(rogue_chase.roomin(16, 9, [room]), room)
+        self.assertIsNone(rogue_chase.roomin(17, 9, [room]))
 
     def test_rogue_544_chase_helper_see_monst_blocks_blind_and_unseen_invisible(self):
         # Rogue 5.4.4 chase.c:see_monst() rejects blind sight and invisible monsters without CANSEE.

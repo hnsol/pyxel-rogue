@@ -64,7 +64,7 @@ def dist_points(c1, c2) -> int:
 def roomin(x, y, rooms):
     """Rogue 5.4.4 chase.c:roomin() room-rectangle lookup."""
     for room in rooms:
-        if room.x <= x < room.x + room.w and room.y <= y < room.y + room.h:
+        if room.x <= x <= room.x + room.w and room.y <= y <= room.y + room.h:
             return room
     return None
 
