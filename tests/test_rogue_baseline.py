@@ -8739,6 +8739,24 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
             rogue.RNG.choice = old_choice
 
+    def test_rogue544_passage_conn_maze_exit_has_no_fixed_retry_fallback(self):
+        # Rogue 5.4.4 passages.c:conn() uses a do/while loop with no retry cap
+        # while an ISMAZE room side coordinate is not F_PASS.
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        tm[maze.y + 2][maze.x + maze.w - 1] = rogue.T_CORR
+        rnd_values = iter([0] * 20 + [1])
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: next(rnd_values)
+            rogue.RNG.choice = lambda seq: (_ for _ in ()).throw(AssertionError("choice used"))
+
+            self.assertEqual(rogue.DGen._maze_exit(tm, maze, "R"), (maze.x + maze.w - 1, maze.y + 2))
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
     def test_rogue544_passage_conn_records_maze_room_exit_for_ai(self):
         # Rogue 5.4.4 passages.c:door() records room.r_exit before returning for ISMAZE.
         game = new_game(seed=524)

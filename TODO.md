@@ -463,6 +463,7 @@
 - [x] Rogue 5.4.4 `new_level.c:new_level()` / `passages.c:do_passages()` 準拠で、原作にない生成後の補修通路を削除
 - [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、扉位置と通路曲がり位置を `rnd()` 選択にする
 - [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、maze room の通路出口を wall `rnd()` 再試行にする
+- [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、maze room 通路出口の固定回数fallbackを削除
 - [x] Rogue 5.4.4 `passages.c:door()` 準拠で、maze room 出口も AI 用 room exit に記録する
 - [x] Rogue 5.4.4 `rooms.c:do_maze()` / `dig()` 準拠で、maze room 本体を偶数 offset と `rnd(++cnt)` で掘る
 - [x] Rogue 5.4.4 `chase.c:roomin()` 準拠で、部屋所属の右下境界を包含判定にする

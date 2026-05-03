@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1915"
+UI_BUILD = "260503_1934"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1132,7 +1132,7 @@ class DGen:
         if side in ("L","R"):
             limit = max(1, r.h - 2)
             x = r.x if side == "L" else r.x + r.w - 1
-            for _ in range(limit * 4):
+            while True:
                 y = r.y + RNG.rnd(limit) + 1
                 if in_play_area(x,y) and (t[y][x] == T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)):
                     if hidden_tiles is None or hidden_tiles.get((x,y)) != T_CORR:
@@ -1141,33 +1141,12 @@ class DGen:
         else:
             limit = max(1, r.w - 2)
             y = r.y if side == "U" else r.y + r.h - 1
-            for _ in range(limit * 4):
+            while True:
                 x = r.x + RNG.rnd(limit) + 1
                 if in_play_area(x,y) and (t[y][x] == T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)):
                     if hidden_tiles is None or hidden_tiles.get((x,y)) != T_CORR:
                         DGen._corr(t,(x,y))
                     return (x,y)
-
-        if side in ("L","R"):
-            xs=range(r.x+1,r.x+r.w-1)
-            target_x = r.x if side=="L" else r.x+r.w-1
-            cands=[
-                (x,y) for y in range(r.y+1,r.y+r.h-1) for x in xs
-                if t[y][x]==T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)
-            ]
-            cands.sort(key=lambda p: abs(p[0]-target_x))
-        else:
-            ys=range(r.y+1,r.y+r.h-1)
-            target_y = r.y if side=="U" else r.y+r.h-1
-            cands=[
-                (x,y) for x in range(r.x+1,r.x+r.w-1) for y in ys
-                if t[y][x]==T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)
-            ]
-            cands.sort(key=lambda p: abs(p[1]-target_y))
-        p=RNG.choice(cands[:max(1,min(4,len(cands)))]) if cands else DGen._passage_side_point(r,side)
-        if hidden_tiles is None or hidden_tiles.get(p) != T_CORR:
-            DGen._corr(t,p)
-        return p
     @staticmethod
     def _pick_wall_door(t,r,side):
         # Rogue 5.4.4 passages.c:conn() selects a wall coordinate directly
