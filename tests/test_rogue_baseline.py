@@ -12952,6 +12952,61 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual((game.p.x, game.p.y), (5, 5))
 
+    def test_rogue_544_wall_move_stops_running_without_turn(self):
+        # Rogue 5.4.4 move.c:do_move() hit_bound/wall branch clears running and after=FALSE.
+        game = new_game(seed=488)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[5][6] = rogue.T_VWALL
+        game.dashing = True
+        game.dash_steps = 2
+
+        self.assertFalse(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+
+    def test_rogue_544_stair_move_stops_running_after_move(self):
+        # Rogue 5.4.4 move.c:do_move() STAIRS falls through default and clears running.
+        game = new_game(seed=487)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[5][6] = rogue.T_STAIR
+        game.dashing = True
+
+        self.assertTrue(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertTrue(game.seen_stairs)
+
+    def test_rogue_544_item_move_stops_running_after_move(self):
+        # Rogue 5.4.4 move.c:do_move() item winat() reaches default and clears running.
+        game = new_game(seed=486)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.auto_pickup = False
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = 6, 5
+        game.gitems = [item]
+        game.dashing = True
+
+        self.assertTrue(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertIn("ration", game.msgs[-1])
+
+    def test_rogue_544_door_move_stops_running_after_move(self):
+        # Rogue 5.4.4 move.c:do_move() DOOR branch clears running before move_stuff.
+        game = new_game(seed=485)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[5][6] = rogue.T_DOOR
+        game.dashing = True
+
+        self.assertTrue(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+
     def test_monster_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=49)
         set_open_floor(game)
@@ -13295,7 +13350,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [5, 5])
 
     def test_rogue_544_move_helper_held_gate_blocks_non_f_destinations(self):
-        # Rogue 5.4.4 move.c:do_move() ISHELD gate only allows a Venus Flytrap destination.
+        # Rogue 5.4.4 move.c:do_move() ISHELD gate checks destination ch != 'F'.
         import rogue_move
 
         self.assertTrue(rogue_move.held_move_blocked(True, False))
@@ -13451,6 +13506,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.no_move, 0)
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("you are being held", game.msgs)
+
+    def test_rogue_544_held_player_can_attack_any_venus_flytrap_destination(self):
+        # Rogue 5.4.4 move.c:do_move() ISHELD gate checks ch != 'F', not holder identity.
+        game = new_game(seed=521)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        holder = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        other = monster_at(10, 9, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        game.p.held_by = holder
+        game.mons = [holder, other]
+        attacks = []
+        game.p_attack = lambda monster: attacks.append(monster)
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual(attacks, [other])
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn + 1)
+        self.assertNotIn("you are being held", game.msgs)
 
     def test_rogue_544_confused_held_player_blocks_random_move_away_after_rndmove(self):
         # Rogue 5.4.4 move.c:do_move() applies ISHELD after confused rndmove() chooses nh.

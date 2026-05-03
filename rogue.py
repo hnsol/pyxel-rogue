@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0125"
+UI_BUILD = "260504_0143"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3879,16 +3879,19 @@ class Game:
             return False
         m = self.mon_at(nx, ny)
         hidden_floor_trap = m is None and (nx, ny) in self.traps and self.tm[ny][nx] == T_FLOOR
-        target_is_holder = p.held_by is not None and (nx, ny) == (p.held_by.x, p.held_by.y)
+        target_is_flytrap = m is not None and m.sym == "F"
         if (
             not hidden_floor_trap
-            and rogue_move.held_move_blocked(p.held_by is not None, target_is_holder)
+            and rogue_move.held_move_blocked(p.held_by is not None, target_is_flytrap)
         ):
             self.msg("move.you_are_being_held")
             self.end_turn()
             return True
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
+            gi = self.gi_at(nx,ny)
+            if self.tm[ny][nx] in (T_DOOR, T_STAIR) or gi:
+                self.dashing = False
             p.x, p.y = nx, ny
             if self.tm[ny][nx] == T_STAIR:
                 self.seen_stairs = True
@@ -3898,7 +3901,6 @@ class Game:
                 if not self.p.alive or self.st!=ST_PLAY:
                     self.end_turn()
                     return True
-            gi = self.gi_at(nx,ny)
             if gi and self.auto_pickup and not trapped:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
