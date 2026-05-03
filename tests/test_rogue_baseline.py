@@ -1,4 +1,5 @@
 import importlib
+import hashlib
 import os
 import random
 import subprocess
@@ -11617,6 +11618,12 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+
+    def test_title_bgm_uses_user_supplied_three_channel_mml(self):
+        digest = hashlib.sha256("\n".join(rogue.TITLE_BGM_MMLS).encode()).hexdigest()
+        self.assertEqual(digest, "2334a06900b48715ad990e831b858c6a96848bf91f8a3986d0e694bdd0d9d815")
+        self.assertEqual(len(rogue.TITLE_BGM_MMLS), 3)
+        self.assertTrue(rogue.TITLE_BGM_MMLS[0].startswith("K0 Q100 T92 L16"))
 
     def test_logo_does_not_request_dummy_seed(self):
         game = rogue.Game.__new__(rogue.Game)
