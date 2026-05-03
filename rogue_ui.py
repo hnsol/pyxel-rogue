@@ -20,6 +20,8 @@ ST_TITLE = 16
 ST_NAME = 17
 ST_READY = 18
 ST_ONLINE_SCORE = 19
+ST_ONLINE_REGISTER = 20
+ST_ONLINE_PIN = 21
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",

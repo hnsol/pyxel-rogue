@@ -134,15 +134,15 @@ Implemented overview:
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
 - Victory score adds sold pack worth following Rogue 5.4.4 `total_winner()`
-- Startup logo, title screen with BGM, and 8-character alphanumeric player name entry
-- Daily Top Ten / Weekly Rivals / Season Legends online ranking scaffold for Google Sheets + Apps Script
+- Startup logo, title screen with BGM, and lowercase alphanumeric player name entry
+- My Rogue Chronicle / Weekly Rivals / Seasonal Legends online ranking scaffold for Google Sheets + Apps Script
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - JSON message catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
 See [TODO.md](TODO.md) for the detailed implementation status.
 
-The Apps Script scaffold for online rankings lives in `docs/apps_script_scoreboard.gs`. Set `PYXEL_ROGUE_SCORE_URL` to point at your deployment. Game end only saves locally; network access happens when entering Online Ranking or manually refreshing with R / Select. B cancels while the entry sync is still waiting to start. The scoreboard syncs Daily / Weekly / Season together, and tab switches do not fetch. Online submission happens only during ranking sync, and `score_id` prevents duplicate rows. During scoreboard sync, Apps Script creates only the needed stable dummy rows for the requested period/key: 10 for today, then 1 each for the previous 10 days and previous 10 weeks. Season aggregates those period rows.
+The Apps Script scaffold for online rankings lives in `docs/apps_script_scoreboard.gs`. Set `PYXEL_ROGUE_SCORE_URL` to point at your deployment. Game end only saves locally, and Online Ranking opens immediately to My Rogue Chronicle. Online sync is manual with Select and allowed once every 24 hours, enforced by server-side `last_sync_at` / `next_sync_at`. First online use registers a lowercase alphanumeric `user_id` plus a 6-digit PIN; later devices link through that PIN and a server token. Local-only names display with a trailing `*`. Weekly / Season are fetched together during sync, and `score_id` prevents duplicate rows. Old score data is intentionally reset by moving to v2 storage while this feature is still in development.
 
 ## Roadmap
 
