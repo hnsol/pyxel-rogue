@@ -116,6 +116,7 @@
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の経験値加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` / `exp_add()` 相当の Amulet 階層以深モンスター生成 stat/EXP 補正と深層 `ISHASTE` を helper 化
 - [x] Rogue 5.4.4 `new_level.c` / `passages.c` / `command.c:search()` / `move.c:be_trapped()` 相当の trap・secret・search・単純trap状態分岐を helper 化
+- [x] Rogue 5.4.4 `passages.c:door()` / `putpass()` 準拠で、隠し扉・隠し通路判定を後段スキャンではなく通路生成中の RNG 順へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`find_floor(..., FALSE)` と同じく monster square を候補から除外しない
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap ごとに `find_floor()` 後 `rnd(NTRAPS)` する乱数順へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap 床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正

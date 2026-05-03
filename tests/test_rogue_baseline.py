@@ -8634,6 +8634,62 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
         self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
 
+    def test_rogue544_passage_conn_hides_secret_doors_during_door_call(self):
+        # Rogue 5.4.4 passages.c:door() runs the secret-door gate during conn(), not in a later map scan.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        hidden = {}
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        values = iter([0, 0, 0, 0, 0, 9])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values, 9)
+
+            rogue.DGen._conn(tm, left, right, True, depth=2, hidden_tiles=hidden)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(hidden[(left.x + left.w - 1, left.y + 1)], rogue.T_DOOR)
+        self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_VWALL)
+        self.assertEqual(tm[right.y + 1][right.x], rogue.T_DOOR)
+
+    def test_rogue544_passage_conn_hides_gone_room_putpass_during_conn(self):
+        # Rogue 5.4.4 passages.c:conn() uses putpass(), not door(), for gone rooms.
+        gone = rogue.Room(2, 2, 1, 1, flags={rogue.ROOM_GONE})
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        hidden = {}
+        rogue.DGen._room(tm, right)
+        values = iter([0, 0, 0, 0, 9])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values, 9)
+
+            rogue.DGen._conn(tm, gone, right, True, depth=2, hidden_tiles=hidden)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(hidden[(gone.x, gone.y)], rogue.T_CORR)
+        self.assertEqual(tm[gone.y][gone.x], rogue.T_VOID)
+
+    def test_rogue544_descend_uses_passages_secret_timing_not_post_scan(self):
+        # Rogue 5.4.4 new_level.c calls passages.c:do_passages(); secrets are decided in door()/putpass().
+        game = new_game(seed=3050)
+        game._spawn_room_gold = lambda: None
+        game._spawn_mons = lambda: None
+        game._spawn_items = lambda: None
+        game._spawn_amulet = lambda: None
+        game._spawn_traps = lambda: None
+        game._hide_secret_features = lambda: (_ for _ in ()).throw(AssertionError("post scan used"))
+        positions = iter([(5, 5), (6, 5)])
+        game.find_floor_pos = lambda *a, **kw: next(positions)
+
+        game.descend()
+
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+
     def test_rogue544_passage_conn_maze_exit_uses_wall_rnd_retry(self):
         # Rogue 5.4.4 passages.c:conn() retries rnd(room size - 2) wall positions
         # while an ISMAZE room side coordinate is not F_PASS.

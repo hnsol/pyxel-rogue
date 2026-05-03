@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1716"
+UI_BUILD = "260503_1848"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -909,9 +909,10 @@ class DGen:
     )
 
     @staticmethod
-    def gen(depth):
+    def gen(depth, with_hidden=False):
         # C: new_level.c:new_level()
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
+        hidden_tiles = {} if with_hidden else None
         gone=rogue_rooms.gone_room_indices(GRID_C*GRID_R, RNG)
         for i in range(GRID_C*GRID_R):
             gx,gy=i%GRID_C,i//GRID_C
@@ -949,11 +950,16 @@ class DGen:
             if r.is_gone:
                 continue
             if r.is_maze:
-                DGen._maze_room(tm,r)
+                DGen._maze_room(tm,r,depth=depth,hidden_tiles=hidden_tiles)
             else:
                 DGen._room(tm,r)
         for a,b in DGen._passage_edges():
-            DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1)
+            if with_hidden:
+                DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1,depth=depth,hidden_tiles=hidden_tiles)
+            else:
+                DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1)
+        if with_hidden:
+            return tm, rooms, hidden_tiles
         return tm,rooms
 
     @staticmethod
@@ -1010,7 +1016,7 @@ class DGen:
                     elif x==r.x or x==r.x+r.w-1: t[y][x]=T_VWALL
                     else: t[y][x]=T_FLOOR
     @staticmethod
-    def _maze_room(t,r):
+    def _maze_room(t,r,depth=None,hidden_tiles=None):
         for y in range(r.y,r.y+r.h):
             for x in range(r.x,r.x+r.w):
                 if in_play_area(x,y):
@@ -1025,11 +1031,14 @@ class DGen:
         def put(oy,ox):
             x,y=r.x+ox,r.y+oy
             if in_play_area(x,y):
-                t[y][x]=T_CORR
+                DGen._corr(t,(x,y),depth=depth,hidden_tiles=hidden_tiles)
 
         def is_pass(oy,ox):
             x,y=r.x+ox,r.y+oy
-            return in_play_area(x,y) and t[y][x]==T_CORR
+            return (
+                in_play_area(x,y)
+                and (t[y][x]==T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR))
+            )
 
         def dig(oy,ox):
             # Rogue 5.4.4 rooms.c:dig() uses reservoir choice via rnd(++cnt).
@@ -1058,35 +1067,41 @@ class DGen:
         put(start_y,start_x)
         dig(start_y,start_x)
     @staticmethod
-    def _conn(t,r1,r2,horiz=None):
+    def _conn(t,r1,r2,horiz=None,depth=None,hidden_tiles=None):
         """Connect two rooms by choosing wall doors first, like Rogue's conn()."""
         if horiz is None:
             horiz = abs(r1.cx-r2.cx) >= abs(r1.cy-r2.cy)
         if horiz:
             if r1.cx <= r2.cx:
-                d1,s=DGen._exit(t,r1,"R",outward=True)
-                d2,e=DGen._exit(t,r2,"L",outward=True)
+                d1,s=DGen._exit(t,r1,"R",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"L",outward=True,hidden_tiles=hidden_tiles)
             else:
-                d1,s=DGen._exit(t,r1,"L",outward=True)
-                d2,e=DGen._exit(t,r2,"R",outward=True)
+                d1,s=DGen._exit(t,r1,"L",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"R",outward=True,hidden_tiles=hidden_tiles)
         else:
             if r1.cy <= r2.cy:
-                d1,s=DGen._exit(t,r1,"D",outward=True)
-                d2,e=DGen._exit(t,r2,"U",outward=True)
+                d1,s=DGen._exit(t,r1,"D",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"U",outward=True,hidden_tiles=hidden_tiles)
             else:
-                d1,s=DGen._exit(t,r1,"U",outward=True)
-                d2,e=DGen._exit(t,r2,"D",outward=True)
-        if d1 is not None: DGen._door(t,d1)
-        if d2 is not None: DGen._door(t,d2)
-        DGen._dig_pass(t,d1 or s,d2 or e,horiz)
+                d1,s=DGen._exit(t,r1,"U",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"D",outward=True,hidden_tiles=hidden_tiles)
+        turn_spot = DGen._passage_turn_spot(d1 or s, d2 or e, horiz)
+        if d1 is not None:
+            DGen._door(t,d1,r1,depth=depth,hidden_tiles=hidden_tiles)
+        elif r1.is_gone:
+            DGen._corr(t,s,depth=depth,hidden_tiles=hidden_tiles)
+        if d2 is not None:
+            DGen._door(t,d2,r2,depth=depth,hidden_tiles=hidden_tiles)
+        elif r2.is_gone:
+            DGen._corr(t,e,depth=depth,hidden_tiles=hidden_tiles)
+        DGen._dig_pass(t,d1 or s,d2 or e,horiz,depth=depth,hidden_tiles=hidden_tiles,turn_spot=turn_spot)
     @staticmethod
-    def _exit(t,r,side,outward=True):
+    def _exit(t,r,side,outward=True,hidden_tiles=None):
         if r.is_gone:
             p=DGen._passage_side_point(r,side)
-            DGen._corr(t,p)
             return None,p
         if r.is_maze:
-            p=DGen._maze_exit(t,r,side)
+            p=DGen._maze_exit(t,r,side,hidden_tiles=hidden_tiles)
             DGen._record_exit(r,p)
             return None,p
         door=DGen._pick_wall_door(t,r,side)
@@ -1109,7 +1124,7 @@ class DGen:
         if side=="U": return r.cx,r.y
         return r.cx,r.y+r.h-1
     @staticmethod
-    def _maze_exit(t,r,side):
+    def _maze_exit(t,r,side,hidden_tiles=None):
         # Rogue 5.4.4 passages.c:conn() retries random side-wall
         # coordinates until an ISMAZE room coordinate already has F_PASS.
         if side in ("L","R"):
@@ -1117,30 +1132,39 @@ class DGen:
             x = r.x if side == "L" else r.x + r.w - 1
             for _ in range(limit * 4):
                 y = r.y + RNG.rnd(limit) + 1
-                if in_play_area(x,y) and t[y][x] == T_CORR:
-                    DGen._corr(t,(x,y))
+                if in_play_area(x,y) and (t[y][x] == T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)):
+                    if hidden_tiles is None or hidden_tiles.get((x,y)) != T_CORR:
+                        DGen._corr(t,(x,y))
                     return (x,y)
         else:
             limit = max(1, r.w - 2)
             y = r.y if side == "U" else r.y + r.h - 1
             for _ in range(limit * 4):
                 x = r.x + RNG.rnd(limit) + 1
-                if in_play_area(x,y) and t[y][x] == T_CORR:
-                    DGen._corr(t,(x,y))
+                if in_play_area(x,y) and (t[y][x] == T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)):
+                    if hidden_tiles is None or hidden_tiles.get((x,y)) != T_CORR:
+                        DGen._corr(t,(x,y))
                     return (x,y)
 
         if side in ("L","R"):
             xs=range(r.x+1,r.x+r.w-1)
             target_x = r.x if side=="L" else r.x+r.w-1
-            cands=[(x,y) for y in range(r.y+1,r.y+r.h-1) for x in xs if t[y][x]==T_CORR]
+            cands=[
+                (x,y) for y in range(r.y+1,r.y+r.h-1) for x in xs
+                if t[y][x]==T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)
+            ]
             cands.sort(key=lambda p: abs(p[0]-target_x))
         else:
             ys=range(r.y+1,r.y+r.h-1)
             target_y = r.y if side=="U" else r.y+r.h-1
-            cands=[(x,y) for x in range(r.x+1,r.x+r.w-1) for y in ys if t[y][x]==T_CORR]
+            cands=[
+                (x,y) for x in range(r.x+1,r.x+r.w-1) for y in ys
+                if t[y][x]==T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)
+            ]
             cands.sort(key=lambda p: abs(p[1]-target_y))
         p=RNG.choice(cands[:max(1,min(4,len(cands)))]) if cands else DGen._passage_side_point(r,side)
-        DGen._corr(t,p)
+        if hidden_tiles is None or hidden_tiles.get(p) != T_CORR:
+            DGen._corr(t,p)
         return p
     @staticmethod
     def _pick_wall_door(t,r,side):
@@ -1153,15 +1177,42 @@ class DGen:
             y = r.y if side=="U" else r.y+r.h-1
             return r.x + RNG.rnd(r.w - 2) + 1, y
     @staticmethod
-    def _door(t,p):
+    def _door(t,p,room=None,depth=None,hidden_tiles=None):
         x,y=p
-        if in_play_area(x,y): t[y][x]=T_DOOR
+        if not in_play_area(x,y):
+            return
+        if hidden_tiles is not None and depth is not None and rogue_search.secret_feature_hidden(depth, RNG, 5):
+            hidden_tiles[(x,y)]=T_DOOR
+            if room is not None and (y == room.y or y == room.y + room.h - 1):
+                t[y][x]=T_HWALL
+            elif room is not None:
+                t[y][x]=T_VWALL
+            else:
+                t[y][x]=DGen._hidden_door_wall_tile(t,x,y)
+            return
+        t[y][x]=T_DOOR
     @staticmethod
-    def _corr(t,p):
+    def _corr(t,p,depth=None,hidden_tiles=None):
         x,y=p
-        if in_play_area(x,y): t[y][x]=T_CORR
+        if not in_play_area(x,y):
+            return
+        if hidden_tiles is not None and depth is not None and rogue_search.secret_feature_hidden(depth, RNG, 40):
+            hidden_tiles[(x,y)]=T_CORR
+            t[y][x]=T_VOID
+            return
+        t[y][x]=T_CORR
     @staticmethod
-    def _dig_pass(t,s,e,first_horiz):
+    def _hidden_door_wall_tile(t,x,y):
+        left = 0<=x-1<MAP_W and t[y][x-1] in (T_FLOOR,T_CORR,T_STAIR)
+        right = 0<=x+1<MAP_W and t[y][x+1] in (T_FLOOR,T_CORR,T_STAIR)
+        return T_VWALL if left or right else T_HWALL
+    @staticmethod
+    def _passage_turn_spot(s,e,first_horiz):
+        x,y=s; ex,ey=e
+        distance=abs(x-ex)-1 if first_horiz else abs(y-ey)-1
+        return RNG.rnd(distance - 1) + 1
+    @staticmethod
+    def _dig_pass(t,s,e,first_horiz,depth=None,hidden_tiles=None,turn_spot=None):
         # Rogue 5.4.4 passages.c:conn() moves one step at a time and
         # turns when the remaining straight-line distance reaches turn_spot.
         x,y=s; ex,ey=e
@@ -1175,17 +1226,18 @@ class DGen:
             tx,ty=(1 if x < ex else -1),0
             distance=abs(y-ey)-1
             turn_distance=abs(x-ex)
-        turn_spot = RNG.rnd(distance - 1) + 1
+        if turn_spot is None:
+            turn_spot = RNG.rnd(distance - 1) + 1
         while distance > 0:
             x += dx
             y += dy
             if distance == turn_spot:
                 while turn_distance > 0:
-                    DGen._corr(t,(x,y))
+                    DGen._corr(t,(x,y),depth=depth,hidden_tiles=hidden_tiles)
                     x += tx
                     y += ty
                     turn_distance -= 1
-            DGen._corr(t,(x,y))
+            DGen._corr(t,(x,y),depth=depth,hidden_tiles=hidden_tiles)
             distance -= 1
     @staticmethod
     def _hl(t,x1,x2,y):
@@ -1658,15 +1710,16 @@ class Game:
         self.p.held_by = None
         self.p.depth += 1
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
-        self.tm, self.rooms = DGen.gen(self.p.depth)
+        self.tm, self.rooms, level_hidden_tiles = DGen.gen(self.p.depth, with_hidden=True)
         self.no_food = rogue_things.no_food_after_new_level(getattr(self, "no_food", 0))
         usable_rooms = self.usable_rooms()
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
+        self.hidden_tiles.update(level_hidden_tiles)
         self.visible=set(); self.explored=set()
         self.seen_stairs = False
         self.wander_timer=self.fuses.remaining("swander")
         self._spawn_room_gold(); self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
-        self._hide_secret_features(); self._spawn_traps()
+        self._spawn_traps()
         stair_pos = self.find_floor_pos(
             None,
             monst=False,
