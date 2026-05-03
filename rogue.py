@@ -1280,11 +1280,9 @@ class Game:
     def apply_palette_values(self, palette):
         if not hasattr(pyxel, 'colors'):
             return
-        for i, rgb in enumerate(palette):
-            if i < len(pyxel.colors):
-                pyxel.colors[i] = rgb
-            else:
-                pyxel.colors.append(rgb)
+        color_count = len(pyxel.colors)
+        for i, rgb in enumerate(palette[:color_count]):
+            pyxel.colors[i] = rgb
 
     def run_step_interval(self):
         return DASH_INTERVAL if self.ensure_settings().show_run_steps else 1
