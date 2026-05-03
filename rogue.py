@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1345"
+UI_BUILD = "260503_1425"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5000,7 +5000,7 @@ class Game:
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
         if online:
-            scores = get_period_scores(online, period, key, limit=10)
+            scores = get_period_scores(online + local, period, key, limit=10)
         else:
             scores = get_period_scores(local, period, key, limit=10)
         self.online_scores = scores
@@ -5018,6 +5018,15 @@ class Game:
                         break
             if rank is not None:
                 self.online_rank_cache[period] = rank
+        return scores
+
+    def display_online_period_scores(self, period):
+        scores = self.online_score_cache.get(period, [])
+        if period == SCOREBOARD_PERIOD_LOCAL:
+            return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
+        if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+            key = self.scoreboard_period_key(period)
+            return get_period_scores(scores + load_score_entries(), period, key, limit=10)
         return scores
 
     def perform_online_scoreboard_sync(self):
@@ -5653,14 +5662,15 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: "Weekly Rivals",
             SCOREBOARD_PERIOD_SEASON: "Season Legends",
         }.get(period, "My Rogue Chronicle")
-        self._box(98, 48, 380, 244, f"{title} - {self.scoreboard_period_label(period)}")
-        scores = self.online_score_cache.get(period, [])
-        if period == SCOREBOARD_PERIOD_LOCAL:
-            scores = self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
+        self._box(98, 48, 380, 286, f"{title} - {self.scoreboard_period_label(period)}")
+        scores = self.display_online_period_scores(period)
         self.txt(120, 74, "   Score Name", SCOREBOARD_TEXT_COL)
         y = 90
         player_name = str(self.current_score_player_name()).upper()[:16]
-        for i, entry in enumerate(scores[:10], start=1):
+        result_entry = getattr(self, "result_entry", None)
+        rank = self.online_rank_cache.get(period)
+        display_scores = scores[:10]
+        for i, entry in enumerate(display_scores, start=1):
             name = str(entry.get("player_name", "")).upper()[:16]
             col = SCOREBOARD_HILITE_COL if name == player_name else SCOREBOARD_TEXT_COL
             self.txt(120, y, self.format_score_line_for_board(i, entry, period)[:56], col)
@@ -5668,19 +5678,17 @@ class Game:
         if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
-        entry = getattr(self, "result_entry", None)
-        rank = self.online_rank_cache.get(period)
-        if entry and rank and rank > 10:
-            self.txt(120, 242, self.format_score_line_for_board(rank, entry, period)[:56], SCOREBOARD_TEXT_COL)
-        self.txt(114, 252, self.online_sync_hint_line()[:58], SCOREBOARD_DIM_COL)
+        if result_entry and rank and rank > 10:
+            self.txt(120, 222, self.format_score_line_for_board(rank, result_entry, period)[:56], SCOREBOARD_TEXT_COL)
+        self.txt(114, 268, self.online_sync_hint_line()[:58], SCOREBOARD_DIM_COL)
         if period != SCOREBOARD_PERIOD_LOCAL:
-            self.txt(114, 236, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
+            self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
             msg = self.online_sync_result[:34]
             self.txt(max(286, 468 - len(msg) * 6), 56, msg, SCOREBOARD_HILITE_COL)
         if getattr(self, "online_score_load_result", ""):
-            self.txt(114, 212, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
-        self.txt(114, 268, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
+            self.txt(114, 236, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
+        self.txt(114, 312, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
             self._box(156, 116, 268, 82, self.online_text("sync_title"))
             status = self.online_text(getattr(self, "online_sync_status", "loading scoreboard..."))

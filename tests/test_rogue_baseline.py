@@ -10748,7 +10748,7 @@ class RogueBaselineTest(unittest.TestCase):
             (rogue.SCOREBOARD_PERIOD_SEASON, True),
         ])
 
-    def test_online_score_fetch_does_not_resubmit_local_scores(self):
+    def test_online_score_fetch_merges_local_scores_without_resubmitting(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
@@ -10758,13 +10758,13 @@ class RogueBaselineTest(unittest.TestCase):
         old_fetch = rogue.fetch_online_scores
         old_load = rogue.load_score_entries
         old_sync = rogue.sync_missing_local_best
-        day = rogue.score_period_keys()["period_day"]
+        keys = rogue.score_period_keys()
         try:
             rogue.fetch_online_scores = lambda period, timestamp=None: [
-                {"player_name": "DOT", "score": 20, "period_day": day}
+                {"player_name": "DOT", "score": 20, "period_week": keys["period_week"], "period_season": keys["period_season"]}
             ]
             rogue.load_score_entries = lambda: [
-                {"player_name": "ACE", "score": 300, "period_day": day}
+                {"player_name": "ACE", "score": 300, "period_week": keys["period_week"], "period_season": keys["period_season"]}
             ]
             rogue.sync_missing_local_best = lambda *args, **kwargs: self.fail("score fetch must not post local best")
 
@@ -10774,7 +10774,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.load_score_entries = old_load
             rogue.sync_missing_local_best = old_sync
 
-        self.assertEqual([(e["player_name"], e["score"]) for e in scores], [("DOT", 20)])
+        self.assertEqual([(e["player_name"], e["score"]) for e in scores], [("ACE", 300), ("DOT", 20)])
 
     def test_online_score_draw_uses_rogue_score_lines_title_and_player_highlight(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -10810,8 +10810,13 @@ class RogueBaselineTest(unittest.TestCase):
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
         game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: []
 
-        game.draw_online_score_screen()
+            game.draw_online_score_screen()
+        finally:
+            rogue.load_score_entries = old_load
 
         text = "\n".join(str(item) for item in drawn)
         self.assertIn("Weekly Rivals - 2026-W18", text)
@@ -10826,9 +10831,47 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Ends in 03h 12m 45s  UTC 2026-05-01 00:00", text)
         self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 103), drawn)
         self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 90), drawn)
+        self.assertIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 222), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
         self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 90)), drawn.index(("box", (156, 116, 268, 82, "sync"))))
+
+    def test_online_score_draw_merges_cached_weekly_with_local_best_without_fetching(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "rogue54b"
+        game.online_profile = {"user_name": "rogue54b", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        key = rogue.score_period_keys()["period_week"]
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_WEEKLY: [
+                {"score": 1320, "player_name": "6502", "period_week": key, "result_flags": "killed", "level": 15, "killer": "vampire"},
+                {"score": 631, "player_name": "algol", "period_week": key, "result_flags": "killed", "level": 5, "killer": "orc"},
+                {"score": 480, "player_name": "fortran", "period_week": key, "result_flags": "killed", "level": 3, "killer": "hobgoblin"},
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = False
+        game.online_rank_cache = {}
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [
+                {"score": 624, "player_name": "rogue54b", "period_week": key, "result_flags": "quit", "level": 5, "killer": ""}
+            ]
+            game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+            drawn = []
+            game._box = lambda *args: drawn.append(("box", args))
+            game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+            game.draw_online_score_screen()
+        finally:
+            rogue.load_score_entries = old_load
+
+        text = "\n".join(str(item) for item in drawn)
+        self.assertIn(" 2   631 algol: killed on level 5 by an orc.", text)
+        self.assertIn(" 3   624 rogue54b: quit on level 5.", text)
+        self.assertIn(" 4   480 fortran: killed on level 3 by a hobgoblin.", text)
 
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -10850,7 +10893,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         y_by_text = {item[0]: item[3] for item in drawn if len(item) == 4 and isinstance(item[0], str)}
         self.assertEqual(y_by_text["No local scores yet."], 56)
-        self.assertEqual(y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"], 236)
+        self.assertEqual(y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"], 252)
 
     def test_enter_online_scoreboard_clears_stale_no_local_scores_when_local_score_exists(self):
         game = rogue.Game.__new__(rogue.Game)
