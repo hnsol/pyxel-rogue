@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1636"
+UI_BUILD = "260503_1656"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4317,7 +4317,7 @@ class Game:
             self.fitems=[p.arm] if p.arm is not None else []
         elif aname=="Remove ring":
             self.fitems=[i for i in (p.ring_l, p.ring_r) if i is not None]
-        elif aname in("Throw","Drop"):
+        elif aname in("Throw","Drop","Wield"):
             self.fitems=list(p.inv)
         elif aname=="Call":
             self.fitems=self.callable_items()

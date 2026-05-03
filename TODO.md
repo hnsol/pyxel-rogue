@@ -274,6 +274,7 @@
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` 準拠で、武器ダメージ表を `%dx%d` 表記へ統一
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` を `rogue_weapons.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:wield()` 準拠で armor の wield を拒否
+- [x] Rogue 5.4.4 `pack.c:get_item()` / `weapons.c:wield()` 準拠で、wield 選択候補は armor を含む pack 全体にする
 - [x] Rogue 5.4.4 `weapons.c:wield()` / `misc.c:is_current()` 準拠で現在装備中 item の wield に in-use 表示を出す
 - [x] Rogue 5.4.4 `weapons.c:wield()` / `command.c:command()` 準拠で wield bad path はターン非消費
 - [x] Rogue 5.4.4 `weapons.c:wield()` の gate 判定を `rogue_weapons.py` へ小分割

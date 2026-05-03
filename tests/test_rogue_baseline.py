@@ -5946,6 +5946,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertEqual(game.st, rogue.ST_PLAY)
 
+    def test_rogue_544_wield_prompt_allows_non_weapon_items(self):
+        # Rogue 5.4.4 pack.c:get_item("wield", WEAPON) returns any chosen pack item;
+        # weapons.c:wield() rejects armor only after selection.
+        game = new_game(seed=5042)
+        weapon = rogue.Item(rogue.CAT_WPN, 1)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv = [weapon, potion, armor]
+
+        game.start_item_action("Wield")
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [weapon, potion, armor])
+
     def test_rogue_544_wield_cursed_current_weapon_failure_spends_turn(self):
         # Rogue 5.4.4 weapons.c:wield() dropcheck(cur_weapon) failure does not clear after.
         game = new_game(seed=5048)
@@ -12715,6 +12729,27 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.no_command, 7)
         self.assertNotIn("you are frozen", game.msgs)
+
+    def test_rogue_544_ice_freeze_thaws_by_no_command_decrement_without_refreeze(self):
+        # Rogue 5.4.4 command.c:command() decrements no_command each command loop.
+        game = new_game(seed=5036)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        game.roll_monster_attack = lambda m: (True, 0)
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.m_attack(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+        game.mons = []
+
+        self.assertEqual(game.p.no_command, 2)
+        game.update()
+        self.assertEqual(game.p.no_command, 1)
+        game.update()
+        self.assertEqual(game.p.no_command, 0)
+        self.assertIn("you can move again", game.msgs)
 
     def test_rogue_544_ice_monster_miss_has_no_miss_message(self):
         # Rogue 5.4.4 fight.c:attack() skips miss() when mp->t_type == 'I'.
