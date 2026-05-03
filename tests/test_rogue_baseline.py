@@ -1430,6 +1430,39 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 18)
         self.assertEqual((dragon.x, dragon.y), (10, 10))
 
+    def test_rogue_544_dragon_breaths_at_hero_on_room_door(self):
+        # Rogue 5.4.4 passages.c:numpass() numbers normal DOOR exits without F_PASS;
+        # chase.c:do_chase() therefore sees a hero on a room door as in proom.
+        game = new_game(seed=2271)
+        room = rogue.Room(10, 8, 10, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.tm[10][10] = rogue.T_DOOR
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        dragon = monster_at(16, 10, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [dragon]
+        game.save_vs_magic = lambda: False
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            calls = []
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [5])
+        self.assertEqual(game.p.hp, 18)
+        self.assertEqual((dragon.x, dragon.y), (16, 10))
+        self.assertIn("you are hit by the flame", game.msgs)
+
     def test_rogue_544_dragon_breath_death_cause_is_dragon_not_flame(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() calls death(moat(start)->t_type) for monster-started bolts.
         game = new_game(seed=224)

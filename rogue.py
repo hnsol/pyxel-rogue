@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1656"
+UI_BUILD = "260503_1716"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2547,7 +2547,7 @@ class Game:
         rer=self.room_for_ai(m.x,m.y,actor=False) if door else self.room_for_ai(m.x,m.y,actor=True)
         ree=rogue_chase.destination_room(
             dest == (self.p.x, self.p.y),
-            self.room_for_ai(self.p.x,self.p.y,actor=True),
+            self.room_for_ai(self.p.x,self.p.y,actor=False),
             self.room_for_ai(dest[0],dest[1],actor=False),
         )
         chase_dest=dest
