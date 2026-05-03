@@ -195,6 +195,7 @@
 - [x] Rogue 5.4.4 `chase.c:do_chase()` / `passages.c:numpass()` 準拠で、passage 内 chaser は nearest passage exit へ向かう
 - [x] Rogue 5.4.4 `chase.c:do_chase()` / `roomin()` 準拠で、maze passage item 回収後も `F_PASS` 相当の AI passage 所属を維持
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、door 上 chaser は部屋出口候補を保持したまま passage 出口候補へ切り替える
+- [x] Rogue 5.4.4 `passages.c:numpass()` / `chase.c:do_chase()` 準拠で、passage exit の記録順を同距離出口選択へ反映
 - [x] Rogue 5.4.4 `passages.c:putpass()` / `numpass()` 準拠で、隠し通路/隠し扉を passage 番号・exit 判定に含める
 - [x] Rogue 5.4.4 `passages.c:door()` 準拠で、部屋の exit 候補に隠し扉を含める
 - [x] Rogue 5.4.4 `passages.c:numpass()` 相当の passage 番号・exit 判定を `rogue_passages.py` へ小分割

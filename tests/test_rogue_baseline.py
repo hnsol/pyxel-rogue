@@ -4467,6 +4467,19 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn((6, 10), game.passage_exits(passage))
 
+    def test_rogue_544_passage_exits_keep_numpass_traversal_order(self):
+        # Rogue 5.4.4 passages.c:numpass() stores exits during down/up/right/left recursion.
+        game = new_game(seed=522)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = []
+        game.tm[10][10] = rogue.T_CORR
+        for x, y in ((10, 11), (10, 9), (11, 10), (9, 10)):
+            game.tm[y][x] = rogue.T_DOOR
+
+        passage = game.passage_component(10, 10)
+
+        self.assertEqual(game.passage_exits(passage), [(10, 11), (10, 9), (11, 10), (9, 10)])
+
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
         import rogue_chase
