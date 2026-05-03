@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0841"
+UI_BUILD = "260504_0851"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3938,6 +3938,8 @@ class Game:
 
     def do_search(self, front_only=False, spend_turn=True, quiet_fail=False):
         # C: command.c:search()
+        if spend_turn:
+            self.wake_visible_monsters()
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
@@ -4149,7 +4151,9 @@ class Game:
         self.msg("pyxel.pack_too_full")
         return True
 
-    def do_wait(self): self.end_turn()
+    def do_wait(self):
+        self.wake_visible_monsters()
+        self.end_turn()
 
     def ring_after_turn(self):
         for hand in (rogue_rings.LEFT, rogue_rings.RIGHT):
@@ -5576,6 +5580,7 @@ class Game:
 
     def upd_play(self):
         if self.p.no_command>0:
+            self.wake_visible_monsters()
             self.msg("pyxel.unable_to_move")
             self.end_turn()
             return

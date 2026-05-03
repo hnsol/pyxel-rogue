@@ -13291,6 +13291,73 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertEqual((monster.x, monster.y), (7, 5))
 
+    def test_rogue_544_no_command_turn_wakes_visible_monsters_before_decrement(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before the no_command branch.
+        game = new_game(seed=5013)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.p.no_command = 1
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+
+    def test_rogue_544_rest_command_wakes_visible_monsters_before_runners(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '.': rest.
+        game = new_game(seed=5014)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.do_wait()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+
+    def test_rogue_544_search_command_wakes_visible_monsters_before_runners(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 's': search().
+        game = new_game(seed=5015)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.do_search(quiet_fail=True)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual(monster.x, 7)
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
