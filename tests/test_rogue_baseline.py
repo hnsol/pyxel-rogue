@@ -10011,6 +10011,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn('"user_name"', script)
         self.assertIn("USER_NAME_MAX = 8", script)
 
+    def test_apps_script_stores_user_password_as_text(self):
+        path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
+        with open(path, encoding="utf-8") as f:
+            script = f.read()
+
+        self.assertIn('setNumberFormat("@")', script)
+        self.assertIn("storedUserPassword", script)
+
     def test_apps_script_score_names_are_lowercase_alnum(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
         with open(path, encoding="utf-8") as f:
@@ -10295,11 +10303,46 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_ONLINE_LOCAL_CONFIRM)
 
-    def test_online_local_only_confirm_ok_saves_edited_name_and_cancel_returns(self):
+    def test_online_local_only_confirm_ok_from_title_returns_to_title(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
-        game.st = rogue.ST_ONLINE_LOCAL_CONFIRM
+        game.st = rogue.ST_TITLE
         game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.enter_online_register()
+        game.st = rogue.ST_ONLINE_LOCAL_CONFIRM
+        game.name_chars = list("newname")
+        saved = []
+        old_save = rogue.save_local_only_profile
+        try:
+            rogue.save_local_only_profile = lambda user_name: saved.append(user_name) or {
+                "user_name": user_name,
+                "local_only": True,
+                "profile_exists": True,
+            }
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+            game.update()
+            self.assertEqual(saved, [])
+            self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
+
+            game.st = rogue.ST_ONLINE_LOCAL_CONFIRM
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+        finally:
+            rogue.save_local_only_profile = old_save
+
+        self.assertEqual(saved, ["newname"])
+        self.assertEqual(game.online_profile["user_name"], "newname")
+        self.assertTrue(game.online_profile["local_only"])
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_online_local_only_confirm_ok_from_scoreboard_returns_to_scoreboard(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_SCORE
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.enter_online_register()
+        game.st = rogue.ST_ONLINE_LOCAL_CONFIRM
         game.name_chars = list("newname")
         saved = []
         old_save = rogue.save_local_only_profile
@@ -10371,6 +10414,26 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_ONLINE_PIN)
         self.assertEqual(game.online_password_mode, "link")
+
+    def test_online_pin_link_screen_explains_existing_server_name(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.st = rogue.ST_ONLINE_PIN
+        game.online_pending_user_name = "taken"
+        game.online_password_mode = "link"
+        game.online_password_chars = list("000000")
+        game.name_pos = 0
+        calls = []
+        game._box = lambda *args: calls.append(("box", args))
+        game.txt = lambda x, y, s, c: calls.append((str(s), x, y))
+
+        game.draw_online_pin_screen()
+
+        text = "\n".join(str(item) for item in calls)
+        self.assertIn("Verify PIN", text)
+        self.assertIn("This name exists on the server.", text)
+        self.assertIn("Enter its PIN to link this device.", text)
 
     def test_online_register_rejects_reserved_names_without_server_check(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -10962,6 +11025,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(y_by_text["No local scores yet."], 56)
         self.assertEqual(y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"], 252)
 
+    def test_online_score_long_result_splits_inside_scoreboard_box(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        game.online_period = rogue.SCOREBOARD_PERIOD_LOCAL
+        game.online_score_cache = {rogue.SCOREBOARD_PERIOD_LOCAL: []}
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_LOCAL}
+        game.online_syncing = False
+        game.online_sync_result = "Ranking updated. No local scores yet."
+        game.load_online_period_scores = lambda *args, **kwargs: []
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        result_lines = [item for item in drawn if len(item) == 4 and item[1] == rogue.SCOREBOARD_HILITE_COL]
+        self.assertIn(("Ranking updated.", rogue.SCOREBOARD_HILITE_COL, 372, 56), result_lines)
+        self.assertIn(("No local scores yet.", rogue.SCOREBOARD_HILITE_COL, 348, 69), result_lines)
+        for text, _c, x, _y in result_lines:
+            if text in ("Ranking updated.", "No local scores yet."):
+                self.assertLessEqual(x + len(text) * 6, 468)
+
     def test_enter_online_scoreboard_clears_stale_no_local_scores_when_local_score_exists(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -11031,6 +11118,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.scoreboard_period_label(rogue.SCOREBOARD_PERIOD_WEEKLY, "2026-04-30T20:47:15Z"), "2026-W18")
         self.assertEqual(game.scoreboard_period_label(rogue.SCOREBOARD_PERIOD_SEASON, "2026-04-30T20:47:15Z"), "2026-Spring")
         self.assertEqual(game.online_sync_hint_line(), "Last sync UTC 2026-05-03 03:45")
+
+    def test_online_sync_hint_line_is_empty_before_first_sync(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_profile = {
+            "user_name": "ace",
+            "local_only": False,
+            "server_token": "tok",
+            "last_sync_at": "",
+            "profile_exists": True,
+        }
+
+        self.assertEqual(game.online_sync_hint_line(), "")
 
     def test_logo_auto_fades_on_bgm_bar_timing_and_can_be_skipped(self):
         self.assertEqual(rogue.LOGO_BGM_DELAY_FRAMES, 78)

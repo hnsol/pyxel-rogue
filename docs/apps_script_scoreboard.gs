@@ -156,6 +156,7 @@ function userSheet() {
       "created_at",
     ]);
   }
+  sh.getRange(1, 2, Math.max(1, sh.getMaxRows()), 1).setNumberFormat("@");
   return sh;
 }
 
@@ -190,7 +191,8 @@ function registerUser(body) {
   if (!password) return { ok: false, status: "bad_password" };
   if (findUser(userId)) return { ok: false, status: "exists" };
   const token = makeServerToken();
-  userSheet().appendRow([
+  const sh = userSheet();
+  sh.appendRow([
     userId,
     password,
     token,
@@ -199,6 +201,7 @@ function registerUser(body) {
     "",
     new Date().toISOString(),
   ]);
+  sh.getRange(sh.getLastRow(), 2).setNumberFormat("@").setValue(password);
   return {
     ok: true,
     status: "registered",
@@ -217,7 +220,7 @@ function linkUser(body) {
   if (lockedUntil && new Date(lockedUntil).getTime() > Date.now()) {
     return { ok: false, status: "locked", locked_until: new Date(lockedUntil).toISOString() };
   }
-  if (String(user.values[user.idx.user_password]) !== password) {
+  if (storedUserPassword(user.values[user.idx.user_password]) !== password) {
     const failures = parseInt(user.values[user.idx.failed_attempts] || 0, 10) + 1;
     user.sheet.getRange(user.row, user.idx.failed_attempts + 1).setValue(failures);
     if (failures >= USER_PASSWORD_FAIL_LIMIT) {
@@ -708,6 +711,11 @@ function cleanDisplayName(displayName) {
 function cleanUserPassword(password) {
   const text = String(password || "");
   return /^\d{6}$/.test(text) ? text : "";
+}
+
+function storedUserPassword(password) {
+  const text = String(password || "");
+  return /^\d{1,6}$/.test(text) ? text.padStart(6, "0") : text;
 }
 
 function isReservedUserId(userId) {

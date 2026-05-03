@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1450"
+UI_BUILD = "260503_1515"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -239,6 +239,9 @@ ONLINE_UI_TEXT = {
         "pin_title": "6-Digit PIN",
         "pin_server": "This PIN is stored on the server",
         "pin_reuse": "without encryption. Do not reuse it.",
+        "pin_link_title": "Verify PIN",
+        "pin_link_server": "This name exists on the server.",
+        "pin_link_reuse": "Enter its PIN to link this device.",
         "pin_hint": "A NEXT/END  START OK  B BACK",
         "sync_title": "sync",
         "checking user...": "checking user...",
@@ -267,6 +270,9 @@ ONLINE_UI_TEXT = {
         "pin_title": "6桁PIN",
         "pin_server": "PINはサーバに平文保存されます。",
         "pin_reuse": "他の場所のパスワードを使わないでください。",
+        "pin_link_title": "PIN確認",
+        "pin_link_server": "この名前はサーバにあります。",
+        "pin_link_reuse": "本人ならPINを入力してください。",
         "pin_hint": "A 次/END  START 決定  B 戻る",
         "sync_title": "通信",
         "checking user...": "ユーザを確認中...",
@@ -4753,7 +4759,7 @@ class Game:
         last_sync = profile.get("last_sync_at", "")
         if last_sync:
             return f"Last sync {self.format_utc_minute(last_sync)}"
-        return "Not synced yet. Press Select."
+        return ""
 
     def ensure_online_score_state(self):
         if not hasattr(self, "online_score_cache"):
@@ -4858,6 +4864,8 @@ class Game:
 
     def enter_online_register(self, reset_to_default=False):
         self.apply_palette()
+        if getattr(self, "st", ST_TITLE) not in (ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_LOCAL_CONFIRM):
+            self.online_register_return_state = getattr(self, "st", ST_TITLE)
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         user_name = "rogue54" if reset_to_default else profile.get("user_name", "rogue54")
         self.online_pending_user_name = user_name
@@ -4895,7 +4903,10 @@ class Game:
         self.online_profile = save_local_only_profile(user_name)
         self.player_name = self.online_profile["user_name"]
         self.online_register_prompt = False
-        self.st = ST_ONLINE_SCORE
+        if getattr(self, "online_register_return_state", ST_TITLE) == ST_ONLINE_SCORE:
+            self.st = ST_ONLINE_SCORE
+        else:
+            self.enter_title_screen()
 
     def online_register_name_changed(self):
         current = sanitize_user_id("".join(getattr(self, "name_chars", [])))
@@ -5082,6 +5093,27 @@ class Game:
             if str(row.get("player_name", ""))[:16] == str(profile.get("user_name", ""))[:16]:
                 row["player_name"] = display_score_name(profile)
         return format_score_line(rank, row)
+
+    def online_result_lines(self, message, limit=27):
+        text = str(message or "").strip()
+        if ". " in text:
+            head, tail = text.split(". ", 1)
+            head = f"{head}."
+            if len(head) <= limit and len(tail) <= limit:
+                return [head, tail]
+        words = text.split()
+        if not words:
+            return []
+        lines = []
+        i = 0
+        while i < len(words) and len(lines) < 2:
+            line = words[i]
+            i += 1
+            while i < len(words) and len(line) + 1 + len(words[i]) <= limit:
+                line = f"{line} {words[i]}"
+                i += 1
+            lines.append(line[:limit])
+        return lines[:2]
 
     def confirm_name_input(self):
         name = "".join(getattr(self, "name_chars", [])).strip()
@@ -5681,12 +5713,14 @@ class Game:
             y += 16
         if result_entry and rank and rank > 10:
             self.txt(120, 222, self.format_score_line_for_board(rank, result_entry, period)[:56], SCOREBOARD_TEXT_COL)
-        self.txt(114, 268, self.online_sync_hint_line()[:58], SCOREBOARD_DIM_COL)
+        hint = self.online_sync_hint_line()[:58]
+        if hint:
+            self.txt(114, 268, hint, SCOREBOARD_DIM_COL)
         if period != SCOREBOARD_PERIOD_LOCAL:
             self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
-            msg = self.online_sync_result[:34]
-            self.txt(max(286, 468 - len(msg) * 6), 56, msg, SCOREBOARD_HILITE_COL)
+            for i, msg in enumerate(self.online_result_lines(self.online_sync_result)):
+                self.txt(max(114, 468 - len(msg) * 6), 56 + i * 13, msg, SCOREBOARD_HILITE_COL)
         if getattr(self, "online_score_load_result", ""):
             self.txt(114, 236, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
         self.txt(114, 312, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
@@ -5722,11 +5756,12 @@ class Game:
             self.txt(138, 236, self.online_sync_result[:48], UI_HILITE_COL)
 
     def draw_online_pin_screen(self):
-        self._box(126, 58, 328, 210, self.online_text("pin_title"))
+        is_link = getattr(self, "online_password_mode", "register") == "link"
+        self._box(126, 58, 328, 210, self.online_text("pin_link_title" if is_link else "pin_title"))
         user_name = getattr(self, "online_pending_user_name", "rogue54")
         self.txt(150, 84, f"User: {user_name}", UI_TEXT_COL)
-        self.txt(150, 104, self.online_text("pin_server"), UI_TEXT_COL)
-        self.txt(150, 118, self.online_text("pin_reuse"), UI_TEXT_COL)
+        self.txt(150, 104, self.online_text("pin_link_server" if is_link else "pin_server"), UI_TEXT_COL)
+        self.txt(150, 118, self.online_text("pin_link_reuse" if is_link else "pin_reuse"), UI_TEXT_COL)
         chars = getattr(self, "online_password_chars", ["0"] * 6)
         base_x, y = 206, 152
         for i, ch in enumerate(chars):
