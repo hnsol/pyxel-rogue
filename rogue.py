@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_2011"
+UI_BUILD = "260503_2012"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2136,9 +2136,14 @@ class Game:
         # C: passages.c:numpass() numbers F_PASS cells and door/secret-door exits.
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return False
+        if self.is_maze_passage_floor(x, y):
+            return True
         return rogue_passages.is_number_cell(
             self.tm[y][x], self.hidden_tiles.get((x,y)), T_CORR, T_DOOR
         )
+    def is_maze_passage_floor(self,x,y):
+        # C: F_PASS remains set if chase.c:do_chase() restores a maze PASSAGE char to FLOOR.
+        return self.tm[y][x] == T_FLOOR and getattr(self.room_containing(x, y), "is_maze", False)
     def is_passage_exit_cell(self,x,y):
         # C: passages.c:numpass() records DOOR and non-F_REAL '|'/'-' as exits.
         return 0<=x<MAP_W and 0<=y<MAP_H and rogue_passages.is_exit_cell(
@@ -2158,7 +2163,7 @@ class Game:
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return None
         tile=self.tm[y][x]
-        if tile==T_CORR or (actor and tile==T_DOOR):
+        if tile==T_CORR or self.is_maze_passage_floor(x, y) or (actor and tile==T_DOOR):
             return self.passage_component(x,y) or "corridor"
         if tile==T_DOOR:
             return self.room_near_door(x,y) or "corridor"
@@ -2729,6 +2734,8 @@ class Game:
         if gi:
             self.gitems.remove(gi)
             m.pack.append(gi)
+            room = self.room_for_ai(m.x, m.y, actor=True)
+            self.tm[dest[1]][dest[0]] = T_CORR if getattr(room, "is_gone", False) else T_FLOOR
             self.find_dest(m)
             return
         if m.sym!="F":

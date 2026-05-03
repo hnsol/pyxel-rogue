@@ -4237,6 +4237,63 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(item, monster.pack)
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
 
+    def test_rogue_544_do_chase_collecting_maze_item_restores_floor_tile(self):
+        # Rogue 5.4.4 chase.c:do_chase() restores chat(obj->o_pos) to
+        # FLOOR unless th->t_room has ISGONE, even when the item was on PASSAGE.
+        game = new_game(seed=5101)
+        room = rogue.Room(5, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_CORR
+        game.p.x, game.p.y = 20, 20
+        game.tm[20][20] = rogue.T_FLOOR
+        monster = monster_at(7, 7, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (8, 7)
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = monster.dest
+        game.mons = [monster]
+        game.gitems = [item]
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (8, 7))
+        self.assertIn(item, monster.pack)
+        self.assertEqual(game.tm[7][8], rogue.T_FLOOR)
+
+    def test_rogue_544_collected_maze_floor_keeps_passage_identity_for_ai(self):
+        # Rogue 5.4.4 chase.c:roomin() uses F_PASS before room bounds, so a
+        # maze passage whose display char was restored to FLOOR remains in the passage.
+        game = new_game(seed=5102)
+        room = rogue.Room(5, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_CORR
+        monster = monster_at(7, 7, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (8, 7)
+        first = rogue.Item(rogue.CAT_POT, 0)
+        first.x, first.y = monster.dest
+        second = rogue.Item(rogue.CAT_POT, 1)
+        second.x, second.y = 9, 7
+        game.mons = [monster]
+        game.gitems = [first, second]
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.do_chase(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.tm[7][8], rogue.T_FLOOR)
+        self.assertEqual(monster.dest, (9, 7))
+        self.assertEqual(game.room_for_ai(monster.x, monster.y), game.room_for_ai(second.x, second.y))
+
     def test_rogue_544_do_chase_keeps_running_after_collecting_item_when_new_dest_differs(self):
         # Rogue 5.4.4 chase.c:do_chase() stops only if relocate() leaves the monster on the new t_dest.
         game = new_game(seed=515)
