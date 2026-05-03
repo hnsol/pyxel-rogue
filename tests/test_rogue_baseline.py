@@ -195,17 +195,17 @@ class RogueBaselineTest(unittest.TestCase):
     def test_palette_tables_are_split_without_changing_defaults(self):
         import rogue_palettes
 
-        self.assertEqual(rogue.DEFAULT_PALETTE, rogue_palettes.PALETTE_GBC_HIGH_CONTRAST)
+        self.assertEqual(rogue.DEFAULT_PALETTE, rogue_palettes.PALETTE_FLEXOKI_DARK)
         self.assertEqual(
             rogue.PALETTE_IDS,
             (
-                rogue_palettes.PALETTE_GBC,
+                rogue_palettes.PALETTE_FLEXOKI_DARK,
                 rogue_palettes.PALETTE_GBC_HIGH_CONTRAST,
                 rogue_palettes.PALETTE_FLEXOKI_LIGHT,
             ),
         )
-        self.assertEqual(rogue.PALETTE_LABELS[rogue.DEFAULT_PALETTE], "GBC High Contrast")
-        self.assertEqual(set(rogue.PALETTES), set(rogue.PALETTE_IDS))
+        self.assertEqual(rogue.PALETTE_LABELS[rogue.DEFAULT_PALETTE], "Flexoki Dark")
+        self.assertTrue(set(rogue.PALETTE_IDS).issubset(set(rogue.PALETTES)))
         self.assertTrue(all(len(colors) == 32 for colors in rogue.PALETTES.values()))
 
     def test_map_tables_are_split_without_changing_play_area(self):
@@ -8670,11 +8670,27 @@ class RogueBaselineTest(unittest.TestCase):
             else:
                 rogue.pyxel.colors = old_colors
 
-    def test_palette_options_are_three_32_color_candidates(self):
-        self.assertEqual(rogue.PALETTE_IDS, ("gbc", "gbc_high_contrast", "flexoki_light"))
+    def test_palette_options_use_flexoki_dark_default_order(self):
+        self.assertEqual(rogue.PALETTE_IDS, ("flexoki_dark", "gbc_high_contrast", "flexoki_light"))
         for palette_id in rogue.PALETTE_IDS:
             self.assertEqual(len(rogue.PALETTES[palette_id]), 32)
         self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
+
+    def test_flexoki_dark_uses_official_dark_background_and_text(self):
+        self.assertEqual(rogue.PALETTE_LABELS["flexoki_dark"], "Flexoki Dark")
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[0], 0x100F0F)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[30], 0xCECDC3)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[31], 0xFFFCF0)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[2], 0x282726)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[3], 0x343331)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[4], 0x575653)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[5], 0x6F6E69)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[6], 0x878580)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[9], 0xDAD8CE)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[12], 0x66800B)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[18], 0xBC5215)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[26], 0x3AA99F)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[29], 0xD0A215)
 
     def test_flexoki_light_uses_readable_monster_colors(self):
         game = new_game(seed=242)
@@ -8696,15 +8712,15 @@ class RogueBaselineTest(unittest.TestCase):
         )
         old_colors = getattr(rogue.pyxel, "colors", None)
         try:
-            rogue.pyxel.colors = [0] * len(rogue.FLEXOKI_LIGHT_PALETTE)
-            game.st = rogue.ST_AUX
-            game.acur = rogue.AUX_ACTIONS.index("Palette")
-            rogue.pyxel.set_input(
-                held={rogue.pyxel.GAMEPAD1_BUTTON_A},
-                pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
-            )
-
-            game.update()
+            rogue.pyxel.colors = [0] * len(rogue.GBC_HIGH_CONTRAST_PALETTE)
+            for _ in range(2):
+                game.st = rogue.ST_AUX
+                game.acur = rogue.AUX_ACTIONS.index("Palette")
+                rogue.pyxel.set_input(
+                    held={rogue.pyxel.GAMEPAD1_BUTTON_A},
+                    pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+                )
+                game.update()
 
             self.assertEqual(game.settings.palette, "flexoki_light")
             self.assertEqual(
@@ -11690,8 +11706,8 @@ class RogueBaselineTest(unittest.TestCase):
 
             game.open_name_input()
             self.assertEqual(
-                rogue.pyxel.colors[: len(rogue.GBC_HIGH_CONTRAST_PALETTE)],
-                rogue.GBC_HIGH_CONTRAST_PALETTE,
+                rogue.pyxel.colors[: len(rogue.FLEXOKI_DARK_PALETTE)],
+                rogue.FLEXOKI_DARK_PALETTE,
             )
         finally:
             if old_colors is None:
