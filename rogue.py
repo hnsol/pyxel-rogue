@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1626"
+UI_BUILD = "260503_1636"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3783,7 +3783,7 @@ class Game:
             p.x, p.y = nx, ny
             if self.tm[ny][nx] == T_STAIR:
                 self.seen_stairs = True
-            trapped = (nx,ny) in self.traps
+            trapped = (nx,ny) in self.traps and self.tm[ny][nx] in (T_FLOOR, T_TRAP)
             if trapped and p.levitating <= 0:
                 self.trigger_trap(nx,ny)
                 if not self.p.alive or self.st!=ST_PLAY:
@@ -3812,7 +3812,11 @@ class Game:
                     found = self.reveal_hidden_at(nx,ny) or found
                 elif hidden==T_CORR and rogue_search.reveals_secret_passage(rnd(3+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
-                elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rogue_search.reveals_trap(rnd(2+probinc), probinc):
+                elif (
+                    (nx,ny) in self.traps
+                    and self.tm[ny][nx] == T_FLOOR
+                    and rogue_search.reveals_trap(rnd(2+probinc), probinc)
+                ):
                     trap = self.traps[(nx,ny)]
                     found = self.reveal_trap_at(nx,ny) or found
                     if found:
