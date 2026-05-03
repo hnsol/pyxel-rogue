@@ -132,7 +132,6 @@ from rogue_scores import (
     USER_NAME_MAX,
     check_online_user,
     fetch_online_scores,
-    fetch_online_rank,
     build_score_entry,
     can_register_user_id,
     display_score_name,
@@ -141,6 +140,7 @@ from rogue_scores import (
     get_period_scores,
     get_top_scores,
     link_online_user,
+    load_online_score_cache,
     load_online_profile,
     load_player_name,
     load_score_entries,
@@ -151,6 +151,7 @@ from rogue_scores import (
     sanitize_user_id,
     save_player_name,
     save_local_only_profile,
+    save_online_score_cache,
     save_online_profile,
     save_score_entry,
     score_period_keys,
@@ -215,7 +216,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260503_1515"
+UI_BUILD = "260503_1716"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -244,6 +245,9 @@ ONLINE_UI_TEXT = {
         "pin_link_reuse": "Enter its PIN to link this device.",
         "pin_hint": "A NEXT/END  START OK  B BACK",
         "sync_title": "sync",
+        "sync_scores": "Syncing scores...",
+        "refresh_ranking": "Refreshing ranking...",
+        "please_wait": "Please wait.",
         "checking user...": "checking user...",
         "registering user...": "registering user...",
         "linking user...": "linking user...",
@@ -275,6 +279,9 @@ ONLINE_UI_TEXT = {
         "pin_link_reuse": "本人ならPINを入力してください。",
         "pin_hint": "A 次/END  START 決定  B 戻る",
         "sync_title": "通信",
+        "sync_scores": "スコア同期中...",
+        "refresh_ranking": "ランキング更新中...",
+        "please_wait": "お待ちください。",
         "checking user...": "ユーザを確認中...",
         "registering user...": "登録通信中...",
         "linking user...": "リンク通信中...",
@@ -4698,6 +4705,17 @@ class Game:
         dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
         return f"UTC {dt:%Y-%m-%d %H:%M}"
 
+    def format_utc_short_minute(self, value):
+        text = str(value or "")
+        if not text:
+            return "-"
+        try:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return text
+        dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        return f"{dt:%m-%d %H:%M}"
+
     def scoreboard_period_end(self, period, now=None):
         if period == SCOREBOARD_PERIOD_LOCAL:
             return None
@@ -4758,7 +4776,10 @@ class Game:
             return "Local only. Select opens online registration."
         last_sync = profile.get("last_sync_at", "")
         if last_sync:
-            return f"Last sync {self.format_utc_minute(last_sync)}"
+            next_sync = profile.get("next_sync_at", "")
+            if next_sync:
+                return f"Posted UTC {self.format_utc_short_minute(last_sync)} / POST after {self.format_utc_short_minute(next_sync)}"
+            return f"Posted {self.format_utc_minute(last_sync)}"
         return ""
 
     def ensure_online_score_state(self):
@@ -4983,9 +5004,19 @@ class Game:
         self.online_period = SCOREBOARD_PERIOD_LOCAL
         local_entries = load_score_entries()
         self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10)
+        for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+            if period in self.online_score_loaded:
+                continue
+            key = self.scoreboard_period_key(period)
+            cached = load_online_score_cache(period, key)
+            if not cached:
+                continue
+            self.online_score_cache[period] = get_period_scores(cached + local_entries, period, key, limit=10)
+            self.online_score_loaded.add(period)
         if getattr(self, "online_sync_result", "") in (
             "No local scores yet.",
             "Ranking updated. No local scores yet.",
+            "Ranking refreshed. No local scores yet.",
         ) and local_entries:
             self.online_sync_result = ""
         self.online_return_state = ST_TITLE
@@ -5006,24 +5037,16 @@ class Game:
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
         if online:
+            save_online_score_cache(period, key, online)
             scores = get_period_scores(online + local, period, key, limit=10)
         else:
+            online = load_online_score_cache(period, key)
             scores = get_period_scores(local, period, key, limit=10)
+            if online:
+                scores = get_period_scores(online + local, period, key, limit=10)
         self.online_scores = scores
         self.online_score_cache[period] = scores
         self.online_score_loaded.add(period)
-        if getattr(self, "result_entry", None):
-            rank = fetch_online_rank(self.result_entry, period)
-            if rank is None:
-                ranked = get_period_scores((online or local) + [self.result_entry], period, key, limit=9999)
-                name = str(self.result_entry.get("player_name", "")).upper()[:8]
-                score = int(self.result_entry.get("score", 0))
-                for i, entry in enumerate(ranked, start=1):
-                    if str(entry.get("player_name", "")).upper()[:8] == name and int(entry.get("score", 0)) == score:
-                        rank = i
-                        break
-            if rank is not None:
-                self.online_rank_cache[period] = rank
         return scores
 
     def display_online_period_scores(self, period):
@@ -5036,12 +5059,15 @@ class Game:
         return scores
 
     def refresh_online_scoreboard_periods(self):
+        ok = True
         for period in getattr(self, "online_sync_periods", []) or [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]:
             try:
                 self.load_online_period_scores(period, force=True)
             except Exception:
-                self.online_score_load_result = "Could not load scoreboard."
+                ok = False
                 break
+        self.online_score_load_result = ""
+        return ok
 
     def perform_online_scoreboard_sync(self):
         self.ensure_online_score_state()
@@ -5050,12 +5076,13 @@ class Game:
         post_allowed = bool(getattr(self, "online_sync_post_allowed", True))
         if not entries or not post_allowed:
             if entries:
-                self.online_sync_result = "Score sync available later. Ranking updated."
+                self.online_sync_result = "Ranking refreshed. POST once per 24h."
             else:
-                self.online_sync_result = "Ranking updated. No local scores yet."
+                self.online_sync_result = "Ranking refreshed. No local scores yet."
             self.online_score_load_result = ""
             self.online_sync_status = "loading scoreboard..."
-            self.refresh_online_scoreboard_periods()
+            if not self.refresh_online_scoreboard_periods():
+                self.online_sync_result = "Refresh failed. POST once per 24h." if entries else "Refresh failed. No local scores yet."
             status = "cooldown_refresh" if entries else "no_local_scores"
             return {"ok": True, "status": status, "posted_count": 0}
         result = sync_online_scoreboard(
@@ -5064,17 +5091,18 @@ class Game:
         )
         status = str(result.get("status", "success" if result.get("ok") else "failed"))
         if result.get("ok"):
-            self.online_sync_result = "Score synced." if entries else "Profile synced. No local scores yet."
+            self.online_sync_result = "Score posted. Ranking refreshed." if entries else "Ranking refreshed. No local scores yet."
         elif status == "cooldown":
-            self.online_sync_result = "Score sync available later. Ranking updated."
+            self.online_sync_result = "Ranking refreshed. POST once per 24h."
             self.online_score_load_result = ""
             self.online_sync_status = "loading scoreboard..."
-            self.refresh_online_scoreboard_periods()
+            if not self.refresh_online_scoreboard_periods():
+                self.online_sync_result = "Refresh failed. POST once per 24h."
         elif status == "auth_failed":
             self.online_sync_result = "Authentication failed. Register again."
             self.online_register_prompt = True
         else:
-            self.online_sync_result = f"Sync failed: {status}."
+            self.online_sync_result = f"POST failed. {status}."
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if result.get("last_sync_at") or result.get("next_sync_at"):
             profile["last_sync_at"] = result.get("last_sync_at", profile.get("last_sync_at", ""))
@@ -5083,7 +5111,8 @@ class Game:
         self.online_score_load_result = ""
         if result.get("ok"):
             self.online_sync_status = "loading scoreboard..."
-            self.refresh_online_scoreboard_periods()
+            if not self.refresh_online_scoreboard_periods():
+                self.online_sync_result = "Score posted. Ranking refresh failed."
         return result
 
     def format_score_line_for_board(self, rank, entry, period):
@@ -5114,6 +5143,11 @@ class Game:
                 i += 1
             lines.append(line[:limit])
         return lines[:2]
+
+    def online_sync_box_lines(self):
+        if bool(getattr(self, "online_sync_post_allowed", True)):
+            return [self.online_text("sync_scores"), self.online_text("please_wait")]
+        return [self.online_text("refresh_ranking"), self.online_text("please_wait")]
 
     def confirm_name_input(self):
         name = "".join(getattr(self, "name_chars", [])).strip()
@@ -5700,8 +5734,6 @@ class Game:
         self.txt(120, 74, "   Score Name", SCOREBOARD_TEXT_COL)
         y = 90
         player_name = str(self.current_score_player_name()).upper()[:16]
-        result_entry = getattr(self, "result_entry", None)
-        rank = self.online_rank_cache.get(period)
         display_scores = scores[:10]
         for i, entry in enumerate(display_scores, start=1):
             name = str(entry.get("player_name", "")).upper()[:16]
@@ -5711,8 +5743,6 @@ class Game:
         if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
-        if result_entry and rank and rank > 10:
-            self.txt(120, 222, self.format_score_line_for_board(rank, result_entry, period)[:56], SCOREBOARD_TEXT_COL)
         hint = self.online_sync_hint_line()[:58]
         if hint:
             self.txt(114, 268, hint, SCOREBOARD_DIM_COL)
@@ -5726,8 +5756,9 @@ class Game:
         self.txt(114, 312, "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK", SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
             self._box(156, 116, 268, 82, self.online_text("sync_title"))
-            status = self.online_text(getattr(self, "online_sync_status", "loading scoreboard..."))
-            self.txt(184, 150, status[:34], SCOREBOARD_HILITE_COL)
+            lines = self.online_sync_box_lines()
+            self.txt(184, 146, lines[0][:34], SCOREBOARD_HILITE_COL)
+            self.txt(184, 160, lines[1][:34], SCOREBOARD_HILITE_COL)
         if getattr(self, "online_register_prompt", False):
             self._box(148, 104, 282, 92, "Online Scoreboard")
             self.txt(168, 126, "Register a name to sync once per day.", UI_TEXT_COL)

@@ -16,6 +16,7 @@ from typing import Any
 SCORE_STORAGE_KEY = "pyxel-rogue-scores-v2"
 PLAYER_NAME_STORAGE_KEY = "pyxel-rogue-player-name-v2"
 ONLINE_PROFILE_STORAGE_KEY = "pyxel-rogue-online-profile-v3"
+ONLINE_SCORE_CACHE_STORAGE_KEY = "pyxel-rogue-online-score-cache-v1"
 SCORE_FILE = os.environ.get(
     "PYXEL_ROGUE_SCORE_FILE",
     os.path.join(os.path.expanduser("~"), ".pyxel_rogue_scores_v2.json"),
@@ -27,6 +28,10 @@ PLAYER_NAME_FILE = os.environ.get(
 ONLINE_PROFILE_FILE = os.environ.get(
     "PYXEL_ROGUE_ONLINE_PROFILE_FILE",
     os.path.join(os.path.expanduser("~"), ".pyxel_rogue_online_profile_v3.json"),
+)
+ONLINE_SCORE_CACHE_FILE = os.environ.get(
+    "PYXEL_ROGUE_ONLINE_SCORE_CACHE_FILE",
+    os.path.join(os.path.expanduser("~"), ".pyxel_rogue_online_score_cache_v1.json"),
 )
 DEFAULT_ONLINE_SCORE_URL = "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec"
 ONLINE_SCORE_URL = os.environ.get("PYXEL_ROGUE_SCORE_URL", DEFAULT_ONLINE_SCORE_URL)
@@ -514,6 +519,58 @@ def save_score_entry(entry: dict[str, Any]) -> None:
             _write_file_scores(entries)
     except Exception:
         return
+
+
+def _read_online_score_cache() -> dict[str, Any]:
+    try:
+        if sys.platform == "emscripten":
+            from js import localStorage
+
+            raw = localStorage.getItem(ONLINE_SCORE_CACHE_STORAGE_KEY)
+            data = json.loads(str(raw)) if raw else {}
+        elif os.path.exists(ONLINE_SCORE_CACHE_FILE):
+            with open(ONLINE_SCORE_CACHE_FILE, encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            data = {}
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_online_score_cache(data: dict[str, Any]) -> None:
+    try:
+        if sys.platform == "emscripten":
+            from js import localStorage
+
+            localStorage.setItem(ONLINE_SCORE_CACHE_STORAGE_KEY, json.dumps(data, ensure_ascii=False))
+        else:
+            with open(ONLINE_SCORE_CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+    except Exception:
+        return
+
+
+def load_online_score_cache(period: str, key: str) -> list[dict[str, Any]]:
+    if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+        return []
+    record = _read_online_score_cache().get(period, {})
+    if not isinstance(record, dict) or str(record.get("key", "")) != str(key):
+        return []
+    scores = record.get("scores", [])
+    return scores if isinstance(scores, list) else []
+
+
+def save_online_score_cache(period: str, key: str, scores: list[dict[str, Any]]) -> None:
+    if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+        return
+    data = _read_online_score_cache()
+    data[period] = {
+        "key": str(key),
+        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "scores": [with_score_periods(score) for score in scores[:10]],
+    }
+    _write_online_score_cache(data)
 
 
 def _http_json(url: str, payload: dict[str, Any] | None = None) -> Any:

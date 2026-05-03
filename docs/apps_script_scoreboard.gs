@@ -117,14 +117,16 @@ function doGet(e) {
     return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
+  const ctx = scoreContext();
   if (period === "weekly") {
-    ensureDummyRows(period, key, DUMMY_TARGET_COUNT);
+    ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx);
   }
   if (period === "season") {
-    ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT);
-    ensureHistoricalWeeklyRows(new Date(), key);
+    ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx);
+    ensureHistoricalWeeklyRows(new Date(), key, ctx);
   }
-  return json({ scores: topScores(period, key) });
+  flushScoreRows(ctx);
+  return json({ scores: topScores(period, key, ctx) });
 }
 
 function doPost(e) {
@@ -331,6 +333,32 @@ function sheet() {
   return sh;
 }
 
+function scoreContext() {
+  const sh = sheet();
+  const data = sh.getDataRange().getValues();
+  const header = data.shift();
+  return {
+    sheet: sh,
+    header: header,
+    idx: Object.fromEntries(header.map((h, i) => [h, i])),
+    rows: data,
+    pendingRows: [],
+  };
+}
+
+function rowsForContext(ctx) {
+  return ctx.rows.concat(ctx.pendingRows);
+}
+
+function flushScoreRows(ctx) {
+  if (!ctx || ctx.pendingRows.length === 0) return 0;
+  const rows = ctx.pendingRows;
+  ctx.sheet.getRange(ctx.sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  ctx.rows = ctx.rows.concat(rows);
+  ctx.pendingRows = [];
+  return rows.length;
+}
+
 function appendScore(entry) {
   const now = entry.timestamp || new Date().toISOString();
   const p = periodsFor(new Date(now));
@@ -384,10 +412,10 @@ function scoreIdFor(entry, timestamp, name) {
   ].join("|");
 }
 
-function topScores(period, key) {
-  const data = sheet().getDataRange().getValues();
-  const header = data.shift();
-  const idx = Object.fromEntries(header.map((h, i) => [h, i]));
+function topScores(period, key, ctx) {
+  const context = ctx || scoreContext();
+  const data = rowsForContext(context);
+  const idx = context.idx;
   const field = periodField(period);
   const best = {};
   data.forEach((row) => {
@@ -428,10 +456,10 @@ function scoreRank(params) {
   return rank;
 }
 
-function allScores(period, key) {
-  const data = sheet().getDataRange().getValues();
-  const header = data.shift();
-  const idx = Object.fromEntries(header.map((h, i) => [h, i]));
+function allScores(period, key, ctx) {
+  const context = ctx || scoreContext();
+  const data = rowsForContext(context);
+  const idx = context.idx;
   const field = periodField(period);
   const best = {};
   data.forEach((row) => {
@@ -457,18 +485,21 @@ function periodCellValue(value, field) {
 }
 
 function seedDummy() {
-  return ensureScoreboardDummyContext();
-}
-
-function ensureScoreboardDummyContext() {
-  const now = new Date();
-  let rows = 0;
-  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT);
-  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season);
+  const ctx = scoreContext();
+  const rows = ensureScoreboardDummyContext(ctx);
+  flushScoreRows(ctx);
   return rows;
 }
 
-function ensureHistoricalWeeklyRows(now, seasonKey) {
+function ensureScoreboardDummyContext(ctx) {
+  const now = new Date();
+  let rows = 0;
+  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx);
+  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx);
+  return rows;
+}
+
+function ensureHistoricalWeeklyRows(now, seasonKey, ctx) {
   const base = now || new Date();
   let rows = 0;
   for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
@@ -478,6 +509,7 @@ function ensureHistoricalWeeklyRows(now, seasonKey) {
       "weekly",
       p.period_week,
       DUMMY_BACKFILL_COUNT,
+      ctx,
     );
   }
   return rows;
@@ -487,32 +519,33 @@ function historicalWeeklyDayOffset(i) {
   return -(2 + (i - 1) * 7);
 }
 
-function ensureDummyRows(period, key, targetCount) {
-  return ensureDummyRowsForPeriod(period, key, targetCount, false);
+function ensureDummyRows(period, key, targetCount, ctx) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, false, ctx);
 }
 
-function ensureSeededDummyRows(period, key, targetCount) {
-  return ensureDummyRowsForPeriod(period, key, targetCount, true);
+function ensureSeededDummyRows(period, key, targetCount, ctx) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, true, ctx);
 }
 
-function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly) {
-  const scores = topScores(period, key);
+function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx) {
+  const context = ctx || scoreContext();
+  const scores = topScores(period, key, context);
   const used = new Set(scores.map((r) => cleanName(r.player_name)));
-  const seeded = seededDummyNames(period, key);
+  const seeded = seededDummyNames(period, key, context);
   seeded.forEach((name) => used.add(cleanName(name)));
   const visibleOrSeeded = countSeededOnly
     ? seeded.size
     : Math.max(scores.length, seeded.size);
   const needed = Math.max(0, targetCount - visibleOrSeeded);
   if (needed === 0) return 0;
-  const out = [];
   const offset = dummyNameOffset(period, key);
-  for (let i = 0; i < DUMMY_NAMES.length && out.length < needed; i++) {
+  let rows = 0;
+  for (let i = 0; i < DUMMY_NAMES.length && rows < needed; i++) {
     const name = DUMMY_NAMES[(offset + i) % DUMMY_NAMES.length];
     const clean = cleanName(name);
     if (used.has(clean)) continue;
     const p = periodsFromKey(period, key, i);
-    out.push([
+    context.pendingRows.push([
       timestampForPeriod(period, key, i),
       p.period_day,
       p.period_week,
@@ -526,20 +559,17 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly) {
       true,
       "dummy-" + period + "-" + key + "-" + clean,
     ]);
+    used.add(clean);
+    rows++;
   }
-  if (out.length > 0) {
-    const sh = sheet();
-    sh.getRange(sh.getLastRow() + 1, 1, out.length, out[0].length).setValues(
-      out,
-    );
-  }
-  return out.length;
+  if (!ctx) flushScoreRows(context);
+  return rows;
 }
 
-function seededDummyNames(period, key) {
-  const data = sheet().getDataRange().getValues();
-  const header = data.shift();
-  const idx = Object.fromEntries(header.map((h, i) => [h, i]));
+function seededDummyNames(period, key, ctx) {
+  const context = ctx || scoreContext();
+  const data = rowsForContext(context);
+  const idx = context.idx;
   const prefix = "dummy-" + period + "-" + key + "-";
   const names = new Set();
   data.forEach((row) => {
