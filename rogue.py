@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0100"
+UI_BUILD = "260504_0115"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2768,6 +2768,16 @@ class Game:
         gi=self.gi_at(x,y)
         return not (gi and self.is_scare_monster(gi))
 
+    def can_player_rndmove_step(self,x,y):
+        # C: move.c:rndmove() checks winat()/step_ok() and rejects S_SCARE.
+        if not (0 <= x < MAP_W and 0 <= y < MAP_H):
+            return False
+        ch = self.zap_winat_char(x, y)
+        if not self.zap_step_ok_char(ch):
+            return False
+        gi=self.gi_at(x,y)
+        return not (gi and self.is_scare_monster(gi))
+
     def chase(self,m,dest):
         # C: chase.c:chase()
         px,py=self.p.x,self.p.y
@@ -3855,7 +3865,7 @@ class Game:
                 (p.x, p.y),
                 rnd,
                 lambda src, dst: self.diag_ok(src[0], src[1], dst[0], dst[1])
-                and (dst == src or self.walkable(dst[0], dst[1]) or self.mon_at(dst[0], dst[1])),
+                and (dst == src or self.can_player_rndmove_step(dst[0], dst[1])),
             )
             if (nx, ny) == (p.x, p.y):
                 self.dashing = False

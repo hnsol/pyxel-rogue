@@ -229,6 +229,7 @@
 - [x] Rogue 5.4.4 `chase.c:chase()` / `winat()` 準拠で、item 目的地追跡中も hero マスを候補評価し、足元の scare scroll より PLAYER を優先する
 - [x] Rogue 5.4.4 `monsters.c:save_throw()` / `save()` 相当の player/monster セーヴ式と protection ring 補正を helper 化
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
+- [x] Rogue 5.4.4 `move.c:rndmove()` / `winat()` 準拠で、混乱中 player のランダム移動は通常 monster glyph と scare scroll を不可にする
 - [x] Rogue 5.4.4 `move.c:rndmove()` / `rogue.h:winat()` 準拠で、混乱/Phantom/Bat のランダム追跡移動は item 擬態 Xeroc を `step_ok()` として扱う
 - [x] Rogue 5.4.4 `move.c:rust_armor()` 相当の錆び合法判定・保護分岐を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:be_trapped()` `T_MYST` 11択メッセージ表を `rogue_move.py` へ小分割

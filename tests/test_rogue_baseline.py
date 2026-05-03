@@ -13309,6 +13309,62 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.x, game.p.y), (11, 10))
 
+    def test_rogue_544_player_confused_rndmove_rejects_normal_monster(self):
+        # Rogue 5.4.4 move.c:rndmove() uses winat()/step_ok(); normal monster glyphs are not step_ok().
+        game = new_game(seed=531)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 5
+        monster = monster_at(11, 10)
+        game.mons = [monster]
+        rng = SequenceRng([1, 1, 2])
+        old_rnd = rogue.RNG.rnd
+        attacks = []
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.p_attack = lambda mo: attacks.append(mo)
+            turn = game.turn
+            moved = game.try_move(0, 1)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(moved)
+        self.assertEqual(attacks, [])
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(rng.calls, [5, 3, 3])
+
+    def test_rogue_544_player_confused_rndmove_rejects_scare_scroll(self):
+        # Rogue 5.4.4 move.c:rndmove() rejects S_SCARE after a SCROLL winat() result.
+        game = new_game(seed=532)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = 11, 10
+        game.gitems = [scroll]
+        rng = SequenceRng([1, 1, 2])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            turn = game.turn
+            moved = game.try_move(0, 1)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.gitems, [scroll])
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(rng.calls, [5, 3, 3])
+
     def test_rogue_544_held_player_move_away_spends_turn_without_moving(self):
         # Rogue 5.4.4 move.c:do_move() reports ISHELD after the destination checks and leaves after true.
         game = new_game(seed=517)
