@@ -4254,6 +4254,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.dest, (24, 4))
         self.assertFalse(monster.running)
 
+    def test_rogue_544_do_chase_greedy_stale_gold_destination_falls_back_to_hero(self):
+        # Rogue 5.4.4 chase.c:do_chase() sends ISGREED monsters after hero when rer->r_goldval is 0.
+        game = new_game(seed=526)
+        set_two_room_floor(game)
+        game.p.x, game.p.y = 3, 4
+        monster = monster_at(23, 4, "O", "orc", hp=10, armor=100, exp=5, flags="greed")
+        monster.running = True
+        monster.dest = (24, 4)
+        game.mons = [monster]
+        game.gitems = []
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (22, 4))
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+
     def test_rogue_544_do_chase_collecting_maze_item_restores_floor_tile(self):
         # Rogue 5.4.4 chase.c:do_chase() restores chat(obj->o_pos) to
         # FLOOR unless th->t_room has ISGONE, even when the item was on PASSAGE.
