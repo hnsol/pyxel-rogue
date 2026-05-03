@@ -134,15 +134,15 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 自動拾得ON/OFF、投擲アニメーション
 - 墓石つき死亡画面
 - Rogue 5.4.4 `total_winner()` 準拠の勝利時所持品売却スコア
-- 起動ロゴ、BGMつきタイトル画面、英数字8文字のプレイヤー名入力
-- Google Sheets + Apps Script 連携用の Daily Top Ten / Weekly Rivals / Season Legends オンラインランキング雛形
+- 起動ロゴ、BGMつきタイトル画面、小文字英数字のプレイヤー名入力
+- Google Sheets + Apps Script 連携用の My Rogue Chronicle / Weekly Rivals / Seasonal Legends オンラインランキング雛形
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
 - JSONメッセージカタログによる日英切替基盤、ロジックテスト基盤
 - Rogue2.Official の `mesg_E` / `mesg_J` を参考データとして同梱
 
 実装状況の詳細は [TODO.md](TODO.md) を参照してください。
 
-オンラインランキングは Google Sheets + Apps Script 連携用の雛形を `docs/apps_script_scoreboard.gs` に置いています。公開先を差し替える場合は `PYXEL_ROGUE_SCORE_URL` を指定してください。ゲーム終了時はローカル保存だけを行い、通信はOnline Ranking入場時とR / Select手動更新時だけ行います。入場直後の同期開始待ち中はBでキャンセルできます。スコアボードは Daily / Weekly / Season をまとめて同期し、タブ切替では通信しません。オンライン投稿はランキング同期時だけ行い、`score_id` で重複行を抑止します。Apps Script はスコアボード同期時に必要なperiod/keyだけ、今日10件、過去10日と過去10週を各1件ずつ、安定したダミー行として生成します。Season はそれらの期間行を集計します。
+オンラインランキングは Google Sheets + Apps Script 連携用の雛形を `docs/apps_script_scoreboard.gs` に置いています。公開先を差し替える場合は `PYXEL_ROGUE_SCORE_URL` を指定してください。ゲーム終了時はローカル保存だけを行い、Online Ranking では My Rogue Chronicle を即表示します。オンライン同期は Select から24時間に1回だけ行い、server時刻の `last_sync_at` / `next_sync_at` で制限します。初回は小文字英数字の `user_id` と6桁PINを登録し、server token照合で別端末リンクと同期を行います。Localのみの名前は表示時に `*` が付きます。Weekly / Season は同期時にまとめて取得し、`score_id` で重複行を抑止します。旧スコアデータは開発中リセットとして v2 storage へ切り替えています。
 
 ## 今後の予定
 

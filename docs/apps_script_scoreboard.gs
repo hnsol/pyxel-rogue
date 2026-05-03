@@ -1,8 +1,11 @@
 const SHEET_NAME = "scores";
+const USER_SHEET_NAME = "users";
 const DUMMY_TARGET_COUNT = 10;
-const DUMMY_PAST_DAYS = 6;
 const DUMMY_PAST_WEEKS = 4;
 const DUMMY_BACKFILL_COUNT = 1;
+const SYNC_COOLDOWN_HOURS = 24;
+const USER_PASSWORD_FAIL_LIMIT = 5;
+const USER_PASSWORD_LOCK_MINUTES = 10;
 const DUMMY_NAMES = [
   "RODNEY",
   "YENDOR",
@@ -113,9 +116,7 @@ function doGet(e) {
     return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
-  if (period === "daily") ensureDummyRows(period, key, DUMMY_TARGET_COUNT);
   if (period === "weekly") {
-    ensureRecentDailyRows();
     ensureDummyRows(period, key, DUMMY_BACKFILL_COUNT);
   }
   if (period === "season") ensureHistoricalWeeklyRows();
@@ -125,11 +126,163 @@ function doGet(e) {
 function doPost(e) {
   const body = JSON.parse(e.postData.contents || "{}");
   if (body.action === "seedDummy") return json({ rows: seedDummy() });
+  if (body.action === "registerUser") return json(registerUser(body));
+  if (body.action === "linkUser") return json(linkUser(body));
+  if (body.action === "syncScoreboard") return json(syncScoreboard(body));
   if (body.action === "submit") {
     appendScore(body.entry || {});
     return json({ ok: true });
   }
   return json({ ok: false });
+}
+
+function userSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(USER_SHEET_NAME);
+  if (!sh) sh = ss.insertSheet(USER_SHEET_NAME);
+  if (sh.getLastRow() === 0) {
+    sh.appendRow([
+      "user_id",
+      "display_name",
+      "user_password",
+      "server_token",
+      "last_sync_at",
+      "failed_attempts",
+      "locked_until",
+      "created_at",
+    ]);
+  }
+  return sh;
+}
+
+function userIndex(data) {
+  const header = data[0];
+  return Object.fromEntries(header.map((h, i) => [h, i]));
+}
+
+function findUser(userId) {
+  const clean = cleanUserId(userId);
+  const sh = userSheet();
+  const data = sh.getDataRange().getValues();
+  const idx = userIndex(data);
+  for (let r = 1; r < data.length; r++) {
+    if (String(data[r][idx.user_id]) === clean) {
+      return { sheet: sh, row: r + 1, values: data[r], idx: idx };
+    }
+  }
+  return null;
+}
+
+function registerUser(body) {
+  const userId = cleanUserId(body.user_id);
+  const password = cleanUserPassword(body.user_password);
+  if (isReservedUserId(userId)) return { ok: false, status: "reserved" };
+  if (!password) return { ok: false, status: "bad_password" };
+  if (findUser(userId)) return { ok: false, status: "exists" };
+  const token = makeServerToken();
+  userSheet().appendRow([
+    userId,
+    cleanDisplayName(body.display_name || userId),
+    password,
+    token,
+    "",
+    0,
+    "",
+    new Date().toISOString(),
+  ]);
+  return {
+    ok: true,
+    status: "registered",
+    user_id: userId,
+    display_name: cleanDisplayName(body.display_name || userId),
+    server_token: token,
+    last_sync_at: "",
+    next_sync_at: "",
+  };
+}
+
+function linkUser(body) {
+  const user = findUser(body.user_id);
+  const password = cleanUserPassword(body.user_password);
+  if (!user || !password) return { ok: false, status: "auth_failed" };
+  const lockedUntil = user.values[user.idx.locked_until];
+  if (lockedUntil && new Date(lockedUntil).getTime() > Date.now()) {
+    return { ok: false, status: "locked", locked_until: new Date(lockedUntil).toISOString() };
+  }
+  if (String(user.values[user.idx.user_password]) !== password) {
+    const failures = parseInt(user.values[user.idx.failed_attempts] || 0, 10) + 1;
+    user.sheet.getRange(user.row, user.idx.failed_attempts + 1).setValue(failures);
+    if (failures >= USER_PASSWORD_FAIL_LIMIT) {
+      const locked = new Date(Date.now() + USER_PASSWORD_LOCK_MINUTES * 60 * 1000);
+      user.sheet.getRange(user.row, user.idx.locked_until + 1).setValue(locked.toISOString());
+      return { ok: false, status: "locked", locked_until: locked.toISOString() };
+    }
+    return { ok: false, status: "auth_failed" };
+  }
+  user.sheet.getRange(user.row, user.idx.failed_attempts + 1).setValue(0);
+  user.sheet.getRange(user.row, user.idx.locked_until + 1).setValue("");
+  return {
+    ok: true,
+    status: "linked",
+    user_id: String(user.values[user.idx.user_id]),
+    display_name: String(user.values[user.idx.display_name]),
+    server_token: String(user.values[user.idx.server_token]),
+    last_sync_at: String(user.values[user.idx.last_sync_at] || ""),
+    next_sync_at: nextSyncAt(user.values[user.idx.last_sync_at]),
+  };
+}
+
+function syncScoreboard(body) {
+  const user = findUser(body.user_id);
+  if (!user || String(user.values[user.idx.server_token]) !== String(body.server_token || "")) {
+    return { ok: false, status: "auth_failed", scores: scorePayload() };
+  }
+  const last = String(user.values[user.idx.last_sync_at] || "");
+  const next = nextSyncAt(last);
+  if (next && new Date(next).getTime() > Date.now()) {
+    return {
+      ok: false,
+      status: "cooldown",
+      last_sync_at: last,
+      next_sync_at: next,
+      scores: scorePayload(),
+    };
+  }
+  const entries = Array.isArray(body.entries) ? body.entries : [];
+  entries.forEach((entry) => appendScore(Object.assign({}, entry, {
+    user_id: String(user.values[user.idx.user_id]),
+    player_name: String(user.values[user.idx.display_name]),
+  })));
+  const now = new Date().toISOString();
+  user.sheet.getRange(user.row, user.idx.last_sync_at + 1).setValue(now);
+  return {
+    ok: true,
+    status: "success",
+    last_sync_at: now,
+    next_sync_at: nextSyncAt(now),
+    scores: scorePayload(),
+  };
+}
+
+function scorePayload() {
+  const periods = currentPeriods();
+  ensureDummyRows("weekly", periods.period_week, DUMMY_BACKFILL_COUNT);
+  ensureHistoricalWeeklyRows(new Date());
+  return {
+    weekly: topScores("weekly", periods.period_week),
+    season: topScores("season", periods.period_season),
+  };
+}
+
+function nextSyncAt(lastSyncAt) {
+  if (!lastSyncAt) return "";
+  const d = new Date(lastSyncAt);
+  if (isNaN(d.getTime())) return "";
+  return new Date(d.getTime() + SYNC_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
+}
+
+function makeServerToken() {
+  return Utilities.getUuid().replace(/-/g, "") + "-" + Math.floor(Math.random() * 1000000);
 }
 
 function sheet() {
@@ -289,26 +442,8 @@ function seedDummy() {
 function ensureScoreboardDummyContext() {
   const now = new Date();
   let rows = 0;
-  rows += ensureDummyRows(
-    "daily",
-    currentPeriods().period_day,
-    DUMMY_TARGET_COUNT,
-  );
-  rows += ensureRecentDailyRows(now);
+  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT);
   rows += ensureHistoricalWeeklyRows(now);
-  return rows;
-}
-
-function ensureRecentDailyRows(now) {
-  const base = now || new Date();
-  let rows = 0;
-  for (let i = 1; i <= DUMMY_PAST_DAYS; i++) {
-    rows += ensureDummyRows(
-      "daily",
-      periodsFor(addUtcDays(base, -i)).period_day,
-      DUMMY_BACKFILL_COUNT,
-    );
-  }
   return rows;
 }
 
@@ -326,7 +461,7 @@ function ensureHistoricalWeeklyRows(now) {
 }
 
 function historicalWeeklyDayOffset(i) {
-  return -(DUMMY_PAST_DAYS + 2 + (i - 1) * 7);
+  return -(2 + (i - 1) * 7);
 }
 
 function ensureDummyRows(period, key, targetCount) {
@@ -403,9 +538,6 @@ function dummyScore(period, key, offset, targetCount) {
   if (period === "weekly") {
     return 900 + dummyValue(period, key, offset, "score", 600);
   }
-  if (period === "daily" && targetCount === DUMMY_BACKFILL_COUNT) {
-    return 850 + dummyValue(period, key, offset, "score", 550);
-  }
   return 80 + dummyValue(period, key, offset, "score", 950);
 }
 
@@ -448,9 +580,6 @@ function hashString(s) {
 }
 
 function periodsFromKey(period, key, offset) {
-  if (period === "daily") {
-    return periodsFor(new Date(key + "T00:00:00Z"));
-  }
   if (period === "weekly") {
     const p = periodsFor(dateForIsoWeek(key, offset % 7));
     p.period_week = key;
@@ -462,16 +591,13 @@ function periodsFromKey(period, key, offset) {
 }
 
 function periodField(period) {
-  if (period === "daily") return "period_day";
   if (period === "season") return "period_season";
   return "period_week";
 }
 
 function timestampForPeriod(period, key, offset) {
   let d;
-  if (period === "daily") {
-    d = new Date(key + "T00:00:00Z");
-  } else if (period === "weekly") {
+  if (period === "weekly") {
     d = dateForIsoWeek(key, offset % 7);
   } else {
     d = dateForSeason(key, offset * 7);
@@ -544,6 +670,31 @@ function cleanName(name) {
     .trim()
     .slice(0, 8);
   return s || "ROGUE";
+}
+
+function cleanUserId(userId) {
+  const id = String(userId || "rogue54")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 16);
+  return id || "rogue54";
+}
+
+function cleanDisplayName(displayName) {
+  return String(displayName || "rogue54")
+    .replace(/[^\x20-\x7e]/g, "")
+    .slice(0, 16) || "rogue54";
+}
+
+function cleanUserPassword(password) {
+  const text = String(password || "");
+  return /^\d{6}$/.test(text) ? text : "";
+}
+
+function isReservedUserId(userId) {
+  const id = cleanUserId(userId);
+  if (id === "rogue54") return true;
+  return DUMMY_NAMES.some((name) => cleanUserId(name) === id);
 }
 
 function json(obj) {
