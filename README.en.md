@@ -110,6 +110,7 @@ Keyboard:
 - Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap
 - .: Wait a turn
+- > / <: Go down / up stairs
 - s: Search around all 8 neighboring tiles
 - t: Quick throw
 - ^: Trap Inspect (choose direction)

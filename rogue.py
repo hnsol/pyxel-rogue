@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1118"
+UI_BUILD = "260504_1138"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4337,6 +4337,47 @@ class Game:
         self.msg("pyxel.dungeon_depth", depth=p.depth)
         self.end_turn()
 
+    def stairs_down_command(self):
+        # Rogue 5.4.4 command.c:d_level() goes down on stairs regardless of amulet.
+        self.command_look()
+        if self.levit_check():
+            self.command_look_done = False
+            return
+        if self.tm[self.p.y][self.p.x] != T_STAIR:
+            self.msg("command.i_see_no_way_down")
+            self.command_look_done = False
+            return
+        self.msg("pyxel.descend_to_depth", depth=self.p.depth + 1)
+        self.descend()
+        self.msg("pyxel.dungeon_depth", depth=self.p.depth)
+        self.command_look_done = False
+        self.end_turn()
+
+    def stairs_up_command(self):
+        # Rogue 5.4.4 command.c:u_level() only goes up when carrying the amulet.
+        self.command_look()
+        if self.levit_check():
+            self.command_look_done = False
+            return
+        if self.tm[self.p.y][self.p.x] != T_STAIR:
+            self.msg("command.i_see_no_way_up")
+            self.command_look_done = False
+            return
+        if not self.p.has_amulet:
+            self.msg("command.your_way_is_magically_blocked")
+            self.command_look_done = False
+            return
+        if self.p.depth <= 1:
+            self.msg("pyxel.escaped_with_amulet")
+            self.command_look_done = False
+            self.enter_result_state("winner")
+            return
+        self.p.depth -= 2
+        self.descend()
+        self.msg("pyxel.wrenching_sensation_gut")
+        self.command_look_done = False
+        self.end_turn()
+
     def pickup_at(self,x,y):
         # C: pack.c:pick_up()
         p=self.p
@@ -5867,6 +5908,8 @@ class Game:
         if self.btn_r():     self.open_help_command(); return
         if self.kp(getattr(pyxel, "KEY_SLASH", None)): self.open_symbol_identify_command(); return
         if self.key_upper(getattr(pyxel, "KEY_I", None)): self.open_picky_inventory_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_PERIOD", None)): self.stairs_down_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_COMMA", None)): self.stairs_up_command(); return
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
@@ -6540,7 +6583,7 @@ class Game:
         y+=8
         self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
         commands=[
-            ". Wait   s Search   t Throw   ^ Trap",
+            ". Wait   </> Stairs s Search   t Throw   ^ Trap",
             "i Inv    I Inv item ? Help     / Identify",
             "d Drop   m Move onto o Options",
             "q Quaff  r Read     e Eat     z Zap",

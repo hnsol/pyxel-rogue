@@ -14133,6 +14133,93 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ITEM)
         self.assertIn("'m' not in pack", game.msgs)
 
+    def test_rogue_544_down_stairs_command_wakes_and_rejects_floor_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '>': d_level().
+        game = new_game(seed=5046)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_PERIOD},
+                pressed=[rogue.pyxel.KEY_PERIOD],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("I see no way down", game.msgs)
+
+    def test_rogue_544_down_stairs_command_descends_even_with_amulet(self):
+        # Rogue 5.4.4 command.c:d_level() ignores amulet and always goes down on stairs.
+        game = new_game(seed=5047)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.p.has_amulet = True
+        old_depth = game.p.depth
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_PERIOD},
+            pressed=[rogue.pyxel.KEY_PERIOD],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.p.depth, old_depth + 1)
+        self.assertNotEqual(game.st, rogue.ST_WIN)
+
+    def test_rogue_544_up_stairs_command_blocks_without_amulet_without_turn(self):
+        # Rogue 5.4.4 command.c:u_level() blocks upward stairs without amulet.
+        game = new_game(seed=5048)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        old_depth = game.p.depth
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_COMMA},
+            pressed=[rogue.pyxel.KEY_COMMA],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.p.depth, old_depth)
+        self.assertIn("your way is magically blocked", game.msgs)
+
+    def test_rogue_544_up_stairs_command_wins_on_depth_one_with_amulet(self):
+        # Rogue 5.4.4 command.c:u_level() calls total_winner() when level reaches zero.
+        game = new_game(seed=5049)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.p.depth = 1
+        game.p.has_amulet = True
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_COMMA},
+            pressed=[rogue.pyxel.KEY_COMMA],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.st, rogue.ST_WIN)
+        self.assertIn("You escaped with the Amulet of Yendor!", game.msgs)
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
@@ -15632,6 +15719,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("--- Keyboard: Pad ---", text)
         self.assertIn("--- Keyboard commands ---", text)
         self.assertIn("Enter+Esc", text)
+        self.assertIn("</> Stairs", text)
         self.assertIn("q Quaff", text)
         self.assertIn("d Drop", text)
         self.assertIn("I Inv item", text)

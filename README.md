@@ -110,6 +110,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認
 - .: 足踏み
+- > / <: 階段を降りる / 登る
 - s: 周囲8マスsearch
 - t: quick throw
 - ^: Trap Inspect（方向指定）
