@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_2308"
+UI_BUILD = "260504_2317"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5200,6 +5200,12 @@ class Game:
         command = getattr(self, "count_repeat_command", None)
         if not command or self.count_repeat_remaining <= 0:
             return False
+        if command == "again":
+            self.count_repeat_remaining -= 1
+            if self.count_repeat_remaining <= 0:
+                self.count_repeat_command = None
+            self.repeat_last_command()
+            return True
         if self.count_repeat_remaining == 1:
             repeat_command = "move" if command == "move_on" else command
             self.record_repeat_command(repeat_command)
@@ -6327,6 +6333,13 @@ class Game:
             self.start_count_prefix(count_digit)
             return
         if self.key_lower(getattr(pyxel, "KEY_A", None)):
+            if self.count_prefix_active:
+                count = self.count_prefix_value
+                self.count_prefix_active = False
+                self.count_prefix_value = 0
+                if count > 1:
+                    self.count_repeat_command = "again"
+                    self.count_repeat_remaining = count - 1
             self.repeat_last_command()
             return
         if self.btn_wait():

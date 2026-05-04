@@ -14050,6 +14050,54 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 3)
         self.assertEqual(game.msgs[-3:], ["You find nothing.", "You find nothing.", "You find nothing."])
 
+    def test_rogue_544_count_prefix_repeats_again_command(self):
+        # Rogue 5.4.4 command.c count switch includes 'a', so count replays again itself.
+        game = new_game(seed=506011)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 4)
+        self.assertEqual(
+            game.msgs[-4:],
+            ["You find nothing.", "You find nothing.", "You find nothing.", "You find nothing."],
+        )
+
+    def test_rogue_544_count_prefix_repeats_again_move_direction(self):
+        # Rogue 5.4.4 command.c:'a' with count reuses the previous direction command repeatedly.
+        game = new_game(seed=506012)
+        set_open_floor(game)
+        start = (game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_U])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_2])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 3, start[1] - 3))
+        self.assertEqual(game.turn, 3)
+
     def test_rogue_544_count_prefix_repeats_diagonal_move_command(self):
         # Rogue 5.4.4 command.c count prefix applies to vi direction commands.
         game = new_game(seed=50602)

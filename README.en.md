@@ -123,7 +123,7 @@ Keyboard:
 - m: Move onto without picking up
 - f/F: Fight / Fight to death
 - a: Again (repeat the last command)
-- Digits: Count prefix for search / wait / movement
+- Digits: Count prefix for search / wait / movement / Again
 - o: Assist menu
 - v: Version
 - ) / ] / = / @: Current weapon / armor / rings / status
