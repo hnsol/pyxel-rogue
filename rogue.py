@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_2253"
+UI_BUILD = "260504_2308"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4926,7 +4926,19 @@ class Game:
             return
         if self.dact=="Move":
             self.p.facing=(dx,dy)
-            self.remember_repeat_dir(dx,dy)
+            if self.count_prefix_active:
+                count = self.count_prefix_value
+                self.count_prefix_active = False
+                self.count_prefix_value = 0
+                if count > 1:
+                    self.count_repeat_command = "move_on"
+                    self.count_repeat_remaining = count - 1
+                    self.count_repeat_dir = (dx, dy)
+                else:
+                    self.record_repeat_command("move_on")
+                    self.remember_repeat_dir(dx,dy)
+            else:
+                self.remember_repeat_dir(dx,dy)
             moved = self.execute_move_on(dx,dy)
             if not moved:
                 self.command_look_done = False
@@ -5189,8 +5201,9 @@ class Game:
         if not command or self.count_repeat_remaining <= 0:
             return False
         if self.count_repeat_remaining == 1:
-            self.record_repeat_command(command)
-            if command == "move" and self.count_repeat_dir is not None:
+            repeat_command = "move" if command == "move_on" else command
+            self.record_repeat_command(repeat_command)
+            if command in ("move", "move_on") and self.count_repeat_dir is not None:
                 self.remember_repeat_dir(*self.count_repeat_dir)
         self.count_repeat_remaining -= 1
         if self.count_repeat_remaining <= 0:
@@ -5203,6 +5216,9 @@ class Game:
             return True
         if command == "move" and self.count_repeat_dir is not None:
             self.try_move(*self.count_repeat_dir)
+            return True
+        if command == "move_on" and self.count_repeat_dir is not None:
+            self.execute_move_on(*self.count_repeat_dir)
             return True
         return False
 
@@ -6265,7 +6281,8 @@ class Game:
             self.record_repeat_command("options")
             self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)):
-            self.record_repeat_command("move_on")
+            if not self.count_prefix_active:
+                self.record_repeat_command("move_on")
             self.start_move_on_command(); return
         if self.key_lower(getattr(pyxel, "KEY_F", None)):
             self.record_repeat_command("fight")

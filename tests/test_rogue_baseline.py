@@ -14069,6 +14069,76 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((game.p.x, game.p.y), (start[0] + 2, start[1] - 2))
         self.assertEqual(game.turn, 2)
 
+    def test_rogue_544_count_prefix_repeats_move_on_without_pickup(self):
+        # Rogue 5.4.4 command.c:'m' stores dir_ch in countch; move_on stays true during the count.
+        game = new_game(seed=506021)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        items = []
+        for x in (6, 7, 8):
+            item = rogue.Item(rogue.CAT_FOOD, 0)
+            item.x, item.y = x, 5
+            items.append(item)
+        game.gitems = list(items)
+        pack_before = list(game.p.inv)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (8, 5))
+        self.assertEqual(game.gitems, items)
+        self.assertEqual(game.p.inv, pack_before)
+        self.assertEqual(game.turn, 3)
+
+    def test_rogue_544_counted_move_on_again_repeats_normal_move(self):
+        # Rogue 5.4.4 command.c records the final countch direction, not 'm', after counted move_on.
+        game = new_game(seed=506022)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        move_on_items = []
+        for x in (6, 7, 8):
+            item = rogue.Item(rogue.CAT_FOOD, 0)
+            item.x, item.y = x, 5
+            move_on_items.append(item)
+        pickup_item = rogue.Item(rogue.CAT_FOOD, 0)
+        pickup_item.x, pickup_item.y = 9, 5
+        game.gitems = move_on_items + [pickup_item]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (9, 5))
+        self.assertEqual(game.gitems, move_on_items)
+        self.assertNotIn(pickup_item, game.gitems)
+        self.assertEqual(game.turn, 4)
+
     def test_rogue_544_count_prefix_is_cleared_by_non_countable_command(self):
         # Rogue 5.4.4 command.c clears count for commands outside the countable switch.
         game = new_game(seed=50603)
