@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1308"
+UI_BUILD = "260504_1329"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1571,6 +1571,13 @@ class Game:
         self.fight_dir = (0, 0)
         self.fight_target = None
         self.fight_max_hit = 0
+        self.last_repeat_command = None
+        self.last_repeat_dir = None
+        self.last_repeat_item = None
+        self.prev_repeat_command = None
+        self.prev_repeat_dir = None
+        self.prev_repeat_item = None
+        self.repeat_command_active = False
         self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
@@ -4235,6 +4242,13 @@ class Game:
         self.st = ST_DIR
         self.dir_pending = None
 
+    def execute_move_on(self, dx, dy):
+        self.move_on_once = True
+        try:
+            return self.try_move(dx,dy)
+        finally:
+            self.move_on_once = False
+
     def pack_letter_for(self, it):
         try:
             idx = self.p.inv.index(it)
@@ -4815,12 +4829,14 @@ class Game:
 
     def confirm_item(self, it):
         a=self.cact
+        self.remember_repeat_item(it)
         if a=="Throw":
             if self.throw_dir:
                 self.command_look()
                 dx,dy=self.throw_dir
                 self.p.facing=(dx,dy)
                 animating = self.throw(it,dx,dy)
+                self.clear_repeat_item_if_gone(it)
                 self.close_menu()
                 if animating:
                     self.turn_after_throw_anim = True
@@ -4871,39 +4887,42 @@ class Game:
             if self.drop(it) is False:
                 self.close_menu()
                 return
+        self.clear_repeat_item_if_gone(it)
         self.close_menu(); self.end_turn()
 
     def dir_confirm(self,dx,dy):
         if self.dact=="Trap":
+            self.remember_repeat_dir(dx,dy)
             self.inspect_trap(dx,dy)
             self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
             return
         if self.dact in ("Fight", "Fight to death"):
+            self.remember_repeat_dir(dx,dy)
             kamikaze = self.dact == "Fight to death" or getattr(self, "fight_kamikaze_pending", False)
             self.fight_command_confirm(dx,dy,kamikaze)
             self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
             return
         if self.dact=="Throw":
+            self.remember_repeat_dir(dx,dy)
             self.throw_dir=(dx,dy)
             self.dact=None
             self.st=ST_ITEM
             return
         if self.dact=="Zap":
             if self.zap_item:
+                self.remember_repeat_dir(dx,dy)
                 self.p.facing=(dx,dy)
                 self.command_look()
                 spent_turn = self.zap_stick(self.zap_item,dx,dy)
+                self.clear_repeat_item_if_gone(self.zap_item)
                 self.close_menu()
                 if spent_turn:
                     self.end_turn()
             return
         if self.dact=="Move":
             self.p.facing=(dx,dy)
-            self.move_on_once = True
-            try:
-                moved = self.try_move(dx,dy)
-            finally:
-                self.move_on_once = False
+            self.remember_repeat_dir(dx,dy)
+            moved = self.execute_move_on(dx,dy)
             if not moved:
                 self.command_look_done = False
             self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
@@ -4966,6 +4985,117 @@ class Game:
         if not moved:
             self.clear_fight_to_death()
         return moved
+
+    def record_repeat_command(self, command):
+        # C: command.c saves last_comm/last_dir/last_pick before dispatch, except while again.
+        if getattr(self, "repeat_command_active", False):
+            return
+        self.prev_repeat_command = self.last_repeat_command
+        self.prev_repeat_dir = self.last_repeat_dir
+        self.prev_repeat_item = self.last_repeat_item
+        self.last_repeat_command = command
+        self.last_repeat_dir = None
+        self.last_repeat_item = None
+
+    def reset_repeat_command(self):
+        # C: pack.c:reset_last() restores the previous command when get_dir/get_item aborts.
+        self.last_repeat_command = self.prev_repeat_command
+        self.last_repeat_dir = self.prev_repeat_dir
+        self.last_repeat_item = self.prev_repeat_item
+
+    def remember_repeat_dir(self, dx, dy):
+        if not getattr(self, "repeat_command_active", False):
+            self.last_repeat_dir = (dx, dy)
+
+    def remember_repeat_item(self, it):
+        if not getattr(self, "repeat_command_active", False):
+            self.last_repeat_item = it
+
+    def clear_repeat_item_if_gone(self, it):
+        if getattr(self, "last_repeat_item", None) is it and it not in self.p.inv:
+            self.last_repeat_item = None
+
+    def repeat_last_command(self):
+        # C: command.c:'a' repeats last_comm with again=TRUE.
+        self.command_look()
+        command = self.last_repeat_command
+        if command is None:
+            self.msg("command.you_havent_typed_a_command_yet")
+            self.command_look_done = False
+            return
+        self.repeat_command_active = True
+        try:
+            self.dispatch_repeat_command(command)
+        finally:
+            self.repeat_command_active = False
+
+    def repeat_dir_or_prompt(self):
+        direction = self.last_repeat_dir
+        if direction is None:
+            self.st = ST_DIR
+            return None
+        return direction
+
+    def repeat_item_or_ran_out(self):
+        item = self.last_repeat_item
+        if item is None or item not in self.p.inv:
+            self.msg("pack.you_ran_out")
+            self.last_repeat_item = None
+            self.command_look_done = False
+            return None
+        return item
+
+    def dispatch_repeat_command(self, command):
+        if command == "search":
+            self.do_search()
+        elif command == "wait":
+            self.do_wait()
+        elif command == "move":
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                self.try_move(*direction)
+        elif command == "move_on":
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                moved = self.execute_move_on(*direction)
+                if not moved:
+                    self.command_look_done = False
+        elif command == "trap":
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                self.inspect_trap(*direction)
+        elif command == "picky_inventory":
+            self.open_picky_inventory_command()
+        elif command in ("fight", "fight_to_death"):
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                self.fight_command_confirm(*direction, kamikaze=(command == "fight_to_death"))
+        elif isinstance(command, tuple) and command[0] == "item":
+            self.repeat_item_command(command[1])
+
+    def repeat_item_command(self, aname):
+        item = self.repeat_item_or_ran_out()
+        if item is None:
+            return
+        self.cact = aname
+        self.fitems = [item]
+        self.action_origin = ST_PLAY
+        if aname in ("Throw", "Zap"):
+            direction = self.repeat_dir_or_prompt()
+            if direction is None:
+                self.dact = aname
+                self.st = ST_DIR
+                if aname == "Zap":
+                    self.zap_item = item
+                return
+            if aname == "Throw":
+                self.throw_dir = direction
+                self.confirm_item(item)
+            else:
+                self.zap_item = item
+                self.dir_confirm(*direction)
+            return
+        self.confirm_item(item)
 
     # ---------- Input helpers ----------
     def kp(self,*ks): return any(k is not None and pyxel.btnp(k) for k in ks)
@@ -5146,6 +5276,8 @@ class Game:
         self.msg("pack.item_not_in_pack", item=ch)
     def cancel_item_prompt(self):
         # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
+        if not getattr(self, "repeat_command_active", False):
+            self.reset_repeat_command()
         if self.cact=="Throw" and self.throw_dir is not None and self.action_origin==ST_MENU:
             self.st=ST_MENU
         elif self.action_origin==ST_MENU:
@@ -5162,6 +5294,8 @@ class Game:
             self.close_menu()
     def cancel_dir_prompt(self):
         # Rogue 5.4.4 misc.c:get_dir() ESC aborts direction commands with after=FALSE.
+        if not getattr(self, "repeat_command_active", False):
+            self.reset_repeat_command()
         if self.dact=="Trap":
             self.st=ST_PLAY
             self.dact=None
@@ -5996,14 +6130,22 @@ class Game:
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
         if self.btn_r():     self.open_help_command(); return
         if self.kp(getattr(pyxel, "KEY_SLASH", None)): self.open_symbol_identify_command(); return
-        if self.key_upper(getattr(pyxel, "KEY_I", None)): self.open_picky_inventory_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_I", None)):
+            self.record_repeat_command("picky_inventory")
+            self.open_picky_inventory_command(); return
         if self.key_upper(getattr(pyxel, "KEY_PERIOD", None)): self.stairs_down_command(); return
         if self.key_upper(getattr(pyxel, "KEY_COMMA", None)): self.stairs_up_command(); return
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
-        if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
-        if self.key_lower(getattr(pyxel, "KEY_F", None)): self.start_fight_command(False); return
-        if self.key_upper(getattr(pyxel, "KEY_F", None)): self.start_fight_command(True); return
+        if self.key_lower(getattr(pyxel, "KEY_M", None)):
+            self.record_repeat_command("move_on")
+            self.start_move_on_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_F", None)):
+            self.record_repeat_command("fight")
+            self.start_fight_command(False); return
+        if self.key_upper(getattr(pyxel, "KEY_F", None)):
+            self.record_repeat_command("fight_to_death")
+            self.start_fight_command(True); return
         if self.key_upper(getattr(pyxel, "KEY_Q", None)): self.quit_command(); return
         if self.key_upper(getattr(pyxel, "KEY_0", None)):
             self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
@@ -6027,13 +6169,24 @@ class Game:
         if self.legal_space_command_press():
             self.legal_space_command()
             return
-        if self.btn_wait():  self.do_wait(); return
-        if self.btn_search(): self.do_search(); return
-        if self.btn_trap_inspect(): self.start_trap_inspect(); return
+        if self.key_lower(getattr(pyxel, "KEY_A", None)):
+            self.repeat_last_command()
+            return
+        if self.btn_wait():
+            if self.kp(getattr(pyxel, "KEY_PERIOD", None)):
+                self.record_repeat_command("wait")
+            self.do_wait(); return
+        if self.btn_search():
+            self.record_repeat_command("search")
+            self.do_search(); return
+        if self.btn_trap_inspect():
+            self.record_repeat_command("trap")
+            self.start_trap_inspect(); return
         if self.key_upper(getattr(pyxel, "KEY_D", None)):
             self.open_discoveries(); return
         aname = self.rogue_command_action()
         if aname:
+            self.record_repeat_command(("item", aname))
             self.start_item_action(aname)
             return
         illegal = self.illegal_command_press()
@@ -6056,6 +6209,8 @@ class Game:
         # Normal direction
         d = self.dir_press()
         if d:
+            self.record_repeat_command("move")
+            self.remember_repeat_dir(*d)
             self.try_move(*d)
             return
 
@@ -6677,10 +6832,10 @@ class Game:
         commands=[
             ". Wait   </> Stairs s Search   t Throw   ^ Trap",
             "i Inv    I Inv item ? Help     / Identify",
-            "d Drop   m Move onto f Fight   o Options",
+            "d Drop   m Move onto f Fight   a Again",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
-            "P Put on R Remove   Q Quit",
+            "P Put on R Remove   o Options Q Quit",
         ]
         for ln in commands:
             self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11

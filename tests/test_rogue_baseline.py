@@ -13986,6 +13986,108 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.fight_to_death)
         self.assertFalse(game.fight_kamikaze)
 
+    def test_rogue_544_again_command_without_last_wakes_without_turn(self):
+        # Rogue 5.4.4 command.c:'a' reports no last command after command.c:look(TRUE).
+        game = new_game(seed=5059)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("you haven't typed a command yet", game.msgs[-1])
+
+    def test_rogue_544_again_command_repeats_search(self):
+        # Rogue 5.4.4 command.c:'a' re-dispatches last_comm without replacing it.
+        game = new_game(seed=5060)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 2)
+        self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
+    def test_rogue_544_again_command_reuses_move_on_direction(self):
+        # Rogue 5.4.4 misc.c:get_dir() reuses last_dir when again is TRUE.
+        game = new_game(seed=5061)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        item_a = rogue.Item(rogue.CAT_FOOD, 0)
+        item_a.x, item_a.y = 6, 5
+        item_b = rogue.Item(rogue.CAT_FOOD, 0)
+        item_b.x, item_b.y = 7, 5
+        game.gitems = [item_a, item_b]
+        pack_before = list(game.p.inv)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual((game.p.x, game.p.y), (7, 5))
+        self.assertEqual(game.gitems, [item_a, item_b])
+        self.assertEqual(game.p.inv, pack_before)
+        self.assertEqual(game.turn, 2)
+
+    def test_rogue_544_again_command_direction_cancel_restores_previous_command(self):
+        # Rogue 5.4.4 misc.c:get_dir() ESC calls reset_last().
+        game = new_game(seed=5062)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed=[rogue.pyxel.KEY_ESCAPE])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 2)
+        self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
+    def test_help_text_lists_rogue_again_command(self):
+        # Rogue 5.4.4 extern.c:helpstr[] lists 'a' as repeat last command.
+        game = new_game(seed=5063)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        self.assertIn("a Again", "\n".join(calls))
+
     def test_rogue_544_current_weapon_command_wakes_visible_monsters_without_turn(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ')': current weapon.
         game = new_game(seed=5031)

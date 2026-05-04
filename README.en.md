@@ -122,6 +122,7 @@ Keyboard:
 - Ctrl+R: Redraw
 - m: Move onto without picking up
 - f/F: Fight / Fight to death
+- a: Again (repeat the last command)
 - o: Assist menu
 - v: Version
 - ) / ] / = / @: Current weapon / armor / rings / status

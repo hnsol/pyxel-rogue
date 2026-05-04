@@ -122,6 +122,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Ctrl+R: 再描画
 - m: Move onto（拾わずに移動）
 - f/F: Fight / Fight to death
+- a: Again（直前コマンドを繰り返し）
 - o: 補助メニュー
 - v: Version
 - ) / ] / = / @: 現在装備 / よろい / 指輪 / ステータス
