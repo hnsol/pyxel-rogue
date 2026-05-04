@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0207"
+UI_BUILD = "260505_0220"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4629,7 +4629,7 @@ class Game:
 
     def run_runners(self):
         # C: chase.c:runners()
-        rogue_chase.runners(self.mons, self.m_turn)
+        rogue_chase.runners(self.mons, self.m_turn, self.clear_fight_to_death)
 
     def clear_hallucination_visuals(self):
         self.hallu_item_syms = {}

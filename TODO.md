@@ -231,6 +231,7 @@
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath 後に対象外 fight-to-death を解除する
 - [x] Rogue 5.4.4 `daemons.c:stomach()` 準拠で、空腹状態変化時に fight-to-death も解除する
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、ISTARGET monster が移動した時に fight-to-death も解除する
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、Phantom / Bat のランダム移動後も混乱解除用 `rnd(20)` を消費する
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、候補マス走査順を x外側/y内側に合わせる
 - [x] Rogue 5.4.4 `chase.c:chase()` / `winat()` 準拠で、item 目的地追跡中も hero マスを候補評価し、足元の scare scroll より PLAYER を優先する

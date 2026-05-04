@@ -4,7 +4,7 @@ from __future__ import annotations
 import rogue_monsters
 
 
-def runners(monsters, monster_turn) -> None:
+def runners(monsters, monster_turn, target_moved=None) -> None:
     """Rogue 5.4.4 chase.c:runners() ISHELD/ISRUN gate."""
     for monster in list(monsters):
         if getattr(monster, "held", 0) > 0 or not getattr(monster, "running", False):
@@ -14,6 +14,8 @@ def runners(monsters, monster_turn) -> None:
         monster_turn(monster)
         if was_target and (monster.x, monster.y) != orig_pos:
             monster.target = False
+            if target_moved is not None:
+                target_moved()
 
 
 def monster_turn(monster, move_monst, distance_to_hero) -> None:

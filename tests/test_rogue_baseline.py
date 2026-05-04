@@ -4097,6 +4097,33 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(monster.target)
 
+    def test_rogue_544_runners_target_move_clears_fight_to_death(self):
+        # Rogue 5.4.4 chase.c:runners() clears to_death when an ISTARGET monster moves.
+        game = new_game(seed=311)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 3, game.p.y, hp=20)
+        monster.running = True
+        monster.target = True
+        monster.dest = rogue.DEST_PLAYER
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = monster
+        game.fight_dir = (1, 0)
+        moved = []
+
+        def move_once(m):
+            moved.append(m)
+            m.x -= 1
+            return 0
+
+        game.move_monst = move_once
+        game.run_runners()
+
+        self.assertEqual(moved, [monster])
+        self.assertFalse(monster.target)
+        self.assertFalse(game.fight_to_death)
+
     def test_rogue_544_chase_helper_monster_turn_repeats_for_flying_at_distance(self):
         # Rogue 5.4.4 chase.c:runners() calls move_monst() again for ISFLY at distance >= 3.
         import rogue_chase
