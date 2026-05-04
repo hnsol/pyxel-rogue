@@ -46,8 +46,10 @@ tools/check_web_build.sh
 GitHub Pages uses the root of the `gh-pages` branch. This keeps generated files out of the `main` root and `docs/`; publish the generated `web/` output with:
 
 ```bash
-tools/deploy_pages.sh
+PYXEL_ROGUE_SCORE_URL="new URL" tools/deploy_pages_clean.sh
 ```
+
+Set `PYXEL_ROGUE_SCORE_URL` to the online scoreboard deployment URL. Keep the URL out of the repository and pass it only as an environment variable when deploying.
 
 ## Download and Play Locally
 

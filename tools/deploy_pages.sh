@@ -14,9 +14,13 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ -z "${PYXEL_ROGUE_SCORE_URL:-}" ]]; then
-    echo "ERROR: PYXEL_ROGUE_SCORE_URL is not set. Export it before deploying." >&2
+    echo "ERROR: PYXEL_ROGUE_SCORE_URL is not set." >&2
+    echo "Set the online scoreboard endpoint before deploying:" >&2
+    echo '  PYXEL_ROGUE_SCORE_URL="新URL" tools/deploy_pages_clean.sh' >&2
     exit 1
 fi
+
+echo "Building Web deploy with PYXEL_ROGUE_SCORE_URL=${PYXEL_ROGUE_SCORE_URL}"
 
 "${ROOT_DIR}/tools/build_web.sh"
 
