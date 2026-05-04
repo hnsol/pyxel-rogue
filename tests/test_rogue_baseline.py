@@ -159,6 +159,16 @@ def monster_at(x, y, sym="H", name="hobgoblin", hp=10, level=1, armor=5,
     return rogue.Monster(x, y, sym, name, hp, level, armor, damage, exp, flags)
 
 
+def command_look_monster(game):
+    # Rogue 5.4.4 misc.c:look(TRUE) wakes monsters only in the hero-adjacent 3x3 scan.
+    x, y = game.p.x, game.p.y + 1
+    game.tm[y][x] = rogue.T_CORR
+    monster = monster_at(x, y, hp=10, armor=100, exp=5, flags="mean")
+    game.mons = [monster]
+    game.visible = {(monster.x, monster.y)}
+    return monster
+
+
 def state_signature(game):
     return (
         game.turn,
@@ -13329,9 +13339,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
         game.p.no_command = 1
 
         old_rnd = rogue.RNG.rnd
@@ -13342,7 +13350,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
 
     def test_rogue_544_rest_command_wakes_visible_monsters_before_runners(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '.': rest.
@@ -13352,9 +13360,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13364,7 +13370,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
 
     def test_rogue_544_search_command_wakes_visible_monsters_before_runners(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 's': search().
@@ -13374,9 +13380,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13386,7 +13390,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
 
     def test_rogue_544_pickup_command_wakes_visible_monsters_before_runners(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ',': pick_up().
@@ -13398,11 +13402,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         item = rogue.Item(rogue.CAT_FOOD, 0)
         item.x, item.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        monster = command_look_monster(game)
         game.p.inv = []
         game.gitems = [item]
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13412,7 +13414,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertIn(item, game.p.inv)
 
     def test_rogue_544_pack_command_wakes_visible_monsters_before_drop(self):
@@ -13426,9 +13428,7 @@ class RogueBaselineTest(unittest.TestCase):
         item = rogue.Item(rogue.CAT_FOOD, 0)
         game.p.inv = [item]
         game.gitems = []
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
         game.cact = "Drop"
 
         old_rnd = rogue.RNG.rnd
@@ -13439,7 +13439,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual([(it.x, it.y) for it in game.gitems], [(5, 5)])
 
     def test_rogue_544_throw_command_wakes_visible_monsters_before_missile(self):
@@ -13453,9 +13453,7 @@ class RogueBaselineTest(unittest.TestCase):
         item = rogue.Item(rogue.CAT_FOOD, 0)
         game.p.inv = [item]
         game.gitems = []
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
         game.cact = "Throw"
         game.throw_dir = (0, -1)
 
@@ -13467,7 +13465,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
 
     def test_rogue_544_zap_command_wakes_visible_monsters_before_do_zap(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before sticks.c:do_zap().
@@ -13479,11 +13477,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         nothing = next(i for i, stick in enumerate(rogue.STICKS) if stick["name"] == "nothing")
         stick = rogue.Item(rogue.CAT_STICK, nothing, charges=1)
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        monster = command_look_monster(game)
         game.zap_item = stick
         game.dact = "Zap"
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13493,7 +13489,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 7)
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(stick.charges, 0)
 
     def test_rogue_544_pack_command_cancel_wakes_visible_monsters_at_prompt(self):
@@ -13506,9 +13502,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         item = rogue.Item(rogue.CAT_FOOD, 0)
         game.p.inv = [item]
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13519,7 +13513,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 8)
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.p.inv, [item])
 
     def test_rogue_544_menu_pack_command_cancel_wakes_visible_monsters_at_prompt(self):
@@ -13532,9 +13526,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         item = rogue.Item(rogue.CAT_FOOD, 0)
         game.p.inv = [item]
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
         game.st = rogue.ST_MENU
 
         old_rnd = rogue.RNG.rnd
@@ -13546,8 +13538,33 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual(monster.x, 8)
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.p.inv, [item])
+
+    def test_rogue_544_command_look_does_not_wake_far_visible_room_monster(self):
+        # Rogue 5.4.4 misc.c:look(TRUE) scans only the 3x3 cells around hero;
+        # room-wide wake belongs to move.c:door_open(), not command.c:command().
+        game = new_game(seed=5057)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room = rogue.Room(1, 1, 20, 8)
+        game.rooms = [room]
+        for y in range(room.y, room.y + room.h):
+            for x in range(room.x, room.x + room.w):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(10, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.command_look()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(monster.running)
+        self.assertEqual((monster.x, monster.y), (10, 5))
 
     def test_rogue_544_pack_command_prompt_wakes_visible_monsters_once(self):
         # Rogue 5.4.4 command.c:command() has one misc.c:look(TRUE) before readchar/get_item.
@@ -13556,9 +13573,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         item = rogue.Item(rogue.CAT_FOOD, 0)
         game.p.inv = [item]
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
         calls = []
         game.wake_visible_monsters = lambda: calls.append("wake")
 
@@ -13575,9 +13590,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13590,7 +13603,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_INVENTORY)
 
@@ -13602,9 +13615,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13614,7 +13625,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_DISC)
 
@@ -13626,9 +13637,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13638,7 +13647,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
 
     def test_rogue_544_help_command_wakes_visible_monsters_without_turn(self):
@@ -13649,9 +13658,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13664,7 +13671,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_HELP)
 
@@ -13676,9 +13683,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13691,7 +13696,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertIn("version", game.msgs[-1])
 
@@ -13703,9 +13708,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13718,7 +13721,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertIn("illegal command", game.msgs[-1])
 
@@ -13730,9 +13733,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13745,7 +13746,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_AUX)
 
@@ -13757,9 +13758,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13786,9 +13785,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
         game.open_aux()
         game.acur = rogue.AUX_ACTIONS.index("Quit")
 
@@ -13818,9 +13815,7 @@ class RogueBaselineTest(unittest.TestCase):
         item.x, item.y = 6, 5
         game.gitems = [item]
         pack_before = list(game.p.inv)
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13864,9 +13859,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -13882,7 +13875,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
 
         self.assertTrue(monster.running)
-        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertIn("no monster there", game.msgs[-1])
@@ -14022,9 +14015,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14454,9 +14445,7 @@ class RogueBaselineTest(unittest.TestCase):
         weapon = rogue.Item(rogue.CAT_WPN, 0)
         game.p.inv = [weapon]
         game.p.wpn = weapon
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14487,9 +14476,7 @@ class RogueBaselineTest(unittest.TestCase):
         armor = rogue.Item(rogue.CAT_ARM, 0)
         game.p.inv = [armor]
         game.p.arm = armor
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14516,9 +14503,7 @@ class RogueBaselineTest(unittest.TestCase):
         ring = rogue.Item(rogue.CAT_RING, 0)
         game.p.inv = [ring]
         game.p.ring_l = ring
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14543,9 +14528,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14570,9 +14553,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.rooms = []
         game.p.x, game.p.y = 5, 5
         game.msg_text("old message")
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14600,9 +14581,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.rooms = []
         game.p.x, game.p.y = 5, 5
         game.msg_text("keep me")
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14632,9 +14611,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.rooms = []
         game.p.x, game.p.y = 5, 5
         game.msg_text("keep me")
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14661,9 +14638,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14733,9 +14708,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.rooms = []
         game.p.x, game.p.y = 5, 5
         game.p.inv = []
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14827,9 +14800,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.tm[5][x] = rogue.T_CORR
         game.rooms = []
         game.p.x, game.p.y = 5, 5
-        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
-        game.mons = [monster]
-        game.visible = {(monster.x, monster.y)}
+        monster = command_look_monster(game)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -14909,7 +14880,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
-        monster = monster_at(game.p.x + 2, game.p.y, hp=10, armor=100, exp=5, flags="mean")
+        monster = monster_at(game.p.x + 1, game.p.y, hp=10, armor=100, exp=5, flags="mean")
         game.mons = [monster]
         game.visible.add((monster.x, monster.y))
         old_randrange = rogue.random.randrange

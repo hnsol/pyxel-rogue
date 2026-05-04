@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0054"
+UI_BUILD = "260505_0127"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2551,10 +2551,47 @@ class Game:
         if rogue_monsters.is_greedy(m) and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
 
-    def wake_visible_monsters(self):
+    def look_scan_allows_cell(self, x, y):
+        # C: misc.c:look() 3x3 scan gates: bounds, blank cells, F_PASS, and diagonal passages.
+        if not in_play_area(x, y):
+            return False
+        if self.p.blind <= 0 and x == self.p.x and y == self.p.y:
+            return False
+        tile = self.tm[y][x]
+        if tile == T_VOID:
+            return False
+        hero_tile = self.tm[self.p.y][self.p.x]
+
+        def pass_flag(cx, cy, ctile):
+            return ctile == T_CORR or self.is_maze_passage_floor(cx, cy)
+
+        cell_pass = pass_flag(x, y, tile)
+        hero_pass = pass_flag(self.p.x, self.p.y, hero_tile)
+        if hero_tile != T_DOOR and tile != T_DOOR and cell_pass != hero_pass:
+            return False
+        if (cell_pass or tile == T_DOOR) and (hero_pass or hero_tile == T_DOOR):
+            if x != self.p.x and y != self.p.y:
+                if not (
+                    rogue_io.step_ok_tile(self.tm[y][self.p.x], TILE_CH)
+                    or rogue_io.step_ok_tile(self.tm[self.p.y][x], TILE_CH)
+                ):
+                    return False
+        return True
+
+    def wake_look_monsters(self):
         for mo in self.mons:
-            if (mo.x,mo.y) in self.visible:
-                self.wake_monster(mo)
+            if abs(mo.x - self.p.x) > 1 or abs(mo.y - self.p.y) > 1:
+                continue
+            if not self.look_scan_allows_cell(mo.x, mo.y):
+                continue
+            if self.p.see_monsters > 0 and rogue_monsters.is_invisible(mo):
+                continue
+            self.wake_monster(mo)
+
+    def wake_visible_monsters(self):
+        # Kept for command-path compatibility; Rogue 5.4.4 misc.c:look(TRUE) wakes
+        # monsters from its 3x3 scan, not from the whole Pyxel visible set.
+        self.wake_look_monsters()
 
     def command_look(self):
         # C: command.c:command() calls misc.c:look(TRUE) once before dispatch.
