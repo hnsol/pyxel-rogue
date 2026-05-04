@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0857"
+UI_BUILD = "260504_0902"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2519,6 +2519,13 @@ class Game:
             if (mo.x,mo.y) in self.visible:
                 self.wake_monster(mo)
 
+    def command_look(self):
+        # C: command.c:command() calls misc.c:look(TRUE) once before dispatch.
+        if getattr(self, "command_look_done", False):
+            return
+        self.wake_visible_monsters()
+        self.command_look_done = True
+
     def can_see_monster(self, m):
         # C: chase.c:see_monst()
         return rogue_chase.see_monst(
@@ -3160,9 +3167,11 @@ class Game:
         return result
 
     def open_discoveries(self):
+        self.command_look()
         self.disc_scroll = 0
         self.disc_lines = self._disc_lines(RNG.rnd)
         self.st = ST_DISC
+        self.command_look_done = False
 
     def identify_item(self, it):
         # Backward-compat alias for set_know().
@@ -4078,6 +4087,7 @@ class Game:
         self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
+        self.command_look()
         x,y=self.p.x+dx,self.p.y+dy
         trap=self.visible_trap_at(x,y)
         if trap is None:
@@ -4086,6 +4096,7 @@ class Game:
             if self.p.hallucinating > 0:
                 trap = rnd(len(TRAPS))
             self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
+        self.command_look_done = False
 
     def do_action(self):
         p=self.p; px,py=p.x,p.y
@@ -4165,6 +4176,7 @@ class Game:
                 self.teleport_player()
 
     def end_turn(self):
+        self.command_look_done = False
         msg_start = min(getattr(self, "turn_msg_start", 0), len(self.msg_turns))
         if self.p.haste > 0 and not self.haste_half_turn:
             # Rogue 5.4.4 command.c:command() gives ISHASTE two player actions
@@ -4472,7 +4484,7 @@ class Game:
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
         self.throw_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
-        self.b_menu_guard=False; self.dir_pending=None
+        self.b_menu_guard=False; self.dir_pending=None; self.command_look_done=False
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
@@ -4482,6 +4494,8 @@ class Game:
         self.start_item_action(aname, cat)
 
     def start_item_action(self, aname, cat=None):
+        if self.st in (ST_PLAY, ST_MENU):
+            self.command_look()
         if cat is None:
             cat = next((c for n,c in MENU_ACTIONS if n == aname), None)
         self.action_origin = self.st
@@ -4538,7 +4552,7 @@ class Game:
         a=self.cact
         if a=="Throw":
             if self.throw_dir:
-                self.wake_visible_monsters()
+                self.command_look()
                 dx,dy=self.throw_dir
                 self.p.facing=(dx,dy)
                 animating = self.throw(it,dx,dy)
@@ -4559,7 +4573,7 @@ class Game:
             self.msg("pyxel.it_is_item", item=self.ident.name(it))
             self.close_menu(); self.end_turn()
             return
-        self.wake_visible_monsters()
+        self.command_look()
         if a=="Quaff":
             if self.use_pot(it) is False:
                 self.close_menu()
@@ -4603,7 +4617,7 @@ class Game:
         if self.dact=="Zap":
             if self.zap_item:
                 self.p.facing=(dx,dy)
-                self.wake_visible_monsters()
+                self.command_look()
                 spent_turn = self.zap_stick(self.zap_item,dx,dy)
                 self.close_menu()
                 if spent_turn:
@@ -4611,6 +4625,7 @@ class Game:
             return
 
     def start_trap_inspect(self):
+        self.command_look()
         self.cact="Trap"; self.dact="Trap"; self.st=ST_DIR; self.dir_pending=None
 
     # ---------- Input helpers ----------
@@ -5614,8 +5629,10 @@ class Game:
             self.do_search()
             self.dir_pending=None
             return
-        if self.btn_inventory(): self.st=ST_INVENTORY; return
-        if self.btn_back():  self.st=ST_INVENTORY; return
+        if self.btn_inventory():
+            self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
+        if self.btn_back():
+            self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
         if self.btn_r():     self.st=ST_HELP; return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
