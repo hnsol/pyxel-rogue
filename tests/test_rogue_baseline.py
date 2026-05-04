@@ -1708,6 +1708,48 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 18)
         self.assertIn("you are hit by the flame", game.msgs)
 
+    def test_rogue_544_monster_started_bolt_ignores_monster_before_hero(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() keeps hit_hero true for monster-started bolts
+        # until the hero square, so intervening monsters before the hero are ignored.
+        game = new_game(seed=2301)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        orc = monster_at(8, 10, sym="O", name="orc", hp=20)
+        game.mons = [orc]
+        game.save_vs_magic = lambda: True
+        game.monster_save_throw = lambda which, monster: (_ for _ in ()).throw(
+            AssertionError("pre-hero monster should not get a bolt save")
+        )
+
+        hit = game.fire_bolt_from(6, 10, 1, 0, "flame")
+
+        self.assertFalse(hit)
+        self.assertEqual(orc.hp, 20)
+        self.assertFalse(orc.running)
+        self.assertIn("the flame whizzes by you", game.msgs)
+
+    def test_rogue_544_monster_started_bolt_can_hit_monster_after_saved_hero(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() flips hit_hero after a hero save, so the
+        # continuing bolt can hit a monster behind the hero.
+        game = new_game(seed=2302)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        orc = monster_at(12, 10, sym="O", name="orc", hp=30)
+        game.mons = [orc]
+        game.save_vs_magic = lambda: True
+        game.monster_save_throw = lambda which, monster: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 6
+            hit = game.fire_bolt_from(6, 10, 1, 0, "flame")
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertTrue(hit)
+        self.assertEqual(orc.hp, 24)
+        self.assertTrue(orc.running)
+        self.assertIn("the flame hits the orc", game.msgs)
+
     def test_rogue_544_monster_started_bolt_miss_does_not_runto_target(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() calls runto() on a monster miss only when start == &hero.
         game = new_game(seed=226)

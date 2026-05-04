@@ -598,7 +598,7 @@
 - [x] 投擲が斜め方向に未対応（`misc.c:get_dir()` / `weapons.c:missile()/do_motion()` 準拠の期待値テストで既存対応を確認）
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
-- [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携（Dragon breath の同室・直線・射程・`ISCANC` ゲートは `chase.c:do_chase()` / `sticks.c:fire_bolt()` 準拠で接続済み）
+- [x] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携（Dragon breath の同室・直線・射程・`ISCANC` ゲート、および monster 起点 bolt の `hit_hero` 反転は `chase.c:do_chase()` / `sticks.c:fire_bolt()` 準拠で接続・監査済み）
   - [x] Rogue 5.4.4 `passages.c:numpass()` / `chase.c:do_chase()` 準拠で、hero が通常 room door 上にいる場合の Dragon breath `proom` 判定を固定
   - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、Dragon に flame が当たった時はダメージなしで bolt 処理を終了する
 - [x] 巻物 18 種化完了（identify 対象選択 UI 含む）
