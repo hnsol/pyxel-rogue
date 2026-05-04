@@ -16,6 +16,23 @@ mkdir -p "${STAGE_DIR}" "${OUT_DIR}"
 cp -p "${ROOT_DIR}"/rogue*.py "${STAGE_DIR}/"
 cp -Rp "${ROOT_DIR}/assets" "${STAGE_DIR}/assets"
 
+if [[ -n "${PYXEL_ROGUE_SCORE_URL:-}" ]]; then
+    python3 - "${STAGE_DIR}/rogue_scores.py" <<'PY'
+import os
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+url = os.environ["PYXEL_ROGUE_SCORE_URL"]
+text = path.read_text(encoding="utf-8")
+old = 'DEFAULT_ONLINE_SCORE_URL = ""'
+new = f"DEFAULT_ONLINE_SCORE_URL = {url!r}"
+if old not in text:
+    raise SystemExit("DEFAULT_ONLINE_SCORE_URL placeholder not found")
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+fi
+
 (
     cd "${OUT_DIR}"
     pyxel package "${STAGE_DIR}" "${STAGE_DIR}/rogue.py" >/dev/null
