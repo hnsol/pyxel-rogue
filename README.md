@@ -121,6 +121,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Ctrl+P: 前メッセージ再表示
 - Ctrl+R: 再描画
 - m: Move onto（拾わずに移動）
+- f/F: Fight / Fight to death
 - o: 補助メニュー
 - v: Version
 - ) / ] / = / @: 現在装備 / よろい / 指輪 / ステータス

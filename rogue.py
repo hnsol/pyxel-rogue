@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1221"
+UI_BUILD = "260504_1308"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1565,6 +1565,12 @@ class Game:
         self.cact = None; self.dact = None; self.fitems = []
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
         self.identify_symbol_pending = False
+        self.fight_kamikaze_pending = False
+        self.fight_to_death = False
+        self.fight_kamikaze = False
+        self.fight_dir = (0, 0)
+        self.fight_target = None
+        self.fight_max_hit = 0
         self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
@@ -2479,6 +2485,8 @@ class Game:
 
     def remove_monster(self,m,was_kill=False):
         # C: fight.c:remove_mon()
+        if getattr(m, "target", False):
+            self.clear_fight_to_death()
         if rogue_fight.remove_monster_pack_should_fall(was_kill):
             for item in list(getattr(m, "pack", [])):
                 pos=self.fall_position(m.x,m.y)
@@ -2570,11 +2578,14 @@ class Game:
         # C: fight.c:attack()
         self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
         self.clear_running_count()
+        if getattr(self, "fight_to_death", False) and not getattr(m, "target", False):
+            self.clear_fight_to_death()
         if rogue_fight.attack_reveals_disguised_xeroc(
             rogue_monsters.is_disguised_xeroc(m), self.p.blind > 0
         ):
             rogue_monsters.reveal_disguise(m)
         mn=self.combat_monster_name(m,upper=True)
+        old_hp = self.p.hp
         hit,dmg=self.roll_monster_attack(m)
         if hit:
             if dmg:
@@ -2585,6 +2596,11 @@ class Game:
                 if not self.death_cause:
                     self.death_cause=f"killed by a {m.name}"
                 return
+            if getattr(self, "fight_to_death", False) and not getattr(self, "fight_kamikaze", False):
+                loss = max(0, old_hp - self.p.hp)
+                self.fight_max_hit = max(getattr(self, "fight_max_hit", 0), loss)
+                if self.p.hp <= self.fight_max_hit:
+                    self.fight_to_death = False
             if rogue_fight.attack_specials_allowed(rogue_monsters.is_cancelled(m)):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
@@ -4862,6 +4878,11 @@ class Game:
             self.inspect_trap(dx,dy)
             self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
             return
+        if self.dact in ("Fight", "Fight to death"):
+            kamikaze = self.dact == "Fight to death" or getattr(self, "fight_kamikaze_pending", False)
+            self.fight_command_confirm(dx,dy,kamikaze)
+            self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
+            return
         if self.dact=="Throw":
             self.throw_dir=(dx,dy)
             self.dact=None
@@ -4891,6 +4912,60 @@ class Game:
     def start_trap_inspect(self):
         self.command_look()
         self.cact="Trap"; self.dact="Trap"; self.st=ST_DIR; self.dir_pending=None
+
+    def start_fight_command(self, kamikaze=False):
+        # C: command.c:'f'/'F' calls get_dir() after command.c:look(TRUE).
+        self.command_look()
+        self.fight_kamikaze_pending = kamikaze
+        self.cact = "Fight to death" if kamikaze else "Fight"
+        self.dact = self.cact
+        self.st = ST_DIR
+        self.dir_pending = None
+
+    def fight_command_confirm(self, dx, dy, kamikaze=False):
+        # C: command.c:'f'/'F' selects an adjacent visible/SEEMONST target, marks ISTARGET, then melee-dispatches dir_ch.
+        self.command_look()
+        self.fight_kamikaze_pending = False
+        nx, ny = self.p.x + dx, self.p.y + dy
+        m = self.mon_at(nx, ny)
+        if m is None or (not self.monster_is_seen(m) and not self.can_detect_monsters()):
+            self.msg("command.no_monster_there")
+            self.command_look_done = False
+            return
+        m.target = True
+        if self.diag_ok(self.p.x, self.p.y, nx, ny):
+            self.fight_to_death = True
+            self.fight_kamikaze = kamikaze
+            self.fight_dir = (dx, dy)
+            self.fight_target = m
+            self.fight_max_hit = 0
+            self.try_move(dx, dy)
+        else:
+            self.end_turn()
+
+    def clear_fight_to_death(self):
+        self.fight_to_death = False
+        self.fight_kamikaze = False
+        self.fight_dir = (0, 0)
+        self.fight_target = None
+        self.fight_max_hit = 0
+
+    def continue_fight_to_death(self):
+        # C: command.c reuses runch while to_death is set, before reading another command.
+        if not getattr(self, "fight_to_death", False):
+            return False
+        target = getattr(self, "fight_target", None)
+        dx, dy = getattr(self, "fight_dir", (0, 0))
+        if target not in self.mons or not getattr(target, "alive", False) or not getattr(target, "target", False):
+            self.clear_fight_to_death()
+            return False
+        if (target.x, target.y) != (self.p.x + dx, self.p.y + dy):
+            self.clear_fight_to_death()
+            return False
+        moved = self.try_move(dx, dy)
+        if not moved:
+            self.clear_fight_to_death()
+        return moved
 
     # ---------- Input helpers ----------
     def kp(self,*ks): return any(k is not None and pyxel.btnp(k) for k in ks)
@@ -5097,6 +5172,12 @@ class Game:
                 self.st=ST_MENU
             else:
                 self.close_menu()
+        elif self.dact in ("Fight", "Fight to death"):
+            self.st=ST_PLAY
+            self.dact=None
+            self.cact=None
+            self.fight_kamikaze_pending=False
+            self.command_look_done=False
         elif self.dact=="Move":
             self.st=ST_PLAY
             self.dact=None
@@ -5881,6 +5962,9 @@ class Game:
             self.end_turn()
             return
 
+        if self.continue_fight_to_death():
+            return
+
         # Dash continuation
         if self.dashing:
             if not self.dash_held():
@@ -5918,6 +6002,8 @@ class Game:
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_F", None)): self.start_fight_command(False); return
+        if self.key_upper(getattr(pyxel, "KEY_F", None)): self.start_fight_command(True); return
         if self.key_upper(getattr(pyxel, "KEY_Q", None)): self.quit_command(); return
         if self.key_upper(getattr(pyxel, "KEY_0", None)):
             self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
@@ -6591,7 +6677,7 @@ class Game:
         commands=[
             ". Wait   </> Stairs s Search   t Throw   ^ Trap",
             "i Inv    I Inv item ? Help     / Identify",
-            "d Drop   m Move onto o Options",
+            "d Drop   m Move onto f Fight   o Options",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
             "P Put on R Remove   Q Quit",

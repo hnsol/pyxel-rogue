@@ -121,6 +121,7 @@ Keyboard:
 - Ctrl+P: Repeat last message
 - Ctrl+R: Redraw
 - m: Move onto without picking up
+- f/F: Fight / Fight to death
 - o: Assist menu
 - v: Version
 - ) / ] / = / @: Current weapon / armor / rings / status

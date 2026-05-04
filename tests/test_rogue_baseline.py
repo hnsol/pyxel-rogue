@@ -13814,6 +13814,178 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("moved onto", game.msgs[-1])
         self.assertEqual(game.turn, 1)
 
+    def test_rogue_544_fight_command_prompts_for_direction(self):
+        # Rogue 5.4.4 command.c:'f' calls misc.c:get_dir() before fighting.
+        game = new_game(seed=5051)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Fight")
+        self.assertEqual(game.turn, 0)
+
+    def test_rogue_544_fight_command_no_monster_wakes_without_turn(self):
+        # Rogue 5.4.4 command.c:'f' reports no monster and after=FALSE after misc.c:look(TRUE).
+        game = new_game(seed=5052)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+            game.begin_input()
+            game.upd_play()
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+            game.begin_input()
+            game.upd_dir()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("no monster there", game.msgs[-1])
+
+    def test_rogue_544_fight_command_marks_visible_adjacent_target_and_attacks(self):
+        # Rogue 5.4.4 command.c:'f' sets ISTARGET and re-dispatches the direction as melee.
+        game = new_game(seed=5053)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(6, 5, hp=20, armor=100, exp=5, flags="")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.run_runners = lambda: None
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+            game.begin_input()
+            game.upd_play()
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+            game.begin_input()
+            game.upd_dir()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.target)
+        self.assertLess(monster.hp, 20)
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+        self.assertEqual(game.turn, 1)
+
+    def test_rogue_544_fight_command_escape_cancels_without_turn(self):
+        # Rogue 5.4.4 command.c:'f' sets after=FALSE when misc.c:get_dir() returns FALSE.
+        game = new_game(seed=5054)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed=[rogue.pyxel.KEY_ESCAPE])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIsNone(game.dact)
+        self.assertEqual(game.turn, 0)
+
+    def test_help_text_lists_rogue_fight_command(self):
+        # Rogue 5.4.4 extern.c:helpstr[] lists 'f' as fight until either of you dies.
+        game = new_game(seed=5055)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        self.assertIn("f Fight", "\n".join(calls))
+
+    def test_rogue_544_fight_command_repeats_target_melee_until_stopped(self):
+        # Rogue 5.4.4 command.c:'f' sets to_death and reuses runch before reading input.
+        game = new_game(seed=5056)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(6, 5, hp=30, armor=100, exp=5, flags="")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.run_runners = lambda: None
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        first_hp = monster.hp
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(first_hp, 29)
+        self.assertEqual(monster.hp, 28)
+        self.assertEqual(game.turn, 2)
+
+    def test_rogue_544_fight_command_non_kamikaze_stops_when_hp_reaches_max_hit(self):
+        # Rogue 5.4.4 fight.c:attack() clears to_death when current HP is <= max_hit.
+        game = new_game(seed=5057)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=30, armor=100, exp=5, flags="")
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = False
+        game.fight_max_hit = 0
+        game.p.hp = 5
+        game.roll_monster_attack = lambda m: (True, 3)
+
+        game.m_attack(monster)
+
+        self.assertFalse(game.fight_to_death)
+
+    def test_rogue_544_fight_to_death_command_kamikaze_ignores_max_hit_stop(self):
+        # Rogue 5.4.4 fight.c:attack() skips max_hit stop while kamikaze is TRUE.
+        game = new_game(seed=50571)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=30, armor=100, exp=5, flags="")
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_max_hit = 0
+        game.p.hp = 5
+        game.roll_monster_attack = lambda m: (True, 3)
+
+        game.m_attack(monster)
+
+        self.assertTrue(game.fight_to_death)
+
+    def test_rogue_544_fight_command_target_kill_clears_to_death(self):
+        # Rogue 5.4.4 fight.c:remove_mon() clears to_death/kamikaze when removing ISTARGET.
+        game = new_game(seed=5058)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=1, armor=100, exp=5, flags="")
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+
+        game.remove_monster(monster, was_kill=True)
+
+        self.assertFalse(game.fight_to_death)
+        self.assertFalse(game.fight_kamikaze)
+
     def test_rogue_544_current_weapon_command_wakes_visible_monsters_without_turn(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ')': current weapon.
         game = new_game(seed=5031)
