@@ -126,6 +126,7 @@ Keyboard:
 - ) / ] / = / @: Current weapon / armor / rings / status
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
+- Q: Quit
 
 Use Zap from the menu to choose a wand or staff, then choose a direction.
 

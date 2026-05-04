@@ -126,6 +126,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - ) / ] / = / @: 現在装備 / よろい / 指輪 / ステータス
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
+- Q: Quit
 
 杖はメニューの Zap から選び、方向を指定して振ります。
 

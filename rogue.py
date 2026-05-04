@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1138"
+UI_BUILD = "260504_1221"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4258,6 +4258,11 @@ class Game:
         self.command_look()
         self.command_look_done = False
 
+    def quit_command(self):
+        self.command_look()
+        self.st = ST_QUIT_CONFIRM
+        self.command_look_done = False
+
     def repeat_message_command(self):
         # C: command.c:command() CTRL('P') dispatches msg(huh), the previous message.
         last = self.msgs[-1] if self.msgs else ""
@@ -5913,6 +5918,7 @@ class Game:
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_Q", None)): self.quit_command(); return
         if self.key_upper(getattr(pyxel, "KEY_0", None)):
             self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
             return
@@ -6103,7 +6109,7 @@ class Game:
             self.toggle_palette()
             self.st=ST_PLAY
         elif act=="Quit":
-            self.st=ST_QUIT_CONFIRM
+            self.quit_command()
         self.dir_pending=None
 
     # =====================================================
@@ -6588,7 +6594,7 @@ class Game:
             "d Drop   m Move onto o Options",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
-            "P Put on R Remove",
+            "P Put on R Remove   Q Quit",
         ]
         for ln in commands:
             self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11

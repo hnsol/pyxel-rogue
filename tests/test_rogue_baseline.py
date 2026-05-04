@@ -13721,6 +13721,63 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_AUX)
 
+    def test_rogue_544_quit_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'Q': quit().
+        game = new_game(seed=5049)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_Q},
+                pressed=[rogue.pyxel.KEY_Q],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_QUIT_CONFIRM)
+
+    def test_rogue_544_aux_quit_uses_quit_command_wake_timing(self):
+        # Pyxel Aux Quit maps to Rogue 5.4.4 command.c:'Q' quit timing.
+        game = new_game(seed=5050)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.open_aux()
+        game.acur = rogue.AUX_ACTIONS.index("Quit")
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_RETURN])
+            game.begin_input()
+            game.upd_aux()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_QUIT_CONFIRM)
+
     def test_rogue_544_move_on_command_moves_without_auto_pickup(self):
         # Rogue 5.4.4 command.c:'m' sets move_on before do_move(); pack.c:pick_up() only reports the item.
         game = new_game(seed=5030)
@@ -15725,6 +15782,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("I Inv item", text)
         self.assertIn("P Put on", text)
         self.assertIn("R Remove", text)
+        self.assertIn("Q Quit", text)
         self.assertNotIn("Z / Enter", text)
         self.assertNotIn("Close overlays", text)
 
