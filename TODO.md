@@ -584,7 +584,7 @@
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携（Dragon breath の同室・直線・射程・`ISCANC` ゲートは `chase.c:do_chase()` / `sticks.c:fire_bolt()` 準拠で接続済み）
   - [x] Rogue 5.4.4 `passages.c:numpass()` / `chase.c:do_chase()` 準拠で、hero が通常 room door 上にいる場合の Dragon breath `proom` 判定を固定
-  - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、Dragon に flame が当たった後も bolt 処理を継続する
+  - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、Dragon に flame が当たった時はダメージなしで bolt 処理を終了する
 - [x] 巻物 18 種化完了（identify 対象選択 UI 含む）
 - [x] ポーションを原作 14 種へ更新（hallucination / levitation 接続済み）
 - [x] treasure room（モンスターハウス）を `new_level.c:treas_room()` 準拠で接続済み。`rogue_dungeon.py` に個数計算と発生ゲートを分離。

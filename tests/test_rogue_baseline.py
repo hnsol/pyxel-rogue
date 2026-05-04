@@ -1328,8 +1328,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(dragon.running)
         self.assertIn("the flame bounces", game.msgs)
 
-    def test_rogue_544_fire_bolt_continues_after_bouncing_off_dragon(self):
-        # Rogue 5.4.4 sticks.c:fire_bolt() does not return after the Dragon flame-bounce branch.
+    def test_rogue_544_fire_bolt_stops_after_bouncing_off_dragon(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() sets used=TRUE in the Dragon flame-bounce branch.
         import rogue_sticks
 
         game = new_game(seed=230)
@@ -1350,8 +1350,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(hit)
         self.assertEqual(dragon.hp, 40)
-        self.assertEqual(game.p.hp, 18)
-        self.assertIn("you are hit by the flame", game.msgs)
+        self.assertEqual(game.p.hp, 30)
+        self.assertIn("the flame bounces", game.msgs)
+        self.assertNotIn("you are hit by the flame", game.msgs)
 
     def test_rogue_544_bolt_hits_monster_standing_on_door_before_door_bounce(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses winat(); a monster on DOOR is seen before terrain bounce.

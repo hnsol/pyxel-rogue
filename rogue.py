@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0047"
+UI_BUILD = "260505_0054"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3569,7 +3569,7 @@ class Game:
                         if target.sym=="D" and name=="flame":
                             used=True
                             self.msg("sticks.the_flame_bounces")
-                            continue
+                            return True
                         else:
                             self.hit_monster_with_bolt(target,name)
                             return True
