@@ -14122,6 +14122,72 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_INVENTORY)
 
+    def test_rogue_544_again_command_repeats_illegal_command(self):
+        # Rogue 5.4.4 command.c records otherwise: illcom() as last_comm before dispatch.
+        game = new_game(seed=50655)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_G])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(
+            [m for m in game.msgs if "illegal command" in m],
+            ["illegal command 'g'", "illegal command 'g'"],
+        )
+
+    def test_rogue_544_again_item_command_empty_pack_uses_get_item_message_and_spends_turn(self):
+        # Rogue 5.4.4 pack.c:get_item() checks pack == NULL before again.
+        game = new_game(seed=5066)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv = [potion]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Q])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.p.inv, [])
+        self.assertEqual(game.turn, 2)
+        self.assertIn("you aren't carrying anything", game.msgs[-1])
+
+    def test_rogue_544_again_item_command_ran_out_with_nonempty_pack_spends_turn(self):
+        # Rogue 5.4.4 pack.c:get_item() says "you ran out" when again and last_pick is NULL.
+        game = new_game(seed=5067)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [potion, food]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Q])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.p.inv, [food])
+        self.assertEqual(game.turn, 2)
+        self.assertIn("you ran out", game.msgs[-1])
+
     def test_rogue_544_current_weapon_command_wakes_visible_monsters_without_turn(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ')': current weapon.
         game = new_game(seed=5031)

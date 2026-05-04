@@ -385,7 +385,7 @@
 - [x] Rogue 5.4.4 `move.c:do_move()` / `be_trapped()` 準拠で、移動で踏んだ arrow trap miss の矢は移動前 hero 位置から `fall()` する
 - [x] Rogue 5.4.4 `things.c:inv_name()` 準拠で、`GOLD` の inventory name を gold value 表示にする
 - [x] Rogue 5.4.4 `command.c:command()` / `fight.c:attack()` / `remove_mon()` 準拠で、`f/F` fight-to-death の方向指定、対象選択、`to_death` 継続、HP停止、target死亡解除を接続
-- [x] Rogue 5.4.4 `command.c:command()` / `misc.c:get_dir()` / `pack.c:reset_last()` 準拠で、`a` again command の last command / direction 再利用、ターン非消費 command の repeat、方向キャンセル復元を接続
+- [x] Rogue 5.4.4 `command.c:command()` / `misc.c:get_dir()` / `pack.c:get_item()` / `reset_last()` 準拠で、`a` again command の last command / direction / item 再利用、ターン非消費 command と illegal command の repeat、方向キャンセル復元、使い切り item repeat の message / turn を接続
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
 - [x] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）
   - [x] `S_CONFUSE` monster confusion（次攻撃時にモンスター混乱、`your hands begin to glow red`）

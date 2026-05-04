@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1347"
+UI_BUILD = "260504_2224"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5039,9 +5039,12 @@ class Game:
     def repeat_item_or_ran_out(self):
         item = self.last_repeat_item
         if item is None or item not in self.p.inv:
-            self.msg("pack.you_ran_out")
+            if self.p.inv:
+                self.msg("pack.you_ran_out")
+            else:
+                self.msg("pack.you_arent_carrying_anything")
             self.last_repeat_item = None
-            self.command_look_done = False
+            self.end_turn()
             return None
         return item
 
@@ -5104,6 +5107,8 @@ class Game:
             direction = self.repeat_dir_or_prompt()
             if direction is not None:
                 self.fight_command_confirm(*direction, kamikaze=(command == "fight_to_death"))
+        elif isinstance(command, tuple) and command[0] == "illegal":
+            self.illegal_command(command[1])
         elif isinstance(command, tuple) and command[0] == "item":
             self.repeat_item_command(command[1])
 
@@ -6248,6 +6253,7 @@ class Game:
             return
         illegal = self.illegal_command_press()
         if illegal:
+            self.record_repeat_command(("illegal", illegal))
             self.illegal_command(illegal)
             return
 
