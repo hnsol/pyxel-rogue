@@ -228,6 +228,7 @@
 - [x] Rogue 5.4.4 `sticks.c:do_zap()` 準拠で、target が Venus Flytrap なら保持者照合なしに hold を解除
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath を chaser/chasee 同室分岐に限定
 - [x] Rogue 5.4.4 `chase.c:roomin()` / `do_chase()` 準拠で、door 上 Dragon も同室 hero へ breath 可能にする
+- [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath 後に対象外 fight-to-death を解除する
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、Phantom / Bat のランダム移動後も混乱解除用 `rnd(20)` を消費する
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、候補マス走査順を x外側/y内側に合わせる

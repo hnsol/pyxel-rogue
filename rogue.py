@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0140"
+UI_BUILD = "260505_0152"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2801,6 +2801,8 @@ class Game:
         self.clear_running_count()
         self.p.quiet=0
         self.fire_bolt_from(m.x,m.y,sx,sy,"flame")
+        if getattr(self, "fight_to_death", False) and not getattr(m, "target", False):
+            self.clear_fight_to_death()
         return True
 
     def room_gold_target(self,m):

@@ -1468,6 +1468,69 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_dragon_breath_clears_fight_to_death_when_dragon_is_not_target(self):
+        # Rogue 5.4.4 chase.c:do_chase() clears to_death/kamikaze after Dragon fire_bolt()
+        # unless the breathing Dragon has ISTARGET.
+        game = new_game(seed=2251)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        target = monster_at(game.p.x - 1, game.p.y, sym="O", name="orc")
+        target.target = True
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [target, dragon]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = target
+        game.fight_dir = (-1, 0)
+        game.save_vs_magic = lambda: True
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertFalse(game.fight_to_death)
+        self.assertFalse(game.fight_kamikaze)
+        self.assertIsNone(game.fight_target)
+        self.assertEqual(game.fight_dir, (0, 0))
+        self.assertTrue(target.target)
+
+    def test_rogue_544_dragon_breath_preserves_fight_to_death_when_dragon_is_target(self):
+        # Rogue 5.4.4 chase.c:do_chase() leaves to_death/kamikaze set when the Dragon has ISTARGET.
+        game = new_game(seed=2252)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
+        dragon.running = True
+        dragon.target = True
+        game.mons = [dragon]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = dragon
+        game.fight_dir = (1, 0)
+        game.save_vs_magic = lambda: True
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertTrue(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
+        self.assertIs(game.fight_target, dragon)
+        self.assertEqual(game.fight_dir, (1, 0))
+
     def test_rogue_544_cancelled_dragon_does_not_breathe_or_roll_dragonshot(self):
         # Rogue 5.4.4 chase.c:do_chase() gates Dragon breath with !ISCANC before rnd(DRAGONSHOT).
         game = new_game(seed=223)
