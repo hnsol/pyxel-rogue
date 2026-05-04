@@ -680,6 +680,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertTrue(game.ident.wk[rogue_sticks.WS_POLYMORPH])
 
+    def test_rogue_544_zap_polymorph_reattaches_target_to_mlist_head(self):
+        # Rogue 5.4.4 sticks.c:do_zap() detaches tp, then monsters.c:new_monster() attaches it to mlist head.
+        import rogue_sticks
+
+        game = new_game(seed=607)
+        set_open_floor(game)
+        before = monster_at(game.p.x + 4, game.p.y, sym="B", name="bat")
+        target = monster_at(game.p.x + 1, game.p.y, sym="H", name="hobgoblin")
+        after = monster_at(game.p.x + 5, game.p.y, sym="K", name="kobold")
+        game.mons = [before, target, after]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_POLYMORPH, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(stick.charges, 0)
+        self.assertIs(game.mons[0], target)
+        self.assertEqual(game.mons[1:], [before, after])
+        self.assertEqual((target.sym, target.name), ("D", "dragon"))
+        self.assertEqual((target.x, target.y), (game.p.x + 1, game.p.y))
+        self.assertIs(game.mon_at(target.x, target.y), target)
+        self.assertIs(game.mon_at(before.x, before.y), before)
+        self.assertIs(game.mon_at(after.x, after.y), after)
+
     def test_rogue_544_polymorph_restores_mean_from_new_monster_spec(self):
         # Rogue 5.4.4 monsters.c:new_monster() rebuilds flags from extern.c:monsters[].
         game = new_game(seed=606)

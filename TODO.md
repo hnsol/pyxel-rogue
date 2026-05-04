@@ -63,6 +63,7 @@
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` 準拠で、polymorph 後も monster pack を保持
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` 準拠で、polymorph 後の monster が見えている時だけ識別
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` 識別条件を `rogue_sticks.py` へ小分割
+  - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` / `monsters.c:new_monster()` 準拠で、polymorph 対象を mlist head 相当に再接続
   - [x] lightning / fire / cold の bolt 反射・命中・ダメージ接続
   - [x] haste monster / slow monster の `ISHASTE` / `ISSLOW` 相当フラグと行動頻度への接続
   - [x] magic missile / drain life / nothing の効果監査と接続

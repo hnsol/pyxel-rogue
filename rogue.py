@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0130"
+UI_BUILD = "260505_0140"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3465,10 +3465,14 @@ class Game:
         self.dash_steps = 0
 
     def polymorph_monster(self,m):
-        # C: sticks.c (WS_POLYMORPH)
+        # C: sticks.c:do_zap(WS_POLYMORPH) detach(tp), then monsters.c:new_monster()
+        # attach(mlist, tp) puts the rebuilt monster at list head.
         pack=m.pack
         spec=self.monster_spec_for_sym(chr(RNG.rnd(26)+ord("A")))
         if spec:
+            if m in self.mons:
+                self.mons.remove(m)
+                self.mons.insert(0,m)
             self.set_monster_from_spec(m,spec)
             m.pack=pack
 
