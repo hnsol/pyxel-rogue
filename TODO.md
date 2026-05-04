@@ -32,6 +32,13 @@
 
 罠・隠し要素の実装では、Rogue 5.4.4 の `new_level.c`, `passages.c`, `command.c`, `move.c` にある生成頻度、発見率、ターン消費、踏んだ時の効果を明示してから実装する。推測、現代ローグライクの慣習、Rogue2.Official、既存 Pyxel 実装をゲーム挙動の正解にしない。
 
+- [ ] **難易度設計**
+  - [ ] `Easy`: 種類名の未鑑定負担を下げ、個体情報は隠す
+  - [ ] `Normal`: Rogue V5 on Pyxel 標準。Rogue 5.4.5p `idscrl` 準拠の統合 identify scroll
+  - [ ] `Classic`: Rogue 5.4.4 寄り。identify scroll 5種類分化、状態表示あり
+  - [ ] `Strict 5.4.4`: Rogue 5.4.4 準拠チャレンジ
+  - [ ] `Normal` の scroll table は 5.4.5p `extern.c:scr_info2[]` / `set_scroll_2()` を参照する
+
 完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
 
 推奨順:
@@ -418,11 +425,11 @@
   - [x] Rogue 5.4.4 `potions.c:do_pot()` 準拠で、blindness quaff 後の `look(FALSE)` と hallucinating levitation 文言を反映
   - [x] `doctor / stomach / runners / swander / rollwand` など daemon 系を統一インフラへ段階移行
 
-## Phase 5: 移植性・UI基盤（優先度: 中）
+## Phase 5: PC / SteamDeck向けUI基盤（優先度: 中）
 
 - [x] Pyxel Web 対応確認
   - [x] Web Launcher で確認する開発branch名は `/` なしにする（`codex/...` は path と誤解される場合あり）
-- [ ] ブラウザ / SteamDeck / 中華ゲーム機向け入力整理
+- [ ] PC / SteamDeck向け現UIの磨き込み
 - [x] 通常8方向移動の整理
 - [x] Start押下中だけ斜め補助モードにする
 - [x] 斜め補助モード中は左上/右上/右下/左下の同時押しだけを NW/NE/SE/SW として扱い、上下左右単体をOFFにする
@@ -431,7 +438,7 @@
 - [x] D-pad/矢印の横→斜め入力が横移動+斜め移動に分裂する問題を1フレーム保留で抑制
 - [x] B短押しメニュー/キャンセルとB長押しダッシュの競合解消
 - [x] キーボードでも A/B/Select/Start 相当の最低限操作（Enter, Esc, Tab, Space）を割り当てる
-- [ ] pyxapp / 中華ゲーム機向けの Pyxel 終了方法追加（セーブ / システム系インタフェースで扱う）
+- [ ] pyxapp / 中華ゲーム機向けの Pyxel 終了方法追加（優先度低。セーブ / システム系インタフェースで扱う）
 - [x] Rogue V5 直打ちキーボードショートカット基礎（`t/q/r/e/w/W/T/i/?/s/^/z`。既存メニュー項目への入口として実装し、プレイ中だけ発火）
 - [x] Rogue V5 `P` put on ring の直打ち入力を追加する。`c` call は実装済み。英字キーは原作コマンドを優先するため、Pad style では使わない。
 - [x] Item overlay で `a-z` のアイテム letter 直接選択を追加する。プレイ中の Rogue commands とは別レイヤーとして扱い、overlay 中は文字コマンドを発火させない。
@@ -463,7 +470,7 @@
 - [x] 下ログを画面下部に再配置し7行表示へ拡張
 - [x] 通常画面のミニマップを廃止
 - [x] Selectから開く全体マップUIを廃止
-- [ ] 可変画面 / レイアウト再計算
+- [ ] 可変画面 / レイアウト再計算（優先度低。狭い画面対応は将来候補）
 - [x] **設定オブジェクト導入**
   - 言語、自動拾い、パレット、run 中間表示、レイアウト候補などを `Game` 内の個別フラグから段階的に集約する。
   - 当面は開発・テストプレイ用の切替基盤とし、ゲームメカニクスに影響する設定は持たせない。
@@ -484,10 +491,10 @@
   - `8bit-bgm-generator` 調査
   - `pyxel-hadegame` の `pyxelhg/bgm/bgm_generator.py` 確認
   - Pyxel Webでも破綻しない鳴らし方を検証
-- [ ] メッセージ履歴スクロール
+- [ ] メッセージ履歴画面（Select -> Select -> Log、直近50〜100件、ターン非消費）
 - [x] 投擲アイテムの飛翔アニメーション
 - [ ] ダメージフラッシュ等のアニメーション
-- [ ] GBC風インタフェース刷新（着手条件: Rogue 5.4.4 再現 Phase 4 完了後。詳細は `DESIGN.md` の「将来方針：GBC 美学寄せと 360x240 移行」参照）
+- [ ] GBC風インタフェース刷新（優先度低。詳細は `DESIGN_ARCHIVE.md` 参照）
   - [ ] 解像度 576×360 → 360×240 移行（80×24 論理座標を維持したままタイル寸法・右HUD幅・下ログ行数を再計算。`可変画面 / レイアウト再計算` の完了が前提）
   - [x] GBC寄りの32色パレット策定・実装（青灰/緑/琥珀/シアン、警告時のみ赤。`GBC_PALETTE` 定数として `rogue.py` に実装済み）
   - [x] 複数パレット定義（標準Flexoki Dark + 2候補）
@@ -513,7 +520,8 @@
 - [x] ハイスコア保存（JSON）
 - [x] 死亡 / 勝利 / quit 後の Top 10 表示
 - [ ] スコア履歴画面
-- [ ] リプレイ（操作ログ保存・再生）
+- [ ] Death Review Stats（死亡 / 勝利 / quit 後に、プレイヤー既知情報だけで LLM に貼れる攻略支援statsを出す）
+- [ ] リプレイ（現時点では考えない。`DESIGN_ARCHIVE.md` 参照）
 - [ ] **Wizard モード**（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 等）— 忠実度監査・バグ再現の検証用途。Pyxel版での入力割当は実装時に検討。
 - [ ] **ゲーム中セーブ (`S` コマンド)**（`save.c:save_game()/restore()`）— リプレイとは別枠。Pyxel Web での永続化方式（localStorage 等）は実装時に検討。
 
@@ -552,7 +560,7 @@
 - [x] RNG helper を導入し、Rogue 5.4.4 準拠・seed 再現性・Pyxel MCP の `random.randint` 警告の扱いを整理する
 - [x] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
 - [x] Rogue 5.4.4 メッセージ全文監査（`vendor/rogue544` の `msg()` / `addmsg()` 抽出と catalog 化）
-- [ ] Select(Back) 補助メニューから開くメッセージ履歴ビュー
+- [ ] メッセージ履歴画面のテスト（Select -> Select -> Log、ターン非消費）
 - [x] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
 - [ ] 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加
 - [x] Rogue 5.4.4 `rogue.h:NUMCOLS/NUMLINES/STATLINE`, `move.c:do_move()`, `rooms.c:bsze` 準拠のマップ寸法・地形領域テスト追加
