@@ -118,6 +118,7 @@ Keyboard:
 - m: Move onto without picking up
 - o: Assist menu
 - v: Version
+- ) / ] / = / @: Current weapon / armor / rings / status
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
 

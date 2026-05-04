@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0933"
+UI_BUILD = "260504_1000"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3941,7 +3941,7 @@ class Game:
                     return True
             move_on = getattr(self, "move_on_once", False)
             if gi and move_on and not trapped:
-                self.msg("pyxel.see_item_here", item=self.ident.name(gi))
+                self.msg("pack.moved_onto_item", item=self.ident.name(gi))
             elif gi and self.auto_pickup and not trapped:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
@@ -4125,6 +4125,45 @@ class Game:
         self.dact = "Move"
         self.st = ST_DIR
         self.dir_pending = None
+
+    def pack_letter_for(self, it):
+        try:
+            idx = self.p.inv.index(it)
+        except ValueError:
+            return "?"
+        return chr(ord("a") + idx)
+
+    def append_current_message(self, cur, how_en, where_en=None, how_ja=None, where_ja=None):
+        how = how_ja if self.lang == LANG_JA and how_ja else how_en
+        where = where_ja if self.lang == LANG_JA and where_ja else where_en
+        where = f" {where}" if where else ""
+        if cur is None:
+            value = f"you are {how} nothing" if self.lang == LANG_EN else f"{how} 何もない"
+            self.msg("command.value_value2", value=value, value2=where)
+            return
+        letter = self.pack_letter_for(cur)
+        if self.lang == LANG_EN:
+            value = f"you are {how} ("
+            value2 = f"{letter}) {self.ident.name(cur)}{where}"
+        else:
+            value = f"{how}（"
+            value2 = f"{letter}）{self.ident.name(cur)}{where}"
+        self.msg("command.value_value2", value=value, value2=value2)
+
+    def current_item_command(self, cur, how_en, where_en=None, how_ja=None, where_ja=None):
+        self.command_look()
+        self.append_current_message(cur, how_en, where_en, how_ja, where_ja)
+        self.command_look_done = False
+
+    def current_rings_command(self):
+        self.command_look()
+        self.append_current_message(self.p.ring_l, "wearing", "on left hand", "装着中", "左手")
+        self.append_current_message(self.p.ring_r, "wearing", "on right hand", "装着中", "右手")
+        self.command_look_done = False
+
+    def status_command(self):
+        self.command_look()
+        self.command_look_done = False
 
     def illegal_command(self, command):
         self.command_look()
@@ -5693,6 +5732,18 @@ class Game:
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_0", None)):
+            self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
+            return
+        if self.kp(getattr(pyxel, "KEY_RIGHTBRACKET", None)):
+            self.current_item_command(self.p.arm, "wearing", None, "装着中")
+            return
+        if self.kp(getattr(pyxel, "KEY_EQUALS", None)):
+            self.current_rings_command()
+            return
+        if self.kp(getattr(pyxel, "KEY_AT", None)):
+            self.status_command()
+            return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
         if self.btn_trap_inspect(): self.start_trap_inspect(); return
