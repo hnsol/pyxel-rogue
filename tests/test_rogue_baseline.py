@@ -15505,6 +15505,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(attacks, [monster])
         self.assertEqual((monster.x, monster.y), (5, 5))
 
+    def test_rogue_544_random_chase_attacks_hero_standing_on_scare_scroll(self):
+        # Rogue 5.4.4 move.c:rndmove() uses winat(); PLAYER wins over the scroll under hero.
+        game = new_game(seed=531)
+        set_open_floor(game)
+        game.p.x, game.p.y = 6, 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = game.p.x, game.p.y
+        bat = monster_at(5, 5, "B", "bat", hp=10, armor=100, exp=5)
+        game.gitems = [scroll]
+        game.mons = [bat]
+        attacks = []
+        game.m_attack = lambda mo: attacks.append(mo)
+
+        rng = SequenceRng([0, 1, 2, 1])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            result = game.chase(bat, (game.p.x, game.p.y))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(result, "attack")
+        self.assertEqual(attacks, [bat])
+        self.assertEqual((bat.x, bat.y), (5, 5))
+        self.assertEqual(rng.calls, [2, 3, 3])
+
     def test_rogue_544_chase_helper_continues_unless_at_goal_or_hero(self):
         # Rogue 5.4.4 chase.c:chase() returns curdist != 0 && !ce(ch_ret, hero).
         import rogue_chase

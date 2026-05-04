@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0127"
+UI_BUILD = "260505_0130"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -2866,9 +2866,12 @@ class Game:
         # C: move.c:rndmove() gates random monster moves with winat()/step_ok().
         if not (0 <= x < MAP_W and 0 <= y < MAP_H):
             return False
-        ch = "@" if (x, y) == (self.p.x, self.p.y) else self.zap_winat_char(x, y)
+        is_hero_pos = (x, y) == (self.p.x, self.p.y)
+        ch = "@" if is_hero_pos else self.zap_winat_char(x, y)
         if not self.zap_step_ok_char(ch):
             return False
+        if is_hero_pos:
+            return True
         gi=self.gi_at(x,y)
         return not (gi and self.is_scare_monster(gi))
 
