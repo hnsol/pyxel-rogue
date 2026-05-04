@@ -53,19 +53,18 @@ PYXEL_ROGUE_SCORE_URL="新URL" tools/deploy_pages_clean.sh
 
 ## 手元でダウンロードして遊ぶ
 
-Python 3.10+ と Pyxel が必要です。
+Python 3.10+ と uv が必要です。
 
 ```bash
 git clone https://github.com/hnsol/pyxel-rogue.git
 cd pyxel-rogue
-pip install pyxel
-pyxel run rogue.py
+uv run --with pyxel pyxel run rogue.py
 ```
 
 日本語表示で起動する場合:
 
 ```bash
-PYXEL_ROGUE_LANG=ja pyxel run rogue.py
+PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 ```
 
 開発者向けの簡易チェック:

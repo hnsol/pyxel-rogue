@@ -53,19 +53,18 @@ Set `PYXEL_ROGUE_SCORE_URL` to the online scoreboard deployment URL. Keep the UR
 
 ## Download and Play Locally
 
-Python 3.10+ and Pyxel are required.
+Python 3.10+ and uv are required.
 
 ```bash
 git clone https://github.com/hnsol/pyxel-rogue.git
 cd pyxel-rogue
-pip install pyxel
-pyxel run rogue.py
+uv run --with pyxel pyxel run rogue.py
 ```
 
 To start with Japanese text:
 
 ```bash
-PYXEL_ROGUE_LANG=ja pyxel run rogue.py
+PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 ```
 
 Basic developer checks:
