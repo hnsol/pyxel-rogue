@@ -13,6 +13,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [[ -z "${PYXEL_ROGUE_SCORE_URL:-}" ]]; then
+    echo "ERROR: PYXEL_ROGUE_SCORE_URL is not set. Export it before deploying." >&2
+    exit 1
+fi
+
 "${ROOT_DIR}/tools/build_web.sh"
 
 if git -C "${ROOT_DIR}" ls-remote --exit-code --heads "${REMOTE}" "${BRANCH}" >/dev/null 2>&1; then

@@ -66,8 +66,6 @@ To start with Japanese text:
 PYXEL_ROGUE_LANG=ja pyxel run rogue.py
 ```
 
-During first-time online registration, use the `Select/L Change Language（言語切替）` hint below the action line to switch languages; the scoreboard follows the selected language.
-
 Basic developer checks:
 
 ```bash
@@ -137,16 +135,11 @@ Implemented overview:
 - Tombstone death screen
 - Victory score adds sold pack worth following Rogue 5.4.4 `total_winner()`
 - Startup logo, title screen with BGM, and lowercase alphanumeric player name entry
-- My Rogue Chronicle / Weekly Rivals / Seasonal Legends online ranking scaffold for Google Sheets + Apps Script
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - JSON message catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
 See [TODO.md](TODO.md) for the detailed implementation status.
-
-Successful ranking GET results are saved, so Online Ranking can later show saved Weekly / Season rankings merged with local bests without communicating.
-
-The Apps Script scaffold for online rankings lives in `docs/apps_script_scoreboard.gs`. Set `PYXEL_ROGUE_SCORE_URL` to point at your deployment. Game end only saves locally, and Online Ranking opens immediately to My Rogue Chronicle. Entering Online Ranking from Title or after game over does not communicate; it displays cached rankings merged with local bests. After the logo, a missing online profile opens a registration prompt. Online names are lowercase alphanumeric only and default to `rogue54`. Unregistered or not-yet-posted names display in game with a trailing `*`, such as `rogue54*`; saved and submitted names never include the mark. Registration and switching are available from Title Name or Online Ranking. The client checks the server user list with `checkUser`; existing names ask for the 6-digit PIN as ownership verification, and new names register a 6-digit PIN plus a server token. If an already registered Title Name entry is edited and B is pressed, a confirmation saves that edited name as local-only and returns to Title. The server token is obfuscated locally and checked on POST. UI copy avoids `sync` / `synced`: local storage is saved, server submission is posted, and ranking GET updates are refreshed. Communication runs after registration/linking and from Select. POST is allowed once every 24 hours by server-side `last_sync_at` / `next_sync_at`; pressing Select during cooldown skips POST and runs GET only, with the operation result in the upper-right and the current `POST after` state on line 19. POST only sends local bests and updates profile post time; Weekly / Season are fetched by GET. Scoreboards show the top 10 only. The Apps Script users sheet treats `user_password` as a text column. Ranking GET lazily creates dummy rows so new weeks/seasons are not empty, and `score_id` prevents duplicate rows. GET reads the score sheet through one context and writes generated dummy rows in one batch. Old online profile data is intentionally reset by moving to v3 storage while this feature is still in development.
 
 ## Roadmap
 
@@ -155,7 +148,7 @@ The Apps Script scaffold for online rankings lives in `docs/apps_script_scoreboa
 - HUD / Inventory / Help / Death text catalog coverage
 - Responsive layout and font selection
 - In-dungeon BGM
-- Full score history and online ranking operation improvements
+- Full score history
 - Replay support
 
 ## Links

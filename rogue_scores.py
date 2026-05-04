@@ -33,7 +33,7 @@ ONLINE_SCORE_CACHE_FILE = os.environ.get(
     "PYXEL_ROGUE_ONLINE_SCORE_CACHE_FILE",
     os.path.join(os.path.expanduser("~"), ".pyxel_rogue_online_score_cache_v1.json"),
 )
-DEFAULT_ONLINE_SCORE_URL = "https://script.google.com/macros/s/AKfycbx0jUvQm2puooh1rnEGpcjrltLhgbmCFwwoPRqD1qKlDieZhZRaOEdeggRYgTbFdX5t/exec"
+DEFAULT_ONLINE_SCORE_URL = ""
 ONLINE_SCORE_URL = os.environ.get("PYXEL_ROGUE_SCORE_URL", DEFAULT_ONLINE_SCORE_URL)
 ONLINE_HTTP_TIMEOUT_SECONDS = 15
 SCOREBOARD_PERIOD_LOCAL = "local"
@@ -689,12 +689,12 @@ def seed_dummy_online_scores(url: str | None = None) -> bool:
         return False
 
 
-def fetch_online_scores(period: str, url: str | None = None, timestamp: str | None = None) -> list[dict[str, Any]]:
+def fetch_online_scores(period: str, url: str | None = None, timestamp: str | None = None) -> list[dict[str, Any]] | None:
     if period == SCOREBOARD_PERIOD_LOCAL or period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
         return []
     target = url if url is not None else ONLINE_SCORE_URL
     if not target:
-        return []
+        return None
     key = score_period_keys(timestamp).get(_period_field(period), "")
     try:
         sep = "&" if "?" in target else "?"
@@ -704,7 +704,7 @@ def fetch_online_scores(period: str, url: str | None = None, timestamp: str | No
             data = data.get("scores", [])
         return data if isinstance(data, list) else []
     except Exception:
-        return []
+        return None
 
 
 def fetch_online_rank(entry: dict[str, Any], period: str, url: str | None = None) -> int | None:

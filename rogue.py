@@ -218,7 +218,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0216"
+UI_BUILD = "260504_2356"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5173,10 +5173,17 @@ class Game:
         online = fetch_online_scores(period, timestamp=now)
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
-        if online:
+        if online is None:
+            self.online_score_load_result = "failed"
+            online = load_online_score_cache(period, key)
+            scores = get_period_scores(local, period, key, limit=10)
+            if online:
+                scores = get_period_scores(online + local, period, key, limit=10)
+        elif online:
             save_online_score_cache(period, key, online)
             scores = get_period_scores(online + local, period, key, limit=10)
         else:
+            self.online_score_load_result = ""
             online = load_online_score_cache(period, key)
             scores = get_period_scores(local, period, key, limit=10)
             if online:
@@ -5200,6 +5207,9 @@ class Game:
         for period in getattr(self, "online_sync_periods", []) or [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]:
             try:
                 self.load_online_period_scores(period, force=True)
+                if getattr(self, "online_score_load_result", "") == "failed":
+                    ok = False
+                    break
             except Exception:
                 ok = False
                 break
