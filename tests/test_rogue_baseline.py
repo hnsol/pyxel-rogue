@@ -15947,6 +15947,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.p.inv, [potion])
 
+    def test_rogue_544_call_item_escape_restores_previous_again_command(self):
+        # Rogue 5.4.4 command.c:call() starts with pack.c:get_item(); ESC calls reset_last().
+        game = new_game(seed=55211)
+        set_open_floor(game)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed=[rogue.pyxel.KEY_C])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed=[rogue.pyxel.KEY_ESCAPE])
+        game.begin_input()
+        game.upd_call()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 2)
+        self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
     def test_call_escape_from_menu_returns_to_menu(self):
         game = new_game(seed=5522)
         potion = rogue.Item(rogue.CAT_POT, 0)

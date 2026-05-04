@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_2224"
+UI_BUILD = "260504_2240"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5326,6 +5326,12 @@ class Game:
         self.throw_dir=None
     def cancel_call_prompt(self):
         # Rogue 5.4.4 command.c:call() returns without changing guesses on ESC.
+        if (
+            self.call_item is None
+            and self.action_origin == ST_PLAY
+            and not getattr(self, "repeat_command_active", False)
+        ):
+            self.reset_repeat_command()
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
         if self.action_origin==ST_MENU:
             self.st=ST_MENU
