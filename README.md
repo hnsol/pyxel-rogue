@@ -114,6 +114,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - t: quick throw
 - ^: Trap Inspect（方向指定）
 - i: Inventory
+- I: 単品Inventory
 - ?: Help
 - /: 記号の識別
 - Ctrl+P: 前メッセージ再表示

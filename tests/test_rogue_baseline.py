@@ -14038,6 +14038,101 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("/ Identify", "\n".join(calls))
 
+    def test_rogue_544_picky_inventory_empty_wakes_and_spends_no_turn(self):
+        # Rogue 5.4.4 command.c:'I' calls pack.c:picky_inven(); empty pack prints and after=FALSE.
+        game = new_game(seed=5042)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.p.inv = []
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_I},
+                pressed=[rogue.pyxel.KEY_I],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("you aren't carrying anything", game.msgs)
+
+    def test_rogue_544_picky_inventory_single_item_prints_without_prompt(self):
+        # Rogue 5.4.4 pack.c:picky_inven() prints the lone item directly.
+        game = new_game(seed=5043)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [food]
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_I},
+            pressed=[rogue.pyxel.KEY_I],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("a)", game.msgs[-1])
+
+    def test_rogue_544_picky_inventory_multiple_prompts_then_prints_letter(self):
+        # Rogue 5.4.4 pack.c:picky_inven() prompts and accepts a pack letter.
+        game = new_game(seed=5044)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [food, potion]
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_I},
+            pressed=[rogue.pyxel.KEY_I],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.cact, "Picky inventory")
+        self.assertIn("which item do you wish to inventory", game.msgs[-1])
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_B])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("b)", game.msgs[-1])
+
+    def test_rogue_544_picky_inventory_invalid_letter_stays_in_prompt(self):
+        # Rogue 5.4.4 pack.c:picky_inven() reports "'x' not in pack" and consumes no turn.
+        game = new_game(seed=5045)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        game.cact = "Picky inventory"
+        game.fitems = list(game.p.inv)
+        game.st = rogue.ST_ITEM
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertIn("'m' not in pack", game.msgs)
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
@@ -15539,6 +15634,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Enter+Esc", text)
         self.assertIn("q Quaff", text)
         self.assertIn("d Drop", text)
+        self.assertIn("I Inv item", text)
         self.assertIn("P Put on", text)
         self.assertIn("R Remove", text)
         self.assertNotIn("Z / Enter", text)

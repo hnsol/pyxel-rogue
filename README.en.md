@@ -114,6 +114,7 @@ Keyboard:
 - t: Quick throw
 - ^: Trap Inspect (choose direction)
 - i: Inventory
+- I: Inventory one item
 - ?: Help
 - /: Identify a symbol
 - Ctrl+P: Repeat last message

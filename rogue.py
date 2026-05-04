@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1049"
+UI_BUILD = "260504_1118"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4132,6 +4132,27 @@ class Game:
         self.identify_symbol_pending = True
         self.command_look_done = False
 
+    def picky_inventory_line(self, it):
+        return f"{self.pack_letter_for(it)}) {self.ident.name(it)}"
+
+    def open_picky_inventory_command(self):
+        # Rogue 5.4.4 pack.c:picky_inven() inventories one chosen pack item.
+        self.command_look()
+        if not self.p.inv:
+            self.msg("pack.you_arent_carrying_anything")
+            self.command_look_done = False
+            return
+        if len(self.p.inv) == 1:
+            self.msg_text(self.picky_inventory_line(self.p.inv[0]))
+            self.command_look_done = False
+            return
+        self.cact = "Picky inventory"
+        self.fitems = list(self.p.inv)
+        self.icur = 0
+        self.st = ST_ITEM
+        self.msg("pack.which_item_do_you_wish_to_inventory")
+        self.command_look_done = False
+
     def symbol_description(self, ch):
         unknown = "知らない文字" if self.lang == LANG_JA else "unknown character"
         if len(ch) == 1 and "A" <= ch <= "Z":
@@ -4755,6 +4776,10 @@ class Game:
             self.msg("pyxel.it_is_item", item=self.ident.name(it))
             self.close_menu(); self.end_turn()
             return
+        if a=="Picky inventory":
+            self.msg_text(self.picky_inventory_line(it))
+            self.close_menu()
+            return
         self.command_look()
         if a=="Quaff":
             if self.use_pot(it) is False:
@@ -4996,6 +5021,8 @@ class Game:
         return None
     def invalid_pack_letter(self, ch):
         self.msg("pack.item_is_not_a_valid_item", item=ch)
+    def invalid_picky_inventory_letter(self, ch):
+        self.msg("pack.item_not_in_pack", item=ch)
     def cancel_item_prompt(self):
         # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
         if self.cact=="Throw" and self.throw_dir is not None and self.action_origin==ST_MENU:
@@ -5839,6 +5866,7 @@ class Game:
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
         if self.btn_r():     self.open_help_command(); return
         if self.kp(getattr(pyxel, "KEY_SLASH", None)): self.open_symbol_identify_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_I", None)): self.open_picky_inventory_command(); return
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
@@ -5912,7 +5940,10 @@ class Game:
         if letter_press is not None:
             ch, letter_item = letter_press
             if letter_item is None:
-                self.invalid_pack_letter(ch)
+                if self.cact == "Picky inventory":
+                    self.invalid_picky_inventory_letter(ch)
+                else:
+                    self.invalid_pack_letter(ch)
                 return
             self.confirm_item(letter_item)
             return
@@ -6510,7 +6541,7 @@ class Game:
         self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
         commands=[
             ". Wait   s Search   t Throw   ^ Trap",
-            "i Inv    ? Help     / Identify",
+            "i Inv    I Inv item ? Help     / Identify",
             "d Drop   m Move onto o Options",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
