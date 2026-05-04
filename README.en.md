@@ -115,6 +115,9 @@ Keyboard:
 - ^: Trap Inspect (choose direction)
 - i: Inventory
 - ?: Help
+- m: Move onto without picking up
+- o: Assist menu
+- v: Version
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
 

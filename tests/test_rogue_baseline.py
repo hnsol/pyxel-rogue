@@ -13612,6 +13612,149 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.x, monster.y), (8, 5))
         self.assertEqual(game.turn, 0)
 
+    def test_rogue_544_help_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '?': help().
+        game = new_game(seed=5026)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_QUESTION])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_HELP)
+
+    def test_rogue_544_version_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'v': version.
+        game = new_game(seed=5027)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_V])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual(game.turn, 0)
+        self.assertIn("version", game.msgs[-1])
+
+    def test_rogue_544_illegal_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before otherwise: illcom().
+        game = new_game(seed=5028)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_G])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual(game.turn, 0)
+        self.assertIn("illegal command", game.msgs[-1])
+
+    def test_rogue_544_options_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'o': option().
+        game = new_game(seed=5029)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_O])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (8, 5))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_AUX)
+
+    def test_rogue_544_move_on_command_moves_without_auto_pickup(self):
+        # Rogue 5.4.4 command.c:'m' sets move_on before do_move(); pack.c:pick_up() only reports the item.
+        game = new_game(seed=5030)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = 6, 5
+        game.gitems = [item]
+        pack_before = list(game.p.inv)
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+            game.begin_input()
+            game.upd_play()
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+            game.begin_input()
+            game.upd_dir()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertEqual(game.gitems, [item])
+        self.assertEqual(game.p.inv, pack_before)
+        self.assertEqual(game.turn, 1)
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)

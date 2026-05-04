@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_0902"
+UI_BUILD = "260504_0933"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3884,7 +3884,7 @@ class Game:
         p = self.p
         if p.held_by and not p.held_by.alive:
             p.held_by=None
-        self.wake_visible_monsters()
+        self.command_look()
         if p.no_move>0:
             p.no_move-=1
             self.msg("move.you_are_still_stuck_in_the_bear_trap")
@@ -3899,6 +3899,7 @@ class Game:
             )
             if (nx, ny) == (p.x, p.y):
                 self.dashing = False
+                self.command_look_done = False
                 return False
             dx, dy = nx - p.x, ny - p.y
         if dx or dy:
@@ -3906,6 +3907,7 @@ class Game:
         nx, ny = p.x+dx, p.y+dy
         if not self.diag_ok(p.x,p.y,nx,ny):
             self.dashing = False
+            self.command_look_done = False
             return False
         m = self.mon_at(nx, ny)
         gi = self.gi_at(nx, ny)
@@ -3937,18 +3939,22 @@ class Game:
                 if not self.p.alive or self.st!=ST_PLAY:
                     self.end_turn()
                     return True
-            if gi and self.auto_pickup and not trapped:
+            move_on = getattr(self, "move_on_once", False)
+            if gi and move_on and not trapped:
+                self.msg("pyxel.see_item_here", item=self.ident.name(gi))
+            elif gi and self.auto_pickup and not trapped:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
                 self.msg("pyxel.see_item_here", item=self.ident.name(gi))
             self.update_fov()
             self.update_cam(); self.end_turn(); return True
+        self.command_look_done = False
         return False
 
     def do_search(self, front_only=False, spend_turn=True, quiet_fail=False):
         # C: command.c:search()
         if spend_turn:
-            self.wake_visible_monsters()
+            self.command_look()
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
@@ -4098,6 +4104,40 @@ class Game:
             self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
         self.command_look_done = False
 
+    def open_help_command(self):
+        self.command_look()
+        self.st = ST_HELP
+        self.command_look_done = False
+
+    def show_version_command(self):
+        self.command_look()
+        self.msg("command.version_version_mctesq_was_here", version=UI_BUILD)
+        self.command_look_done = False
+
+    def open_options_command(self):
+        self.command_look()
+        self.open_aux()
+        self.command_look_done = False
+
+    def start_move_on_command(self):
+        self.command_look()
+        self.cact = "Move"
+        self.dact = "Move"
+        self.st = ST_DIR
+        self.dir_pending = None
+
+    def illegal_command(self, command):
+        self.command_look()
+        self.msg("command.illegal_command_command", command=command)
+        self.command_look_done = False
+
+    def illegal_command_press(self):
+        for key_name, command in (("KEY_G", "g"),):
+            key = getattr(pyxel, key_name, None)
+            if key is not None and self.key_lower(key):
+                return command
+        return None
+
     def do_action(self):
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR or self.gi_at(px,py):
@@ -4106,7 +4146,7 @@ class Game:
         self.do_search(front_only=True)
 
     def do_pickup(self):
-        self.wake_visible_monsters()
+        self.command_look()
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR:
             self.use_stairs(); return
@@ -4164,7 +4204,7 @@ class Game:
         return True
 
     def do_wait(self):
-        self.wake_visible_monsters()
+        self.command_look()
         self.end_turn()
 
     def ring_after_turn(self):
@@ -4623,6 +4663,17 @@ class Game:
                 if spent_turn:
                     self.end_turn()
             return
+        if self.dact=="Move":
+            self.p.facing=(dx,dy)
+            self.move_on_once = True
+            try:
+                moved = self.try_move(dx,dy)
+            finally:
+                self.move_on_once = False
+            if not moved:
+                self.command_look_done = False
+            self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
+            return
 
     def start_trap_inspect(self):
         self.command_look()
@@ -4829,6 +4880,11 @@ class Game:
                 self.st=ST_MENU
             else:
                 self.close_menu()
+        elif self.dact=="Move":
+            self.st=ST_PLAY
+            self.dact=None
+            self.cact=None
+            self.command_look_done=False
         else:
             self.st=ST_ITEM
     def btn_search(self): return self.key_lower(pyxel.KEY_S)
@@ -5633,7 +5689,10 @@ class Game:
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
         if self.btn_back():
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
-        if self.btn_r():     self.st=ST_HELP; return
+        if self.btn_r():     self.open_help_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return
         if self.btn_trap_inspect(): self.start_trap_inspect(); return
@@ -5642,6 +5701,10 @@ class Game:
         aname = self.rogue_command_action()
         if aname:
             self.start_item_action(aname)
+            return
+        illegal = self.illegal_command_press()
+        if illegal:
+            self.illegal_command(illegal)
             return
 
         # Dash start: B/Shift held + direction

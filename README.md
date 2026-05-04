@@ -115,6 +115,9 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - ^: Trap Inspect（方向指定）
 - i: Inventory
 - ?: Help
+- m: Move onto（拾わずに移動）
+- o: 補助メニュー
+- v: Version
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
 
