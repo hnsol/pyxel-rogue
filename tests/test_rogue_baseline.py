@@ -14088,6 +14088,40 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("a Again", "\n".join(calls))
 
+    def test_rogue_544_again_command_repeats_version_command(self):
+        # Rogue 5.4.4 command.c records 'v' as last_comm even though after=FALSE.
+        game = new_game(seed=5064)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_V])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertIn("version", game.msgs[-2])
+        self.assertIn("version", game.msgs[-1])
+
+    def test_rogue_544_again_command_repeats_inventory_command(self):
+        # Rogue 5.4.4 command.c records 'i' as last_comm even though inventory() is after=FALSE.
+        game = new_game(seed=5065)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_I])
+        game.begin_input()
+        game.upd_play()
+        game.st = rogue.ST_PLAY
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
     def test_rogue_544_current_weapon_command_wakes_visible_monsters_without_turn(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ')': current weapon.
         game = new_game(seed=5031)

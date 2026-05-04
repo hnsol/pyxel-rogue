@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1329"
+UI_BUILD = "260504_1347"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5066,6 +5066,40 @@ class Game:
                 self.inspect_trap(*direction)
         elif command == "picky_inventory":
             self.open_picky_inventory_command()
+        elif command == "inventory":
+            self.command_look()
+            self.st = ST_INVENTORY
+            self.command_look_done = False
+        elif command == "help":
+            self.open_help_command()
+        elif command == "symbol_identify":
+            self.open_symbol_identify_command()
+        elif command == "version":
+            self.show_version_command()
+        elif command == "options":
+            self.open_options_command()
+        elif command == "discoveries":
+            self.open_discoveries()
+        elif command == "stairs_down":
+            self.stairs_down_command()
+        elif command == "stairs_up":
+            self.stairs_up_command()
+        elif command == "current_weapon":
+            self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
+        elif command == "current_armor":
+            self.current_item_command(self.p.arm, "wearing", None, "装着中")
+        elif command == "current_rings":
+            self.current_rings_command()
+        elif command == "status":
+            self.status_command()
+        elif command == "repeat_message":
+            self.repeat_message_command()
+        elif command == "redraw":
+            self.redraw_command()
+        elif command == "legal_space":
+            self.legal_space_command()
+        elif command == "quit":
+            self.quit_command()
         elif command in ("fight", "fight_to_death"):
             direction = self.repeat_dir_or_prompt()
             if direction is not None:
@@ -6125,18 +6159,31 @@ class Game:
             self.dir_pending=None
             return
         if self.btn_inventory():
+            self.record_repeat_command("inventory")
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
         if self.btn_back():
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
-        if self.btn_r():     self.open_help_command(); return
-        if self.kp(getattr(pyxel, "KEY_SLASH", None)): self.open_symbol_identify_command(); return
+        if self.btn_r():
+            self.record_repeat_command("help")
+            self.open_help_command(); return
+        if self.kp(getattr(pyxel, "KEY_SLASH", None)):
+            self.record_repeat_command("symbol_identify")
+            self.open_symbol_identify_command(); return
         if self.key_upper(getattr(pyxel, "KEY_I", None)):
             self.record_repeat_command("picky_inventory")
             self.open_picky_inventory_command(); return
-        if self.key_upper(getattr(pyxel, "KEY_PERIOD", None)): self.stairs_down_command(); return
-        if self.key_upper(getattr(pyxel, "KEY_COMMA", None)): self.stairs_up_command(); return
-        if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
-        if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_PERIOD", None)):
+            self.record_repeat_command("stairs_down")
+            self.stairs_down_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_COMMA", None)):
+            self.record_repeat_command("stairs_up")
+            self.stairs_up_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_V", None)):
+            self.record_repeat_command("version")
+            self.show_version_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_O", None)):
+            self.record_repeat_command("options")
+            self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)):
             self.record_repeat_command("move_on")
             self.start_move_on_command(); return
@@ -6146,27 +6193,36 @@ class Game:
         if self.key_upper(getattr(pyxel, "KEY_F", None)):
             self.record_repeat_command("fight_to_death")
             self.start_fight_command(True); return
-        if self.key_upper(getattr(pyxel, "KEY_Q", None)): self.quit_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_Q", None)):
+            self.record_repeat_command("quit")
+            self.quit_command(); return
         if self.key_upper(getattr(pyxel, "KEY_0", None)):
+            self.record_repeat_command("current_weapon")
             self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
             return
         if self.kp(getattr(pyxel, "KEY_RIGHTBRACKET", None)):
+            self.record_repeat_command("current_armor")
             self.current_item_command(self.p.arm, "wearing", None, "装着中")
             return
         if self.kp(getattr(pyxel, "KEY_EQUALS", None)):
+            self.record_repeat_command("current_rings")
             self.current_rings_command()
             return
         if self.kp(getattr(pyxel, "KEY_AT", None)):
+            self.record_repeat_command("status")
             self.status_command()
             return
         ctrl_command = self.ctrl_command_press()
         if ctrl_command == "repeat":
+            self.record_repeat_command("repeat_message")
             self.repeat_message_command()
             return
         if ctrl_command == "redraw":
+            self.record_repeat_command("redraw")
             self.redraw_command()
             return
         if self.legal_space_command_press():
+            self.record_repeat_command("legal_space")
             self.legal_space_command()
             return
         if self.key_lower(getattr(pyxel, "KEY_A", None)):
@@ -6183,6 +6239,7 @@ class Game:
             self.record_repeat_command("trap")
             self.start_trap_inspect(); return
         if self.key_upper(getattr(pyxel, "KEY_D", None)):
+            self.record_repeat_command("discoveries")
             self.open_discoveries(); return
         aname = self.rogue_command_action()
         if aname:
