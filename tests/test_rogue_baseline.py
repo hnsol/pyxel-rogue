@@ -707,6 +707,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.mon_at(before.x, before.y), before)
         self.assertIs(game.mon_at(after.x, after.y), after)
 
+    def test_rogue_544_zap_polymorph_preserves_monster_pack(self):
+        # Rogue 5.4.4 sticks.c:do_zap() restores tp->t_pack after monsters.c:new_monster().
+        import rogue_sticks
+
+        game = new_game(seed=608)
+        set_open_floor(game)
+        target = monster_at(game.p.x + 1, game.p.y, sym="H", name="hobgoblin")
+        loot = rogue.Item(rogue.CAT_GOLD, 0, qty=17)
+        target.pack = [loot]
+        game.mons = [target]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_POLYMORPH, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(stick.charges, 0)
+        self.assertEqual((target.sym, target.name), ("D", "dragon"))
+        self.assertEqual(target.pack, [loot])
+        self.assertIs(target.pack[0], loot)
+        self.assertIs(game.mons[0], target)
+
     def test_rogue_544_polymorph_restores_mean_from_new_monster_spec(self):
         # Rogue 5.4.4 monsters.c:new_monster() rebuilds flags from extern.c:monsters[].
         game = new_game(seed=606)
@@ -4123,6 +4147,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(moved, [monster])
         self.assertFalse(monster.target)
         self.assertFalse(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
 
     def test_rogue_544_chase_helper_monster_turn_repeats_for_flying_at_distance(self):
         # Rogue 5.4.4 chase.c:runners() calls move_monst() again for ISFLY at distance >= 3.
@@ -5172,9 +5197,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.state, "weak")
         self.assertFalse(game.fight_to_death)
-        self.assertFalse(game.fight_kamikaze)
-        self.assertIsNone(game.fight_target)
-        self.assertEqual(game.fight_dir, (0, 0))
+        self.assertTrue(game.fight_kamikaze)
+        self.assertIs(game.fight_target, target)
+        self.assertEqual(game.fight_dir, (1, 0))
 
     def test_rogue_544_stomach_decrements_food_on_starvation_death_check(self):
         # Rogue 5.4.4 daemons.c:stomach() uses food_left-- in the starvation death check.

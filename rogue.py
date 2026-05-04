@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0220"
+UI_BUILD = "260505_0226"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4629,7 +4629,7 @@ class Game:
 
     def run_runners(self):
         # C: chase.c:runners()
-        rogue_chase.runners(self.mons, self.m_turn, self.clear_fight_to_death)
+        rogue_chase.runners(self.mons, self.m_turn, self.clear_to_death_only)
 
     def clear_hallucination_visuals(self):
         self.hallu_item_syms = {}
@@ -4668,7 +4668,7 @@ class Game:
             self.msg(m)
         if rogue_daemons.stomach_stops_running(old_state, self.p.state):
             self.clear_running_count()
-            self.clear_fight_to_death()
+            self.clear_to_death_only()
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
 
@@ -5044,6 +5044,9 @@ class Game:
         self.fight_dir = (0, 0)
         self.fight_target = None
         self.fight_max_hit = 0
+
+    def clear_to_death_only(self):
+        self.fight_to_death = False
 
     def continue_fight_to_death(self):
         # C: command.c reuses runch while to_death is set, before reading another command.
