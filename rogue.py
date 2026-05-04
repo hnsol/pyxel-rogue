@@ -218,7 +218,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0231"
+UI_BUILD = "260505_0252"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -677,6 +677,22 @@ TRAPS = [
     {"name":"rust trap"}, {"name":"mysterious trap"},
 ]
 RAINBOW = ["red","orange","yellow","green","blue","violet"]
+SYMBOL_DESC_EN = {
+    "|": "wall of a room", "-": "wall of a room", "*": "gold",
+    "%": "a staircase", "+": "door", ".": "room floor",
+    "@": "you", "#": "passage", "^": "trap", "!": "potion",
+    "?": "scroll", ":": "food", ")": "weapon", " ": "solid rock",
+    "]": "armor", ",": "the Amulet of Yendor", "=": "ring",
+    "/": "wand or staff",
+}
+SYMBOL_DESC_JA = {
+    "|": "部屋の壁", "-": "部屋の壁", "*": "金貨",
+    "%": "階段", "+": "扉", ".": "部屋の床",
+    "@": "あなた", "#": "通路", "^": "わな", "!": "水薬",
+    "?": "巻き物", ":": "食料", ")": "武器", " ": "岩",
+    "]": "よろい", ",": "イェンダーの魔除け", "=": "指輪",
+    "/": "杖",
+}
 
 # ===========================================================
 #  Bestiary  (Rogue 5.4.4 extern.c:monsters[])
@@ -741,6 +757,7 @@ class Room:
     def __init__(s,x,y,w,h,flags=None):
         s.x,s.y,s.w,s.h=x,y,w,h
         s.flags=set(flags or ())
+        s.exits=[]
     @property
     def cx(s): return s.x+s.w//2
     @property
@@ -996,9 +1013,10 @@ class DGen:
     )
 
     @staticmethod
-    def gen(depth):
+    def gen(depth, with_hidden=False, room_callback=None):
         # C: new_level.c:new_level()
         tm=[[T_VOID]*MAP_W for _ in range(MAP_H)]; rooms=[]; sr={}
+        hidden_tiles = {} if with_hidden else None
         gone=rogue_rooms.gone_room_indices(GRID_C*GRID_R, RNG)
         for i in range(GRID_C*GRID_R):
             gx,gy=i%GRID_C,i//GRID_C
@@ -1036,12 +1054,19 @@ class DGen:
             if r.is_gone:
                 continue
             if r.is_maze:
-                DGen._maze_room(tm,r)
+                DGen._maze_room(tm,r,depth=depth,hidden_tiles=hidden_tiles)
             else:
                 DGen._room(tm,r)
+            if room_callback is not None:
+                room_callback(tm, rooms, r)
         for a,b in DGen._passage_edges():
-            DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1)
-        DGen._ensure(tm,rooms); return tm,rooms
+            if with_hidden:
+                DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1,depth=depth,hidden_tiles=hidden_tiles)
+            else:
+                DGen._conn(tm,rooms[a],rooms[b],abs(a-b)==1)
+        if with_hidden:
+            return tm, rooms, hidden_tiles
+        return tm,rooms
 
     @staticmethod
     def _passage_edges(audit=False):
@@ -1097,70 +1122,110 @@ class DGen:
                     elif x==r.x or x==r.x+r.w-1: t[y][x]=T_VWALL
                     else: t[y][x]=T_FLOOR
     @staticmethod
-    def _maze_room(t,r):
+    def _maze_room(t,r,depth=None,hidden_tiles=None):
         for y in range(r.y,r.y+r.h):
             for x in range(r.x,r.x+r.w):
                 if in_play_area(x,y):
                     t[y][x]=T_VOID
-        cells=[
-            (x,y)
-            for y in range(r.y+1,r.y+r.h-1,2)
-            for x in range(r.x+1,r.x+r.w-1,2)
-        ]
-        if not cells:
+        if r.w <= 0 or r.h <= 0:
             return
-        start=RNG.choice(cells)
-        t[start[1]][start[0]]=T_CORR
-        seen={start}; stack=[start]
-        while stack:
-            x,y=stack[-1]
-            nxt=[]
-            for dx,dy in ((2,0),(-2,0),(0,2),(0,-2)):
-                nx,ny=x+dx,y+dy
-                if r.x<nx<r.x+r.w-1 and r.y<ny<r.y+r.h-1 and (nx,ny) not in seen:
-                    nxt.append((nx,ny,dx,dy))
-            if not nxt:
-                stack.pop()
-                continue
-            nx,ny,dx,dy=RNG.choice(nxt)
-            t[y+dy//2][x+dx//2]=T_CORR
-            t[ny][nx]=T_CORR
-            seen.add((nx,ny)); stack.append((nx,ny))
+        max_y=r.h-1
+        max_x=r.w-1
+        start_y=(RNG.rnd(r.h)//2)*2
+        start_x=(RNG.rnd(r.w)//2)*2
+
+        def put(oy,ox):
+            x,y=r.x+ox,r.y+oy
+            if in_play_area(x,y):
+                DGen._corr(t,(x,y),depth=depth,hidden_tiles=hidden_tiles)
+
+        def is_pass(oy,ox):
+            x,y=r.x+ox,r.y+oy
+            return (
+                in_play_area(x,y)
+                and (t[y][x]==T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR))
+            )
+
+        def dig(oy,ox):
+            # Rogue 5.4.4 rooms.c:dig() uses reservoir choice via rnd(++cnt).
+            while True:
+                cnt=0
+                picked=None
+                for dy,dx in ((2,0),(-2,0),(0,2),(0,-2)):
+                    ny,nx=oy+dy,ox+dx
+                    if ny < 0 or ny > max_y or nx < 0 or nx > max_x:
+                        continue
+                    if is_pass(ny,nx):
+                        continue
+                    cnt+=1
+                    if RNG.rnd(cnt)==0:
+                        picked=(ny,nx)
+                if picked is None:
+                    return
+                ny,nx=picked
+                if ny==oy:
+                    put(oy, nx + 1 if nx - ox < 0 else nx - 1)
+                else:
+                    put(ny + 1 if ny - oy < 0 else ny - 1, ox)
+                put(ny,nx)
+                dig(ny,nx)
+
+        put(start_y,start_x)
+        dig(start_y,start_x)
     @staticmethod
-    def _conn(t,r1,r2,horiz=None):
+    def _conn(t,r1,r2,horiz=None,depth=None,hidden_tiles=None):
         """Connect two rooms by choosing wall doors first, like Rogue's conn()."""
         if horiz is None:
             horiz = abs(r1.cx-r2.cx) >= abs(r1.cy-r2.cy)
+        # C: passages.c:conn() normalizes r1/r2 to the lower sector before drawing right/down.
+        if (horiz and r1.cx > r2.cx) or (not horiz and r1.cy > r2.cy):
+            r1, r2 = r2, r1
         if horiz:
             if r1.cx <= r2.cx:
-                d1,s=DGen._exit(t,r1,"R",outward=True)
-                d2,e=DGen._exit(t,r2,"L",outward=True)
+                d1,s=DGen._exit(t,r1,"R",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"L",outward=True,hidden_tiles=hidden_tiles)
             else:
-                d1,s=DGen._exit(t,r1,"L",outward=True)
-                d2,e=DGen._exit(t,r2,"R",outward=True)
+                d1,s=DGen._exit(t,r1,"L",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"R",outward=True,hidden_tiles=hidden_tiles)
         else:
             if r1.cy <= r2.cy:
-                d1,s=DGen._exit(t,r1,"D",outward=True)
-                d2,e=DGen._exit(t,r2,"U",outward=True)
+                d1,s=DGen._exit(t,r1,"D",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"U",outward=True,hidden_tiles=hidden_tiles)
             else:
-                d1,s=DGen._exit(t,r1,"U",outward=True)
-                d2,e=DGen._exit(t,r2,"D",outward=True)
-        if d1 is not None: DGen._door(t,d1)
-        if d2 is not None: DGen._door(t,d2)
-        DGen._dig_pass(t,s,e,horiz)
+                d1,s=DGen._exit(t,r1,"U",outward=True,hidden_tiles=hidden_tiles)
+                d2,e=DGen._exit(t,r2,"D",outward=True,hidden_tiles=hidden_tiles)
+        turn_spot = DGen._passage_turn_spot(d1 or s, d2 or e, horiz)
+        if d1 is not None:
+            DGen._door(t,d1,r1,depth=depth,hidden_tiles=hidden_tiles)
+        elif r1.is_gone:
+            DGen._corr(t,s,depth=depth,hidden_tiles=hidden_tiles)
+        if d2 is not None:
+            DGen._door(t,d2,r2,depth=depth,hidden_tiles=hidden_tiles)
+        elif r2.is_gone:
+            DGen._corr(t,e,depth=depth,hidden_tiles=hidden_tiles)
+        DGen._dig_pass(t,d1 or s,d2 or e,horiz,depth=depth,hidden_tiles=hidden_tiles,turn_spot=turn_spot)
     @staticmethod
-    def _exit(t,r,side,outward=True):
+    def _exit(t,r,side,outward=True,hidden_tiles=None):
         if r.is_gone:
             p=DGen._passage_side_point(r,side)
-            DGen._corr(t,p)
             return None,p
         if r.is_maze:
-            p=DGen._maze_exit(t,r,side)
+            p=DGen._maze_exit(t,r,side,hidden_tiles=hidden_tiles)
+            DGen._record_exit(r,p)
             return None,p
         door=DGen._pick_wall_door(t,r,side)
+        DGen._record_exit(r,door)
         x,y=door
         dx,dy={"L":(-1,0),"R":(1,0),"U":(0,-1),"D":(0,1)}[side]
         return door,(x+dx,y+dy) if outward else door
+    @staticmethod
+    def _record_exit(r,p):
+        exits=getattr(r,"exits",None)
+        if exits is None:
+            r.exits=[]
+            exits=r.exits
+        if p not in exits:
+            exits.append(p)
     @staticmethod
     def _passage_side_point(r,side):
         if side=="L": return r.x,r.cy
@@ -1168,67 +1233,100 @@ class DGen:
         if side=="U": return r.cx,r.y
         return r.cx,r.y+r.h-1
     @staticmethod
-    def _maze_exit(t,r,side):
+    def _maze_exit(t,r,side,hidden_tiles=None):
+        # Rogue 5.4.4 passages.c:conn() retries random side-wall
+        # coordinates until an ISMAZE room coordinate already has F_PASS.
         if side in ("L","R"):
-            xs=range(r.x+1,r.x+r.w-1)
-            target_x = r.x if side=="L" else r.x+r.w-1
-            cands=[(x,y) for y in range(r.y+1,r.y+r.h-1) for x in xs if t[y][x]==T_CORR]
-            cands.sort(key=lambda p: abs(p[0]-target_x))
+            limit = max(1, r.h - 2)
+            x = r.x if side == "L" else r.x + r.w - 1
+            while True:
+                y = r.y + RNG.rnd(limit) + 1
+                if in_play_area(x,y) and (t[y][x] == T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)):
+                    if hidden_tiles is None or hidden_tiles.get((x,y)) != T_CORR:
+                        DGen._corr(t,(x,y))
+                    return (x,y)
         else:
-            ys=range(r.y+1,r.y+r.h-1)
-            target_y = r.y if side=="U" else r.y+r.h-1
-            cands=[(x,y) for x in range(r.x+1,r.x+r.w-1) for y in ys if t[y][x]==T_CORR]
-            cands.sort(key=lambda p: abs(p[1]-target_y))
-        p=RNG.choice(cands[:max(1,min(4,len(cands)))]) if cands else DGen._passage_side_point(r,side)
-        DGen._corr(t,p)
-        return p
+            limit = max(1, r.w - 2)
+            y = r.y if side == "U" else r.y + r.h - 1
+            while True:
+                x = r.x + RNG.rnd(limit) + 1
+                if in_play_area(x,y) and (t[y][x] == T_CORR or (hidden_tiles is not None and hidden_tiles.get((x,y)) == T_CORR)):
+                    if hidden_tiles is None or hidden_tiles.get((x,y)) != T_CORR:
+                        DGen._corr(t,(x,y))
+                    return (x,y)
     @staticmethod
     def _pick_wall_door(t,r,side):
+        # Rogue 5.4.4 passages.c:conn() selects a wall coordinate directly
+        # with rnd(width/height - 2) + 1; it does not avoid adjacent doors.
         if side in ("L","R"):
             x = r.x if side=="L" else r.x+r.w-1
-            cands=[(x,y) for y in range(r.y+1,r.y+r.h-1)]
+            return x, r.y + RNG.rnd(r.h - 2) + 1
         else:
             y = r.y if side=="U" else r.y+r.h-1
-            cands=[(x,y) for x in range(r.x+1,r.x+r.w-1)]
-        RNG.shuffle(cands)
-        for p in cands:
-            if DGen._door_ok(t,p): return p
-        return cands[0]
+            return r.x + RNG.rnd(r.w - 2) + 1, y
     @staticmethod
-    def _door_ok(t,p):
+    def _door(t,p,room=None,depth=None,hidden_tiles=None):
         x,y=p
-        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-            nx,ny=x+dx,y+dy
-            if in_map(nx,ny) and t[ny][nx]==T_DOOR:
-                return False
-        return True
+        if not in_play_area(x,y):
+            return
+        if hidden_tiles is not None and depth is not None and rogue_search.secret_feature_hidden(depth, RNG, 5):
+            hidden_tiles[(x,y)]=T_DOOR
+            if room is not None and (y == room.y or y == room.y + room.h - 1):
+                t[y][x]=T_HWALL
+            elif room is not None:
+                t[y][x]=T_VWALL
+            else:
+                t[y][x]=DGen._hidden_door_wall_tile(t,x,y)
+            return
+        t[y][x]=T_DOOR
     @staticmethod
-    def _door(t,p):
+    def _corr(t,p,depth=None,hidden_tiles=None):
         x,y=p
-        if in_play_area(x,y): t[y][x]=T_DOOR
+        if not in_play_area(x,y):
+            return
+        if hidden_tiles is not None and depth is not None and rogue_search.secret_feature_hidden(depth, RNG, 40):
+            hidden_tiles[(x,y)]=T_CORR
+            t[y][x]=T_VOID
+            return
+        t[y][x]=T_CORR
     @staticmethod
-    def _corr(t,p):
-        x,y=p
-        if in_play_area(x,y): t[y][x]=T_CORR
+    def _hidden_door_wall_tile(t,x,y):
+        left = 0<=x-1<MAP_W and t[y][x-1] in (T_FLOOR,T_CORR,T_STAIR)
+        right = 0<=x+1<MAP_W and t[y][x+1] in (T_FLOOR,T_CORR,T_STAIR)
+        return T_VWALL if left or right else T_HWALL
     @staticmethod
-    def _dig_pass(t,s,e,first_horiz):
+    def _passage_turn_spot(s,e,first_horiz):
+        x,y=s; ex,ey=e
+        distance=abs(x-ex)-1 if first_horiz else abs(y-ey)-1
+        return RNG.rnd(distance - 1) + 1
+    @staticmethod
+    def _dig_pass(t,s,e,first_horiz,depth=None,hidden_tiles=None,turn_spot=None):
+        # Rogue 5.4.4 passages.c:conn() moves one step at a time and
+        # turns when the remaining straight-line distance reaches turn_spot.
         x,y=s; ex,ey=e
         if first_horiz:
-            turn_x=DGen._turn_coord(x,ex)
-            DGen._hl(t,x,turn_x,y)
-            DGen._vl(t,y,ey,turn_x)
-            DGen._hl(t,turn_x,ex,ey)
+            dx,dy=(1 if x < ex else -1),0
+            tx,ty=0,(1 if y < ey else -1)
+            distance=abs(x-ex)-1
+            turn_distance=abs(y-ey)
         else:
-            turn_y=DGen._turn_coord(y,ey)
-            DGen._vl(t,y,turn_y,x)
-            DGen._hl(t,x,ex,turn_y)
-            DGen._vl(t,turn_y,ey,ex)
-    @staticmethod
-    def _turn_coord(a,b):
-        lo,hi=min(a,b),max(a,b)
-        if hi-lo <= 2:
-            return RNG.randint(lo,hi) if a!=b else a
-        return RNG.randint(lo+1,hi-1)
+            dx,dy=0,(1 if y < ey else -1)
+            tx,ty=(1 if x < ex else -1),0
+            distance=abs(y-ey)-1
+            turn_distance=abs(x-ex)
+        if turn_spot is None:
+            turn_spot = RNG.rnd(distance - 1) + 1
+        while distance > 0:
+            x += dx
+            y += dy
+            if distance == turn_spot:
+                while turn_distance > 0:
+                    DGen._corr(t,(x,y),depth=depth,hidden_tiles=hidden_tiles)
+                    x += tx
+                    y += ty
+                    turn_distance -= 1
+            DGen._corr(t,(x,y),depth=depth,hidden_tiles=hidden_tiles)
+            distance -= 1
     @staticmethod
     def _hl(t,x1,x2,y):
         if not(PLAY_Y_MIN<=y<=PLAY_Y_MAX): return
@@ -1243,23 +1341,6 @@ class DGen:
             if not(PLAY_Y_MIN<=y<=PLAY_Y_MAX): continue
             v=t[y][x]
             if v==T_VOID or v==T_CORR: t[y][x]=T_CORR
-    @staticmethod
-    def _ensure(t,rooms):
-        rooms=[r for r in rooms if r.usable]
-        if len(rooms)<=1: return
-        def flood(sx,sy):
-            vis=set();stk=[(sx,sy)]
-            while stk:
-                x,y=stk.pop()
-                if (x,y) in vis or not(0<=x<MAP_W and 0<=y<MAP_H): continue
-                if t[y][x]==T_VOID: continue
-                vis.add((x,y))
-                for dx,dy in((-1,0),(1,0),(0,-1),(0,1)): stk.append((x+dx,y+dy))
-            return vis
-        base=flood(rooms[0].cx,rooms[0].cy)
-        for r in rooms[1:]:
-            if(r.cx,r.cy) not in base:
-                DGen._conn(t,rooms[0],r); base=flood(rooms[0].cx,rooms[0].cy)
 
 # ===========================================================
 #  Item factory
@@ -1478,22 +1559,48 @@ class Game:
         return self.random_thing_sym()
 
     def visible_tile_sym(self, x, y, tile):
-        if self.p.hallucinating > 0 and tile == T_STAIR:
+        # Rogue 5.4.4 misc.c:trip_ch() keeps STAIRS real after seenstairs is set.
+        if self.p.hallucinating > 0 and tile == T_STAIR and not getattr(self, "seen_stairs", False):
+            if (x, y) in self.hallu_tile_syms:
+                return self.hallu_tile_syms[(x, y)]
             return self.hallucination_thing_sym()
         return TILE_CH.get(tile, (" ", 0))[0]
 
+    def stairs_seen_on_map(self):
+        # Rogue 5.4.4 potions.c:seen_stairs().
+        if self.tm[self.p.y][self.p.x] == T_STAIR:
+            return True
+        for y, row in enumerate(self.tm):
+            for x, tile in enumerate(row):
+                if tile == T_STAIR and ((x, y) in self.visible or (x, y) in self.explored):
+                    return True
+        for monster in self.mons:
+            if not getattr(monster, "alive", False) or self.tm[monster.y][monster.x] != T_STAIR:
+                continue
+            if self.monster_is_seen(monster) and getattr(monster, "running", False):
+                return True
+            if self.can_detect_monsters():
+                return True
+        return False
+
     def visible_item_sym(self, item):
         if self.p.hallucinating > 0:
+            if id(item) in self.hallu_item_syms:
+                return self.hallu_item_syms[id(item)]
             return self.hallucination_thing_sym()
         return item.sym
 
     def visible_monster_sym(self, monster):
         if self.p.hallucinating > 0:
+            if id(monster) in self.hallu_monster_syms:
+                return self.hallu_monster_syms[id(monster)]
             return chr(ord("A") + rnd(26))
         return getattr(monster, "disguise", monster.sym)
 
     def detected_monster_sym(self, monster):
         if self.p.hallucinating > 0:
+            if id(monster) in self.hallu_detected_monster_syms:
+                return self.hallu_detected_monster_syms[id(monster)]
             return chr(ord("A") + rnd(26))
         return monster.sym
 
@@ -1551,6 +1658,25 @@ class Game:
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
+        self.identify_symbol_pending = False
+        self.fight_kamikaze_pending = False
+        self.fight_to_death = False
+        self.fight_kamikaze = False
+        self.fight_dir = (0, 0)
+        self.fight_target = None
+        self.fight_max_hit = 0
+        self.last_repeat_command = None
+        self.last_repeat_dir = None
+        self.last_repeat_item = None
+        self.prev_repeat_command = None
+        self.prev_repeat_dir = None
+        self.prev_repeat_item = None
+        self.repeat_command_active = False
+        self.count_prefix_active = False
+        self.count_prefix_value = 0
+        self.count_repeat_command = None
+        self.count_repeat_remaining = 0
+        self.count_repeat_dir = None
         self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
@@ -1576,6 +1702,11 @@ class Game:
         self.options = {"tombstone": True, "name": self.player_name}
         self.max_depth = 0
         self.no_food = 0
+        self.seen_stairs = False
+        self.hallu_item_syms = {}
+        self.hallu_tile_syms = {}
+        self.hallu_monster_syms = {}
+        self.hallu_detected_monster_syms = {}
         self.wander_timer = 0
         self.wander_between = 0
         self.delayed_actions = rogue_daemons.DelayedActionTable()
@@ -1583,7 +1714,6 @@ class Game:
         self.daemons = self.delayed_actions.daemons
         self.daemons.start("runners", rogue_daemons.AFTER)
         self.daemons.start("doctor", rogue_daemons.AFTER)
-        self.daemons.start("stomach", rogue_daemons.AFTER)
         self.haste_half_turn = False
         self.haste_no_command_half_turn = False
         self.result_scores = []
@@ -1592,6 +1722,7 @@ class Game:
         self.result_outcome = None
         self.descend()
         self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
+        self.daemons.start("stomach", rogue_daemons.AFTER)
         self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
 
@@ -1755,18 +1886,43 @@ class Game:
         self.p.held_by = None
         self.p.depth += 1
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
-        self.tm, self.rooms = DGen.gen(self.p.depth)
+        self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
+        def populate_room(tm, rooms, room):
+            self.tm = tm
+            self.rooms = rooms
+            self._populate_initial_room(room)
+        self.tm, self.rooms, level_hidden_tiles = DGen.gen(
+            self.p.depth, with_hidden=True, room_callback=populate_room
+        )
+        self.hidden_tiles.update(level_hidden_tiles)
         self.no_food = rogue_things.no_food_after_new_level(getattr(self, "no_food", 0))
         usable_rooms = self.usable_rooms()
-        self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         self.visible=set(); self.explored=set()
+        self.seen_stairs = False
+        self.clear_hallucination_visuals()
         self.wander_timer=self.fuses.remaining("swander")
-        px,py = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
-        self.p.x,self.p.y = px,py
-        sr=RNG.choice(usable_rooms); sx,sy=self.random_room_tile(sr, WALKABLE); self.tm[sy][sx]=T_STAIR
-        self._spawn_room_gold(); self._spawn_mons(); self._spawn_items(); self._spawn_amulet()
-        self._hide_secret_features(); self._spawn_traps()
+        self._spawn_items(); self._spawn_amulet()
+        self._spawn_traps()
+        stair_pos = self.find_floor_pos(
+            None,
+            monst=False,
+            occupied={(i.x,i.y) for i in self.gitems},
+        )
+        if stair_pos is None:
+            stair_pos = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
+        sx,sy=stair_pos
+        self.tm[sy][sx]=T_STAIR
+        hero_pos = self.find_floor_pos(
+            None,
+            monst=True,
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
+        )
+        if hero_pos is None:
+            hero_pos = self.random_room_tile(RNG.choice(usable_rooms), WALKABLE)
+        self.p.x,self.p.y = hero_pos
         self._center_cam(); self.update_fov()
+        if self.p.hallucinating > 0:
+            self.run_visuals()
 
     def usable_rooms(self):
         return [room for room in self.rooms if room.usable] or self.rooms
@@ -1793,11 +1949,10 @@ class Game:
             return None
         if not usable:
             return rooms[0]
-        for _ in range(max(1, len(rooms) * 4)):
+        while True:
             room = rooms[RNG.rnd(len(rooms))]
             if room.usable:
                 return room
-        return usable[0]
 
     def source_rnd_pos(self, room):
         # C: rooms.c:rnd_pos().
@@ -1805,21 +1960,40 @@ class Game:
             return room.inner()
         return room.x + RNG.rnd(room.w - 2) + 1, room.y + RNG.rnd(room.h - 2) + 1
 
+    def find_floor_has_candidate(self, room=None, monst=False, avoid=(), occupied=()):
+        rooms = [room] if room is not None else self.usable_rooms()
+        avoid = set(avoid or ())
+        occupied = set(occupied or ())
+        for test_room in rooms:
+            if test_room is None:
+                continue
+            for y in range(test_room.y + 1, test_room.y + max(1, test_room.h - 1)):
+                for x in range(test_room.x + 1, test_room.x + max(1, test_room.w - 1)):
+                    if not in_map(x, y) or (x, y) in avoid:
+                        continue
+                    tile = self.tm[y][x]
+                    if monst:
+                        if (x, y) not in occupied and rogue_io.step_ok_tile(tile, TILE_CH):
+                            return True
+                    else:
+                        compchar = T_CORR if test_room.is_maze else T_FLOOR
+                        if tile == compchar and (x, y) not in occupied:
+                            return True
+        return False
+
     def find_floor_pos(self, room=None, limit=0, monst=False, avoid=(), occupied=()):
         # C: rooms.c:find_floor().
         pickroom = room is None
         avoid = set(avoid or ())
         occupied = set(occupied or ())
         count = limit
-        attempts = 0
+        if not limit and not self.find_floor_has_candidate(room, monst, avoid, occupied):
+            return None
         while True:
             if limit:
                 if count == 0:
                     return None
                 count -= 1
-            elif attempts > MAP_W * MAP_H * max(1, len(self.rooms)):
-                return None
-            attempts += 1
             test_room = self.source_rnd_room() if pickroom else room
             if test_room is None:
                 return None
@@ -1846,21 +2020,31 @@ class Game:
         # C: rooms.c:do_rooms()
         d=self.p.depth
         for rm in self.usable_rooms():
-            if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(rm)):
-                continue
-            pos = self.find_floor_pos(
-                rm,
-                monst=True,
-                avoid={(self.p.x,self.p.y)},
-                occupied={(m.x,m.y) for m in self.mons if m.alive},
-            )
-            if pos is None:
-                continue
-            mx,my=pos
-            e=self.random_monster_spec(d)
-            monster=self.new_monster_from_spec(mx,my,e)
-            self.give_pack(monster)
-            self.mons.append(monster)
+            self._spawn_mon_for_room(rm, d)
+
+    def _populate_initial_room(self, room):
+        # C: rooms.c:do_rooms() places room gold and monster before do_passages().
+        self._spawn_room_gold_for_room(room)
+        self._spawn_mon_for_room(room, self.p.depth)
+
+    def _spawn_mon_for_room(self, room, depth):
+        if not room.usable:
+            return
+        if not rogue_dungeon.should_place_room_monster(RNG, self.room_has_gold(room)):
+            return
+        pos = self.find_floor_pos(
+            room,
+            monst=True,
+            avoid={(self.p.x,self.p.y)},
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
+        )
+        if pos is None:
+            return
+        mx,my=pos
+        e=self.random_monster_spec(depth)
+        monster=self.new_monster_from_spec(mx,my,e)
+        self.give_pack(monster)
+        self.mons.append(monster)
 
     def room_has_gold(self, room):
         return any(
@@ -1939,13 +2123,14 @@ class Game:
         # C: monsters.c:wanderer() loops until roomin(cp) != proom.
         player_room = self.room_containing(self.p.x, self.p.y)
         occupied = {(m.x, m.y) for m in self.mons if m.alive}
-        for _ in range(MAP_W * MAP_H * max(1, len(self.rooms))):
+        if not self.wanderer_floor_candidates():
+            return None
+        while True:
             pos = self.find_floor_pos(None, monst=True, occupied=occupied)
             if pos is None:
                 return None
             if self.room_containing(pos[0], pos[1]) is not player_room:
                 return pos
-        return None
 
     def _spawn_items(self):
         # C: new_level.c:put_things()
@@ -1970,21 +2155,27 @@ class Game:
 
     def _spawn_room_gold(self):
         # C: rooms.c:do_rooms()
-        d=self.p.depth
         for rm in self.usable_rooms():
-            if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
-                continue
-            qty=goldcalc(d)
-            pos = self.find_floor_pos(
-                rm,
-                monst=False,
-                avoid={(self.p.x,self.p.y)},
-                occupied={(i.x,i.y) for i in self.gitems},
-            )
-            if pos is not None:
-                ix,iy=pos
-                g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
-                self.gitems.append(g)
+            self._spawn_room_gold_for_room(rm)
+
+    def _spawn_room_gold_for_room(self, room):
+        # C: rooms.c:do_rooms()
+        if not room.usable:
+            return
+        d=self.p.depth
+        if not rogue_dungeon.should_place_room_gold(RNG, self.p.has_amulet, d, getattr(self, "max_depth", d)):
+            return
+        qty=goldcalc(d)
+        pos = self.find_floor_pos(
+            room,
+            monst=False,
+            avoid={(self.p.x,self.p.y)},
+            occupied={(i.x,i.y) for i in self.gitems},
+        )
+        if pos is not None:
+            ix,iy=pos
+            g=Item(CAT_GOLD,0); g.qty=qty; g.x,g.y=ix,iy
+            self.gitems.append(g)
 
     def _spawn_treasure_room(self, room=None):
         # Rogue 5.4.4 new_level.c:treas_room().
@@ -2066,7 +2257,7 @@ class Game:
         if n <= 0:
             return
         for _ in range(n):
-            for _ in range(MAP_W * MAP_H * max(1, len(self.rooms))):
+            while True:
                 pos = self.find_floor_pos(
                     None,
                     monst=False,
@@ -2143,9 +2334,14 @@ class Game:
         # C: passages.c:numpass() numbers F_PASS cells and door/secret-door exits.
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return False
+        if self.is_maze_passage_floor(x, y):
+            return True
         return rogue_passages.is_number_cell(
             self.tm[y][x], self.hidden_tiles.get((x,y)), T_CORR, T_DOOR
         )
+    def is_maze_passage_floor(self,x,y):
+        # C: F_PASS remains set if chase.c:do_chase() restores a maze PASSAGE char to FLOOR.
+        return self.tm[y][x] == T_FLOOR and getattr(self.room_containing(x, y), "is_maze", False)
     def is_passage_exit_cell(self,x,y):
         # C: passages.c:numpass() records DOOR and non-F_REAL '|'/'-' as exits.
         return 0<=x<MAP_W and 0<=y<MAP_H and rogue_passages.is_exit_cell(
@@ -2165,7 +2361,7 @@ class Game:
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return None
         tile=self.tm[y][x]
-        if tile==T_CORR or (actor and tile==T_DOOR):
+        if tile==T_CORR or self.is_maze_passage_floor(x, y) or (actor and tile==T_DOOR):
             return self.passage_component(x,y) or "corridor"
         if tile==T_DOOR:
             return self.room_near_door(x,y) or "corridor"
@@ -2176,7 +2372,7 @@ class Game:
             if r: return r
         return None
     def room_exits(self,room):
-        exits=[]
+        exits=list(getattr(room,"exits",[]))
         for x in range(room.x,room.x+room.w):
             for y in (room.y,room.y+room.h-1):
                 if self.is_passage_exit_cell(x,y):
@@ -2189,7 +2385,16 @@ class Game:
     def passage_exits(self,passage):
         if not (isinstance(passage, tuple) and len(passage) == 2 and passage[0] == "passage"):
             return []
-        return rogue_passages.passage_exits(passage[1], self.is_passage_exit_cell)
+        roots = []
+        for room in self.rooms:
+            roots.extend(getattr(room, "exits", []))
+        return rogue_passages.passage_exits(
+            passage[1],
+            self.is_passage_exit_cell,
+            roots,
+            lambda px, py: 0<=px<MAP_W and 0<=py<MAP_H,
+            self.is_passage_number_cell,
+        )
     def dist2(self,a,b):
         # C: chase.c:dist()
         return rogue_chase.dist_points(a, b)
@@ -2437,6 +2642,8 @@ class Game:
 
     def remove_monster(self,m,was_kill=False):
         # C: fight.c:remove_mon()
+        if getattr(m, "target", False):
+            self.clear_fight_to_death()
         if rogue_fight.remove_monster_pack_should_fall(was_kill):
             for item in list(getattr(m, "pack", [])):
                 pos=self.fall_position(m.x,m.y)
@@ -2489,10 +2696,54 @@ class Game:
         if rogue_monsters.is_greedy(m) and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
 
-    def wake_visible_monsters(self):
+    def look_scan_allows_cell(self, x, y):
+        # C: misc.c:look() 3x3 scan gates: bounds, blank cells, F_PASS, and diagonal passages.
+        if not in_play_area(x, y):
+            return False
+        if self.p.blind <= 0 and x == self.p.x and y == self.p.y:
+            return False
+        tile = self.tm[y][x]
+        if tile == T_VOID:
+            return False
+        hero_tile = self.tm[self.p.y][self.p.x]
+
+        def pass_flag(cx, cy, ctile):
+            return ctile == T_CORR or self.is_maze_passage_floor(cx, cy)
+
+        cell_pass = pass_flag(x, y, tile)
+        hero_pass = pass_flag(self.p.x, self.p.y, hero_tile)
+        if hero_tile != T_DOOR and tile != T_DOOR and cell_pass != hero_pass:
+            return False
+        if (cell_pass or tile == T_DOOR) and (hero_pass or hero_tile == T_DOOR):
+            if x != self.p.x and y != self.p.y:
+                if not (
+                    rogue_io.step_ok_tile(self.tm[y][self.p.x], TILE_CH)
+                    or rogue_io.step_ok_tile(self.tm[self.p.y][x], TILE_CH)
+                ):
+                    return False
+        return True
+
+    def wake_look_monsters(self):
         for mo in self.mons:
-            if (mo.x,mo.y) in self.visible:
-                self.wake_monster(mo)
+            if abs(mo.x - self.p.x) > 1 or abs(mo.y - self.p.y) > 1:
+                continue
+            if not self.look_scan_allows_cell(mo.x, mo.y):
+                continue
+            if self.p.see_monsters > 0 and rogue_monsters.is_invisible(mo):
+                continue
+            self.wake_monster(mo)
+
+    def wake_visible_monsters(self):
+        # Kept for command-path compatibility; Rogue 5.4.4 misc.c:look(TRUE) wakes
+        # monsters from its 3x3 scan, not from the whole Pyxel visible set.
+        self.wake_look_monsters()
+
+    def command_look(self):
+        # C: command.c:command() calls misc.c:look(TRUE) once before dispatch.
+        if getattr(self, "command_look_done", False):
+            return
+        self.wake_visible_monsters()
+        self.command_look_done = True
 
     def can_see_monster(self, m):
         # C: chase.c:see_monst()
@@ -2521,11 +2772,14 @@ class Game:
         # C: fight.c:attack()
         self.dashing, self.p.quiet = rogue_fight.attack_activity_state()
         self.clear_running_count()
+        if getattr(self, "fight_to_death", False) and not getattr(m, "target", False):
+            self.clear_fight_to_death()
         if rogue_fight.attack_reveals_disguised_xeroc(
             rogue_monsters.is_disguised_xeroc(m), self.p.blind > 0
         ):
             rogue_monsters.reveal_disguise(m)
         mn=self.combat_monster_name(m,upper=True)
+        old_hp = self.p.hp
         hit,dmg=self.roll_monster_attack(m)
         if hit:
             if dmg:
@@ -2536,6 +2790,11 @@ class Game:
                 if not self.death_cause:
                     self.death_cause=f"killed by a {m.name}"
                 return
+            if getattr(self, "fight_to_death", False) and not getattr(self, "fight_kamikaze", False):
+                loss = max(0, old_hp - self.p.hp)
+                self.fight_max_hit = max(getattr(self, "fight_max_hit", 0), loss)
+                if self.p.hp <= self.fight_max_hit:
+                    self.fight_to_death = False
             if rogue_fight.attack_specials_allowed(rogue_monsters.is_cancelled(m)):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
                     self.rust_armor()
@@ -2629,7 +2888,7 @@ class Game:
         rer=self.room_for_ai(m.x,m.y,actor=False) if door else self.room_for_ai(m.x,m.y,actor=True)
         ree=rogue_chase.destination_room(
             dest == (self.p.x, self.p.y),
-            self.room_for_ai(self.p.x,self.p.y,actor=True),
+            self.room_for_ai(self.p.x,self.p.y,actor=False),
             self.room_for_ai(dest[0],dest[1],actor=False),
         )
         chase_dest=dest
@@ -2657,10 +2916,10 @@ class Game:
 
     def current_chase_dest(self,m):
         # C: chase.c:do_chase() uses the existing t_dest; find_dest() is called by runto()/relocate().
-        if isinstance(m.dest, tuple):
-            if self.gi_at(*m.dest):
-                return m.dest
+        if rogue_monsters.is_greedy(m) and self.room_gold_target(m) is None:
             m.dest=DEST_PLAYER
+        if isinstance(m.dest, tuple):
+            return m.dest
         if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:
@@ -2687,6 +2946,8 @@ class Game:
         self.clear_running_count()
         self.p.quiet=0
         self.fire_bolt_from(m.x,m.y,sx,sy,"flame")
+        if getattr(self, "fight_to_death", False) and not getattr(m, "target", False):
+            self.clear_fight_to_death()
         return True
 
     def room_gold_target(self,m):
@@ -2701,10 +2962,6 @@ class Game:
 
     def find_dest(self,m):
         # C: chase.c:find_dest()
-        if isinstance(m.dest, tuple):
-            if self.gi_at(*m.dest):
-                return m.dest
-            m.dest=DEST_PLAYER
         if rogue_monsters.is_greedy(m) and m.dest==DEST_GOLD:
             target=rogue_chase.greedy_destination(True, m.dest, self.room_gold_target(m), DEST_PLAYER)
             if target != DEST_PLAYER:
@@ -2719,7 +2976,7 @@ class Game:
             self.room_for_ai(self.p.x, self.p.y, actor=True),
             (m.x, m.y) in self.visible and self.can_see_monster(m),
             self.gitems,
-            {mo.dest for mo in self.mons if mo is not m},
+            {mo.dest for mo in self.mons},
             lambda item: self.room_for_ai(item.x, item.y),
             lambda item: (item.x, item.y),
             self.is_scare_monster,
@@ -2736,6 +2993,8 @@ class Game:
         if gi:
             self.gitems.remove(gi)
             m.pack.append(gi)
+            room = self.room_for_ai(m.x, m.y, actor=True)
+            self.tm[dest[1]][dest[0]] = T_CORR if getattr(room, "is_gone", False) else T_FLOOR
             self.find_dest(m)
             return
         if m.sym!="F":
@@ -2751,9 +3010,24 @@ class Game:
         )
 
     def can_monster_step(self,m,x,y):
-        if (x,y)==(self.p.x,self.p.y):
+        # C: move.c:rndmove() gates random monster moves with winat()/step_ok().
+        if not (0 <= x < MAP_W and 0 <= y < MAP_H):
+            return False
+        is_hero_pos = (x, y) == (self.p.x, self.p.y)
+        ch = "@" if is_hero_pos else self.zap_winat_char(x, y)
+        if not self.zap_step_ok_char(ch):
+            return False
+        if is_hero_pos:
             return True
-        if not self.walkable(x,y) or self.mon_at(x,y):
+        gi=self.gi_at(x,y)
+        return not (gi and self.is_scare_monster(gi))
+
+    def can_player_rndmove_step(self,x,y):
+        # C: move.c:rndmove() checks winat()/step_ok() and rejects S_SCARE.
+        if not (0 <= x < MAP_W and 0 <= y < MAP_H):
+            return False
+        ch = self.zap_winat_char(x, y)
+        if not self.zap_step_ok_char(ch):
             return False
         gi=self.gi_at(x,y)
         return not (gi and self.is_scare_monster(gi))
@@ -2775,20 +3049,19 @@ class Game:
             diagonal_ok=self.diag_ok(m.x,m.y,nx,ny)
             if not diagonal_ok:
                 continue
-            if (nx,ny)==(px,py):
-                if dest==(px,py):
-                    self.m_attack(m); return "attack"
-                continue
+            is_hero_pos = (nx,ny)==(px,py)
             gi=self.gi_at(nx,ny)
             if not rogue_chase.is_chase_candidate(
                 diagonal_ok,
                 self.walkable(nx,ny) and not self.mon_at(nx,ny),
-                bool(gi and self.is_scare_monster(gi)),
+                bool(not is_hero_pos and gi and self.is_scare_monster(gi)),
                 False,
             ):
                 continue
             d=self.dist2((nx,ny),dest)
             best,bestd,ties=rogue_chase.choose_chase_step(best,bestd,ties,(nx,ny),d,rnd)
+        if best==(px,py):
+            self.m_attack(m); return "attack"
         if best!=(m.x,m.y):
             m.x,m.y=best
         return "move" if rogue_chase.chase_continues(bestd, best, (px, py)) else "arrived"
@@ -2847,8 +3120,10 @@ class Game:
             if rogue_potions.do_pot_fuse_action(p.hallucinating > 0) == "lengthen":
                 self.fuses.lengthen("come_down", duration)
             else:
+                self.seen_stairs = self.stairs_seen_on_map()
                 if p.see_monsters > 0:
                     p.see_monsters = rogue_potions.turn_see_state(False, p.see_monsters)
+                self.daemons.start("visuals", rogue_daemons.BEFORE)
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
             self.msg("potions.oh_wow_everything_seems_so_cosmic")
@@ -2966,6 +3241,8 @@ class Game:
         )
         if not should_clear:
             return
+        self.daemons.kill("visuals")
+        self.clear_hallucination_visuals()
         self.p.hallucinating = 0
         if message_key:
             self.msg(message_key)
@@ -3122,9 +3399,11 @@ class Game:
         return result
 
     def open_discoveries(self):
+        self.command_look()
         self.disc_scroll = 0
         self.disc_lines = self._disc_lines(RNG.rnd)
         self.st = ST_DISC
+        self.command_look_done = False
 
     def identify_item(self, it):
         # Backward-compat alias for set_know().
@@ -3195,10 +3474,9 @@ class Game:
             rogue_scrolls.sleep_scroll(p, rnd, SLEEPTIME); self.dashing=False; self.msg("scrolls.you_fall_asleep")
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
-            r=RNG.choice(self.usable_rooms()); p.x,p.y=self.random_room_tile(r, WALKABLE); self.update_fov(); self._center_cam()
+            self.teleport_player()
             if rogue_scrolls.teleport_identifies(old_room, self.room_at(p.x, p.y)):
                 self.ident.sk[it.kind]=True
-            self.finish_teleport()
         elif nm=="create monster":
             candidates = []
             for dy in (-1,0,1):
@@ -3206,7 +3484,8 @@ class Game:
                     if dx==0 and dy==0:
                         continue
                     nx,ny=p.x+dx,p.y+dy
-                    if self.walkable(nx,ny) and not self.mon_at(nx,ny):
+                    ch = self.zap_winat_char(nx, ny)
+                    if self.zap_step_ok_char(ch):
                         gi=self.gi_at(nx,ny)
                         if gi and self.is_scare_scroll(gi):
                             continue
@@ -3216,7 +3495,8 @@ class Game:
                 nx,ny=pick
                 spec = self.monster_spec_for_sym(rogue_monsters.randmonster(p.depth, RNG.rnd, wander=False))
                 if spec:
-                    self.mons.append(self.new_monster_from_spec(nx,ny,spec))
+                    # C: monsters.c:new_monster() attach(mlist, tp) puts the new monster at list head.
+                    self.mons.insert(0, self.new_monster_from_spec(nx,ny,spec))
             else:
                 self.msg("scrolls.you_hear_a_faint_cry_of_anguish_in_the_distance")
         elif nm=="magic mapping":
@@ -3332,10 +3612,14 @@ class Game:
         self.dash_steps = 0
 
     def polymorph_monster(self,m):
-        # C: sticks.c (WS_POLYMORPH)
+        # C: sticks.c:do_zap(WS_POLYMORPH) detach(tp), then monsters.c:new_monster()
+        # attach(mlist, tp) puts the rebuilt monster at list head.
         pack=m.pack
         spec=self.monster_spec_for_sym(chr(RNG.rnd(26)+ord("A")))
         if spec:
+            if m in self.mons:
+                self.mons.remove(m)
+                self.mons.insert(0,m)
             self.set_monster_from_spec(m,spec)
             m.pack=pack
 
@@ -3450,6 +3734,7 @@ class Game:
         source_monster=self.mon_at(start_x,start_y) if hit_hero else None
         changed=False
         steps=0
+        used=False
         bounces=0
         while steps < BOLT_LENGTH and bounces < BOLT_LENGTH * 2:
             x+=dx; y+=dy
@@ -3461,6 +3746,7 @@ class Game:
                     if self.p.hp<=0 and not self.death_cause:
                         killer=rogue_sticks.bolt_death_cause(hero_started, source_monster.name if source_monster else None)
                         self.death_cause=f"killed by a {killer}"
+                    used=True
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True
                 self.msg("sticks.the_value_whizzes_by_you", value=name)
@@ -3472,11 +3758,17 @@ class Game:
                     changed=not changed
                     if not self.monster_save_throw(VS_MAGIC,target):
                         if target.sym=="D" and name=="flame":
+                            used=True
                             self.msg("sticks.the_flame_bounces")
+                            return True
                         else:
                             self.hit_monster_with_bolt(target,name)
-                        return True
-                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(hero_started)
+                            return True
+                    wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
+                        hero_started,
+                        self.zap_winat_char(x, y),
+                        getattr(target, "disguise", target.sym),
+                    )
                     if wake_miss:
                         self.runto(target)
                     if show_miss:
@@ -3491,7 +3783,7 @@ class Game:
                 self.msg("sticks.the_value_bounces", value=name)
                 continue
             steps+=1
-        return False
+        return used
 
     def zap_stick(self,it,dx,dy):
         # C: sticks.c:do_zap()
@@ -3832,6 +4124,7 @@ class Game:
         p = self.p
         if p.held_by and not p.held_by.alive:
             p.held_by=None
+        self.command_look()
         if p.no_move>0:
             p.no_move-=1
             self.msg("move.you_are_still_stuck_in_the_bear_trap")
@@ -3842,43 +4135,67 @@ class Game:
                 (p.x, p.y),
                 rnd,
                 lambda src, dst: self.diag_ok(src[0], src[1], dst[0], dst[1])
-                and (dst == src or self.walkable(dst[0], dst[1]) or self.mon_at(dst[0], dst[1])),
+                and (dst == src or self.can_player_rndmove_step(dst[0], dst[1])),
             )
             if (nx, ny) == (p.x, p.y):
                 self.dashing = False
+                self.clear_to_death_only()
+                self.command_look_done = False
                 return False
             dx, dy = nx - p.x, ny - p.y
         if dx or dy:
             p.facing=(dx,dy)
         nx, ny = p.x+dx, p.y+dy
         if not self.diag_ok(p.x,p.y,nx,ny):
+            self.dashing = False
+            self.command_look_done = False
             return False
-        target_is_holder = p.held_by is not None and (nx, ny) == (p.held_by.x, p.held_by.y)
-        if rogue_move.held_move_blocked(p.held_by is not None, target_is_holder):
+        m = self.mon_at(nx, ny)
+        gi = self.gi_at(nx, ny)
+        hidden_floor_trap = (
+            m is None
+            and gi is None
+            and (nx, ny) in self.traps
+            and self.tm[ny][nx] == T_FLOOR
+        )
+        target_is_flytrap = m is not None and m.sym == "F"
+        if (
+            not hidden_floor_trap
+            and rogue_move.held_move_blocked(p.held_by is not None, target_is_flytrap)
+        ):
             self.msg("move.you_are_being_held")
             self.end_turn()
             return True
-        m = self.mon_at(nx, ny)
         if m: self.p_attack(m); self.end_turn(); return True
         if self.walkable(nx, ny):
+            if self.tm[ny][nx] in (T_DOOR, T_STAIR) or gi:
+                self.dashing = False
+            old_pos = (p.x, p.y)
             p.x, p.y = nx, ny
-            trapped = (nx,ny) in self.traps
+            if self.tm[ny][nx] == T_STAIR:
+                self.seen_stairs = True
+            trapped = gi is None and (nx,ny) in self.traps and self.tm[ny][nx] in (T_FLOOR, T_TRAP)
             if trapped and p.levitating <= 0:
-                self.trigger_trap(nx,ny)
+                self.trigger_trap(nx, ny, arrow_origin=old_pos)
                 if not self.p.alive or self.st!=ST_PLAY:
                     self.end_turn()
                     return True
-            gi = self.gi_at(nx,ny)
-            if gi and self.auto_pickup and not trapped:
+            move_on = getattr(self, "move_on_once", False)
+            if gi and move_on and not trapped:
+                self.msg("pack.moved_onto_item", item=self.ident.name(gi))
+            elif gi and self.auto_pickup and not trapped:
                 self.pickup_at(nx,ny)
             elif gi and not trapped:
                 self.msg("pyxel.see_item_here", item=self.ident.name(gi))
-            self.update_fov(); self.wake_visible_monsters()
+            self.update_fov()
             self.update_cam(); self.end_turn(); return True
+        self.command_look_done = False
         return False
 
     def do_search(self, front_only=False, spend_turn=True, quiet_fail=False):
         # C: command.c:search()
+        if spend_turn:
+            self.command_look()
         p=self.p
         dirs=[p.facing] if front_only else list(DIR8.values())
         found=False
@@ -3891,7 +4208,12 @@ class Game:
                     found = self.reveal_hidden_at(nx,ny) or found
                 elif hidden==T_CORR and rogue_search.reveals_secret_passage(rnd(3+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
-                elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rogue_search.reveals_trap(rnd(2+probinc), probinc):
+                elif (
+                    (nx,ny) in self.traps
+                    and self.tm[ny][nx] == T_FLOOR
+                    and not self.gi_at(nx, ny)
+                    and rogue_search.reveals_trap(rnd(2+probinc), probinc)
+                ):
                     trap = self.traps[(nx,ny)]
                     found = self.reveal_trap_at(nx,ny) or found
                     if found:
@@ -3914,25 +4236,25 @@ class Game:
     def save_vs_poison(self):
         return rogue_monsters.save_throw(0,self.p.level,RNG.roll)
 
-    def drop_arrow_at_player(self):
+    def drop_arrow_at_player(self, origin=None):
         arrow=Item(CAT_WPN,3,qty=1)
         # C: move.c:T_ARROW falls via weapons.c:fall()/fallpos().
-        self.drop_thrown(arrow,self.p.x,self.p.y)
+        x, y = origin if origin is not None else (self.p.x, self.p.y)
+        self.drop_thrown(arrow, x, y)
 
     def teleport_player(self):
-        # C: scrolls.c (teleportation)
-        cands=[
-            (x,y)
-            for y,row in enumerate(self.tm)
-            for x,tile in enumerate(row)
-            if tile in WALKABLE and tile!=T_TRAP and not self.mon_at(x,y)
-        ]
-        if cands:
-            self.p.x,self.p.y=RNG.choice(cands)
+        # C: wizard.c:teleport() via scrolls.c:S_TELEP / move.c:T_TEL.
+        pos = self.find_floor_pos(
+            None,
+            monst=True,
+            occupied={(m.x,m.y) for m in self.mons if m.alive},
+        )
+        if pos is not None:
+            self.p.x,self.p.y=pos
             self.update_fov(); self._center_cam()
             self.finish_teleport()
 
-    def trigger_trap(self,x,y):
+    def trigger_trap(self, x, y, arrow_origin=None):
         # C: move.c:be_trapped()
         self.reveal_trap_at(x,y)
         kind=self.traps.get((x,y),0)
@@ -3956,7 +4278,7 @@ class Game:
                 else:
                     self.msg("move.oh_no_an_arrow_shot_you")
             else:
-                self.drop_arrow_at_player()
+                self.drop_arrow_at_player(arrow_origin)
                 self.msg("move.an_arrow_shoots_past_you")
         elif name=="teleport trap":
             self.teleport_player()
@@ -4012,6 +4334,7 @@ class Game:
         self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
+        self.command_look()
         x,y=self.p.x+dx,self.p.y+dy
         trap=self.visible_trap_at(x,y)
         if trap is None:
@@ -4020,6 +4343,199 @@ class Game:
             if self.p.hallucinating > 0:
                 trap = rnd(len(TRAPS))
             self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
+        self.command_look_done = False
+
+    def open_help_command(self):
+        self.command_look()
+        self.st = ST_HELP
+        self.command_look_done = False
+
+    def open_symbol_identify_command(self):
+        self.command_look()
+        self.msg("command.what_do_you_want_identified")
+        self.identify_symbol_pending = True
+        self.command_look_done = False
+
+    def picky_inventory_line(self, it):
+        return f"{self.pack_letter_for(it)}) {self.ident.name(it)}"
+
+    def open_picky_inventory_command(self):
+        # Rogue 5.4.4 pack.c:picky_inven() inventories one chosen pack item.
+        self.command_look()
+        if not self.p.inv:
+            self.msg("pack.you_arent_carrying_anything")
+            self.command_look_done = False
+            return
+        if len(self.p.inv) == 1:
+            self.msg_text(self.picky_inventory_line(self.p.inv[0]))
+            self.command_look_done = False
+            return
+        self.cact = "Picky inventory"
+        self.fitems = list(self.p.inv)
+        self.icur = 0
+        self.st = ST_ITEM
+        self.msg("pack.which_item_do_you_wish_to_inventory")
+        self.command_look_done = False
+
+    def symbol_description(self, ch):
+        unknown = "知らない文字" if self.lang == LANG_JA else "unknown character"
+        if len(ch) == 1 and "A" <= ch <= "Z":
+            spec = self.monster_spec_for_sym(ch)
+            return TextCatalog.monster(self.lang, spec.name) if spec else unknown
+        table = SYMBOL_DESC_JA if self.lang == LANG_JA else SYMBOL_DESC_EN
+        return table.get(ch, unknown)
+
+    def symbol_identify_key_press(self):
+        if self.kp(getattr(pyxel, "KEY_ESCAPE", None)):
+            return ""
+        if self.kp(getattr(pyxel, "KEY_SPACE", None)):
+            return " "
+        if self.kp(getattr(pyxel, "KEY_AT", None)):
+            return "@"
+        if self.kp(getattr(pyxel, "KEY_PERIOD", None)):
+            return "."
+        if self.kp(getattr(pyxel, "KEY_COMMA", None)):
+            return ","
+        if self.kp(getattr(pyxel, "KEY_MINUS", None)):
+            return "-"
+        if self.kp(getattr(pyxel, "KEY_EQUALS", None)):
+            return "="
+        if self.kp(getattr(pyxel, "KEY_RIGHTBRACKET", None)):
+            return "]"
+        if self.kp(getattr(pyxel, "KEY_0", None)) and self.shift_held():
+            return ")"
+        if self.kp(getattr(pyxel, "KEY_6", None)) and self.shift_held():
+            return "^"
+        if self.kp(getattr(pyxel, "KEY_QUESTION", None)):
+            return "?"
+        if self.kp(getattr(pyxel, "KEY_SLASH", None)):
+            return "/"
+        for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+            key = getattr(pyxel, f"KEY_{c}", None)
+            if key is not None and self.kp(key):
+                return c if self.shift_held() else c.lower()
+        return None
+
+    def update_symbol_identify_prompt(self):
+        ch = self.symbol_identify_key_press()
+        if ch is None:
+            return True
+        self.identify_symbol_pending = False
+        if ch == "":
+            return True
+        self.msg("command.value_value2_2", value=ch, value2=self.symbol_description(ch))
+        return True
+
+    def show_version_command(self):
+        self.command_look()
+        self.msg("command.version_version_mctesq_was_here", version=UI_BUILD)
+        self.command_look_done = False
+
+    def open_options_command(self):
+        self.command_look()
+        self.open_aux()
+        self.command_look_done = False
+
+    def start_move_on_command(self):
+        self.command_look()
+        self.cact = "Move"
+        self.dact = "Move"
+        self.st = ST_DIR
+        self.dir_pending = None
+
+    def execute_move_on(self, dx, dy):
+        self.move_on_once = True
+        try:
+            return self.try_move(dx,dy)
+        finally:
+            self.move_on_once = False
+
+    def pack_letter_for(self, it):
+        try:
+            idx = self.p.inv.index(it)
+        except ValueError:
+            return "?"
+        return chr(ord("a") + idx)
+
+    def append_current_message(self, cur, how_en, where_en=None, how_ja=None, where_ja=None):
+        how = how_ja if self.lang == LANG_JA and how_ja else how_en
+        where = where_ja if self.lang == LANG_JA and where_ja else where_en
+        where = f" {where}" if where else ""
+        if cur is None:
+            value = f"you are {how} nothing" if self.lang == LANG_EN else f"{how} 何もない"
+            self.msg("command.value_value2", value=value, value2=where)
+            return
+        letter = self.pack_letter_for(cur)
+        if self.lang == LANG_EN:
+            value = f"you are {how} ("
+            value2 = f"{letter}) {self.ident.name(cur)}{where}"
+        else:
+            value = f"{how}（"
+            value2 = f"{letter}）{self.ident.name(cur)}{where}"
+        self.msg("command.value_value2", value=value, value2=value2)
+
+    def current_item_command(self, cur, how_en, where_en=None, how_ja=None, where_ja=None):
+        self.command_look()
+        self.append_current_message(cur, how_en, where_en, how_ja, where_ja)
+        self.command_look_done = False
+
+    def current_rings_command(self):
+        self.command_look()
+        self.append_current_message(self.p.ring_l, "wearing", "on left hand", "装着中", "左手")
+        self.append_current_message(self.p.ring_r, "wearing", "on right hand", "装着中", "右手")
+        self.command_look_done = False
+
+    def status_command(self):
+        self.command_look()
+        self.command_look_done = False
+
+    def quit_command(self):
+        self.command_look()
+        self.st = ST_QUIT_CONFIRM
+        self.command_look_done = False
+
+    def repeat_message_command(self):
+        # C: command.c:command() CTRL('P') dispatches msg(huh), the previous message.
+        last = self.msgs[-1] if self.msgs else ""
+        self.command_look()
+        self.msg_text(last)
+        self.command_look_done = False
+
+    def redraw_command(self):
+        self.command_look()
+        self.command_look_done = False
+
+    def legal_space_command(self):
+        self.command_look()
+        self.command_look_done = False
+
+    def ctrl_command_press(self):
+        if not self.ctrl_held():
+            return None
+        if self.kp(getattr(pyxel, "KEY_P", None)):
+            return "repeat"
+        if self.kp(getattr(pyxel, "KEY_R", None)):
+            return "redraw"
+        return None
+
+    def legal_space_command_press(self):
+        return (
+            self.kp(getattr(pyxel, "KEY_SPACE", None))
+            and not self.ctrl_held()
+            and not self.dir_held_any()
+        )
+
+    def illegal_command(self, command):
+        self.command_look()
+        self.msg("command.illegal_command_command", command=command)
+        self.command_look_done = False
+
+    def illegal_command_press(self):
+        for key_name, command in (("KEY_G", "g"),):
+            key = getattr(pyxel, key_name, None)
+            if key is not None and self.key_lower(key):
+                return command
+        return None
 
     def do_action(self):
         p=self.p; px,py=p.x,p.y
@@ -4029,6 +4545,7 @@ class Game:
         self.do_search(front_only=True)
 
     def do_pickup(self):
+        self.command_look()
         p=self.p; px,py=p.x,p.y
         if self.tm[py][px]==T_STAIR:
             self.use_stairs(); return
@@ -4054,6 +4571,47 @@ class Game:
         self.msg("pyxel.descend_to_depth", depth=p.depth + 1)
         self.descend()
         self.msg("pyxel.dungeon_depth", depth=p.depth)
+        self.end_turn()
+
+    def stairs_down_command(self):
+        # Rogue 5.4.4 command.c:d_level() goes down on stairs regardless of amulet.
+        self.command_look()
+        if self.levit_check():
+            self.command_look_done = False
+            return
+        if self.tm[self.p.y][self.p.x] != T_STAIR:
+            self.msg("command.i_see_no_way_down")
+            self.command_look_done = False
+            return
+        self.msg("pyxel.descend_to_depth", depth=self.p.depth + 1)
+        self.descend()
+        self.msg("pyxel.dungeon_depth", depth=self.p.depth)
+        self.command_look_done = False
+        self.end_turn()
+
+    def stairs_up_command(self):
+        # Rogue 5.4.4 command.c:u_level() only goes up when carrying the amulet.
+        self.command_look()
+        if self.levit_check():
+            self.command_look_done = False
+            return
+        if self.tm[self.p.y][self.p.x] != T_STAIR:
+            self.msg("command.i_see_no_way_up")
+            self.command_look_done = False
+            return
+        if not self.p.has_amulet:
+            self.msg("command.your_way_is_magically_blocked")
+            self.command_look_done = False
+            return
+        if self.p.depth <= 1:
+            self.msg("pyxel.escaped_with_amulet")
+            self.command_look_done = False
+            self.enter_result_state("winner")
+            return
+        self.p.depth -= 2
+        self.descend()
+        self.msg("pyxel.wrenching_sensation_gut")
+        self.command_look_done = False
         self.end_turn()
 
     def pickup_at(self,x,y):
@@ -4085,7 +4643,9 @@ class Game:
         self.msg("pyxel.pack_too_full")
         return True
 
-    def do_wait(self): self.end_turn()
+    def do_wait(self):
+        self.command_look()
+        self.end_turn()
 
     def ring_after_turn(self):
         for hand in (rogue_rings.LEFT, rogue_rings.RIGHT):
@@ -4096,6 +4656,7 @@ class Game:
                 self.teleport_player()
 
     def end_turn(self):
+        self.command_look_done = False
         msg_start = min(getattr(self, "turn_msg_start", 0), len(self.msg_turns))
         if self.p.haste > 0 and not self.haste_half_turn:
             # Rogue 5.4.4 command.c:command() gives ISHASTE two player actions
@@ -4209,10 +4770,41 @@ class Game:
             self.run_stomach()
         elif name == "runners":
             self.run_runners()
+        elif name == "visuals":
+            self.run_visuals()
 
     def run_runners(self):
         # C: chase.c:runners()
-        rogue_chase.runners(self.mons, self.m_turn)
+        rogue_chase.runners(self.mons, self.m_turn, self.clear_to_death_only)
+
+    def clear_hallucination_visuals(self):
+        self.hallu_item_syms = {}
+        self.hallu_tile_syms = {}
+        self.hallu_monster_syms = {}
+        self.hallu_detected_monster_syms = {}
+
+    def run_visuals(self):
+        # C: daemons.c:visuals()
+        self.clear_hallucination_visuals()
+        if self.p.hallucinating <= 0:
+            return
+        can_see_cells = self.p.blind <= 0
+        for item in self.gitems:
+            if can_see_cells and (item.x, item.y) in self.visible:
+                self.hallu_item_syms[id(item)] = self.hallucination_thing_sym()
+        if can_see_cells and not getattr(self, "seen_stairs", False):
+            for y, row in enumerate(self.tm):
+                for x, tile in enumerate(row):
+                    if tile == T_STAIR and (x, y) in self.visible:
+                        self.hallu_tile_syms[(x, y)] = self.hallucination_thing_sym()
+        for monster in self.mons:
+            if self.monster_is_seen(monster):
+                if monster.sym == "X" and getattr(monster, "disguise", monster.sym) != "X":
+                    self.hallu_monster_syms[id(monster)] = self.hallucination_thing_sym()
+                else:
+                    self.hallu_monster_syms[id(monster)] = chr(ord("A") + rnd(26))
+            elif self.can_detect_monsters():
+                self.hallu_detected_monster_syms[id(monster)] = chr(ord("A") + rnd(26))
 
     def run_stomach(self):
         # C: daemons.c:stomach()
@@ -4222,6 +4814,7 @@ class Game:
             self.msg(m)
         if rogue_daemons.stomach_stops_running(old_state, self.p.state):
             self.clear_running_count()
+            self.clear_to_death_only()
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
 
@@ -4372,7 +4965,7 @@ class Game:
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
         self.throw_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
-        self.b_menu_guard=False; self.dir_pending=None
+        self.b_menu_guard=False; self.dir_pending=None; self.command_look_done=False
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
@@ -4382,6 +4975,8 @@ class Game:
         self.start_item_action(aname, cat)
 
     def start_item_action(self, aname, cat=None):
+        if self.st in (ST_PLAY, ST_MENU):
+            self.command_look()
         if cat is None:
             cat = next((c for n,c in MENU_ACTIONS if n == aname), None)
         self.action_origin = self.st
@@ -4392,7 +4987,7 @@ class Game:
             self.fitems=[p.arm] if p.arm is not None else []
         elif aname=="Remove ring":
             self.fitems=[i for i in (p.ring_l, p.ring_r) if i is not None]
-        elif aname in("Throw","Drop"):
+        elif aname in("Throw","Drop","Wield"):
             self.fitems=list(p.inv)
         elif aname=="Call":
             self.fitems=self.callable_items()
@@ -4436,11 +5031,14 @@ class Game:
 
     def confirm_item(self, it):
         a=self.cact
+        self.remember_repeat_item(it)
         if a=="Throw":
             if self.throw_dir:
+                self.command_look()
                 dx,dy=self.throw_dir
                 self.p.facing=(dx,dy)
                 animating = self.throw(it,dx,dy)
+                self.clear_repeat_item_if_gone(it)
                 self.close_menu()
                 if animating:
                     self.turn_after_throw_anim = True
@@ -4458,6 +5056,11 @@ class Game:
             self.msg("pyxel.it_is_item", item=self.ident.name(it))
             self.close_menu(); self.end_turn()
             return
+        if a=="Picky inventory":
+            self.msg_text(self.picky_inventory_line(it))
+            self.close_menu()
+            return
+        self.command_look()
         if a=="Quaff":
             if self.use_pot(it) is False:
                 self.close_menu()
@@ -4486,33 +5089,352 @@ class Game:
             if self.drop(it) is False:
                 self.close_menu()
                 return
+        self.clear_repeat_item_if_gone(it)
         self.close_menu(); self.end_turn()
 
     def dir_confirm(self,dx,dy):
         if self.dact=="Trap":
+            self.remember_repeat_dir(dx,dy)
             self.inspect_trap(dx,dy)
             self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
             return
+        if self.dact in ("Fight", "Fight to death"):
+            self.remember_repeat_dir(dx,dy)
+            kamikaze = self.dact == "Fight to death" or getattr(self, "fight_kamikaze_pending", False)
+            self.fight_command_confirm(dx,dy,kamikaze)
+            self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
+            return
         if self.dact=="Throw":
+            self.remember_repeat_dir(dx,dy)
             self.throw_dir=(dx,dy)
             self.dact=None
             self.st=ST_ITEM
             return
         if self.dact=="Zap":
-            if self.zap_item:
+            if self.zap_item is None:
+                self.remember_repeat_dir(dx,dy)
                 self.p.facing=(dx,dy)
+                self.command_look()
+                self.msg("pack.you_arent_carrying_anything")
+                self.close_menu()
+                self.end_turn()
+                return
+            if self.zap_item:
+                self.remember_repeat_dir(dx,dy)
+                self.p.facing=(dx,dy)
+                self.command_look()
                 spent_turn = self.zap_stick(self.zap_item,dx,dy)
+                self.clear_repeat_item_if_gone(self.zap_item)
                 self.close_menu()
                 if spent_turn:
                     self.end_turn()
             return
+        if self.dact=="Move":
+            self.p.facing=(dx,dy)
+            if self.count_prefix_active:
+                count = self.count_prefix_value
+                self.count_prefix_active = False
+                self.count_prefix_value = 0
+                if count > 1:
+                    self.count_repeat_command = "move_on"
+                    self.count_repeat_remaining = count - 1
+                    self.count_repeat_dir = (dx, dy)
+                else:
+                    self.record_repeat_command("move_on")
+                    self.remember_repeat_dir(dx,dy)
+            else:
+                self.remember_repeat_dir(dx,dy)
+            moved = self.execute_move_on(dx,dy)
+            if not moved:
+                self.command_look_done = False
+            self.st=ST_PLAY; self.dact=None; self.cact=None; self.dir_pending=None
+            return
 
     def start_trap_inspect(self):
+        self.command_look()
         self.cact="Trap"; self.dact="Trap"; self.st=ST_DIR; self.dir_pending=None
+
+    def start_fight_command(self, kamikaze=False):
+        # C: command.c:'f'/'F' calls get_dir() after command.c:look(TRUE).
+        self.command_look()
+        self.fight_kamikaze_pending = kamikaze
+        self.cact = "Fight to death" if kamikaze else "Fight"
+        self.dact = self.cact
+        self.st = ST_DIR
+        self.dir_pending = None
+
+    def fight_command_confirm(self, dx, dy, kamikaze=False):
+        # C: command.c:'f'/'F' selects an adjacent visible/SEEMONST target, marks ISTARGET, then melee-dispatches dir_ch.
+        self.command_look()
+        self.fight_kamikaze_pending = False
+        nx, ny = self.p.x + dx, self.p.y + dy
+        m = self.mon_at(nx, ny)
+        if m is None or (not self.monster_is_seen(m) and not self.can_detect_monsters()):
+            self.msg("command.no_monster_there")
+            self.command_look_done = False
+            return
+        m.target = True
+        if self.diag_ok(self.p.x, self.p.y, nx, ny):
+            self.fight_to_death = True
+            self.fight_kamikaze = kamikaze
+            self.fight_dir = (dx, dy)
+            self.fight_target = m
+            self.fight_max_hit = 0
+            self.try_move(dx, dy)
+        else:
+            self.end_turn()
+
+    def clear_fight_to_death(self):
+        self.fight_to_death = False
+        self.fight_kamikaze = False
+        self.fight_dir = (0, 0)
+        self.fight_target = None
+        self.fight_max_hit = 0
+
+    def clear_to_death_only(self):
+        self.fight_to_death = False
+
+    def continue_fight_to_death(self):
+        # C: command.c reuses runch while to_death is set, before reading another command.
+        if not getattr(self, "fight_to_death", False):
+            return False
+        target = getattr(self, "fight_target", None)
+        dx, dy = getattr(self, "fight_dir", (0, 0))
+        if target not in self.mons or not getattr(target, "alive", False) or not getattr(target, "target", False):
+            self.clear_fight_to_death()
+            return False
+        if (target.x, target.y) != (self.p.x + dx, self.p.y + dy):
+            self.clear_fight_to_death()
+            return False
+        moved = self.try_move(dx, dy)
+        if not moved:
+            self.clear_fight_to_death()
+        return moved
+
+    def record_repeat_command(self, command):
+        # C: command.c saves last_comm/last_dir/last_pick before dispatch, except while again.
+        if getattr(self, "repeat_command_active", False):
+            return
+        if getattr(self, "count_prefix_active", False):
+            self.count_prefix_active = False
+            self.count_prefix_value = 0
+        self.prev_repeat_command = self.last_repeat_command
+        self.prev_repeat_dir = self.last_repeat_dir
+        self.prev_repeat_item = self.last_repeat_item
+        self.last_repeat_command = command
+        self.last_repeat_dir = None
+        self.last_repeat_item = None
+
+    def reset_repeat_command(self):
+        # C: pack.c:reset_last() restores the previous command when get_dir/get_item aborts.
+        self.last_repeat_command = self.prev_repeat_command
+        self.last_repeat_dir = self.prev_repeat_dir
+        self.last_repeat_item = self.prev_repeat_item
+
+    def remember_repeat_dir(self, dx, dy):
+        if not getattr(self, "repeat_command_active", False):
+            self.last_repeat_dir = (dx, dy)
+
+    def remember_repeat_item(self, it):
+        if not getattr(self, "repeat_command_active", False):
+            self.last_repeat_item = it
+
+    def clear_repeat_item_if_gone(self, it):
+        if getattr(self, "last_repeat_item", None) is it and it not in self.p.inv:
+            self.last_repeat_item = None
+
+    def repeat_last_command(self):
+        # C: command.c:'a' repeats last_comm with again=TRUE.
+        self.command_look()
+        command = self.last_repeat_command
+        if command is None:
+            self.msg("command.you_havent_typed_a_command_yet")
+            self.command_look_done = False
+            return
+        self.repeat_command_active = True
+        try:
+            self.dispatch_repeat_command(command)
+        finally:
+            self.repeat_command_active = False
+
+    def repeat_dir_or_prompt(self):
+        direction = self.last_repeat_dir
+        if direction is None:
+            self.st = ST_DIR
+            return None
+        return direction
+
+    def repeat_item_or_ran_out(self):
+        item = self.last_repeat_item
+        if item is None or item not in self.p.inv:
+            if self.p.inv:
+                self.msg("pack.you_ran_out")
+            else:
+                self.msg("pack.you_arent_carrying_anything")
+            self.last_repeat_item = None
+            self.end_turn()
+            return None
+        return item
+
+    def dispatch_repeat_command(self, command):
+        if command == "search":
+            self.do_search()
+        elif command == "wait":
+            self.do_wait()
+        elif command == "move":
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                self.try_move(*direction)
+        elif command == "move_on":
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                moved = self.execute_move_on(*direction)
+                if not moved:
+                    self.command_look_done = False
+        elif command == "trap":
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                self.inspect_trap(*direction)
+        elif command == "picky_inventory":
+            self.open_picky_inventory_command()
+        elif command == "inventory":
+            self.command_look()
+            self.st = ST_INVENTORY
+            self.command_look_done = False
+        elif command == "help":
+            self.open_help_command()
+        elif command == "symbol_identify":
+            self.open_symbol_identify_command()
+        elif command == "version":
+            self.show_version_command()
+        elif command == "options":
+            self.open_options_command()
+        elif command == "discoveries":
+            self.open_discoveries()
+        elif command == "stairs_down":
+            self.stairs_down_command()
+        elif command == "stairs_up":
+            self.stairs_up_command()
+        elif command == "current_weapon":
+            self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
+        elif command == "current_armor":
+            self.current_item_command(self.p.arm, "wearing", None, "装着中")
+        elif command == "current_rings":
+            self.current_rings_command()
+        elif command == "status":
+            self.status_command()
+        elif command == "repeat_message":
+            self.repeat_message_command()
+        elif command == "redraw":
+            self.redraw_command()
+        elif command == "legal_space":
+            self.legal_space_command()
+        elif command == "quit":
+            self.quit_command()
+        elif command in ("fight", "fight_to_death"):
+            direction = self.repeat_dir_or_prompt()
+            if direction is not None:
+                self.fight_command_confirm(*direction, kamikaze=(command == "fight_to_death"))
+        elif isinstance(command, tuple) and command[0] == "illegal":
+            self.illegal_command(command[1])
+        elif isinstance(command, tuple) and command[0] == "item":
+            self.repeat_item_command(command[1])
+
+    def repeat_item_command(self, aname):
+        item = self.repeat_item_or_ran_out()
+        if item is None:
+            return
+        self.cact = aname
+        self.fitems = [item]
+        self.action_origin = ST_PLAY
+        if aname in ("Throw", "Zap"):
+            direction = self.repeat_dir_or_prompt()
+            if direction is None:
+                self.dact = aname
+                self.st = ST_DIR
+                if aname == "Zap":
+                    self.zap_item = item
+                return
+            if aname == "Throw":
+                self.throw_dir = direction
+                self.confirm_item(item)
+            else:
+                self.zap_item = item
+                self.dir_confirm(*direction)
+            return
+        self.confirm_item(item)
 
     # ---------- Input helpers ----------
     def kp(self,*ks): return any(k is not None and pyxel.btnp(k) for k in ks)
     def kh(self,*ks): return any(k is not None and pyxel.btn(k) for k in ks)
+
+    def count_digit_press(self):
+        if self.shift_held() or self.ctrl_held():
+            return None
+        for digit in range(10):
+            key = getattr(pyxel, f"KEY_{digit}", None)
+            if key is not None and self.kp(key):
+                return digit
+        return None
+
+    def countable_command(self, command):
+        return command in ("search", "wait", "move")
+
+    def start_count_prefix(self, digit):
+        # C: command.c digit prefix is read after look(TRUE), before dispatch.
+        self.command_look()
+        if not self.count_prefix_active:
+            self.count_prefix_value = 0
+        self.count_prefix_active = True
+        self.count_prefix_value = min(255, self.count_prefix_value * 10 + digit)
+
+    def record_counted_input_command(self, command, direction=None):
+        # C: command.c decrements count before deciding whether last_comm is updated.
+        if self.count_prefix_active:
+            count = self.count_prefix_value
+            self.count_prefix_active = False
+            self.count_prefix_value = 0
+            if self.countable_command(command) and count > 1:
+                self.count_repeat_command = command
+                self.count_repeat_remaining = count - 1
+                self.count_repeat_dir = direction
+                return False
+        self.record_repeat_command(command)
+        if command == "move" and direction is not None:
+            self.remember_repeat_dir(*direction)
+        return True
+
+    def continue_counted_command(self):
+        command = getattr(self, "count_repeat_command", None)
+        if not command or self.count_repeat_remaining <= 0:
+            return False
+        if command == "again":
+            self.count_repeat_remaining -= 1
+            if self.count_repeat_remaining <= 0:
+                self.count_repeat_command = None
+            self.repeat_last_command()
+            return True
+        if self.count_repeat_remaining == 1:
+            repeat_command = "move" if command == "move_on" else command
+            self.record_repeat_command(repeat_command)
+            if command in ("move", "move_on") and self.count_repeat_dir is not None:
+                self.remember_repeat_dir(*self.count_repeat_dir)
+        self.count_repeat_remaining -= 1
+        if self.count_repeat_remaining <= 0:
+            self.count_repeat_command = None
+        if command == "search":
+            self.do_search()
+            return True
+        if command == "wait":
+            self.do_wait()
+            return True
+        if command == "move" and self.count_repeat_dir is not None:
+            self.try_move(*self.count_repeat_dir)
+            return True
+        if command == "move_on" and self.count_repeat_dir is not None:
+            self.execute_move_on(*self.count_repeat_dir)
+            return True
+        return False
 
     def begin_input(self):
         self.b_tap=False
@@ -4641,6 +5563,8 @@ class Game:
 
     def shift_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT)
+    def ctrl_held(self):
+        return self.kh(pyxel.KEY_CTRL, pyxel.KEY_LCTRL, pyxel.KEY_RCTRL)
     def btn_a(self): return self.kp(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def held_a(self): return self.kh(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or getattr(self, "b_tap", False)
@@ -4683,8 +5607,12 @@ class Game:
         return None
     def invalid_pack_letter(self, ch):
         self.msg("pack.item_is_not_a_valid_item", item=ch)
+    def invalid_picky_inventory_letter(self, ch):
+        self.msg("pack.item_not_in_pack", item=ch)
     def cancel_item_prompt(self):
         # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
+        if not getattr(self, "repeat_command_active", False):
+            self.reset_repeat_command()
         if self.cact=="Throw" and self.throw_dir is not None and self.action_origin==ST_MENU:
             self.st=ST_MENU
         elif self.action_origin==ST_MENU:
@@ -4694,6 +5622,12 @@ class Game:
         self.throw_dir=None
     def cancel_call_prompt(self):
         # Rogue 5.4.4 command.c:call() returns without changing guesses on ESC.
+        if (
+            self.call_item is None
+            and self.action_origin == ST_PLAY
+            and not getattr(self, "repeat_command_active", False)
+        ):
+            self.reset_repeat_command()
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
         if self.action_origin==ST_MENU:
             self.st=ST_MENU
@@ -4701,6 +5635,8 @@ class Game:
             self.close_menu()
     def cancel_dir_prompt(self):
         # Rogue 5.4.4 misc.c:get_dir() ESC aborts direction commands with after=FALSE.
+        if not getattr(self, "repeat_command_active", False):
+            self.reset_repeat_command()
         if self.dact=="Trap":
             self.st=ST_PLAY
             self.dact=None
@@ -4711,6 +5647,17 @@ class Game:
                 self.st=ST_MENU
             else:
                 self.close_menu()
+        elif self.dact in ("Fight", "Fight to death"):
+            self.st=ST_PLAY
+            self.dact=None
+            self.cact=None
+            self.fight_kamikaze_pending=False
+            self.command_look_done=False
+        elif self.dact=="Move":
+            self.st=ST_PLAY
+            self.dact=None
+            self.cact=None
+            self.command_look_done=False
         else:
             self.st=ST_ITEM
     def btn_search(self): return self.key_lower(pyxel.KEY_S)
@@ -4752,7 +5699,7 @@ class Game:
             self.back_used=True
             return (dx,dy)
         return None
-    def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH)
+    def btn_r(self): return self.kp(pyxel.KEY_QUESTION)
     def btn_any_key(self):
         """Return True if any meaningful key or gamepad button was pressed this frame.
         Used to dismiss help/info overlays."""
@@ -5603,9 +6550,17 @@ class Game:
                 self.st=ST_PLAY
 
     def upd_play(self):
+        if getattr(self, "identify_symbol_pending", False):
+            if self.update_symbol_identify_prompt():
+                return
+
         if self.p.no_command>0:
+            self.wake_visible_monsters()
             self.msg("pyxel.unable_to_move")
             self.end_turn()
+            return
+
+        if self.continue_fight_to_death():
             return
 
         # Dash continuation
@@ -5617,6 +6572,9 @@ class Game:
             if self.dash_t>=self.run_step_interval():
                 self.dash_t=0
                 self.dash_step()
+            return
+
+        if self.continue_counted_command():
             return
 
         # Overlays
@@ -5633,17 +6591,121 @@ class Game:
             self.do_search()
             self.dir_pending=None
             return
-        if self.btn_inventory(): self.st=ST_INVENTORY; return
-        if self.btn_back():  self.st=ST_INVENTORY; return
-        if self.btn_r():     self.st=ST_HELP; return
-        if self.btn_wait():  self.do_wait(); return
-        if self.btn_search(): self.do_search(); return
-        if self.btn_trap_inspect(): self.start_trap_inspect(); return
+        if self.btn_inventory():
+            self.record_repeat_command("inventory")
+            self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
+        if self.btn_back():
+            self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
+        if self.btn_r():
+            self.record_repeat_command("help")
+            self.open_help_command(); return
+        if self.kp(getattr(pyxel, "KEY_SLASH", None)):
+            self.record_repeat_command("symbol_identify")
+            self.open_symbol_identify_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_I", None)):
+            self.record_repeat_command("picky_inventory")
+            self.open_picky_inventory_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_PERIOD", None)):
+            self.record_repeat_command("stairs_down")
+            self.stairs_down_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_COMMA", None)):
+            self.record_repeat_command("stairs_up")
+            self.stairs_up_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_V", None)):
+            self.record_repeat_command("version")
+            self.show_version_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_O", None)):
+            self.record_repeat_command("options")
+            self.open_options_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_M", None)):
+            if not self.count_prefix_active:
+                self.record_repeat_command("move_on")
+            self.start_move_on_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_F", None)):
+            self.record_repeat_command("fight")
+            self.start_fight_command(False); return
+        if self.key_upper(getattr(pyxel, "KEY_F", None)):
+            self.record_repeat_command("fight_to_death")
+            self.start_fight_command(True); return
+        if self.key_upper(getattr(pyxel, "KEY_Q", None)):
+            self.record_repeat_command("quit")
+            self.quit_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_0", None)):
+            self.record_repeat_command("current_weapon")
+            self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
+            return
+        if self.kp(getattr(pyxel, "KEY_RIGHTBRACKET", None)):
+            self.record_repeat_command("current_armor")
+            self.current_item_command(self.p.arm, "wearing", None, "装着中")
+            return
+        if self.kp(getattr(pyxel, "KEY_EQUALS", None)):
+            self.record_repeat_command("current_rings")
+            self.current_rings_command()
+            return
+        if self.kp(getattr(pyxel, "KEY_AT", None)):
+            self.record_repeat_command("status")
+            self.status_command()
+            return
+        ctrl_command = self.ctrl_command_press()
+        if ctrl_command == "repeat":
+            self.record_repeat_command("repeat_message")
+            self.repeat_message_command()
+            return
+        if ctrl_command == "redraw":
+            self.record_repeat_command("redraw")
+            self.redraw_command()
+            return
+        if self.legal_space_command_press():
+            self.record_repeat_command("legal_space")
+            self.legal_space_command()
+            return
+        count_digit = self.count_digit_press()
+        if count_digit is not None:
+            self.start_count_prefix(count_digit)
+            return
+        if self.key_lower(getattr(pyxel, "KEY_A", None)):
+            if self.count_prefix_active:
+                count = self.count_prefix_value
+                self.count_prefix_active = False
+                self.count_prefix_value = 0
+                if count > 1:
+                    self.count_repeat_command = "again"
+                    self.count_repeat_remaining = count - 1
+            self.repeat_last_command()
+            return
+        if self.btn_wait():
+            if self.kp(getattr(pyxel, "KEY_PERIOD", None)):
+                self.record_counted_input_command("wait")
+            self.do_wait(); return
+        if self.btn_search():
+            self.record_counted_input_command("search")
+            self.do_search(); return
+        if self.btn_trap_inspect():
+            self.record_repeat_command("trap")
+            self.start_trap_inspect(); return
         if self.key_upper(getattr(pyxel, "KEY_D", None)):
+            self.record_repeat_command("discoveries")
             self.open_discoveries(); return
         aname = self.rogue_command_action()
         if aname:
+            if aname == "Zap" and not self.p.inv:
+                # C: command.c:'z' asks for direction before sticks.c:do_zap() asks for an item.
+                self.record_repeat_command(("item", aname))
+                self.command_look()
+                self.action_origin = ST_PLAY
+                self.cact = aname
+                self.dact = aname
+                self.zap_item = None
+                self.st = ST_DIR
+                self.dir_pending = None
+                return
+            self.record_repeat_command(("item", aname))
             self.start_item_action(aname)
+            return
+        illegal = self.illegal_command_press()
+        if illegal:
+            self.record_repeat_command(("illegal", illegal))
+            self.illegal_command(illegal)
             return
 
         # Dash start: B/Shift held + direction
@@ -5661,6 +6723,7 @@ class Game:
         # Normal direction
         d = self.dir_press()
         if d:
+            self.record_counted_input_command("move", d)
             self.try_move(*d)
             return
 
@@ -5680,7 +6743,10 @@ class Game:
         if letter_press is not None:
             ch, letter_item = letter_press
             if letter_item is None:
-                self.invalid_pack_letter(ch)
+                if self.cact == "Picky inventory":
+                    self.invalid_picky_inventory_letter(ch)
+                else:
+                    self.invalid_pack_letter(ch)
                 return
             self.confirm_item(letter_item)
             return
@@ -5797,7 +6863,7 @@ class Game:
             self.toggle_palette()
             self.st=ST_PLAY
         elif act=="Quit":
-            self.st=ST_QUIT_CONFIRM
+            self.quit_command()
         self.dir_pending=None
 
     # =====================================================
@@ -6284,11 +7350,12 @@ class Game:
         y+=8
         self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
         commands=[
-            ". Wait   s Search   t Throw   ^ Trap",
-            "i Inv    ? Help     d Drop",
+            ". Wait   </> Stairs s Search   t Throw   ^ Trap",
+            "i Inv    I Inv item ? Help     / Identify",
+            "d Drop   m Move onto f Fight   a Again",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
-            "P Put on R Remove",
+            "P Put on R Remove   o Options Q Quit",
         ]
         for ln in commands:
             self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11

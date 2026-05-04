@@ -101,7 +101,7 @@ Keyboard:
 
 - Arrow keys / HJKL: Move
 - YUBN: Diagonal movement
-- Hold Space: Diagonal assist
+- Hold Space: Diagonal assist / press alone: no-op
 - Enter: Confirm / pick up / stairs / search one tile ahead
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
@@ -111,13 +111,26 @@ Keyboard:
 - Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap
 - .: Wait a turn
+- > / <: Go down / up stairs
 - s: Search around all 8 neighboring tiles
 - t: Quick throw
 - ^: Trap Inspect (choose direction)
 - i: Inventory
+- I: Inventory one item
 - ?: Help
+- /: Identify a symbol
+- Ctrl+P: Repeat last message
+- Ctrl+R: Redraw
+- m: Move onto without picking up
+- f/F: Fight / Fight to death
+- a: Again (repeat the last command)
+- Digits: Count prefix for search / wait / movement / Again
+- o: Assist menu
+- v: Version
+- ) / ] / = / @: Current weapon / armor / rings / status
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
+- Q: Quit
 
 Use Zap from the menu to choose a wand or staff, then choose a direction.
 

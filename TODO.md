@@ -41,15 +41,13 @@
 
 完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
 
-推奨順:
+終盤の推奨順:
 
-1. wandering monster spawn（`daemons.c:swander()` / `rollwand()`, `monsters.c:wanderer()`）
-2. armor `wear()` の take off 必須化（`armor.c:wear()`）
-3. 呪い生成確率と識別表示の監査（`things.c:new_thing()`, `armor.c:wear()`, `rings.c:ring_num()`, `sticks.c:charge_str()`）
-4. run停止条件の再監査（`move.c:do_run()` / `do_move()`, `misc.c:look()`）
-5. 杖 bolt 系 / magic missile / drain life / nothing（`sticks.c:do_zap()`）
-6. 鑑定・命名・発見リスト忠実度（`wizard.c:whatis()/set_know()`, `command.c:call()`, `misc.c:call_it()`, `things.c:print_disc()`）
-7. 通路番号付き passages、Dragon breath / cancellation 連携、Xeroc 擬態細部
+1. chase / passage / door / destination（`chase.c:do_chase()` / `chase()`）
+2. sticks / bolt / cancellation / Dragon breath（`sticks.c:do_zap()` / `fire_bolt()`, `chase.c:do_chase()`）
+3. Xeroc 横断監査（`fight.c`, `sticks.c`, `chase.c`）
+4. daemon/fuse 追加期待値テスト（`daemon.c`, `daemons.c`）
+5. command 入力残差（`command.c:command()` / `misc.c:get_dir()` / `pack.c:get_item()`）— Rogue on Pyxel のクリア体験への影響が小さいため後回し
 
 - [x] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
@@ -72,6 +70,7 @@
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` 準拠で、polymorph 後も monster pack を保持
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` 準拠で、polymorph 後の monster が見えている時だけ識別
   - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` 識別条件を `rogue_sticks.py` へ小分割
+  - [x] Rogue 5.4.4 `sticks.c:do_zap()` `WS_POLYMORPH` / `monsters.c:new_monster()` 準拠で、polymorph 対象を mlist head 相当に再接続
   - [x] lightning / fire / cold の bolt 反射・命中・ダメージ接続
   - [x] haste monster / slow monster の `ISHASTE` / `ISSLOW` 相当フラグと行動頻度への接続
   - [x] magic missile / drain life / nothing の効果監査と接続
@@ -102,7 +101,9 @@
 - [x] Rogue 5.4.4 `monsters.c:wanderer()` / `rooms.c:find_floor()` / `rnd_pos()` 準拠で wandering monster 候補を部屋内床に限定
 - [x] Rogue 5.4.4 `rooms.c:find_floor(..., monst=TRUE)` 準拠で、wandering monster と teleport away の候補は部屋内の stair / trap も許可
 - [x] Rogue 5.4.4 `monsters.c:wanderer()` / `sticks.c:WS_TELAWAY` 準拠で、床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正
+- [x] Rogue 5.4.4 `monsters.c:wanderer()` 準拠で、player room を引いた場合は固定回数fallbackせず別部屋まで再試行する
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `find_floor(rp, ..., monst=TRUE)` 準拠で、部屋モンスター配置も `io.c:step_ok()` 候補を先に選んでから `randmonster(FALSE)` する
+- [x] Rogue 5.4.4 `new_level.c:rnd_room()` 準拠で、gone room を引いた場合は固定回数fallbackせず非gone roomまで再抽選する
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠の armor 装備中 wear 拒否（take off 必須）
 - [x] Rogue 5.4.4 `armor.c:wear()` / `command.c:command()` 準拠で armor wear 拒否時はターン非消費
 - [x] Rogue 5.4.4 `armor.c:wear()` 準拠で armor 以外の wear を拒否
@@ -111,18 +112,30 @@
 - [x] Rogue 5.4.4 `things.c:new_thing()` / `pick_one()` 相当の food 90/10・カテゴリ重み・potion/weapon/armor 種類重み・weapon/armor enchant 分岐を helper 化
 - [x] Rogue 5.4.4 `new_level.c:new_level()` / `put_things()` 相当の `no_food` 強制 food、`MAXOBJ=9` × 36% 物資生成、Amulet 上昇中の物資生成停止を helper 化
 - [x] Rogue 5.4.4 `new_level.c:put_things()` 準拠で、各36%成功時に `new_thing()` と床選択を即時実行する乱数順へ修正
+- [x] Rogue 5.4.4 `new_level.c:new_level()` 準拠で、通常物資 / Amulet、traps、stairs、hero の配置順へ修正
 - [x] Rogue 5.4.4 `rooms.c:find_floor(..., monst=FALSE)` 準拠で、通常部屋は floor、maze room は passage を物資 / gold / treasure room / Amulet 候補にする
 - [x] Rogue 5.4.4 `rooms.c:find_floor()` / `rnd_pos()` 準拠で、room gold / 物資 / treasure room / Amulet / 部屋モンスター配置を候補一覧 choice ではなく乱数試行式へ修正
+- [x] Rogue 5.4.4 `rooms.c:find_floor(..., limit=FALSE)` 準拠で、固定回数fallbackせず該当床まで再試行する
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 相当の room gold、部屋モンスター発生、gone/dark/maze room 選択を helper 化
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` 準拠で、room gold は `GOLDCALC` 後に `find_floor()` する乱数順へ修正
+- [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `new_level.c:new_level()` 準拠で、各部屋の gold / monster 配置を `do_passages()` と `no_food++` より前へ修正
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の Leprechaun 死亡時 gold drop を helper 化
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の Leprechaun gold drop gate を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `fight.c:killed()` 相当の経験値加算を `rogue_fight.py` へ小分割
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` / `exp_add()` 相当の Amulet 階層以深モンスター生成 stat/EXP 補正と深層 `ISHASTE` を helper 化
 - [x] Rogue 5.4.4 `new_level.c` / `passages.c` / `command.c:search()` / `move.c:be_trapped()` 相当の trap・secret・search・単純trap状態分岐を helper 化
+- [x] Rogue 5.4.4 `passages.c:door()` / `putpass()` 準拠で、隠し扉・隠し通路判定を後段スキャンではなく通路生成中の RNG 順へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`find_floor(..., FALSE)` と同じく monster square を候補から除外しない
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap ごとに `find_floor()` 後 `rnd(NTRAPS)` する乱数順へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、trap 床選択を候補一覧 choice ではなく `find_floor()` 乱数試行式へ修正
+- [x] Rogue 5.4.4 `new_level.c:new_level()` trap 配置準拠で、`chat()==FLOOR` まで固定回数fallbackせず再試行する
+- [x] Rogue 5.4.4 `wizard.c:teleport()` / `scrolls.c:S_TELEP` 準拠で、player teleport を `find_floor(..., monst=TRUE)` 乱数試行式へ修正
+- [x] Rogue 5.4.4 `move.c:do_move()` / `command.c:search()` 準拠で、hidden trap は表示文字が floor の時だけ発見・発動する
+- [x] Rogue 5.4.4 `move.c:do_move()` / `command.c:search()` 準拠で、item 表示マス上の hidden trap は発見・発動しない
+- [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、不正斜め移動はターン非消費のまま run を停止する
+- [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、hidden floor trap は Venus Flytrap held gate より先に発動する
+- [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、held 中でも目的地表示が `F` なら保持者以外の Venus Flytrap へ攻撃できる
+- [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、door / stairs / item への移動は run を停止する
 - [x] Rogue 5.4.4 `new_level.c:new_level()` 準拠で、階層生成時に Venus Flytrap hold を解除
 - [x] Rogue 5.4.4 `io.c:step_ok()` 相当の文字/地形判定を `rogue_io.py` へ小分割し、視界・杖照準の共通基準にする
 - [x] Rogue 5.4.4 `pack.c:add_pack()` / `pack_room()` 相当の scare monster scroll 拾得消滅と満杯時スタック拒否を helper 化
@@ -174,6 +187,7 @@
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で暗い部屋の Medusa gaze を `dist() < LAMPDIST` に限定する
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で Medusa gaze 成功時も `unconfuse` fuse を使う
 - [x] Rogue 5.4.4 `monsters.c:wake_monster()` 準拠で levitation 中は mean monster が起床しない
+- [x] Rogue 5.4.4 `command.c:command()` / `misc.c:look(TRUE)` 準拠で、コマンド前 wake を hero 周囲3x3 scan に限定し、部屋全体 wake は `move.c:door_open()` 側と分離
 - [x] Rogue 5.4.4 `extern.c:monsters[]` 準拠で Medusa の melee `confuse` flag を外す
 - [x] Rogue 5.4.4 `monsters.c:new_monster()` の深層 `ISHASTE` 付与を `rogue_monsters.apply_deep_haste()` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、`ISTARGET` モンスターが移動したら target を解除
@@ -188,10 +202,15 @@
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 相当の carry 目的地選択を `rogue_chase.py` へ小分割
 - [x] Rogue 5.4.4 `chase.c:runto()` / `find_dest()` / `do_chase()` 準拠で、carry monster の item 目的地保持と到達時 pack 移動を接続
 - [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、carry monster の item 目的地から room gold を除外
+- [x] Rogue 5.4.4 `chase.c:find_dest()` 準拠で、呼び出し元自身の既存 `t_dest` も目的地重複判定に含める
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` を毎ターン `find_dest()` で再選択しない
+- [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、既存 `t_dest` は床 `lvl_obj` から消えても到着まで追跡する
+- [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、greedy monster は room gold 消失後に stale gold destination より hero を優先する
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Venus Flytrap は追跡継続時に `relocate()` しない
 - [x] Rogue 5.4.4 `chase.c:do_chase()` / `passages.c:numpass()` 準拠で、passage 内 chaser は nearest passage exit へ向かう
+- [x] Rogue 5.4.4 `chase.c:do_chase()` / `roomin()` 準拠で、maze passage item 回収後も `F_PASS` 相当の AI passage 所属を維持
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、door 上 chaser は部屋出口候補を保持したまま passage 出口候補へ切り替える
+- [x] Rogue 5.4.4 `passages.c:passnum()` / `numpass()` / `chase.c:do_chase()` 準拠で、rooms[].r_exit root 由来の passage exit 記録順を同距離出口選択へ反映
 - [x] Rogue 5.4.4 `passages.c:putpass()` / `numpass()` 準拠で、隠し通路/隠し扉を passage 番号・exit 判定に含める
 - [x] Rogue 5.4.4 `passages.c:door()` 準拠で、部屋の exit 候補に隠し扉を含める
 - [x] Rogue 5.4.4 `passages.c:numpass()` 相当の passage 番号・exit 判定を `rogue_passages.py` へ小分割
@@ -200,6 +219,7 @@
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、door 上の hero は bolt 反射ではなく命中判定にする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、saved monster miss の `runto()` は hero 発射時だけにする
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、擬態中 Xeroc の saved monster miss は表示/追跡しない
+- [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、saved monster miss の `ch != 'M' || t_disguise == 'M'` 表示/追跡ゲートを反映
 - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` / `rip.c` 準拠で、hero 自身の反射 bolt 死亡原因を `bolt` にする
 - [x] Rogue 5.4.4 `rip.c:death()` 準拠で、墓石Gold表示も死亡時10%減後の purse にする
 - [x] Rogue 5.4.4 `rip.c:killname()` 準拠で、score/墓石の starvation・hypothermia・trap projectile 死因名と冠詞を合わせる
@@ -215,11 +235,20 @@
 - [x] Rogue 5.4.4 `sticks.c:do_zap()` 準拠で、target が Venus Flytrap なら保持者照合なしに hold を解除
 - [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath を chaser/chasee 同室分岐に限定
 - [x] Rogue 5.4.4 `chase.c:roomin()` / `do_chase()` 準拠で、door 上 Dragon も同室 hero へ breath 可能にする
+- [x] Rogue 5.4.4 `chase.c:do_chase()` 準拠で、Dragon breath 後に対象外 fight-to-death を解除する
+- [x] Rogue 5.4.4 `daemons.c:stomach()` 準拠で、空腹状態変化時に fight-to-death も解除する
 - [x] Rogue 5.4.4 `chase.c:chase()` 相当の confused / Phantom / Bat ランダム移動ゲート、混乱解除、候補ゲート、距離/tie選択、戻り値条件を `rogue_chase.py` へ小分割
+- [x] Rogue 5.4.4 `chase.c:runners()` 準拠で、ISTARGET monster が移動した時に fight-to-death も解除する
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、Phantom / Bat のランダム移動後も混乱解除用 `rnd(20)` を消費する
+- [x] Rogue 5.4.4 `chase.c:runners()` / `daemons.c:stomach()` 準拠で、`to_death` 単独解除と `kamikaze` 解除の差を反映する
 - [x] Rogue 5.4.4 `chase.c:chase()` 準拠で、候補マス走査順を x外側/y内側に合わせる
+- [x] Rogue 5.4.4 `chase.c:chase()` / `winat()` 準拠で、item 目的地追跡中も hero マスを候補評価し、足元の scare scroll より PLAYER を優先する
 - [x] Rogue 5.4.4 `monsters.c:save_throw()` / `save()` 相当の player/monster セーヴ式と protection ring 補正を helper 化
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
+- [x] Rogue 5.4.4 `move.c:rndmove()` / `winat()` 準拠で、混乱中 player のランダム移動は通常 monster glyph と scare scroll を不可にする
+- [x] Rogue 5.4.4 `move.c:rndmove()` / `rogue.h:winat()` 準拠で、混乱/Phantom/Bat のランダム追跡移動は item 擬態 Xeroc を `step_ok()` として扱う
+- [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、混乱中 player の `rndmove()` が足元を返した時は `to_death` だけ解除する
+- [x] Rogue 5.4.4 `move.c:rndmove()` / `rogue.h:winat()` 準拠で、混乱/Phantom/Bat のランダム追跡移動は scare scroll 上の hero を `PLAYER` として扱う
 - [x] Rogue 5.4.4 `move.c:rust_armor()` 相当の錆び合法判定・保護分岐を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:be_trapped()` `T_MYST` 11択メッセージ表を `rogue_move.py` へ小分割
 - [x] モンスター8方向移動（`chase.c` 相当の周囲8マス候補選択、`diag_ok()`、扉回り込み）
@@ -230,6 +259,7 @@
 - [x] Rogue 5.4.4 `fight.c:attack()` / `misc.c:chg_str()` 準拠で Strength 下限3の poison bite も弱化結果にする
 - [x] Rogue 5.4.4 `potions.c:P_POISON` 準拠で poison potion Strength 低下を `rnd(3)+1` にする
 - [x] Rogue 5.4.4 `scrolls.c:S_HOLD` 準拠で hold monster は duration roll ではなく `ISHELD` flag にする
+- [x] Rogue 5.4.4 `scrolls.c:S_CREATE` / `monsters.c:new_monster()` 準拠で、create monster 候補を `winat()` / `step_ok()` 基準にし、生成 monster を mlist head 相当にする
 - [x] Rogue 5.4.4 `misc.c:look()` 準拠で、同一セルの visible monster は床・通路・アイテムと重ねず monster glyph だけ描く
 - [x] Rogue 5.4.4 `init.c:init_names()` 準拠で scroll 未識別タイトルを `rnd(3)+2` words / `rnd(3)+1` syllables 生成にする
 - [x] Rogue 5.4.4 `init.c:init_names()` 準拠で scroll 未識別タイトルの `MAXNAME` 判定をタイトル全体へ適用する
@@ -277,6 +307,7 @@
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` 準拠で、武器ダメージ表を `%dx%d` 表記へ統一
 - [x] Rogue 5.4.4 `weapons.c:init_dam[]` を `rogue_weapons.py` へ小分割
 - [x] Rogue 5.4.4 `weapons.c:wield()` 準拠で armor の wield を拒否
+- [x] Rogue 5.4.4 `pack.c:get_item()` / `weapons.c:wield()` 準拠で、wield 選択候補は armor を含む pack 全体にする
 - [x] Rogue 5.4.4 `weapons.c:wield()` / `misc.c:is_current()` 準拠で現在装備中 item の wield に in-use 表示を出す
 - [x] Rogue 5.4.4 `weapons.c:wield()` / `command.c:command()` 準拠で wield bad path はターン非消費
 - [x] Rogue 5.4.4 `weapons.c:wield()` の gate 判定を `rogue_weapons.py` へ小分割
@@ -364,7 +395,10 @@
 - [x] Rogue 5.4.4 `rip.c:total_winner()` 準拠で、ring / stick の勝利売却半額判定を個体 `ISKNOW` に合わせる
 - [x] Rogue 5.4.4 `rooms.c:do_rooms()` / `chase.c:find_dest()` / `do_chase()` 準拠で、monster の gold 目的地選択・収集を `lvl_obj` 扱いに合わせる
 - [x] Rogue 5.4.4 `move.c:be_trapped()` 準拠で、trap 発動時に `running/count` 相当を trap 効果前にクリア
+- [x] Rogue 5.4.4 `move.c:do_move()` / `be_trapped()` 準拠で、移動で踏んだ arrow trap miss の矢は移動前 hero 位置から `fall()` する
 - [x] Rogue 5.4.4 `things.c:inv_name()` 準拠で、`GOLD` の inventory name を gold value 表示にする
+- [x] Rogue 5.4.4 `command.c:command()` / `fight.c:attack()` / `remove_mon()` 準拠で、`f/F` fight-to-death の方向指定、対象選択、`to_death` 継続、HP停止、target死亡解除を接続
+- [x] Rogue 5.4.4 `command.c:command()` / `misc.c:get_dir()` / `pack.c:get_item()` / `reset_last()` 準拠で、`a` again command の last command / direction / item 再利用、ターン非消費 command と illegal command の repeat、方向キャンセル復元、使い切り item repeat の message / turn を接続
 - [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
 - [x] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）
   - [x] `S_CONFUSE` monster confusion（次攻撃時にモンスター混乱、`your hands begin to glow red`）
@@ -385,9 +419,14 @@
   - [x] `see invisible` potion の `unsee` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:P_SEEINVIS` の potion duration と ring-only `CANSEE` 分岐を `rogue_potions.py` へ小分割
   - [x] `hallucination` potion の `come_down` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `potions.c:P_LSD` / `daemons.c:come_down()` 準拠で、`visuals` BEFORE daemon の登録と解除を delayed action table に反映
+  - [x] Rogue 5.4.4 `daemons.c:visuals()` 準拠で、hallucination 表示乱数を draw 時ではなく BEFORE daemon の表示キャッシュ更新に寄せる
+  - [x] Rogue 5.4.4 `daemons.c:visuals()` 準拠で、盲目中も `SEEMONST` detected monster は hallucination 表示更新する
   - [x] Rogue 5.4.4 `potions.c:P_LSD` 準拠で、`turn_see(FALSE)` 時に monster detection 表示を維持
+  - [x] Rogue 5.4.4 `potions.c:seen_stairs()` / `misc.c:trip_ch()` 準拠で、既知の階段は hallucination 中も実階段表示にする
   - [x] `levitation` potion の `land` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] `confusion` potion の `unconfuse` と `blindness` potion の `sight` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
+  - [x] Rogue 5.4.4 `main.c` 準拠で、初期 shared slot 登録順を `runners` / `doctor` / `swander` fuse / `stomach` にする
   - [x] `monster detection` potion の `turn_see` を `fuse` / `lengthen` / `do_fuses(AFTER)` へ接続
   - [x] Rogue 5.4.4 `potions.c:turn_see()` の `SEEMONST` ON/OFF を `rogue_potions.py` へ小分割
   - [x] Rogue 5.4.4 `potions.c:turn_see(FALSE)` の新規 monster 感知判定を `rogue_potions.py` へ小分割
@@ -440,6 +479,8 @@
 - [x] キーボードでも A/B/Select/Start 相当の最低限操作（Enter, Esc, Tab, Space）を割り当てる
 - [ ] pyxapp / 中華ゲーム機向けの Pyxel 終了方法追加（優先度低。セーブ / システム系インタフェースで扱う）
 - [x] Rogue V5 直打ちキーボードショートカット基礎（`t/q/r/e/w/W/T/i/?/s/^/z`。既存メニュー項目への入口として実装し、プレイ中だけ発火）
+- [x] Rogue 5.4.4 `command.c:command()` 準拠で、数字 prefix による search / 足踏み / 方向移動 / move_on / again の count 反復を追加
+- [x] Rogue 5.4.4 `command.c:command()` / `sticks.c:do_zap()` 準拠で、空packの `z` は方向指定後に pack 空メッセージを出してターン消費する
 - [x] Rogue V5 `P` put on ring の直打ち入力を追加する。`c` call は実装済み。英字キーは原作コマンドを優先するため、Pad style では使わない。
 - [x] Item overlay で `a-z` のアイテム letter 直接選択を追加する。プレイ中の Rogue commands とは別レイヤーとして扱い、overlay 中は文字コマンドを発火させない。
 - [x] B+D-pad run 開始をホールド方向判定にし、B と D-pad の押下順に依存しないよう修正
@@ -459,6 +500,15 @@
 - [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理
 - [x] Rogue 5.4.4 `passages.c` 準拠の通常部屋通路生成へ修正
+- [x] Rogue 5.4.4 `new_level.c:new_level()` / `passages.c:do_passages()` 準拠で、原作にない生成後の補修通路を削除
+- [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、扉位置と通路曲がり位置を `rnd()` 選択にする
+- [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、maze room の通路出口を wall `rnd()` 再試行にする
+- [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、maze room 通路出口の固定回数fallbackを削除
+- [x] Rogue 5.4.4 `passages.c:door()` 準拠で、maze room 出口も AI 用 room exit に記録する
+- [x] Rogue 5.4.4 `passages.c:conn()` 準拠で、逆順 edge でも door RNG を左→右 / 上→下に正規化する
+- [x] Rogue 5.4.4 `new_level.c:new_level()` / `passages.c:do_passages()` 準拠で、固定 seed 群の階段1個・到達可能性を監査
+- [x] Rogue 5.4.4 `rooms.c:do_maze()` / `dig()` 準拠で、maze room 本体を偶数 offset と `rnd(++cnt)` で掘る
+- [x] Rogue 5.4.4 `chase.c:roomin()` 準拠で、部屋所属の右下境界を包含判定にする
 - [x] 旧コンパクトレイアウト（512×320化で置き換え済み）
 - [x] 512×320 基準レイアウトへ変更（旧方針。80桁化で暫定640×320へ移行）
 - [x] 内部論理マップを Rogue 5.4.4 準拠の 80×24 座標系へ変更
@@ -549,6 +599,8 @@
 - [x] 迷路部屋 / gone room は生成・接続・視界の初期対応済み
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携（Dragon breath の同室・直線・射程・`ISCANC` ゲートは `chase.c:do_chase()` / `sticks.c:fire_bolt()` 準拠で接続済み）
+  - [x] Rogue 5.4.4 `passages.c:numpass()` / `chase.c:do_chase()` 準拠で、hero が通常 room door 上にいる場合の Dragon breath `proom` 判定を固定
+  - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、Dragon に flame が当たった時はダメージなしで bolt 処理を終了する
 - [x] 巻物 18 種化完了（identify 対象選択 UI 含む）
 - [x] ポーションを原作 14 種へ更新（hallucination / levitation 接続済み）
 - [x] treasure room（モンスターハウス）を `new_level.c:treas_room()` 準拠で接続済み。`rogue_dungeon.py` に個数計算と発生ゲートを分離。

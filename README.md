@@ -100,7 +100,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 - 矢印 / HJKL: 移動
 - YUBN: 斜め移動
-- Space押下中: 斜め補助モード
+- Space押下中: 斜め補助モード / 単独押下: no-op
 - Enter: 決定 / 拾う / 階段 / 正面1マスsearch
 - Enter+Esc: 足踏み
 - Shift+方向: ダッシュ
@@ -111,13 +111,26 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認
 - .: 足踏み
+- > / <: 階段を降りる / 登る
 - s: 周囲8マスsearch
 - t: quick throw
 - ^: Trap Inspect（方向指定）
 - i: Inventory
+- I: 単品Inventory
 - ?: Help
+- /: 記号の識別
+- Ctrl+P: 前メッセージ再表示
+- Ctrl+R: 再描画
+- m: Move onto（拾わずに移動）
+- f/F: Fight / Fight to death
+- a: Again（直前コマンドを繰り返し）
+- 数字: search / 足踏み / 方向移動 / Again の回数指定
+- o: 補助メニュー
+- v: Version
+- ) / ] / = / @: 現在装備 / よろい / 指輪 / ステータス
 - q/r/e/z: Quaff / Read / Eat / Zap
 - w/W/T: Wear / Wield / Take off
+- Q: Quit
 
 杖はメニューの Zap から選び、方向を指定して振ります。
 

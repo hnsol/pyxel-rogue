@@ -61,9 +61,12 @@ def install_pyxel_mock():
         "KEY_Q", "KEY_W", "KEY_E", "KEY_T", "KEY_P",
         "KEY_A", "KEY_D", "KEY_F", "KEY_G", "KEY_M",
         "KEY_O", "KEY_V",
+        "KEY_1", "KEY_2", "KEY_3", "KEY_4", "KEY_5",
+        "KEY_7", "KEY_8", "KEY_9",
         "KEY_I", "KEY_6", "KEY_SPACE",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_BACKSPACE",
         "KEY_PERIOD", "KEY_COMMA", "KEY_MINUS",
+        "KEY_0", "KEY_EQUALS", "KEY_RIGHTBRACKET", "KEY_AT",
         "KEY_QUESTION", "KEY_SLASH", "KEY_R",
         "KEY_SHIFT", "KEY_LSHIFT", "KEY_RSHIFT",
         "KEY_CTRL", "KEY_LCTRL", "KEY_RCTRL",
@@ -155,6 +158,16 @@ def set_two_room_floor(game):
 def monster_at(x, y, sym="H", name="hobgoblin", hp=10, level=1, armor=5,
                damage="1x8", exp=3, flags=""):
     return rogue.Monster(x, y, sym, name, hp, level, armor, damage, exp, flags)
+
+
+def command_look_monster(game):
+    # Rogue 5.4.4 misc.c:look(TRUE) wakes monsters only in the hero-adjacent 3x3 scan.
+    x, y = game.p.x, game.p.y + 1
+    game.tm[y][x] = rogue.T_CORR
+    monster = monster_at(x, y, hp=10, armor=100, exp=5, flags="mean")
+    game.mons = [monster]
+    game.visible = {(monster.x, monster.y)}
+    return monster
 
 
 def state_signature(game):
@@ -366,6 +379,80 @@ class RogueBaselineTest(unittest.TestCase):
                 self.assert_in_rogue_544_play_area(monster.x, monster.y)
             for x, y in game.traps:
                 self.assert_in_rogue_544_play_area(x, y)
+
+    def test_rogue544_new_level_places_traps_stairs_then_hero_after_objects(self):
+        # Rogue 5.4.4 new_level.c:new_level() runs do_rooms(), do_passages(), put_things(), traps, stairs, then hero.
+        game = new_game(seed=35)
+        order = []
+        positions = [(5, 5), (6, 5)]
+
+        game._populate_initial_room = lambda room: order.append(f"room:{len(order)}")
+        game._spawn_items = lambda: order.append("put_things")
+        game._spawn_amulet = lambda: order.append("amulet")
+        game._hide_secret_features = lambda: None
+        game._spawn_traps = lambda: order.append("traps")
+
+        def fake_find_floor_pos(room=None, limit=0, monst=False, **kwargs):
+            order.append("hero" if monst else "stairs")
+            return positions.pop(0)
+
+        game.find_floor_pos = fake_find_floor_pos
+        game.descend()
+
+        self.assertTrue(order[0].startswith("room:"))
+        self.assertEqual(order[order.index("put_things"):], ["put_things", "amulet", "traps", "stairs", "hero"])
+        self.assertTrue(all(entry.startswith("room:") for entry in order[:order.index("put_things")]))
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertEqual(game.tm[5][5], rogue.T_STAIR)
+
+    def test_rogue544_dgen_room_callback_runs_before_do_passages(self):
+        # Rogue 5.4.4 rooms.c:do_rooms() populates each real room before passages.c:do_passages().
+        events = []
+        old_edges = rogue.DGen._passage_edges
+        try:
+            rogue.DGen._passage_edges = staticmethod(lambda *a, **kw: events.append("passages") or [])
+
+            rogue.DGen.gen(depth=1, room_callback=lambda _tm, _rooms, room: events.append("room"))
+        finally:
+            rogue.DGen._passage_edges = old_edges
+
+        self.assertTrue(events)
+        self.assertEqual(events[-1], "passages")
+        self.assertNotIn("room", events[events.index("passages"):])
+
+    def test_rogue544_new_level_increments_no_food_after_do_passages_before_put_things(self):
+        # Rogue 5.4.4 new_level.c:new_level() calls no_food++ after do_passages(), before put_things().
+        game = new_game(seed=3051)
+        events = []
+        game.no_food = 7
+        game._populate_initial_room = lambda room: events.append(("room", game.no_food))
+        game._spawn_items = lambda: events.append(("put_things", game.no_food))
+        game._spawn_amulet = lambda: None
+        game._spawn_traps = lambda: None
+        positions = iter([(5, 5), (6, 5)])
+        game.find_floor_pos = lambda *a, **kw: next(positions)
+
+        game.descend()
+
+        self.assertIn(("room", 7), events)
+        self.assertIn(("put_things", 8), events)
+
+    def test_rogue_544_new_level_refreshes_hallucination_visuals_after_enter_room(self):
+        # Rogue 5.4.4 new_level.c:new_level() calls visuals() after placing hero and enter_room().
+        game = new_game(seed=3052)
+        calls = []
+        positions = iter([(5, 5), (6, 5)])
+        game._populate_initial_room = lambda room: None
+        game._spawn_items = lambda: None
+        game._spawn_amulet = lambda: None
+        game._spawn_traps = lambda: None
+        game.find_floor_pos = lambda *a, **kw: next(positions)
+        game.p.hallucinating = 10
+        game.run_visuals = lambda: calls.append((game.p.x, game.p.y, bool(game.visible)))
+
+        game.descend()
+
+        self.assertEqual(calls, [(6, 5, True)])
 
     def test_rogue_544_stick_table_materials_and_names_audit(self):
         # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
@@ -593,6 +680,57 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((monster.x, monster.y), (game.p.x + 2, game.p.y))
         self.assertFalse(monster.running)
         self.assertTrue(game.ident.wk[rogue_sticks.WS_POLYMORPH])
+
+    def test_rogue_544_zap_polymorph_reattaches_target_to_mlist_head(self):
+        # Rogue 5.4.4 sticks.c:do_zap() detaches tp, then monsters.c:new_monster() attaches it to mlist head.
+        import rogue_sticks
+
+        game = new_game(seed=607)
+        set_open_floor(game)
+        before = monster_at(game.p.x + 4, game.p.y, sym="B", name="bat")
+        target = monster_at(game.p.x + 1, game.p.y, sym="H", name="hobgoblin")
+        after = monster_at(game.p.x + 5, game.p.y, sym="K", name="kobold")
+        game.mons = [before, target, after]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_POLYMORPH, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(stick.charges, 0)
+        self.assertIs(game.mons[0], target)
+        self.assertEqual(game.mons[1:], [before, after])
+        self.assertEqual((target.sym, target.name), ("D", "dragon"))
+        self.assertEqual((target.x, target.y), (game.p.x + 1, game.p.y))
+        self.assertIs(game.mon_at(target.x, target.y), target)
+        self.assertIs(game.mon_at(before.x, before.y), before)
+        self.assertIs(game.mon_at(after.x, after.y), after)
+
+    def test_rogue_544_zap_polymorph_preserves_monster_pack(self):
+        # Rogue 5.4.4 sticks.c:do_zap() restores tp->t_pack after monsters.c:new_monster().
+        import rogue_sticks
+
+        game = new_game(seed=608)
+        set_open_floor(game)
+        target = monster_at(game.p.x + 1, game.p.y, sym="H", name="hobgoblin")
+        loot = rogue.Item(rogue.CAT_GOLD, 0, qty=17)
+        target.pack = [loot]
+        game.mons = [target]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 3
+            stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_POLYMORPH, charges=1)
+            game.zap_stick(stick, 1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(stick.charges, 0)
+        self.assertEqual((target.sym, target.name), ("D", "dragon"))
+        self.assertEqual(target.pack, [loot])
+        self.assertIs(target.pack[0], loot)
+        self.assertIs(game.mons[0], target)
 
     def test_rogue_544_polymorph_restores_mean_from_new_monster_spec(self):
         # Rogue 5.4.4 monsters.c:new_monster() rebuilds flags from extern.c:monsters[].
@@ -1252,6 +1390,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(dragon.running)
         self.assertIn("the flame bounces", game.msgs)
 
+    def test_rogue_544_fire_bolt_stops_after_bouncing_off_dragon(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() sets used=TRUE in the Dragon flame-bounce branch.
+        import rogue_sticks
+
+        game = new_game(seed=230)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        game.tm[10][13] = rogue.T_VWALL
+        dragon = monster_at(12, 10, sym="D", name="dragon", hp=40)
+        game.mons = [dragon]
+        game.monster_save_throw = lambda which, m: False
+        game.save_vs_magic = lambda: False
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.roll = lambda number, sides: 12
+            hit = game.fire_bolt(1, 0, "flame")
+        finally:
+            rogue.RNG.roll = old_roll
+
+        self.assertTrue(hit)
+        self.assertEqual(dragon.hp, 40)
+        self.assertEqual(game.p.hp, 30)
+        self.assertIn("the flame bounces", game.msgs)
+        self.assertNotIn("you are hit by the flame", game.msgs)
+
     def test_rogue_544_bolt_hits_monster_standing_on_door_before_door_bounce(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses winat(); a monster on DOOR is seen before terrain bounce.
         import rogue_sticks
@@ -1329,6 +1493,69 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.quiet, 0)
 
+    def test_rogue_544_dragon_breath_clears_fight_to_death_when_dragon_is_not_target(self):
+        # Rogue 5.4.4 chase.c:do_chase() clears to_death/kamikaze after Dragon fire_bolt()
+        # unless the breathing Dragon has ISTARGET.
+        game = new_game(seed=2251)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        target = monster_at(game.p.x - 1, game.p.y, sym="O", name="orc")
+        target.target = True
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [target, dragon]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = target
+        game.fight_dir = (-1, 0)
+        game.save_vs_magic = lambda: True
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertFalse(game.fight_to_death)
+        self.assertFalse(game.fight_kamikaze)
+        self.assertIsNone(game.fight_target)
+        self.assertEqual(game.fight_dir, (0, 0))
+        self.assertTrue(target.target)
+
+    def test_rogue_544_dragon_breath_preserves_fight_to_death_when_dragon_is_target(self):
+        # Rogue 5.4.4 chase.c:do_chase() leaves to_death/kamikaze set when the Dragon has ISTARGET.
+        game = new_game(seed=2252)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        dragon = monster_at(game.p.x + rogue.BOLT_LENGTH, game.p.y, sym="D", name="dragon", flags="")
+        dragon.running = True
+        dragon.target = True
+        game.mons = [dragon]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = dragon
+        game.fight_dir = (1, 0)
+        game.save_vs_magic = lambda: True
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertTrue(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
+        self.assertIs(game.fight_target, dragon)
+        self.assertEqual(game.fight_dir, (1, 0))
+
     def test_rogue_544_cancelled_dragon_does_not_breathe_or_roll_dragonshot(self):
         # Rogue 5.4.4 chase.c:do_chase() gates Dragon breath with !ISCANC before rnd(DRAGONSHOT).
         game = new_game(seed=223)
@@ -1404,6 +1631,39 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, 18)
         self.assertEqual((dragon.x, dragon.y), (10, 10))
 
+    def test_rogue_544_dragon_breaths_at_hero_on_room_door(self):
+        # Rogue 5.4.4 passages.c:numpass() numbers normal DOOR exits without F_PASS;
+        # chase.c:do_chase() therefore sees a hero on a room door as in proom.
+        game = new_game(seed=2271)
+        room = rogue.Room(10, 8, 10, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.tm[10][10] = rogue.T_DOOR
+        game.p.x, game.p.y = 10, 10
+        game.p.hp = 30
+        dragon = monster_at(16, 10, sym="D", name="dragon", flags="")
+        dragon.running = True
+        game.mons = [dragon]
+        game.save_vs_magic = lambda: False
+        old_rnd = rogue.RNG.rnd
+        old_roll = rogue.RNG.roll
+        try:
+            calls = []
+            rogue.RNG.rnd = lambda n: calls.append(n) or 0
+            rogue.RNG.roll = lambda number, sides: 12
+            game.do_chase(dragon)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.roll = old_roll
+
+        self.assertEqual(calls, [5])
+        self.assertEqual(game.p.hp, 18)
+        self.assertEqual((dragon.x, dragon.y), (16, 10))
+        self.assertIn("you are hit by the flame", game.msgs)
+
     def test_rogue_544_dragon_breath_death_cause_is_dragon_not_flame(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() calls death(moat(start)->t_type) for monster-started bolts.
         game = new_game(seed=224)
@@ -1464,6 +1724,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(orc.running)
         self.assertIn("the flame whizzes past the orc", game.msgs)
 
+    def test_rogue_544_bolt_saved_miss_suppresses_mismatched_magic_m_glyph(self):
+        # Rogue 5.4.4 sticks.c:fire_bolt() saved-miss feedback is gated by
+        # winat() != 'M' || t_disguise == 'M'.
+        game = new_game(seed=2261)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        orc = monster_at(12, 10, sym="O", name="orc")
+        game.mons = [orc]
+        game.monster_save_throw = lambda which, monster: True
+        game.zap_winat_char = lambda x, y: "M" if (x, y) == (orc.x, orc.y) else "."
+
+        hit = game.fire_bolt(1, 0, "flame")
+
+        self.assertFalse(hit)
+        self.assertFalse(orc.running)
+        self.assertNotIn("the flame whizzes past the orc", game.msgs)
+
     def test_rogue_544_bolt_miss_reports_disguised_xeroc_name(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses winat(); item-disguised Xeroc still passes ch != 'M'.
         game = new_game(seed=227)
@@ -1486,6 +1763,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True), (True, True))
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False), (False, True))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, "M", "O"), (False, False))
+        self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True, "M", "M"), (True, True))
 
     def test_rogue_544_sticks_helper_bolt_death_cause(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses death('b') for hero-started bolt deaths.
@@ -2288,8 +2567,8 @@ class RogueBaselineTest(unittest.TestCase):
         kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "teleportation")
         same_room_scroll = rogue.Item(rogue.CAT_SCR, kind)
         game.p.inv.append(same_room_scroll)
-        game.usable_rooms = lambda: [room_a]
-        game.random_room_tile = lambda room, tiles: room.inner()
+        same_pos = room_a.inner()
+        game.find_floor_pos = lambda *args, **kwargs: same_pos
 
         game.use_scr(same_room_scroll)
 
@@ -2306,7 +2585,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.no_move = 5
         game.dashing = True
         game.dash_steps = 3
-        game.usable_rooms = lambda: [room_b]
+        other_pos = room_b.inner()
+        game.find_floor_pos = lambda *args, **kwargs: other_pos
 
         game.use_scr(other_room_scroll)
 
@@ -2319,6 +2599,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.dashing)
         self.assertEqual(game.dash_steps, 0)
         self.assertNotIn("You are teleported!", game.msgs)
+
+    def test_rogue_544_teleport_scroll_uses_find_floor_not_room_choice(self):
+        # Rogue 5.4.4 scrolls.c:S_TELEP calls wizard.c:teleport(),
+        # which relocates the hero through rooms.c:find_floor(..., monst=TRUE).
+        game = new_game(seed=326)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room_a = rogue.Room(1, 1, 8, 6)
+        room_b = rogue.Room(20, 1, 8, 6)
+        game.rooms = [room_a, room_b]
+        for room in game.rooms:
+            for y in range(room.y + 1, room.y + room.h - 1):
+                for x in range(room.x + 1, room.x + room.w - 1):
+                    game.tm[y][x] = rogue.T_FLOOR
+        game.p.x, game.p.y = room_a.inner()
+        game.usable_rooms = lambda: [room_a]
+        game.random_room_tile = lambda room, tiles: room.inner()
+        calls = []
+        target = room_b.inner()
+        game.find_floor_pos = lambda *args, **kwargs: calls.append((args, kwargs)) or target
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "teleportation")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        game.use_scr(scroll)
+
+        self.assertEqual((game.p.x, game.p.y), target)
+        self.assertEqual(calls[0][1]["monst"], True)
+        self.assertTrue(game.ident.sk[kind])
 
     def test_rogue_544_create_monster_uses_eight_neighbors_and_does_not_identify(self):
         # Rogue 5.4.4 scrolls.c:S_CREATE scans the full 3x3 ring and does not set oi_know.
@@ -2408,6 +2716,44 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([mo.sym for mo in game.mons], ["B"])
 
+    def test_rogue_544_create_monster_uses_winat_for_item_disguised_xeroc(self):
+        # Rogue 5.4.4 scrolls.c:S_CREATE uses step_ok(winat()), then monsters.c:new_monster() attaches at mlist head.
+        class CreateMonsterRng:
+            def __init__(self):
+                self.rolls = iter([0, 0, 2])
+
+            def rnd(self, n):
+                return next(self.rolls)
+
+            def choice(self, seq):
+                raise AssertionError("choice used")
+
+            def roll(self, dice, sides):
+                return dice
+
+        game = new_game(seed=338)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = [rogue.Room(1, 1, 8, 8)]
+        game.p.x, game.p.y = 4, 4
+        game.tm[game.p.y][game.p.x] = rogue.T_FLOOR
+        game.tm[game.p.y - 1][game.p.x - 1] = rogue.T_FLOOR
+        xeroc = monster_at(game.p.x - 1, game.p.y - 1, sym="X", name="xeroc")
+        xeroc.disguise = "?"
+        game.mons = [xeroc]
+        kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "create monster")
+        scroll = rogue.Item(rogue.CAT_SCR, kind)
+        game.p.inv.append(scroll)
+
+        old_rng = rogue.RNG
+        rogue.RNG = CreateMonsterRng()
+        try:
+            game.use_scr(scroll)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual([mo.sym for mo in game.mons], ["B", "X"])
+        self.assertIs(game.mon_at(game.p.x - 1, game.p.y - 1), game.mons[0])
+
     def test_rogue_544_random_monster_spec_uses_randmonster_false_table(self):
         # Rogue 5.4.4 rooms.c:do_rooms() uses monsters.c:randmonster(FALSE).
         class MonsterRng:
@@ -2491,6 +2837,36 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(events[:8], ["rnd:2", "rnd:8", "rnd:6", "rnd:2", "rnd:8", "rnd:6", "rnd:10", "rnd:10"])
         self.assertEqual([(mo.x, mo.y, mo.sym) for mo in game.mons], [(23, 5, "B")])
+
+    def test_rogue_544_wanderer_floor_pos_retries_player_room_without_fixed_cap(self):
+        # Rogue 5.4.4 monsters.c:wanderer() has no fixed retry cap around the proom check.
+        game = new_game(seed=3392)
+        room_a, room_b = set_two_room_floor(game)
+        player_room_pos = (room_a.x + 2, room_a.y + 2)
+        other_room_pos = (room_b.x + 2, room_b.y + 2)
+        game.p.x, game.p.y = player_room_pos
+        positions = [player_room_pos, player_room_pos, other_room_pos]
+        calls = []
+
+        old_map_w = rogue.MAP_W
+        old_map_h = rogue.MAP_H
+        old_find_floor_pos = game.find_floor_pos
+        try:
+            rogue.MAP_W = 1
+            rogue.MAP_H = 1
+
+            def fake_find_floor_pos(*args, **kwargs):
+                calls.append((args, kwargs))
+                return positions.pop(0)
+
+            game.find_floor_pos = fake_find_floor_pos
+            self.assertEqual(game.wanderer_floor_pos(), other_room_pos)
+        finally:
+            game.find_floor_pos = old_find_floor_pos
+            rogue.MAP_W = old_map_w
+            rogue.MAP_H = old_map_h
+
+        self.assertEqual(len(calls), 3)
 
     def test_rogue_544_wanderer_floor_candidates_skip_plain_corridors(self):
         # Rogue 5.4.4 monsters.c:wanderer() uses rooms.c:find_floor(NULL), which picks a room.
@@ -3746,6 +4122,34 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(monster.target)
 
+    def test_rogue_544_runners_target_move_clears_fight_to_death(self):
+        # Rogue 5.4.4 chase.c:runners() clears to_death when an ISTARGET monster moves.
+        game = new_game(seed=311)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 3, game.p.y, hp=20)
+        monster.running = True
+        monster.target = True
+        monster.dest = rogue.DEST_PLAYER
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = monster
+        game.fight_dir = (1, 0)
+        moved = []
+
+        def move_once(m):
+            moved.append(m)
+            m.x -= 1
+            return 0
+
+        game.move_monst = move_once
+        game.run_runners()
+
+        self.assertEqual(moved, [monster])
+        self.assertFalse(monster.target)
+        self.assertFalse(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
+
     def test_rogue_544_chase_helper_monster_turn_repeats_for_flying_at_distance(self):
         # Rogue 5.4.4 chase.c:runners() calls move_monst() again for ISFLY at distance >= 3.
         import rogue_chase
@@ -3866,7 +4270,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIs(rogue_chase.roomin(10, 4, [room]), room)
         self.assertIs(rogue_chase.roomin(15, 8, [room]), room)
-        self.assertIsNone(rogue_chase.roomin(16, 8, [room]))
+        self.assertIs(rogue_chase.roomin(16, 8, [room]), room)
+        self.assertIs(rogue_chase.roomin(16, 9, [room]), room)
+        self.assertIsNone(rogue_chase.roomin(17, 9, [room]))
 
     def test_rogue_544_chase_helper_see_monst_blocks_blind_and_unseen_invisible(self):
         # Rogue 5.4.4 chase.c:see_monst() rejects blind sight and invisible monsters without CANSEE.
@@ -3985,6 +4391,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(dest, (25, 4))
         self.assertEqual(second.dest, (25, 4))
 
+    def test_rogue_544_game_find_dest_treats_own_destination_as_claimed(self):
+        # Rogue 5.4.4 chase.c:find_dest() scans mlist including the caller's current t_dest.
+        game = new_game(seed=527)
+        set_two_room_floor(game)
+        claimed = rogue.Item(rogue.CAT_POT, 0)
+        claimed.x, claimed.y = 24, 4
+        target = rogue.Item(rogue.CAT_POT, 1)
+        target.x, target.y = 25, 4
+        monster = monster_at(22, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.dest = (24, 4)
+        game.mons = [monster]
+        game.gitems = [claimed, target]
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            dest = game.find_dest(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(dest, (25, 4))
+        self.assertEqual(monster.dest, (25, 4))
+
     def test_rogue_544_game_find_dest_includes_room_gold_for_carry_monsters(self):
         # Rogue 5.4.4 rooms.c:do_rooms() attaches GOLD to lvl_obj; chase.c:find_dest() skips only S_SCARE.
         game = new_game(seed=514)
@@ -4067,6 +4495,96 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(item, game.gitems)
         self.assertIn(item, monster.pack)
         self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+
+    def test_rogue_544_do_chase_keeps_stale_item_destination_until_reached(self):
+        # Rogue 5.4.4 chase.c:do_chase() does not validate t_dest against lvl_obj before chase().
+        game = new_game(seed=525)
+        set_two_room_floor(game)
+        game.p.x, game.p.y = 3, 4
+        monster = monster_at(23, 4, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (24, 4)
+        game.mons = [monster]
+        game.gitems = []
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (24, 4))
+        self.assertEqual(monster.dest, (24, 4))
+        self.assertFalse(monster.running)
+
+    def test_rogue_544_do_chase_greedy_stale_gold_destination_falls_back_to_hero(self):
+        # Rogue 5.4.4 chase.c:do_chase() sends ISGREED monsters after hero when rer->r_goldval is 0.
+        game = new_game(seed=526)
+        set_two_room_floor(game)
+        game.p.x, game.p.y = 3, 4
+        monster = monster_at(23, 4, "O", "orc", hp=10, armor=100, exp=5, flags="greed")
+        monster.running = True
+        monster.dest = (24, 4)
+        game.mons = [monster]
+        game.gitems = []
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (22, 4))
+        self.assertEqual(monster.dest, rogue.DEST_PLAYER)
+
+    def test_rogue_544_do_chase_collecting_maze_item_restores_floor_tile(self):
+        # Rogue 5.4.4 chase.c:do_chase() restores chat(obj->o_pos) to
+        # FLOOR unless th->t_room has ISGONE, even when the item was on PASSAGE.
+        game = new_game(seed=5101)
+        room = rogue.Room(5, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_CORR
+        game.p.x, game.p.y = 20, 20
+        game.tm[20][20] = rogue.T_FLOOR
+        monster = monster_at(7, 7, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (8, 7)
+        item = rogue.Item(rogue.CAT_POT, 0)
+        item.x, item.y = monster.dest
+        game.mons = [monster]
+        game.gitems = [item]
+
+        game.do_chase(monster)
+
+        self.assertEqual((monster.x, monster.y), (8, 7))
+        self.assertIn(item, monster.pack)
+        self.assertEqual(game.tm[7][8], rogue.T_FLOOR)
+
+    def test_rogue_544_collected_maze_floor_keeps_passage_identity_for_ai(self):
+        # Rogue 5.4.4 chase.c:roomin() uses F_PASS before room bounds, so a
+        # maze passage whose display char was restored to FLOOR remains in the passage.
+        game = new_game(seed=5102)
+        room = rogue.Room(5, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for y in range(room.y + 1, room.y + room.h - 1):
+            for x in range(room.x + 1, room.x + room.w - 1):
+                game.tm[y][x] = rogue.T_CORR
+        monster = monster_at(7, 7, "C", "centaur", hp=10, armor=100, exp=5)
+        monster.running = True
+        monster.dest = (8, 7)
+        first = rogue.Item(rogue.CAT_POT, 0)
+        first.x, first.y = monster.dest
+        second = rogue.Item(rogue.CAT_POT, 1)
+        second.x, second.y = 9, 7
+        game.mons = [monster]
+        game.gitems = [first, second]
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.do_chase(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.tm[7][8], rogue.T_FLOOR)
+        self.assertEqual(monster.dest, (9, 7))
+        self.assertEqual(game.room_for_ai(monster.x, monster.y), game.room_for_ai(second.x, second.y))
 
     def test_rogue_544_do_chase_keeps_running_after_collecting_item_when_new_dest_differs(self):
         # Rogue 5.4.4 chase.c:do_chase() stops only if relocate() leaves the monster on the new t_dest.
@@ -4240,6 +4758,33 @@ class RogueBaselineTest(unittest.TestCase):
         passage = game.passage_component(5, 10)
 
         self.assertIn((6, 10), game.passage_exits(passage))
+
+    def test_rogue_544_passage_exits_keep_numpass_traversal_order(self):
+        # Rogue 5.4.4 passages.c:numpass() stores exits during down/up/right/left recursion.
+        game = new_game(seed=522)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = []
+        game.tm[10][10] = rogue.T_CORR
+        for x, y in ((10, 11), (10, 9), (11, 10), (9, 10)):
+            game.tm[y][x] = rogue.T_DOOR
+
+        passage = game.passage_component(10, 10)
+
+        self.assertEqual(game.passage_exits(passage), [(10, 11), (10, 9), (11, 10), (9, 10)])
+
+    def test_rogue_544_passage_exits_use_passnum_room_exit_root(self):
+        # Rogue 5.4.4 passages.c:passnum() starts numpass() from rooms[].r_exit order.
+        game = new_game(seed=523)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.rooms = [rogue.Room(0, 0, 4, 4)]
+        game.rooms[0].exits = [(9, 10)]
+        game.tm[10][10] = rogue.T_CORR
+        for x, y in ((10, 11), (10, 9), (11, 10), (9, 10)):
+            game.tm[y][x] = rogue.T_DOOR
+
+        passage = game.passage_component(10, 10)
+
+        self.assertEqual(game.passage_exits(passage), [(9, 10), (10, 11), (10, 9), (11, 10)])
 
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
@@ -4635,6 +5180,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.state, "weak")
 
+    def test_rogue_544_stomach_hunger_state_change_clears_fight_to_death(self):
+        # Rogue 5.4.4 daemons.c:stomach() clears to_death/kamikaze/count when hungry_state changes.
+        game = new_game(seed=4431)
+        set_open_floor(game)
+        target = monster_at(game.p.x + 1, game.p.y, sym="O", name="orc")
+        target.target = True
+        game.mons = [target]
+        game.p.food = rogue.MORETIME
+        game.p.state = "normal"
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = target
+        game.fight_dir = (1, 0)
+
+        game.run_stomach()
+
+        self.assertEqual(game.p.state, "weak")
+        self.assertFalse(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
+        self.assertIs(game.fight_target, target)
+        self.assertEqual(game.fight_dir, (1, 0))
+
     def test_rogue_544_stomach_decrements_food_on_starvation_death_check(self):
         # Rogue 5.4.4 daemons.c:stomach() uses food_left-- in the starvation death check.
         player = rogue.Player()
@@ -4706,6 +5273,23 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(seen, [1])
         self.assertEqual(game.p.no_command, 0)
+
+    def test_rogue_544_initial_daemon_fuse_slot_order_matches_main_c(self):
+        # Rogue 5.4.4 main.c starts runners, doctor, swander fuse, then stomach in the shared d_list.
+        game = new_game(seed=319)
+
+        self.assertEqual(
+            [
+                (slot.get("kind"), slot.get("name"), slot.get("when"))
+                for slot in game.delayed_actions._slots[:4]
+            ],
+            [
+                ("daemon", "runners", rogue.rogue_daemons.AFTER),
+                ("daemon", "doctor", rogue.rogue_daemons.AFTER),
+                ("fuse", "swander", rogue.rogue_daemons.AFTER),
+                ("daemon", "stomach", rogue.rogue_daemons.AFTER),
+            ],
+        )
 
     def test_rogue_544_swander_starts_rollwand_as_before_daemon(self):
         # Rogue 5.4.4 daemons.c:swander() calls start_daemon(rollwand, ..., BEFORE).
@@ -5007,6 +5591,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.fuses.remaining("come_down"), 0)
         self.assertIn("Everything looks SO boring now.", game.msgs)
 
+    def test_rogue_544_hallucination_starts_visuals_before_daemon(self):
+        # Rogue 5.4.4 potions.c:P_LSD starts daemons.c:visuals as a BEFORE daemon on first trip.
+        game = new_game(seed=2141)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv.append(potion)
+
+        game.use_pot(potion)
+
+        self.assertTrue(game.daemons.running("visuals", rogue.rogue_daemons.BEFORE))
+
+    def test_rogue_544_come_down_kills_visuals_daemon(self):
+        # Rogue 5.4.4 daemons.c:come_down() calls kill_daemon(visuals).
+        game = new_game(seed=2142)
+        game.p.hallucinating = 10
+        game.daemons.start("visuals", rogue.rogue_daemons.BEFORE)
+        game.hallu_item_syms = {1: "!"}
+
+        game.come_down()
+
+        self.assertFalse(game.daemons.running("visuals"))
+        self.assertEqual(game.hallu_item_syms, {})
+
     def test_rogue_544_hallucination_preserves_detect_monster_display(self):
         # Rogue 5.4.4 potions.c:P_LSD calls turn_see(FALSE), which keeps SEEMONST on.
         game = new_game(seed=216)
@@ -5134,6 +5741,107 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(game.visible_monster_sym(phantom), "A")
         finally:
             rogue.RNG.rnd = old_rnd
+
+    def test_rogue_544_visuals_daemon_refreshes_hallucination_cache_in_source_order(self):
+        # Rogue 5.4.4 daemons.c:visuals() randomizes visible objects, stairs, then monsters.
+        game = new_game(seed=2161)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = px + 1, py
+        game.gitems = [potion]
+        visible_monster = monster_at(px + 2, py, "O", "orc")
+        detected_monster = monster_at(px + 5, py, "B", "bat")
+        game.mons = [visible_monster, detected_monster]
+        game.tm[py][px - 1] = rogue.T_STAIR
+        game.visible.update({(px + 1, py), (px + 2, py), (px - 1, py)})
+        game.visible.discard((px + 5, py))
+        game.p.hallucinating = 10
+        game.p.see_monsters = 10
+        rng = SequenceRng([1, 2, 3, 4])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.run_visuals()
+            rogue.RNG.rnd = lambda n: (_ for _ in ()).throw(AssertionError("draw-time RNG"))
+            self.assertEqual(game.visible_item_sym(potion), rogue.HALLU_THINGS[1])
+            self.assertEqual(game.visible_tile_sym(px - 1, py, rogue.T_STAIR), rogue.HALLU_THINGS[2])
+            self.assertEqual(game.visible_monster_sym(visible_monster), "D")
+            self.assertEqual(game.detected_monster_sym(detected_monster), "E")
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(rng.calls, [len(rogue.HALLU_THINGS) - 1, len(rogue.HALLU_THINGS) - 1, 26, 26])
+
+    def test_rogue_544_visuals_blind_still_randomizes_detected_monsters(self):
+        # Rogue 5.4.4 daemons.c:visuals() skips cansee() cells while blind but still uses SEEMONST.
+        game = new_game(seed=2162)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        potion.x, potion.y = px + 1, py
+        monster = monster_at(px + 5, py, "B", "bat")
+        game.gitems = [potion]
+        game.mons = [monster]
+        game.visible.update({(px + 1, py)})
+        game.p.hallucinating = 10
+        game.p.blind = 10
+        game.p.see_monsters = 10
+        rng = SequenceRng([5])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.run_visuals()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(game.hallu_item_syms, {})
+        self.assertEqual(game.detected_monster_sym(monster), "F")
+        self.assertEqual(rng.calls, [26])
+
+    def test_rogue_544_hallucination_keeps_seen_stairs_real(self):
+        # Rogue 5.4.4 misc.c:trip_ch() leaves STAIRS real while ISHALU if seenstairs is true.
+        game = new_game(seed=3162)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_STAIR
+        game.p.hallucinating = 10
+        game.seen_stairs = True
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            self.assertEqual(game.visible_tile_sym(px + 1, py, rogue.T_STAIR), rogue.TILE_CH[rogue.T_STAIR][0])
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+    def test_rogue_544_stepping_on_stairs_marks_seenstairs_and_new_level_resets_it(self):
+        # Rogue 5.4.4 move.c:do_move() sets seenstairs on STAIRS; new_level.c:new_level() clears it.
+        game = new_game(seed=3163)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_STAIR
+        game.seen_stairs = False
+
+        game.try_move(1, 0)
+        self.assertTrue(game.seen_stairs)
+
+        game.descend()
+        self.assertFalse(game.seen_stairs)
+
+    def test_rogue_544_hallucination_potion_records_seen_stairs(self):
+        # Rogue 5.4.4 potions.c:P_LSD records seenstairs = seen_stairs() before visuals starts.
+        game = new_game(seed=3164)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.tm[py][px + 1] = rogue.T_STAIR
+        game.visible.add((px + 1, py))
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "hallucination")
+
+        game.use_pot(rogue.Item(rogue.CAT_POT, potion_kind))
+
+        self.assertTrue(game.seen_stairs)
+        self.assertEqual(game.visible_tile_sym(px + 1, py, rogue.T_STAIR), rogue.TILE_CH[rogue.T_STAIR][0])
 
     def test_rogue_544_xeroc_new_monster_uses_rnd_thing_disguise(self):
         # Rogue 5.4.4 monsters.c:new_monster() sets X t_disguise = misc.c:rnd_thing().
@@ -5843,6 +6551,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, turn)
         self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_rogue_544_wield_prompt_allows_non_weapon_items(self):
+        # Rogue 5.4.4 pack.c:get_item("wield", WEAPON) returns any chosen pack item;
+        # weapons.c:wield() rejects armor only after selection.
+        game = new_game(seed=5042)
+        weapon = rogue.Item(rogue.CAT_WPN, 1)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv = [weapon, potion, armor]
+
+        game.start_item_action("Wield")
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [weapon, potion, armor])
 
     def test_rogue_544_wield_cursed_current_weapon_failure_spends_turn(self):
         # Rogue 5.4.4 weapons.c:wield() dropcheck(cur_weapon) failure does not clear after.
@@ -7163,8 +7885,21 @@ class RogueBaselineTest(unittest.TestCase):
         old_spawn_treasure_room = getattr(game, "_spawn_treasure_room", None)
         old_rnd = rogue.RNG.rnd
         old_randint = rogue.RNG.randint
+        class TreasureGateRng:
+            def __init__(self):
+                self.treasure_gate = True
+
+            def rnd(self, n):
+                if n == rogue.rogue_dungeon.TREAS_ROOM and self.treasure_gate:
+                    self.treasure_gate = False
+                    return 0
+                if n == 100:
+                    return 99
+                return 0
+
         try:
-            rogue.RNG.rnd = lambda n: 0
+            rng = TreasureGateRng()
+            rogue.RNG.rnd = rng.rnd
             rogue.RNG.randint = lambda a, b: 0
             game._spawn_treasure_room = lambda room=None: calls.append(room)
             game._spawn_items()
@@ -7306,6 +8041,60 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rng.calls, [2, 80, 3, 3])
         self.assertEqual([(item.x, item.y) for item in game.gitems if item.cat == rogue.CAT_GOLD], [(7, 8)])
+
+    def test_rogue544_find_floor_unlimited_has_no_fixed_retry_fallback(self):
+        # Rogue 5.4.4 rooms.c:find_floor(..., limit=FALSE) loops until a matching square is found.
+        game = new_game(seed=30423)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[7][7] = rogue.T_FLOOR
+
+        class FindFloorRng:
+            def __init__(self):
+                self.rolls = 0
+
+            def rnd(self, n):
+                self.rolls += 1
+                if self.rolls <= (rogue.MAP_W * rogue.MAP_H + 1) * 2:
+                    return 0
+                return 1
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = FindFloorRng()
+            pos = game.find_floor_pos(room, limit=0, monst=False)
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(pos, (7, 7))
+
+    def test_rogue544_rnd_room_retries_gone_rooms_until_usable(self):
+        # Rogue 5.4.4 new_level.c:rnd_room() retries while the picked room has ISGONE.
+        game = new_game(seed=30422)
+        gone = rogue.Room(1, 1, 5, 5, flags={rogue.ROOM_GONE})
+        usable = rogue.Room(10, 1, 5, 5)
+        game.rooms = [gone, usable]
+
+        class RndRoomRng:
+            def __init__(self):
+                self.values = [0] * 8 + [1]
+                self.calls = []
+
+            def rnd(self, n):
+                self.calls.append(n)
+                return self.values.pop(0)
+
+        old_rng = rogue.RNG
+        try:
+            rng = RndRoomRng()
+            rogue.RNG = rng
+            picked = game.source_rnd_room()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertIs(picked, usable)
+        self.assertEqual(rng.calls, [2] * 9)
 
     def test_rogue544_room_gold_find_floor_uses_maze_passage(self):
         # Rogue 5.4.4 rooms.c:do_rooms() room gold uses find_floor(rp, ..., monst=FALSE).
@@ -8320,6 +9109,24 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(stairs), 1)
         self.assertIn(stairs[0], seen)
 
+    def test_rogue544_generated_seed_sample_has_one_reachable_stair(self):
+        # Rogue 5.4.4 new_level.c:new_level() places stairs after passages/traps,
+        # and passages.c:do_passages() connects the 3x3 room graph.
+        for seed in range(64):
+            with self.subTest(seed=seed):
+                game = new_game(seed=seed)
+                start = (game.p.x, game.p.y)
+                seen = reachable_tiles(game.tm, start)
+                stairs = [
+                    (x, y)
+                    for y, row in enumerate(game.tm)
+                    for x, tile in enumerate(row)
+                    if tile == rogue.T_STAIR
+                ]
+
+                self.assertEqual(len(stairs), 1)
+                self.assertIn(stairs[0], seen)
+
     def test_v5_dungeon_generation_can_create_dark_and_maze_rooms(self):
         dark_seen = False
         maze_seen = False
@@ -8379,6 +9186,254 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(audit["extra"], [(2, 1), (8, 7)])
         self.assertEqual(audit["edges"], audit["tree"] + audit["extra"])
+
+    def test_rogue544_dungeon_generation_does_not_add_non_source_ensure_passages(self):
+        # Rogue 5.4.4 new_level.c:new_level() calls rooms.c:do_rooms(), then passages.c:do_passages();
+        # it does not dig a post-passages repair connection.
+        random.seed(3)
+        edge_counts = []
+        conn_calls = []
+        old_edges = rogue.DGen._passage_edges
+        old_conn = rogue.DGen._conn
+
+        def record_edges(*args, **kwargs):
+            edges = old_edges(*args, **kwargs)
+            edge_counts.append(len(edges))
+            return edges
+
+        def record_conn(tm, r1, r2, horiz=None):
+            conn_calls.append((r1, r2, horiz))
+            return old_conn(tm, r1, r2, horiz)
+
+        try:
+            rogue.DGen._passage_edges = record_edges
+            rogue.DGen._conn = record_conn
+            rogue.DGen.gen(depth=5)
+        finally:
+            rogue.DGen._passage_edges = old_edges
+            rogue.DGen._conn = old_conn
+
+        self.assertEqual(len(conn_calls), edge_counts[0])
+
+    def test_rogue544_passage_conn_uses_rnd_turn_spot_not_randint(self):
+        # Rogue 5.4.4 passages.c:conn() uses turn_spot = rnd(distance - 1) + 1.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        old_pick = rogue.DGen._pick_wall_door
+        old_rnd = rogue.RNG.rnd
+        old_randint = rogue.RNG.randint
+        try:
+            rogue.DGen._pick_wall_door = staticmethod(
+                lambda _tm, room, side: (room.x + room.w - 1, room.y + 2)
+                if side == "R"
+                else (room.x, room.y + 4)
+            )
+            rogue.RNG.rnd = lambda n: 0
+            rogue.RNG.randint = lambda a, b: (_ for _ in ()).throw(AssertionError("randint used"))
+
+            rogue.DGen._conn(tm, left, right, True)
+        finally:
+            rogue.DGen._pick_wall_door = old_pick
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.randint = old_randint
+
+        self.assertEqual(tm[left.y + 2][left.x + left.w], rogue.T_CORR)
+        self.assertEqual(tm[left.y + 4][right.x - 1], rogue.T_CORR)
+
+    def test_rogue544_passage_conn_uses_rnd_door_positions_not_shuffle(self):
+        # Rogue 5.4.4 passages.c:conn() picks door offsets with rnd(room size - 2), not shuffle/retry.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        values = iter([0, 2, 0])
+        old_rnd = rogue.RNG.rnd
+        old_shuffle = rogue.RNG.shuffle
+        try:
+            rogue.RNG.rnd = lambda n: next(values)
+            rogue.RNG.shuffle = lambda seq: (_ for _ in ()).throw(AssertionError("shuffle used"))
+
+            rogue.DGen._conn(tm, left, right, True)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.shuffle = old_shuffle
+
+        self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
+        self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
+
+    def test_rogue544_passage_conn_normalizes_reversed_horizontal_edges(self):
+        # Rogue 5.4.4 passages.c:conn() normalizes r1/r2 to the lower room index,
+        # so reversed horizontal edges still consume door RNG left-to-right.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        values = iter([0, 2, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values)
+
+            rogue.DGen._conn(tm, right, left, True)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_DOOR)
+        self.assertEqual(tm[right.y + 3][right.x], rogue.T_DOOR)
+
+    def test_rogue544_passage_conn_normalizes_reversed_vertical_edges(self):
+        # Rogue 5.4.4 passages.c:conn() normalizes r1/r2 before a down connection,
+        # so reversed vertical edges still consume door RNG top-to-bottom.
+        top = rogue.Room(10, 2, 5, 5)
+        bottom = rogue.Room(10, 12, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        rogue.DGen._room(tm, top)
+        rogue.DGen._room(tm, bottom)
+        values = iter([0, 2, 0])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values)
+
+            rogue.DGen._conn(tm, bottom, top, False)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(tm[top.y + top.h - 1][top.x + 1], rogue.T_DOOR)
+        self.assertEqual(tm[bottom.y][bottom.x + 3], rogue.T_DOOR)
+
+    def test_rogue544_passage_conn_hides_secret_doors_during_door_call(self):
+        # Rogue 5.4.4 passages.c:door() runs the secret-door gate during conn(), not in a later map scan.
+        left = rogue.Room(2, 2, 5, 5)
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        hidden = {}
+        rogue.DGen._room(tm, left)
+        rogue.DGen._room(tm, right)
+        values = iter([0, 0, 0, 0, 0, 9])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values, 9)
+
+            rogue.DGen._conn(tm, left, right, True, depth=2, hidden_tiles=hidden)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(hidden[(left.x + left.w - 1, left.y + 1)], rogue.T_DOOR)
+        self.assertEqual(tm[left.y + 1][left.x + left.w - 1], rogue.T_VWALL)
+        self.assertEqual(tm[right.y + 1][right.x], rogue.T_DOOR)
+
+    def test_rogue544_passage_conn_hides_gone_room_putpass_during_conn(self):
+        # Rogue 5.4.4 passages.c:conn() uses putpass(), not door(), for gone rooms.
+        gone = rogue.Room(2, 2, 1, 1, flags={rogue.ROOM_GONE})
+        right = rogue.Room(16, 2, 5, 5)
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        hidden = {}
+        rogue.DGen._room(tm, right)
+        values = iter([0, 0, 0, 0, 9])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: next(values, 9)
+
+            rogue.DGen._conn(tm, gone, right, True, depth=2, hidden_tiles=hidden)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(hidden[(gone.x, gone.y)], rogue.T_CORR)
+        self.assertEqual(tm[gone.y][gone.x], rogue.T_VOID)
+
+    def test_rogue544_descend_uses_passages_secret_timing_not_post_scan(self):
+        # Rogue 5.4.4 new_level.c calls passages.c:do_passages(); secrets are decided in door()/putpass().
+        game = new_game(seed=3050)
+        game._spawn_room_gold = lambda: None
+        game._spawn_mons = lambda: None
+        game._populate_initial_room = lambda room: None
+        game._spawn_items = lambda: None
+        game._spawn_amulet = lambda: None
+        game._spawn_traps = lambda: None
+        game._hide_secret_features = lambda: (_ for _ in ()).throw(AssertionError("post scan used"))
+        positions = iter([(5, 5), (6, 5)])
+        game.find_floor_pos = lambda *a, **kw: next(positions)
+
+        game.descend()
+
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+
+    def test_rogue544_passage_conn_maze_exit_uses_wall_rnd_retry(self):
+        # Rogue 5.4.4 passages.c:conn() retries rnd(room size - 2) wall positions
+        # while an ISMAZE room side coordinate is not F_PASS.
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        tm[maze.y + 2][maze.x + maze.w - 1] = rogue.T_CORR
+        rnd_values = iter([0, 1])
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: next(rnd_values)
+            rogue.RNG.choice = lambda seq: (_ for _ in ()).throw(AssertionError("choice used"))
+
+            self.assertEqual(rogue.DGen._maze_exit(tm, maze, "R"), (maze.x + maze.w - 1, maze.y + 2))
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
+    def test_rogue544_passage_conn_maze_exit_has_no_fixed_retry_fallback(self):
+        # Rogue 5.4.4 passages.c:conn() uses a do/while loop with no retry cap
+        # while an ISMAZE room side coordinate is not F_PASS.
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        tm[maze.y + 2][maze.x + maze.w - 1] = rogue.T_CORR
+        rnd_values = iter([0] * 20 + [1])
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: next(rnd_values)
+            rogue.RNG.choice = lambda seq: (_ for _ in ()).throw(AssertionError("choice used"))
+
+            self.assertEqual(rogue.DGen._maze_exit(tm, maze, "R"), (maze.x + maze.w - 1, maze.y + 2))
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
+    def test_rogue544_passage_conn_records_maze_room_exit_for_ai(self):
+        # Rogue 5.4.4 passages.c:door() records room.r_exit before returning for ISMAZE.
+        game = new_game(seed=524)
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [maze]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[maze.y + 2][maze.x + maze.w - 1] = rogue.T_CORR
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+
+            rogue.DGen._exit(game.tm, maze, "R")
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn((maze.x + maze.w - 1, maze.y + 2), game.room_exits(maze))
+
+    def test_rogue544_maze_room_uses_even_rnd_start_not_choice(self):
+        # Rogue 5.4.4 rooms.c:do_maze() starts at (rnd(r_max)/2)*2 from room origin.
+        maze = rogue.Room(10, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        tm = [[rogue.T_FLOOR for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        values = iter([0, 0, 0, 1])
+        old_rnd = rogue.RNG.rnd
+        old_choice = rogue.RNG.choice
+        try:
+            rogue.RNG.rnd = lambda n: next(values, 0)
+            rogue.RNG.choice = lambda seq: (_ for _ in ()).throw(AssertionError("choice used"))
+
+            rogue.DGen._maze_room(tm, maze)
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.RNG.choice = old_choice
+
+        self.assertEqual(tm[maze.y][maze.x], rogue.T_CORR)
+        self.assertEqual(tm[maze.y + 1][maze.x], rogue.T_CORR)
+        self.assertEqual(tm[maze.y + 2][maze.x], rogue.T_CORR)
 
     def test_rogue544_generated_gone_rooms_are_single_passage_points(self):
         random.seed(0)
@@ -11199,6 +12254,7 @@ class RogueBaselineTest(unittest.TestCase):
         }
         game.online_rank_cache = {rogue.SCOREBOARD_PERIOD_WEEKLY: 123}
         game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+        game.scoreboard_period_label = lambda period, timestamp=None: "2026-W18"
         game.scoreboard_period_ends_line = lambda period: "Ends in 03h 12m 45s  UTC 2026-05-01 00:00"
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
@@ -11212,7 +12268,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.load_score_entries = old_load
 
         text = "\n".join(str(item) for item in drawn)
-        self.assertIn(f"Weekly Rivals - {rogue.score_period_keys()['period_week']}", text)
+        self.assertIn("Weekly Rivals - 2026-W18", text)
         self.assertIn("UTC", text)
         self.assertIn("Score Name", text)
         self.assertIn(" 1   346 masatora: killed on level 4 by an orc.", text)
@@ -12782,6 +13838,75 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(attacked, [])
         self.assertEqual(game.turn, 0)
 
+    def test_rogue_544_invalid_diagonal_move_stops_running_without_turn(self):
+        # Rogue 5.4.4 move.c:do_move() clears running and after=FALSE on !diag_ok().
+        game = new_game(seed=489)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[4][5] = rogue.T_HWALL
+        game.dashing = True
+        game.dash_steps = 2
+
+        self.assertFalse(game.try_move(1, -1))
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+
+    def test_rogue_544_wall_move_stops_running_without_turn(self):
+        # Rogue 5.4.4 move.c:do_move() hit_bound/wall branch clears running and after=FALSE.
+        game = new_game(seed=488)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[5][6] = rogue.T_VWALL
+        game.dashing = True
+        game.dash_steps = 2
+
+        self.assertFalse(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+
+    def test_rogue_544_stair_move_stops_running_after_move(self):
+        # Rogue 5.4.4 move.c:do_move() STAIRS falls through default and clears running.
+        game = new_game(seed=487)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[5][6] = rogue.T_STAIR
+        game.dashing = True
+
+        self.assertTrue(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertTrue(game.seen_stairs)
+
+    def test_rogue_544_item_move_stops_running_after_move(self):
+        # Rogue 5.4.4 move.c:do_move() item winat() reaches default and clears running.
+        game = new_game(seed=486)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.auto_pickup = False
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = 6, 5
+        game.gitems = [item]
+        game.dashing = True
+
+        self.assertTrue(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertIn("ration", game.msgs[-1])
+
+    def test_rogue_544_door_move_stops_running_after_move(self):
+        # Rogue 5.4.4 move.c:do_move() DOOR branch clears running before move_stuff.
+        game = new_game(seed=485)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.tm[5][6] = rogue.T_DOOR
+        game.dashing = True
+
+        self.assertTrue(game.try_move(1, 0))
+        self.assertFalse(game.dashing)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+
     def test_monster_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=49)
         set_open_floor(game)
@@ -12870,10 +13995,1600 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(monster.running)
         self.assertEqual((monster.x, monster.y), (7, 5))
 
+    def test_rogue_544_move_wakes_monsters_visible_before_command(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before move.c:do_move().
+        game = new_game(seed=5011)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 6, 5
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.update_fov()
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.try_move(-1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (6, 5))
+
+    def test_rogue_544_move_does_not_wake_newly_visible_monster_until_next_command(self):
+        # Rogue 5.4.4 move.c:do_move() does not call look(TRUE) after hero movement.
+        game = new_game(seed=5012)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(7, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.update_fov()
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.try_move(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(monster.running)
+        self.assertEqual((monster.x, monster.y), (7, 5))
+
+    def test_rogue_544_no_command_turn_wakes_visible_monsters_before_decrement(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before the no_command branch.
+        game = new_game(seed=5013)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+        game.p.no_command = 1
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+
+    def test_rogue_544_rest_command_wakes_visible_monsters_before_runners(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '.': rest.
+        game = new_game(seed=5014)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.do_wait()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+
+    def test_rogue_544_search_command_wakes_visible_monsters_before_runners(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 's': search().
+        game = new_game(seed=5015)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.do_search(quiet_fail=True)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+
+    def test_rogue_544_pickup_command_wakes_visible_monsters_before_runners(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ',': pick_up().
+        game = new_game(seed=5016)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = 5, 5
+        monster = command_look_monster(game)
+        game.p.inv = []
+        game.gitems = [item]
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.do_pickup()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertIn(item, game.p.inv)
+
+    def test_rogue_544_pack_command_wakes_visible_monsters_before_drop(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before pack commands such as drop().
+        game = new_game(seed=5017)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        game.gitems = []
+        monster = command_look_monster(game)
+        game.cact = "Drop"
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.confirm_item(item)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual([(it.x, it.y) for it in game.gitems], [(5, 5)])
+
+    def test_rogue_544_throw_command_wakes_visible_monsters_before_missile(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before weapons.c:missile().
+        game = new_game(seed=5019)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        game.gitems = []
+        monster = command_look_monster(game)
+        game.cact = "Throw"
+        game.throw_dir = (0, -1)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.confirm_item(item)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+
+    def test_rogue_544_zap_command_wakes_visible_monsters_before_do_zap(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before sticks.c:do_zap().
+        game = new_game(seed=5018)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        nothing = next(i for i, stick in enumerate(rogue.STICKS) if stick["name"] == "nothing")
+        stick = rogue.Item(rogue.CAT_STICK, nothing, charges=1)
+        monster = command_look_monster(game)
+        game.zap_item = stick
+        game.dact = "Zap"
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.dir_confirm(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(stick.charges, 0)
+
+    def test_rogue_544_pack_command_cancel_wakes_visible_monsters_at_prompt(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before get_item() can cancel.
+        game = new_game(seed=5020)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.start_item_action("Drop")
+            game.close_menu()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.p.inv, [item])
+
+    def test_rogue_544_menu_pack_command_cancel_wakes_visible_monsters_at_prompt(self):
+        # Pyxel menu selection maps to Rogue 5.4.4 command.c readchar before pack.c:get_item().
+        game = new_game(seed=5025)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        monster = command_look_monster(game)
+        game.st = rogue.ST_MENU
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.start_item_action("Drop")
+            game.close_menu()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.p.inv, [item])
+
+    def test_rogue_544_command_look_does_not_wake_far_visible_room_monster(self):
+        # Rogue 5.4.4 misc.c:look(TRUE) scans only the 3x3 cells around hero;
+        # room-wide wake belongs to move.c:door_open(), not command.c:command().
+        game = new_game(seed=5057)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        room = rogue.Room(1, 1, 20, 8)
+        game.rooms = [room]
+        for y in range(room.y, room.y + room.h):
+            for x in range(room.x, room.x + room.w):
+                game.tm[y][x] = rogue.T_FLOOR
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(10, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.command_look()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(monster.running)
+        self.assertEqual((monster.x, monster.y), (10, 5))
+
+    def test_rogue_544_pack_command_prompt_wakes_visible_monsters_once(self):
+        # Rogue 5.4.4 command.c:command() has one misc.c:look(TRUE) before readchar/get_item.
+        game = new_game(seed=5021)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [item]
+        monster = command_look_monster(game)
+        calls = []
+        game.wake_visible_monsters = lambda: calls.append("wake")
+
+        game.start_item_action("Drop")
+        game.confirm_item(item)
+
+        self.assertEqual(calls, ["wake"])
+
+    def test_rogue_544_inventory_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'i': inventory().
+        game = new_game(seed=5022)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_I])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
+    def test_rogue_544_discoveries_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'D': discovered().
+        game = new_game(seed=5023)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.open_discoveries()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_DISC)
+
+    def test_rogue_544_trap_inspect_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '^': trap inspect.
+        game = new_game(seed=5024)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.inspect_trap(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+
+    def test_rogue_544_help_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '?': help().
+        game = new_game(seed=5026)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_QUESTION])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_HELP)
+
+    def test_rogue_544_version_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'v': version.
+        game = new_game(seed=5027)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_V])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertIn("version", game.msgs[-1])
+
+    def test_rogue_544_illegal_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before otherwise: illcom().
+        game = new_game(seed=5028)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_G])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertIn("illegal command", game.msgs[-1])
+
+    def test_rogue_544_options_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'o': option().
+        game = new_game(seed=5029)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_O])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_AUX)
+
+    def test_rogue_544_quit_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'Q': quit().
+        game = new_game(seed=5049)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_Q},
+                pressed=[rogue.pyxel.KEY_Q],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_QUIT_CONFIRM)
+
+    def test_rogue_544_aux_quit_uses_quit_command_wake_timing(self):
+        # Pyxel Aux Quit maps to Rogue 5.4.4 command.c:'Q' quit timing.
+        game = new_game(seed=5050)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+        game.open_aux()
+        game.acur = rogue.AUX_ACTIONS.index("Quit")
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_RETURN])
+            game.begin_input()
+            game.upd_aux()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_QUIT_CONFIRM)
+
+    def test_rogue_544_move_on_command_moves_without_auto_pickup(self):
+        # Rogue 5.4.4 command.c:'m' sets move_on before do_move(); pack.c:pick_up() only reports the item.
+        game = new_game(seed=5030)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = 6, 5
+        game.gitems = [item]
+        pack_before = list(game.p.inv)
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+            game.begin_input()
+            game.upd_play()
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+            game.begin_input()
+            game.upd_dir()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((game.p.x, game.p.y), (6, 5))
+        self.assertEqual(game.gitems, [item])
+        self.assertEqual(game.p.inv, pack_before)
+        self.assertIn("moved onto", game.msgs[-1])
+        self.assertEqual(game.turn, 1)
+
+    def test_rogue_544_fight_command_prompts_for_direction(self):
+        # Rogue 5.4.4 command.c:'f' calls misc.c:get_dir() before fighting.
+        game = new_game(seed=5051)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Fight")
+        self.assertEqual(game.turn, 0)
+
+    def test_rogue_544_fight_command_no_monster_wakes_without_turn(self):
+        # Rogue 5.4.4 command.c:'f' reports no monster and after=FALSE after misc.c:look(TRUE).
+        game = new_game(seed=5052)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+            game.begin_input()
+            game.upd_play()
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+            game.begin_input()
+            game.upd_dir()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual((monster.x, monster.y), (5, 6))
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("no monster there", game.msgs[-1])
+
+    def test_rogue_544_fight_command_marks_visible_adjacent_target_and_attacks(self):
+        # Rogue 5.4.4 command.c:'f' sets ISTARGET and re-dispatches the direction as melee.
+        game = new_game(seed=5053)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(6, 5, hp=20, armor=100, exp=5, flags="")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.run_runners = lambda: None
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+            game.begin_input()
+            game.upd_play()
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+            game.begin_input()
+            game.upd_dir()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.target)
+        self.assertLess(monster.hp, 20)
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+        self.assertEqual(game.turn, 1)
+
+    def test_rogue_544_fight_command_escape_cancels_without_turn(self):
+        # Rogue 5.4.4 command.c:'f' sets after=FALSE when misc.c:get_dir() returns FALSE.
+        game = new_game(seed=5054)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed=[rogue.pyxel.KEY_ESCAPE])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIsNone(game.dact)
+        self.assertEqual(game.turn, 0)
+
+    def test_help_text_lists_rogue_fight_command(self):
+        # Rogue 5.4.4 extern.c:helpstr[] lists 'f' as fight until either of you dies.
+        game = new_game(seed=5055)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        self.assertIn("f Fight", "\n".join(calls))
+
+    def test_rogue_544_fight_command_repeats_target_melee_until_stopped(self):
+        # Rogue 5.4.4 command.c:'f' sets to_death and reuses runch before reading input.
+        game = new_game(seed=5056)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(6, 5, hp=30, armor=100, exp=5, flags="")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+        game.run_runners = lambda: None
+        game.roll_player_attack = lambda m, weap=None, thrown=False: (True, 1)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_F])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        first_hp = monster.hp
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(first_hp, 29)
+        self.assertEqual(monster.hp, 28)
+        self.assertEqual(game.turn, 2)
+
+    def test_rogue_544_fight_command_non_kamikaze_stops_when_hp_reaches_max_hit(self):
+        # Rogue 5.4.4 fight.c:attack() clears to_death when current HP is <= max_hit.
+        game = new_game(seed=5057)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=30, armor=100, exp=5, flags="")
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = False
+        game.fight_max_hit = 0
+        game.p.hp = 5
+        game.roll_monster_attack = lambda m: (True, 3)
+
+        game.m_attack(monster)
+
+        self.assertFalse(game.fight_to_death)
+
+    def test_rogue_544_fight_to_death_command_kamikaze_ignores_max_hit_stop(self):
+        # Rogue 5.4.4 fight.c:attack() skips max_hit stop while kamikaze is TRUE.
+        game = new_game(seed=50571)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=30, armor=100, exp=5, flags="")
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_max_hit = 0
+        game.p.hp = 5
+        game.roll_monster_attack = lambda m: (True, 3)
+
+        game.m_attack(monster)
+
+        self.assertTrue(game.fight_to_death)
+
+    def test_rogue_544_fight_command_target_kill_clears_to_death(self):
+        # Rogue 5.4.4 fight.c:remove_mon() clears to_death/kamikaze when removing ISTARGET.
+        game = new_game(seed=5058)
+        monster = monster_at(game.p.x + 1, game.p.y, hp=1, armor=100, exp=5, flags="")
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+
+        game.remove_monster(monster, was_kill=True)
+
+        self.assertFalse(game.fight_to_death)
+        self.assertFalse(game.fight_kamikaze)
+
+    def test_rogue_544_again_command_without_last_wakes_without_turn(self):
+        # Rogue 5.4.4 command.c:'a' reports no last command after command.c:look(TRUE).
+        game = new_game(seed=5059)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("you haven't typed a command yet", game.msgs[-1])
+
+    def test_rogue_544_again_command_repeats_search(self):
+        # Rogue 5.4.4 command.c:'a' re-dispatches last_comm without replacing it.
+        game = new_game(seed=5060)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 2)
+        self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
+    def test_rogue_544_count_prefix_repeats_search_command(self):
+        # Rogue 5.4.4 command.c:command() keeps countch and replays countable commands.
+        game = new_game(seed=50601)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 3)
+        self.assertEqual(game.msgs[-3:], ["You find nothing.", "You find nothing.", "You find nothing."])
+
+    def test_rogue_544_count_prefix_repeats_again_command(self):
+        # Rogue 5.4.4 command.c count switch includes 'a', so count replays again itself.
+        game = new_game(seed=506011)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 4)
+        self.assertEqual(
+            game.msgs[-4:],
+            ["You find nothing.", "You find nothing.", "You find nothing.", "You find nothing."],
+        )
+
+    def test_rogue_544_count_prefix_repeats_again_without_last_command(self):
+        # Rogue 5.4.4 command.c leaves count active when counted 'a' has no last_comm.
+        game = new_game(seed=5060111)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(
+            game.msgs[-3:],
+            [
+                "you haven't typed a command yet",
+                "you haven't typed a command yet",
+                "you haven't typed a command yet",
+            ],
+        )
+
+    def test_rogue_544_count_prefix_repeats_again_move_direction(self):
+        # Rogue 5.4.4 command.c:'a' with count reuses the previous direction command repeatedly.
+        game = new_game(seed=506012)
+        set_open_floor(game)
+        start = (game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_U])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_2])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 3, start[1] - 3))
+        self.assertEqual(game.turn, 3)
+
+    def test_rogue_544_count_prefix_repeats_diagonal_move_command(self):
+        # Rogue 5.4.4 command.c count prefix applies to vi direction commands.
+        game = new_game(seed=50602)
+        set_open_floor(game)
+        start = (game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_2])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_U])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 2, start[1] - 2))
+        self.assertEqual(game.turn, 2)
+
+    def test_rogue_544_count_prefix_repeats_move_on_without_pickup(self):
+        # Rogue 5.4.4 command.c:'m' stores dir_ch in countch; move_on stays true during the count.
+        game = new_game(seed=506021)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        items = []
+        for x in (6, 7, 8):
+            item = rogue.Item(rogue.CAT_FOOD, 0)
+            item.x, item.y = x, 5
+            items.append(item)
+        game.gitems = list(items)
+        pack_before = list(game.p.inv)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (8, 5))
+        self.assertEqual(game.gitems, items)
+        self.assertEqual(game.p.inv, pack_before)
+        self.assertEqual(game.turn, 3)
+
+    def test_rogue_544_counted_move_on_again_repeats_normal_move(self):
+        # Rogue 5.4.4 command.c records the final countch direction, not 'm', after counted move_on.
+        game = new_game(seed=506022)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        move_on_items = []
+        for x in (6, 7, 8):
+            item = rogue.Item(rogue.CAT_FOOD, 0)
+            item.x, item.y = x, 5
+            move_on_items.append(item)
+        pickup_item = rogue.Item(rogue.CAT_FOOD, 0)
+        pickup_item.x, pickup_item.y = 9, 5
+        game.gitems = move_on_items + [pickup_item]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (9, 5))
+        self.assertEqual(game.gitems, move_on_items)
+        self.assertNotIn(pickup_item, game.gitems)
+        self.assertEqual(game.turn, 4)
+
+    def test_rogue_544_count_prefix_is_cleared_by_non_countable_command(self):
+        # Rogue 5.4.4 command.c clears count for commands outside the countable switch.
+        game = new_game(seed=50603)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_V])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.msgs[-1], "You find nothing.")
+
+    def test_rogue_544_zap_empty_pack_prompts_direction_then_spends_turn(self):
+        # Rogue 5.4.4 command.c:'z' calls get_dir() before sticks.c:do_zap() calls get_item().
+        game = new_game(seed=50604)
+        set_open_floor(game)
+        game.p.inv = []
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Z])
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Zap")
+        self.assertEqual(game.turn, 0)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 1)
+        self.assertIn("you aren't carrying anything", game.msgs[-1])
+
+    def test_rogue_544_again_command_reuses_move_on_direction(self):
+        # Rogue 5.4.4 misc.c:get_dir() reuses last_dir when again is TRUE.
+        game = new_game(seed=5061)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        item_a = rogue.Item(rogue.CAT_FOOD, 0)
+        item_a.x, item_a.y = 6, 5
+        item_b = rogue.Item(rogue.CAT_FOOD, 0)
+        item_b.x, item_b.y = 7, 5
+        game.gitems = [item_a, item_b]
+        pack_before = list(game.p.inv)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual((game.p.x, game.p.y), (7, 5))
+        self.assertEqual(game.gitems, [item_a, item_b])
+        self.assertEqual(game.p.inv, pack_before)
+        self.assertEqual(game.turn, 2)
+
+    def test_rogue_544_again_command_direction_cancel_restores_previous_command(self):
+        # Rogue 5.4.4 misc.c:get_dir() ESC calls reset_last().
+        game = new_game(seed=5062)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed=[rogue.pyxel.KEY_ESCAPE])
+        game.begin_input()
+        game.upd_dir()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 2)
+        self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
+    def test_help_text_lists_rogue_again_command(self):
+        # Rogue 5.4.4 extern.c:helpstr[] lists 'a' as repeat last command.
+        game = new_game(seed=5063)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        self.assertIn("a Again", "\n".join(calls))
+
+    def test_rogue_544_again_command_repeats_version_command(self):
+        # Rogue 5.4.4 command.c records 'v' as last_comm even though after=FALSE.
+        game = new_game(seed=5064)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_V])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertIn("version", game.msgs[-2])
+        self.assertIn("version", game.msgs[-1])
+
+    def test_rogue_544_again_command_repeats_inventory_command(self):
+        # Rogue 5.4.4 command.c records 'i' as last_comm even though inventory() is after=FALSE.
+        game = new_game(seed=5065)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_I])
+        game.begin_input()
+        game.upd_play()
+        game.st = rogue.ST_PLAY
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
+    def test_rogue_544_again_command_repeats_illegal_command(self):
+        # Rogue 5.4.4 command.c records otherwise: illcom() as last_comm before dispatch.
+        game = new_game(seed=50655)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_G])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(
+            [m for m in game.msgs if "illegal command" in m],
+            ["illegal command 'g'", "illegal command 'g'"],
+        )
+
+    def test_rogue_544_again_item_command_empty_pack_uses_get_item_message_and_spends_turn(self):
+        # Rogue 5.4.4 pack.c:get_item() checks pack == NULL before again.
+        game = new_game(seed=5066)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        game.p.inv = [potion]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Q])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.p.inv, [])
+        self.assertEqual(game.turn, 2)
+        self.assertIn("you aren't carrying anything", game.msgs[-1])
+
+    def test_rogue_544_again_item_command_ran_out_with_nonempty_pack_spends_turn(self):
+        # Rogue 5.4.4 pack.c:get_item() says "you ran out" when again and last_pick is NULL.
+        game = new_game(seed=5067)
+        set_open_floor(game)
+        potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "healing")
+        potion = rogue.Item(rogue.CAT_POT, potion_kind)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [potion, food]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Q])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_A}, pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.p.inv, [food])
+        self.assertEqual(game.turn, 2)
+        self.assertIn("you ran out", game.msgs[-1])
+
+    def test_rogue_544_current_weapon_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ')': current weapon.
+        game = new_game(seed=5031)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        weapon = rogue.Item(rogue.CAT_WPN, 0)
+        game.p.inv = [weapon]
+        game.p.wpn = weapon
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_0},
+                pressed=[rogue.pyxel.KEY_0],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("you are wielding", game.msgs[-1])
+        self.assertIn("a)", game.msgs[-1])
+
+    def test_rogue_544_current_armor_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ']': current armor.
+        game = new_game(seed=5032)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        game.p.inv = [armor]
+        game.p.arm = armor
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_RIGHTBRACKET])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("you are wearing", game.msgs[-1])
+
+    def test_rogue_544_current_rings_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '=': current rings.
+        game = new_game(seed=5033)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        ring = rogue.Item(rogue.CAT_RING, 0)
+        game.p.inv = [ring]
+        game.p.ring_l = ring
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_EQUALS])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("on left hand", game.msgs[-2])
+        self.assertIn("on right hand", game.msgs[-1])
+
+    def test_rogue_544_status_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '@': status.
+        game = new_game(seed=5034)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_AT])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_rogue_544_repeat_message_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before CTRL('P'): msg(huh).
+        game = new_game(seed=5035)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.msg_text("old message")
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_CTRL, rogue.pyxel.KEY_P},
+                pressed=[rogue.pyxel.KEY_P],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.msgs[-1], "old message")
+
+    def test_rogue_544_redraw_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before CTRL('R'): wrefresh(curscr).
+        game = new_game(seed=5036)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.msg_text("keep me")
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_CTRL, rogue.pyxel.KEY_R},
+                pressed=[rogue.pyxel.KEY_R],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.msgs[-1], "keep me")
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIsNone(game.cact)
+
+    def test_rogue_544_space_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ' ': after = FALSE.
+        game = new_game(seed=5037)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.msg_text("keep me")
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SPACE},
+                pressed=[rogue.pyxel.KEY_SPACE],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.msgs[-1], "keep me")
+
+    def test_rogue_544_identify_symbol_command_wakes_and_prompts_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '/': identify().
+        game = new_game(seed=5038)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_SLASH])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertTrue(game.identify_symbol_pending)
+        self.assertIn("what do you want identified?", game.msgs[-1])
+
+    def test_rogue_544_identify_symbol_reports_table_entry_without_turn(self):
+        # Rogue 5.4.4 command.c:identify() maps PLAYER to "you".
+        game = new_game(seed=5039)
+        game.identify_symbol_pending = True
+        game.msg_text("what do you want identified? ")
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_AT])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertFalse(game.identify_symbol_pending)
+        self.assertEqual(game.msgs[-1], "'@': you")
+
+    def test_rogue_544_identify_symbol_reports_monster_name_without_turn(self):
+        # Rogue 5.4.4 command.c:identify() maps uppercase A-Z through extern.c:monsters[].
+        game = new_game(seed=5040)
+        game.identify_symbol_pending = True
+        game.msg_text("what do you want identified? ")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_D},
+            pressed=[rogue.pyxel.KEY_D],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertFalse(game.identify_symbol_pending)
+        self.assertEqual(game.msgs[-1], "'D': dragon")
+
+    def test_help_text_lists_rogue_identify_symbol_command(self):
+        # Rogue 5.4.4 extern.c:helpstr[] lists '/' as identify.
+        game = new_game(seed=5041)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        self.assertIn("/ Identify", "\n".join(calls))
+
+    def test_rogue_544_picky_inventory_empty_wakes_and_spends_no_turn(self):
+        # Rogue 5.4.4 command.c:'I' calls pack.c:picky_inven(); empty pack prints and after=FALSE.
+        game = new_game(seed=5042)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.p.inv = []
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_I},
+                pressed=[rogue.pyxel.KEY_I],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("you aren't carrying anything", game.msgs)
+
+    def test_rogue_544_picky_inventory_single_item_prints_without_prompt(self):
+        # Rogue 5.4.4 pack.c:picky_inven() prints the lone item directly.
+        game = new_game(seed=5043)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [food]
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_I},
+            pressed=[rogue.pyxel.KEY_I],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("a)", game.msgs[-1])
+
+    def test_rogue_544_picky_inventory_multiple_prompts_then_prints_letter(self):
+        # Rogue 5.4.4 pack.c:picky_inven() prompts and accepts a pack letter.
+        game = new_game(seed=5044)
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [food, potion]
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_I},
+            pressed=[rogue.pyxel.KEY_I],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.cact, "Picky inventory")
+        self.assertIn("which item do you wish to inventory", game.msgs[-1])
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_B])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIn("b)", game.msgs[-1])
+
+    def test_rogue_544_picky_inventory_invalid_letter_stays_in_prompt(self):
+        # Rogue 5.4.4 pack.c:picky_inven() reports "'x' not in pack" and consumes no turn.
+        game = new_game(seed=5045)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        game.cact = "Picky inventory"
+        game.fitems = list(game.p.inv)
+        game.st = rogue.ST_ITEM
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_M])
+        game.begin_input()
+        game.upd_item()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertIn("'m' not in pack", game.msgs)
+
+    def test_rogue_544_down_stairs_command_wakes_and_rejects_floor_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '>': d_level().
+        game = new_game(seed=5046)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = command_look_monster(game)
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_PERIOD},
+                pressed=[rogue.pyxel.KEY_PERIOD],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertIn("I see no way down", game.msgs)
+
+    def test_rogue_544_down_stairs_command_descends_even_with_amulet(self):
+        # Rogue 5.4.4 command.c:d_level() ignores amulet and always goes down on stairs.
+        game = new_game(seed=5047)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.p.has_amulet = True
+        old_depth = game.p.depth
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_PERIOD},
+            pressed=[rogue.pyxel.KEY_PERIOD],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.p.depth, old_depth + 1)
+        self.assertNotEqual(game.st, rogue.ST_WIN)
+
+    def test_rogue_544_up_stairs_command_blocks_without_amulet_without_turn(self):
+        # Rogue 5.4.4 command.c:u_level() blocks upward stairs without amulet.
+        game = new_game(seed=5048)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        old_depth = game.p.depth
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_COMMA},
+            pressed=[rogue.pyxel.KEY_COMMA],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.p.depth, old_depth)
+        self.assertIn("your way is magically blocked", game.msgs)
+
+    def test_rogue_544_up_stairs_command_wins_on_depth_one_with_amulet(self):
+        # Rogue 5.4.4 command.c:u_level() calls total_winner() when level reaches zero.
+        game = new_game(seed=5049)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.p.depth = 1
+        game.p.has_amulet = True
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_COMMA},
+            pressed=[rogue.pyxel.KEY_COMMA],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.st, rogue.ST_WIN)
+        self.assertIn("You escaped with the Amulet of Yendor!", game.msgs)
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)
-        monster = monster_at(game.p.x + 2, game.p.y, hp=10, armor=100, exp=5, flags="mean")
+        monster = monster_at(game.p.x + 1, game.p.y, hp=10, armor=100, exp=5, flags="mean")
         game.mons = [monster]
         game.visible.add((monster.x, monster.y))
         old_randrange = rogue.random.randrange
@@ -12997,6 +15712,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.no_command, 7)
         self.assertNotIn("you are frozen", game.msgs)
 
+    def test_rogue_544_ice_freeze_thaws_by_no_command_decrement_without_refreeze(self):
+        # Rogue 5.4.4 command.c:command() decrements no_command each command loop.
+        game = new_game(seed=5036)
+        set_open_floor(game)
+        monster = monster_at(game.p.x + 1, game.p.y, "I", "ice monster", 10, 20, 100, "0x0", 5, "freeze")
+        game.roll_monster_attack = lambda m: (True, 0)
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 0
+            game.m_attack(monster)
+        finally:
+            rogue.RNG.rnd = old_rnd
+        game.mons = []
+
+        self.assertEqual(game.p.no_command, 2)
+        game.update()
+        self.assertEqual(game.p.no_command, 1)
+        game.update()
+        self.assertEqual(game.p.no_command, 0)
+        self.assertIn("you can move again", game.msgs)
+
     def test_rogue_544_ice_monster_miss_has_no_miss_message(self):
         # Rogue 5.4.4 fight.c:attack() skips miss() when mp->t_type == 'I'.
         game = new_game(seed=504)
@@ -13104,7 +15840,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [5, 5])
 
     def test_rogue_544_move_helper_held_gate_blocks_non_f_destinations(self):
-        # Rogue 5.4.4 move.c:do_move() ISHELD gate only allows a Venus Flytrap destination.
+        # Rogue 5.4.4 move.c:do_move() ISHELD gate checks destination ch != 'F'.
         import rogue_move
 
         self.assertTrue(rogue_move.held_move_blocked(True, False))
@@ -13132,6 +15868,98 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual((game.p.x, game.p.y), (11, 10))
 
+    def test_rogue_544_player_confused_rndmove_rejects_normal_monster(self):
+        # Rogue 5.4.4 move.c:rndmove() uses winat()/step_ok(); normal monster glyphs are not step_ok().
+        game = new_game(seed=531)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 5
+        monster = monster_at(11, 10)
+        game.mons = [monster]
+        rng = SequenceRng([1, 1, 2])
+        old_rnd = rogue.RNG.rnd
+        attacks = []
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.p_attack = lambda mo: attacks.append(mo)
+            turn = game.turn
+            moved = game.try_move(0, 1)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(moved)
+        self.assertEqual(attacks, [])
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(rng.calls, [5, 3, 3])
+
+    def test_rogue_544_player_confused_rndmove_rejects_scare_scroll(self):
+        # Rogue 5.4.4 move.c:rndmove() rejects S_SCARE after a SCROLL winat() result.
+        game = new_game(seed=532)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = 11, 10
+        game.gitems = [scroll]
+        rng = SequenceRng([1, 1, 2])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            turn = game.turn
+            moved = game.try_move(0, 1)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.gitems, [scroll])
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(rng.calls, [5, 3, 3])
+
+    def test_rogue_544_player_confused_stationary_rndmove_clears_to_death_only(self):
+        # Rogue 5.4.4 move.c:do_move() clears to_death, not kamikaze, when rndmove() returns hero.
+        game = new_game(seed=533)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 5
+        monster = monster_at(11, 10)
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = monster
+        game.fight_dir = (1, 0)
+        game.fight_max_hit = 3
+        rng = SequenceRng([1, 1, 1])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            turn = game.turn
+            moved = game.try_move(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(rng.calls, [5, 3, 3])
+        self.assertFalse(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
+        self.assertIs(game.fight_target, monster)
+        self.assertEqual(game.fight_dir, (1, 0))
+        self.assertEqual(game.fight_max_hit, 3)
+
     def test_rogue_544_held_player_move_away_spends_turn_without_moving(self):
         # Rogue 5.4.4 move.c:do_move() reports ISHELD after the destination checks and leaves after true.
         game = new_game(seed=517)
@@ -13151,6 +15979,83 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((game.p.x, game.p.y), (10, 10))
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("you are being held", game.msgs)
+
+    def test_rogue_544_hidden_trap_preempts_held_move_gate(self):
+        # Rogue 5.4.4 move.c:do_move() reveals hidden FLOOR traps before the ISHELD gate.
+        game = new_game(seed=519)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        flytrap = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        game.p.held_by = flytrap
+        game.mons = [flytrap]
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        game.traps[(10, 9)] = kind
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 9))
+        self.assertEqual(game.tm[9][10], rogue.T_TRAP)
+        self.assertEqual(game.p.no_move, rogue.BEARTIME)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you are caught in a bear trap", game.msgs)
+        self.assertNotIn("you are being held", game.msgs)
+
+    def test_rogue_544_hidden_trap_under_monster_does_not_preempt_held_gate(self):
+        # Rogue 5.4.4 move.c:do_move() only takes the hidden trap branch when winat() is FLOOR.
+        game = new_game(seed=520)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        flytrap = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        hobgoblin = monster_at(10, 9, hp=10)
+        game.p.held_by = flytrap
+        game.mons = [flytrap, hobgoblin]
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "bear trap")
+        game.traps[(10, 9)] = kind
+        attacks = []
+        game.p_attack = lambda monster: attacks.append(monster)
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual(attacks, [])
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.tm[9][10], rogue.T_FLOOR)
+        self.assertEqual(game.p.no_move, 0)
+        self.assertEqual(game.turn, turn + 1)
+        self.assertIn("you are being held", game.msgs)
+
+    def test_rogue_544_held_player_can_attack_any_venus_flytrap_destination(self):
+        # Rogue 5.4.4 move.c:do_move() ISHELD gate checks ch != 'F', not holder identity.
+        game = new_game(seed=521)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        holder = monster_at(11, 10, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        other = monster_at(10, 9, "F", "venus flytrap", hp=10, damage="0x0", flags="hold")
+        game.p.held_by = holder
+        game.mons = [holder, other]
+        attacks = []
+        game.p_attack = lambda monster: attacks.append(monster)
+
+        turn = game.turn
+        moved = game.try_move(0, -1)
+
+        self.assertTrue(moved)
+        self.assertEqual(attacks, [other])
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn + 1)
+        self.assertNotIn("you are being held", game.msgs)
 
     def test_rogue_544_confused_held_player_blocks_random_move_away_after_rndmove(self):
         # Rogue 5.4.4 move.c:do_move() applies ISHELD after confused rndmove() chooses nh.
@@ -13228,6 +16133,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(rogue_chase.confusion_clears_after_random_move(0, rng.rnd))
         self.assertEqual(rng.calls, [20])
 
+    def test_rogue_544_confused_chase_rndmove_uses_winat_for_item_disguised_xeroc(self):
+        # Rogue 5.4.4 move.c:rndmove() uses winat()/step_ok() and does not apply chase.c's Xeroc moat skip.
+        game = new_game(seed=524)
+        set_open_floor(game)
+        game.p.x, game.p.y = 20, 20
+        monster = monster_at(5, 5)
+        monster.confused = 1
+        xeroc = monster_at(6, 5, "X", "xeroc")
+        xeroc.disguise = "?"
+        game.mons = [monster, xeroc]
+        rng = SequenceRng([1, 1, 2, 1])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            game.chase(monster, (10, 5))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(rng.calls, [5, 3, 3, 20])
+        self.assertEqual((monster.x, monster.y), (6, 5))
+        self.assertEqual(xeroc.disguise, "?")
+
     def test_rogue_544_chase_helper_choose_chase_step_matches_tie_roll(self):
         # Rogue 5.4.4 chase.c:chase() replaces equal-distance candidates only when rnd(++plcnt)==0.
         import rogue_chase
@@ -13285,6 +16212,69 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertEqual((monster.x, monster.y), (4, 5))
+
+    def test_rogue_544_chase_attacks_hero_when_blocking_item_destination(self):
+        # Rogue 5.4.4 chase.c:chase() lets PLAYER be chosen even when t_dest is not hero.
+        game = new_game(seed=528)
+        set_open_floor(game)
+        game.p.x, game.p.y = 6, 5
+        monster = monster_at(5, 5, hp=10, armor=100, exp=5)
+        game.mons = [monster]
+        attacks = []
+        game.m_attack = lambda mo: attacks.append(mo)
+
+        result = game.chase(monster, (7, 5))
+
+        self.assertEqual(result, "attack")
+        self.assertEqual(attacks, [monster])
+        self.assertEqual((monster.x, monster.y), (5, 5))
+
+    def test_rogue_544_chase_attacks_hero_standing_on_scare_scroll(self):
+        # Rogue 5.4.4 rogue.h:winat() returns PLAYER before the SCROLL under the hero.
+        game = new_game(seed=529)
+        set_open_floor(game)
+        game.p.x, game.p.y = 6, 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = game.p.x, game.p.y
+        monster = monster_at(5, 5, hp=10, armor=100, exp=5)
+        game.gitems = [scroll]
+        game.mons = [monster]
+        attacks = []
+        game.m_attack = lambda mo: attacks.append(mo)
+
+        result = game.chase(monster, (game.p.x, game.p.y))
+
+        self.assertEqual(result, "attack")
+        self.assertEqual(attacks, [monster])
+        self.assertEqual((monster.x, monster.y), (5, 5))
+
+    def test_rogue_544_random_chase_attacks_hero_standing_on_scare_scroll(self):
+        # Rogue 5.4.4 move.c:rndmove() uses winat(); PLAYER wins over the scroll under hero.
+        game = new_game(seed=531)
+        set_open_floor(game)
+        game.p.x, game.p.y = 6, 5
+        scare_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "scare monster")
+        scroll = rogue.Item(rogue.CAT_SCR, scare_kind)
+        scroll.x, scroll.y = game.p.x, game.p.y
+        bat = monster_at(5, 5, "B", "bat", hp=10, armor=100, exp=5)
+        game.gitems = [scroll]
+        game.mons = [bat]
+        attacks = []
+        game.m_attack = lambda mo: attacks.append(mo)
+
+        rng = SequenceRng([0, 1, 2, 1])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            result = game.chase(bat, (game.p.x, game.p.y))
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertEqual(result, "attack")
+        self.assertEqual(attacks, [bat])
+        self.assertEqual((bat.x, bat.y), (5, 5))
+        self.assertEqual(rng.calls, [2, 3, 3])
 
     def test_rogue_544_chase_helper_continues_unless_at_goal_or_hero(self):
         # Rogue 5.4.4 chase.c:chase() returns curdist != 0 && !ce(ch_ret, hero).
@@ -13954,6 +16944,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.p.inv, [potion])
 
+    def test_rogue_544_call_item_escape_restores_previous_again_command(self):
+        # Rogue 5.4.4 command.c:call() starts with pack.c:get_item(); ESC calls reset_last().
+        game = new_game(seed=55211)
+        set_open_floor(game)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_C}, pressed=[rogue.pyxel.KEY_C])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed=[rogue.pyxel.KEY_ESCAPE])
+        game.begin_input()
+        game.upd_call()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 2)
+        self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
     def test_call_escape_from_menu_returns_to_menu(self):
         game = new_game(seed=5522)
         potion = rogue.Item(rogue.CAT_POT, 0)
@@ -14157,10 +17171,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("--- Keyboard: Pad ---", text)
         self.assertIn("--- Keyboard commands ---", text)
         self.assertIn("Enter+Esc", text)
+        self.assertIn("</> Stairs", text)
         self.assertIn("q Quaff", text)
         self.assertIn("d Drop", text)
+        self.assertIn("I Inv item", text)
         self.assertIn("P Put on", text)
         self.assertIn("R Remove", text)
+        self.assertIn("Q Quit", text)
         self.assertNotIn("Z / Enter", text)
         self.assertNotIn("Close overlays", text)
 
@@ -14286,6 +17303,34 @@ class RogueBaselineTest(unittest.TestCase):
             ["rnd:10", "rnd:2", "rnd:1", "rnd:3", "rnd:3", "rnd:8", "rnd:1", "rnd:3", "rnd:3", "rnd:8"],
         )
 
+    def test_rogue544_trap_placement_floor_gate_has_no_fixed_retry_fallback(self):
+        # Rogue 5.4.4 new_level.c:new_level() repeats find_floor() until chat() == FLOOR.
+        game = new_game(seed=3049)
+        room = rogue.Room(5, 5, 5, 5)
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.tm[6][6] = rogue.T_CORR
+        game.tm[7][7] = rogue.T_FLOOR
+        game.p.depth = 4
+        game.gitems = []
+        game.traps = {}
+        cap = rogue.MAP_W * rogue.MAP_H * len(game.rooms)
+        positions = iter([(6, 6)] * (cap + 1) + [(7, 7)])
+        game.find_floor_pos = lambda *args, **kwargs: next(positions)
+
+        class TrapRng:
+            def rnd(self, n):
+                return 0
+
+        old_rng = rogue.RNG
+        try:
+            rogue.RNG = TrapRng()
+            game._spawn_traps()
+        finally:
+            rogue.RNG = old_rng
+
+        self.assertEqual(game.traps, {(7, 7): 0})
+
     def test_secret_door_and_passage_generation_uses_rogue54_depth_gate(self):
         game = new_game(seed=56)
         set_open_floor(game)
@@ -14359,6 +17404,43 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.tm[py][px - 1], rogue.T_FLOOR)
         self.assertIn("You find nothing.", game.msgs)
 
+    def test_rogue544_search_does_not_reveal_hidden_trap_under_item(self):
+        # Rogue 5.4.4 command.c:search() reveals hidden traps only when chat() is FLOOR.
+        game = new_game(seed=584)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.traps[(px + 1, py)] = 3
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = px + 1, py
+        game.gitems = [item]
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.do_search()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(game.tm[py][px + 1], rogue.T_FLOOR)
+        self.assertEqual(game.gitems, [item])
+        self.assertNotIn("You found something!", game.msgs)
+
+    def test_rogue544_search_does_not_reveal_hidden_trap_under_stairs(self):
+        # Rogue 5.4.4 command.c:search() reveals hidden traps only when chat() is FLOOR.
+        game = new_game(seed=583)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        game.traps[(px + 1, py)] = 3
+        game.tm[py][px + 1] = rogue.T_STAIR
+        old_randrange = rogue.random.randrange
+        try:
+            rogue.random.randrange = lambda n: 0
+            game.do_search()
+        finally:
+            rogue.random.randrange = old_randrange
+
+        self.assertEqual(game.tm[py][px + 1], rogue.T_STAIR)
+        self.assertNotIn("You found something!", game.msgs)
+
     def test_stepping_on_hidden_bear_trap_reveals_it_and_spends_turn(self):
         game = new_game(seed=59)
         set_open_floor(game)
@@ -14371,6 +17453,48 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreater(game.p.stuck, 0)
         self.assertEqual(game.turn, 1)
         self.assertIn("you are caught in a bear trap", game.msgs)
+
+    def test_rogue544_hidden_trap_under_item_does_not_trigger_on_move(self):
+        # Rogue 5.4.4 move.c:do_move() reveals hidden traps only when winat() is FLOOR.
+        game = new_game(seed=592)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        x, y = game.p.x + 1, game.p.y
+        game.traps[(x, y)] = 3
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = x, y
+        game.gitems = [item]
+        food_qty = sum(i.qty for i in game.p.inv if i.cat == rogue.CAT_FOOD and i.kind == 0)
+
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (x, y))
+        self.assertEqual(game.tm[y][x], rogue.T_FLOOR)
+        self.assertEqual(game.p.stuck, 0)
+        self.assertEqual(game.gitems, [])
+        self.assertEqual(
+            sum(i.qty for i in game.p.inv if i.cat == rogue.CAT_FOOD and i.kind == 0),
+            food_qty + 1,
+        )
+        self.assertNotIn("you are caught in a bear trap", game.msgs)
+
+    def test_rogue544_hidden_trap_under_stairs_does_not_trigger_on_move(self):
+        # Rogue 5.4.4 move.c:do_move() reveals hidden traps only when winat() is FLOOR.
+        game = new_game(seed=591)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        game.traps[(x, y)] = 3
+        game.tm[y][x] = rogue.T_STAIR
+
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (x, y))
+        self.assertEqual(game.tm[y][x], rogue.T_STAIR)
+        self.assertEqual(game.p.stuck, 0)
+        self.assertTrue(game.seen_stairs)
+        self.assertNotIn("you are caught in a bear trap", game.msgs)
 
     def test_rogue_544_sleeping_gas_trap_adds_sleep_time(self):
         # Rogue 5.4.4 move.c:be_trapped() T_SLEEP uses no_command += SLEEPTIME.
@@ -14421,6 +17545,25 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_move.bear_trap_no_move(4, rogue.BEARTIME), 4 + rogue.BEARTIME)
         self.assertEqual(rogue_move.sleep_trap_no_command(7, rogue.SLEEPTIME), 7 + rogue.SLEEPTIME)
+
+    def test_rogue_544_stepping_arrow_trap_miss_drops_from_old_hero_position(self):
+        # Rogue 5.4.4 move.c:do_move() calls be_trapped(&nh) before hero = nh.
+        game = new_game(seed=630)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(11, 10)] = kind
+        game.trap_hits = lambda bonus=0: False
+        drops = []
+        game.drop_thrown = lambda item, x, y, around=True: drops.append((item.cat, item.kind, item.qty, x, y, around))
+
+        game.try_move(1, 0)
+
+        self.assertEqual((game.p.x, game.p.y), (11, 10))
+        self.assertEqual(drops, [(rogue.CAT_WPN, 3, 1, 10, 10, True)])
 
     def test_rogue_544_arrow_trap_miss_drops_one_arrow_with_fallpos(self):
         # Rogue 5.4.4 move.c:T_ARROW uses weapons.c:fall()/fallpos() on a miss.
@@ -14771,6 +17914,8 @@ class TestPrintDisc(unittest.TestCase):
         calls = []
         old_rnd = rogue.RNG.rnd
         try:
+            self.g.mons = []
+            self.g.visible = set()
             rogue.RNG.rnd = lambda n: calls.append(n) or 0
             self.g.open_discoveries()
             expected = len(rogue.POTIONS) + len(rogue.SCROLLS) + len(rogue.RINGS) + len(rogue.STICKS)
