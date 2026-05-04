@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_2317"
+UI_BUILD = "260504_2332"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4914,6 +4914,14 @@ class Game:
             self.st=ST_ITEM
             return
         if self.dact=="Zap":
+            if self.zap_item is None:
+                self.remember_repeat_dir(dx,dy)
+                self.p.facing=(dx,dy)
+                self.command_look()
+                self.msg("pack.you_arent_carrying_anything")
+                self.close_menu()
+                self.end_turn()
+                return
             if self.zap_item:
                 self.remember_repeat_dir(dx,dy)
                 self.p.facing=(dx,dy)
@@ -6357,6 +6365,17 @@ class Game:
             self.open_discoveries(); return
         aname = self.rogue_command_action()
         if aname:
+            if aname == "Zap" and not self.p.inv:
+                # C: command.c:'z' asks for direction before sticks.c:do_zap() asks for an item.
+                self.record_repeat_command(("item", aname))
+                self.command_look()
+                self.action_origin = ST_PLAY
+                self.cact = aname
+                self.dact = aname
+                self.zap_item = None
+                self.st = ST_DIR
+                self.dir_pending = None
+                return
             self.record_repeat_command(("item", aname))
             self.start_item_action(aname)
             return

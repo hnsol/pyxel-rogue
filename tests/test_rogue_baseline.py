@@ -14076,6 +14076,33 @@ class RogueBaselineTest(unittest.TestCase):
             ["You find nothing.", "You find nothing.", "You find nothing.", "You find nothing."],
         )
 
+    def test_rogue_544_count_prefix_repeats_again_without_last_command(self):
+        # Rogue 5.4.4 command.c leaves count active when counted 'a' has no last_comm.
+        game = new_game(seed=5060111)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_A])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(
+            game.msgs[-3:],
+            [
+                "you haven't typed a command yet",
+                "you haven't typed a command yet",
+                "you haven't typed a command yet",
+            ],
+        )
+
     def test_rogue_544_count_prefix_repeats_again_move_direction(self):
         # Rogue 5.4.4 command.c:'a' with count reuses the previous direction command repeatedly.
         game = new_game(seed=506012)
@@ -14207,6 +14234,28 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, 1)
         self.assertEqual(game.msgs[-1], "You find nothing.")
+
+    def test_rogue_544_zap_empty_pack_prompts_direction_then_spends_turn(self):
+        # Rogue 5.4.4 command.c:'z' calls get_dir() before sticks.c:do_zap() calls get_item().
+        game = new_game(seed=50604)
+        set_open_floor(game)
+        game.p.inv = []
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Z])
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Zap")
+        self.assertEqual(game.turn, 0)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.turn, 1)
+        self.assertIn("you aren't carrying anything", game.msgs[-1])
 
     def test_rogue_544_again_command_reuses_move_on_direction(self):
         # Rogue 5.4.4 misc.c:get_dir() reuses last_dir when again is TRUE.
