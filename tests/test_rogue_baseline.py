@@ -5127,6 +5127,28 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.dash_steps, 0)
         self.assertEqual(game.p.state, "weak")
 
+    def test_rogue_544_stomach_hunger_state_change_clears_fight_to_death(self):
+        # Rogue 5.4.4 daemons.c:stomach() clears to_death/kamikaze/count when hungry_state changes.
+        game = new_game(seed=4431)
+        set_open_floor(game)
+        target = monster_at(game.p.x + 1, game.p.y, sym="O", name="orc")
+        target.target = True
+        game.mons = [target]
+        game.p.food = rogue.MORETIME
+        game.p.state = "normal"
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = target
+        game.fight_dir = (1, 0)
+
+        game.run_stomach()
+
+        self.assertEqual(game.p.state, "weak")
+        self.assertFalse(game.fight_to_death)
+        self.assertFalse(game.fight_kamikaze)
+        self.assertIsNone(game.fight_target)
+        self.assertEqual(game.fight_dir, (0, 0))
+
     def test_rogue_544_stomach_decrements_food_on_starvation_death_check(self):
         # Rogue 5.4.4 daemons.c:stomach() uses food_left-- in the starvation death check.
         player = rogue.Player()

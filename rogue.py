@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0152"
+UI_BUILD = "260505_0207"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4668,6 +4668,7 @@ class Game:
             self.msg(m)
         if rogue_daemons.stomach_stops_running(old_state, self.p.state):
             self.clear_running_count()
+            self.clear_fight_to_death()
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
 
