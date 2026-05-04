@@ -15380,6 +15380,42 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, turn)
         self.assertEqual(rng.calls, [5, 3, 3])
 
+    def test_rogue_544_player_confused_stationary_rndmove_clears_to_death_only(self):
+        # Rogue 5.4.4 move.c:do_move() clears to_death, not kamikaze, when rndmove() returns hero.
+        game = new_game(seed=533)
+        set_open_floor(game)
+        game.daemons.kill("runners")
+        game.daemons.kill("doctor")
+        game.daemons.kill("stomach")
+        game.p.x, game.p.y = 10, 10
+        game.p.confused = 5
+        monster = monster_at(11, 10)
+        monster.target = True
+        game.mons = [monster]
+        game.fight_to_death = True
+        game.fight_kamikaze = True
+        game.fight_target = monster
+        game.fight_dir = (1, 0)
+        game.fight_max_hit = 3
+        rng = SequenceRng([1, 1, 1])
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = rng.rnd
+            turn = game.turn
+            moved = game.try_move(1, 0)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertFalse(moved)
+        self.assertEqual((game.p.x, game.p.y), (10, 10))
+        self.assertEqual(game.turn, turn)
+        self.assertEqual(rng.calls, [5, 3, 3])
+        self.assertFalse(game.fight_to_death)
+        self.assertTrue(game.fight_kamikaze)
+        self.assertIs(game.fight_target, monster)
+        self.assertEqual(game.fight_dir, (1, 0))
+        self.assertEqual(game.fight_max_hit, 3)
+
     def test_rogue_544_held_player_move_away_spends_turn_without_moving(self):
         # Rogue 5.4.4 move.c:do_move() reports ISHELD after the destination checks and leaves after true.
         game = new_game(seed=517)

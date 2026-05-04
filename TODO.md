@@ -240,6 +240,7 @@
 - [x] Rogue 5.4.4 `move.c:rndmove()` 相当の1回だけのランダム移動試行を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:rndmove()` / `winat()` 準拠で、混乱中 player のランダム移動は通常 monster glyph と scare scroll を不可にする
 - [x] Rogue 5.4.4 `move.c:rndmove()` / `rogue.h:winat()` 準拠で、混乱/Phantom/Bat のランダム追跡移動は item 擬態 Xeroc を `step_ok()` として扱う
+- [x] Rogue 5.4.4 `move.c:do_move()` 準拠で、混乱中 player の `rndmove()` が足元を返した時は `to_death` だけ解除する
 - [x] Rogue 5.4.4 `move.c:rndmove()` / `rogue.h:winat()` 準拠で、混乱/Phantom/Bat のランダム追跡移動は scare scroll 上の hero を `PLAYER` として扱う
 - [x] Rogue 5.4.4 `move.c:rust_armor()` 相当の錆び合法判定・保護分岐を `rogue_move.py` へ小分割
 - [x] Rogue 5.4.4 `move.c:be_trapped()` `T_MYST` 11択メッセージ表を `rogue_move.py` へ小分割

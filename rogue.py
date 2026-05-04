@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0226"
+UI_BUILD = "260505_0252"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3994,6 +3994,7 @@ class Game:
             )
             if (nx, ny) == (p.x, p.y):
                 self.dashing = False
+                self.clear_to_death_only()
                 self.command_look_done = False
                 return False
             dx, dy = nx - p.x, ny - p.y
