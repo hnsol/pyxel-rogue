@@ -60,6 +60,8 @@ def install_pyxel_mock():
         "KEY_Q", "KEY_W", "KEY_E", "KEY_T", "KEY_P",
         "KEY_A", "KEY_D", "KEY_F", "KEY_G", "KEY_M",
         "KEY_O", "KEY_V",
+        "KEY_1", "KEY_2", "KEY_3", "KEY_4", "KEY_5",
+        "KEY_7", "KEY_8", "KEY_9",
         "KEY_I", "KEY_6", "KEY_SPACE",
         "KEY_ESCAPE", "KEY_RETURN", "KEY_TAB", "KEY_BACKSPACE",
         "KEY_PERIOD", "KEY_COMMA", "KEY_MINUS",
@@ -14027,6 +14029,66 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, 2)
         self.assertEqual(game.msgs[-2:], ["You find nothing.", "You find nothing."])
+
+    def test_rogue_544_count_prefix_repeats_search_command(self):
+        # Rogue 5.4.4 command.c:command() keeps countch and replays countable commands.
+        game = new_game(seed=50601)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 3)
+        self.assertEqual(game.msgs[-3:], ["You find nothing.", "You find nothing.", "You find nothing."])
+
+    def test_rogue_544_count_prefix_repeats_diagonal_move_command(self):
+        # Rogue 5.4.4 command.c count prefix applies to vi direction commands.
+        game = new_game(seed=50602)
+        set_open_floor(game)
+        start = (game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_2])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_U])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual((game.p.x, game.p.y), (start[0] + 2, start[1] - 2))
+        self.assertEqual(game.turn, 2)
+
+    def test_rogue_544_count_prefix_is_cleared_by_non_countable_command(self):
+        # Rogue 5.4.4 command.c clears count for commands outside the countable switch.
+        game = new_game(seed=50603)
+        set_open_floor(game)
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_3])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_V])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_S])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.msgs[-1], "You find nothing.")
 
     def test_rogue_544_again_command_reuses_move_on_direction(self):
         # Rogue 5.4.4 misc.c:get_dir() reuses last_dir when again is TRUE.

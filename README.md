@@ -123,6 +123,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - m: Move onto（拾わずに移動）
 - f/F: Fight / Fight to death
 - a: Again（直前コマンドを繰り返し）
+- 数字: search / 足踏み / 方向移動の回数指定
 - o: 補助メニュー
 - v: Version
 - ) / ] / = / @: 現在装備 / よろい / 指輪 / ステータス

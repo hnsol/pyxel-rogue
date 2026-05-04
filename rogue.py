@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_2240"
+UI_BUILD = "260504_2253"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1578,6 +1578,11 @@ class Game:
         self.prev_repeat_dir = None
         self.prev_repeat_item = None
         self.repeat_command_active = False
+        self.count_prefix_active = False
+        self.count_prefix_value = 0
+        self.count_repeat_command = None
+        self.count_repeat_remaining = 0
+        self.count_repeat_dir = None
         self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
@@ -4990,6 +4995,9 @@ class Game:
         # C: command.c saves last_comm/last_dir/last_pick before dispatch, except while again.
         if getattr(self, "repeat_command_active", False):
             return
+        if getattr(self, "count_prefix_active", False):
+            self.count_prefix_active = False
+            self.count_prefix_value = 0
         self.prev_repeat_command = self.last_repeat_command
         self.prev_repeat_dir = self.last_repeat_dir
         self.prev_repeat_item = self.last_repeat_item
@@ -5139,6 +5147,64 @@ class Game:
     # ---------- Input helpers ----------
     def kp(self,*ks): return any(k is not None and pyxel.btnp(k) for k in ks)
     def kh(self,*ks): return any(k is not None and pyxel.btn(k) for k in ks)
+
+    def count_digit_press(self):
+        if self.shift_held() or self.ctrl_held():
+            return None
+        for digit in range(10):
+            key = getattr(pyxel, f"KEY_{digit}", None)
+            if key is not None and self.kp(key):
+                return digit
+        return None
+
+    def countable_command(self, command):
+        return command in ("search", "wait", "move")
+
+    def start_count_prefix(self, digit):
+        # C: command.c digit prefix is read after look(TRUE), before dispatch.
+        self.command_look()
+        if not self.count_prefix_active:
+            self.count_prefix_value = 0
+        self.count_prefix_active = True
+        self.count_prefix_value = min(255, self.count_prefix_value * 10 + digit)
+
+    def record_counted_input_command(self, command, direction=None):
+        # C: command.c decrements count before deciding whether last_comm is updated.
+        if self.count_prefix_active:
+            count = self.count_prefix_value
+            self.count_prefix_active = False
+            self.count_prefix_value = 0
+            if self.countable_command(command) and count > 1:
+                self.count_repeat_command = command
+                self.count_repeat_remaining = count - 1
+                self.count_repeat_dir = direction
+                return False
+        self.record_repeat_command(command)
+        if command == "move" and direction is not None:
+            self.remember_repeat_dir(*direction)
+        return True
+
+    def continue_counted_command(self):
+        command = getattr(self, "count_repeat_command", None)
+        if not command or self.count_repeat_remaining <= 0:
+            return False
+        if self.count_repeat_remaining == 1:
+            self.record_repeat_command(command)
+            if command == "move" and self.count_repeat_dir is not None:
+                self.remember_repeat_dir(*self.count_repeat_dir)
+        self.count_repeat_remaining -= 1
+        if self.count_repeat_remaining <= 0:
+            self.count_repeat_command = None
+        if command == "search":
+            self.do_search()
+            return True
+        if command == "wait":
+            self.do_wait()
+            return True
+        if command == "move" and self.count_repeat_dir is not None:
+            self.try_move(*self.count_repeat_dir)
+            return True
+        return False
 
     def begin_input(self):
         self.b_tap=False
@@ -6155,6 +6221,9 @@ class Game:
                 self.dash_step()
             return
 
+        if self.continue_counted_command():
+            return
+
         # Overlays
         sd=self.select_dir_press()
         if sd:
@@ -6236,15 +6305,19 @@ class Game:
             self.record_repeat_command("legal_space")
             self.legal_space_command()
             return
+        count_digit = self.count_digit_press()
+        if count_digit is not None:
+            self.start_count_prefix(count_digit)
+            return
         if self.key_lower(getattr(pyxel, "KEY_A", None)):
             self.repeat_last_command()
             return
         if self.btn_wait():
             if self.kp(getattr(pyxel, "KEY_PERIOD", None)):
-                self.record_repeat_command("wait")
+                self.record_counted_input_command("wait")
             self.do_wait(); return
         if self.btn_search():
-            self.record_repeat_command("search")
+            self.record_counted_input_command("search")
             self.do_search(); return
         if self.btn_trap_inspect():
             self.record_repeat_command("trap")
@@ -6278,8 +6351,7 @@ class Game:
         # Normal direction
         d = self.dir_press()
         if d:
-            self.record_repeat_command("move")
-            self.remember_repeat_dir(*d)
+            self.record_counted_input_command("move", d)
             self.try_move(*d)
             return
 
