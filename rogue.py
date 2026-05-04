@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1026"
+UI_BUILD = "260504_1049"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -589,6 +589,22 @@ TRAPS = [
     {"name":"rust trap"}, {"name":"mysterious trap"},
 ]
 RAINBOW = ["red","orange","yellow","green","blue","violet"]
+SYMBOL_DESC_EN = {
+    "|": "wall of a room", "-": "wall of a room", "*": "gold",
+    "%": "a staircase", "+": "door", ".": "room floor",
+    "@": "you", "#": "passage", "^": "trap", "!": "potion",
+    "?": "scroll", ":": "food", ")": "weapon", " ": "solid rock",
+    "]": "armor", ",": "the Amulet of Yendor", "=": "ring",
+    "/": "wand or staff",
+}
+SYMBOL_DESC_JA = {
+    "|": "部屋の壁", "-": "部屋の壁", "*": "金貨",
+    "%": "階段", "+": "扉", ".": "部屋の床",
+    "@": "あなた", "#": "通路", "^": "わな", "!": "水薬",
+    "?": "巻き物", ":": "食料", ")": "武器", " ": "岩",
+    "]": "よろい", ",": "イェンダーの魔除け", "=": "指輪",
+    "/": "杖",
+}
 
 # ===========================================================
 #  Bestiary  (Rogue 5.4.4 extern.c:monsters[])
@@ -1548,6 +1564,7 @@ class Game:
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
+        self.identify_symbol_pending = False
         self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
@@ -4109,6 +4126,61 @@ class Game:
         self.st = ST_HELP
         self.command_look_done = False
 
+    def open_symbol_identify_command(self):
+        self.command_look()
+        self.msg("command.what_do_you_want_identified")
+        self.identify_symbol_pending = True
+        self.command_look_done = False
+
+    def symbol_description(self, ch):
+        unknown = "知らない文字" if self.lang == LANG_JA else "unknown character"
+        if len(ch) == 1 and "A" <= ch <= "Z":
+            spec = self.monster_spec_for_sym(ch)
+            return TextCatalog.monster(self.lang, spec.name) if spec else unknown
+        table = SYMBOL_DESC_JA if self.lang == LANG_JA else SYMBOL_DESC_EN
+        return table.get(ch, unknown)
+
+    def symbol_identify_key_press(self):
+        if self.kp(getattr(pyxel, "KEY_ESCAPE", None)):
+            return ""
+        if self.kp(getattr(pyxel, "KEY_SPACE", None)):
+            return " "
+        if self.kp(getattr(pyxel, "KEY_AT", None)):
+            return "@"
+        if self.kp(getattr(pyxel, "KEY_PERIOD", None)):
+            return "."
+        if self.kp(getattr(pyxel, "KEY_COMMA", None)):
+            return ","
+        if self.kp(getattr(pyxel, "KEY_MINUS", None)):
+            return "-"
+        if self.kp(getattr(pyxel, "KEY_EQUALS", None)):
+            return "="
+        if self.kp(getattr(pyxel, "KEY_RIGHTBRACKET", None)):
+            return "]"
+        if self.kp(getattr(pyxel, "KEY_0", None)) and self.shift_held():
+            return ")"
+        if self.kp(getattr(pyxel, "KEY_6", None)) and self.shift_held():
+            return "^"
+        if self.kp(getattr(pyxel, "KEY_QUESTION", None)):
+            return "?"
+        if self.kp(getattr(pyxel, "KEY_SLASH", None)):
+            return "/"
+        for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+            key = getattr(pyxel, f"KEY_{c}", None)
+            if key is not None and self.kp(key):
+                return c if self.shift_held() else c.lower()
+        return None
+
+    def update_symbol_identify_prompt(self):
+        ch = self.symbol_identify_key_press()
+        if ch is None:
+            return True
+        self.identify_symbol_pending = False
+        if ch == "":
+            return True
+        self.msg("command.value_value2_2", value=ch, value2=self.symbol_description(ch))
+        return True
+
     def show_version_command(self):
         self.command_look()
         self.msg("command.version_version_mctesq_was_here", version=UI_BUILD)
@@ -4998,7 +5070,7 @@ class Game:
             self.back_used=True
             return (dx,dy)
         return None
-    def btn_r(self): return self.kp(pyxel.KEY_QUESTION, pyxel.KEY_SLASH)
+    def btn_r(self): return self.kp(pyxel.KEY_QUESTION)
     def btn_any_key(self):
         """Return True if any meaningful key or gamepad button was pressed this frame.
         Used to dismiss help/info overlays."""
@@ -5726,6 +5798,10 @@ class Game:
                 self.st=ST_PLAY
 
     def upd_play(self):
+        if getattr(self, "identify_symbol_pending", False):
+            if self.update_symbol_identify_prompt():
+                return
+
         if self.p.no_command>0:
             self.wake_visible_monsters()
             self.msg("pyxel.unable_to_move")
@@ -5762,6 +5838,7 @@ class Game:
         if self.btn_back():
             self.command_look(); self.st=ST_INVENTORY; self.command_look_done=False; return
         if self.btn_r():     self.open_help_command(); return
+        if self.kp(getattr(pyxel, "KEY_SLASH", None)): self.open_symbol_identify_command(); return
         if self.key_lower(getattr(pyxel, "KEY_V", None)): self.show_version_command(); return
         if self.key_lower(getattr(pyxel, "KEY_O", None)): self.open_options_command(); return
         if self.key_lower(getattr(pyxel, "KEY_M", None)): self.start_move_on_command(); return
@@ -6433,7 +6510,8 @@ class Game:
         self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
         commands=[
             ". Wait   s Search   t Throw   ^ Trap",
-            "i Inv    ? Help     d Drop",
+            "i Inv    ? Help     / Identify",
+            "d Drop   m Move onto o Options",
             "q Quaff  r Read     e Eat     z Zap",
             "w Wear   W Wield    T Take off",
             "P Put on R Remove",

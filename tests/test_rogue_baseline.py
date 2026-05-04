@@ -13967,6 +13967,77 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.msgs[-1], "keep me")
 
+    def test_rogue_544_identify_symbol_command_wakes_and_prompts_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when '/': identify().
+        game = new_game(seed=5038)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_SLASH])
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertTrue(game.identify_symbol_pending)
+        self.assertIn("what do you want identified?", game.msgs[-1])
+
+    def test_rogue_544_identify_symbol_reports_table_entry_without_turn(self):
+        # Rogue 5.4.4 command.c:identify() maps PLAYER to "you".
+        game = new_game(seed=5039)
+        game.identify_symbol_pending = True
+        game.msg_text("what do you want identified? ")
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_AT])
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertFalse(game.identify_symbol_pending)
+        self.assertEqual(game.msgs[-1], "'@': you")
+
+    def test_rogue_544_identify_symbol_reports_monster_name_without_turn(self):
+        # Rogue 5.4.4 command.c:identify() maps uppercase A-Z through extern.c:monsters[].
+        game = new_game(seed=5040)
+        game.identify_symbol_pending = True
+        game.msg_text("what do you want identified? ")
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_D},
+            pressed=[rogue.pyxel.KEY_D],
+        )
+        game.begin_input()
+        game.upd_play()
+        rogue.pyxel.set_input()
+
+        self.assertEqual(game.turn, 0)
+        self.assertFalse(game.identify_symbol_pending)
+        self.assertEqual(game.msgs[-1], "'D': dragon")
+
+    def test_help_text_lists_rogue_identify_symbol_command(self):
+        # Rogue 5.4.4 extern.c:helpstr[] lists '/' as identify.
+        game = new_game(seed=5041)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_help()
+
+        self.assertIn("/ Identify", "\n".join(calls))
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)

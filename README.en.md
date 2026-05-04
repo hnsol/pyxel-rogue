@@ -115,6 +115,7 @@ Keyboard:
 - ^: Trap Inspect (choose direction)
 - i: Inventory
 - ?: Help
+- /: Identify a symbol
 - Ctrl+P: Repeat last message
 - Ctrl+R: Redraw
 - m: Move onto without picking up
