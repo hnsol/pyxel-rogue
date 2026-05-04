@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_2332"
+UI_BUILD = "260505_0047"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -3543,6 +3543,7 @@ class Game:
         source_monster=self.mon_at(start_x,start_y) if hit_hero else None
         changed=False
         steps=0
+        used=False
         bounces=0
         while steps < BOLT_LENGTH and bounces < BOLT_LENGTH * 2:
             x+=dx; y+=dy
@@ -3554,6 +3555,7 @@ class Game:
                     if self.p.hp<=0 and not self.death_cause:
                         killer=rogue_sticks.bolt_death_cause(hero_started, source_monster.name if source_monster else None)
                         self.death_cause=f"killed by a {killer}"
+                    used=True
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True
                 self.msg("sticks.the_value_whizzes_by_you", value=name)
@@ -3565,10 +3567,12 @@ class Game:
                     changed=not changed
                     if not self.monster_save_throw(VS_MAGIC,target):
                         if target.sym=="D" and name=="flame":
+                            used=True
                             self.msg("sticks.the_flame_bounces")
+                            continue
                         else:
                             self.hit_monster_with_bolt(target,name)
-                        return True
+                            return True
                     wake_miss, show_miss = rogue_sticks.saved_monster_miss_feedback(
                         hero_started,
                         self.zap_winat_char(x, y),
@@ -3588,7 +3592,7 @@ class Game:
                 self.msg("sticks.the_value_bounces", value=name)
                 continue
             steps+=1
-        return False
+        return used
 
     def zap_stick(self,it,dx,dy):
         # C: sticks.c:do_zap()

@@ -34,15 +34,13 @@
 
 完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
 
-推奨順:
+終盤の推奨順:
 
-1. wandering monster spawn（`daemons.c:swander()` / `rollwand()`, `monsters.c:wanderer()`）
-2. armor `wear()` の take off 必須化（`armor.c:wear()`）
-3. 呪い生成確率と識別表示の監査（`things.c:new_thing()`, `armor.c:wear()`, `rings.c:ring_num()`, `sticks.c:charge_str()`）
-4. run停止条件の再監査（`move.c:do_run()` / `do_move()`, `misc.c:look()`）
-5. 杖 bolt 系 / magic missile / drain life / nothing（`sticks.c:do_zap()`）
-6. 鑑定・命名・発見リスト忠実度（`wizard.c:whatis()/set_know()`, `command.c:call()`, `misc.c:call_it()`, `things.c:print_disc()`）
-7. 通路番号付き passages、Dragon breath / cancellation 連携、Xeroc 擬態細部
+1. chase / passage / door / destination（`chase.c:do_chase()` / `chase()`）
+2. sticks / bolt / cancellation / Dragon breath（`sticks.c:do_zap()` / `fire_bolt()`, `chase.c:do_chase()`）
+3. Xeroc 横断監査（`fight.c`, `sticks.c`, `chase.c`）
+4. daemon/fuse 追加期待値テスト（`daemon.c`, `daemons.c`）
+5. command 入力残差（`command.c:command()` / `misc.c:get_dir()` / `pack.c:get_item()`）— Rogue on Pyxel のクリア体験への影響が小さいため後回し
 
 - [x] **指輪（Ring）14種** — 2スロット（左右手）、常時効果、ランダム宝石名で識別
   - protection, add strength, sustain strength, searching,
@@ -586,6 +584,7 @@
 - [x] 暗い部屋の探索済み床 `.` が退室後も残る表示を Rogue 5.4.4 の床消去に寄せて非表示化
 - [ ] 通路番号付き passages / Xeroc / cancellation と Dragon breath / bolt 系の完全連携（Dragon breath の同室・直線・射程・`ISCANC` ゲートは `chase.c:do_chase()` / `sticks.c:fire_bolt()` 準拠で接続済み）
   - [x] Rogue 5.4.4 `passages.c:numpass()` / `chase.c:do_chase()` 準拠で、hero が通常 room door 上にいる場合の Dragon breath `proom` 判定を固定
+  - [x] Rogue 5.4.4 `sticks.c:fire_bolt()` 準拠で、Dragon に flame が当たった後も bolt 処理を継続する
 - [x] 巻物 18 種化完了（identify 対象選択 UI 含む）
 - [x] ポーションを原作 14 種へ更新（hallucination / levitation 接続済み）
 - [x] treasure room（モンスターハウス）を `new_level.c:treas_room()` 準拠で接続済み。`rogue_dungeon.py` に個数計算と発生ゲートを分離。
