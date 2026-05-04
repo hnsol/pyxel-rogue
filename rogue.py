@@ -215,7 +215,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260504_1000"
+UI_BUILD = "260504_1026"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -4165,6 +4165,37 @@ class Game:
         self.command_look()
         self.command_look_done = False
 
+    def repeat_message_command(self):
+        # C: command.c:command() CTRL('P') dispatches msg(huh), the previous message.
+        last = self.msgs[-1] if self.msgs else ""
+        self.command_look()
+        self.msg_text(last)
+        self.command_look_done = False
+
+    def redraw_command(self):
+        self.command_look()
+        self.command_look_done = False
+
+    def legal_space_command(self):
+        self.command_look()
+        self.command_look_done = False
+
+    def ctrl_command_press(self):
+        if not self.ctrl_held():
+            return None
+        if self.kp(getattr(pyxel, "KEY_P", None)):
+            return "repeat"
+        if self.kp(getattr(pyxel, "KEY_R", None)):
+            return "redraw"
+        return None
+
+    def legal_space_command_press(self):
+        return (
+            self.kp(getattr(pyxel, "KEY_SPACE", None))
+            and not self.ctrl_held()
+            and not self.dir_held_any()
+        )
+
     def illegal_command(self, command):
         self.command_look()
         self.msg("command.illegal_command_command", command=command)
@@ -4849,6 +4880,8 @@ class Game:
 
     def shift_held(self):
         return self.kh(pyxel.KEY_SHIFT, pyxel.KEY_LSHIFT, pyxel.KEY_RSHIFT)
+    def ctrl_held(self):
+        return self.kh(pyxel.KEY_CTRL, pyxel.KEY_LCTRL, pyxel.KEY_RCTRL)
     def btn_a(self): return self.kp(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def held_a(self): return self.kh(pyxel.KEY_RETURN, pyxel.GAMEPAD1_BUTTON_A)
     def btn_b(self): return self.kp(pyxel.KEY_ESCAPE) or getattr(self, "b_tap", False)
@@ -5743,6 +5776,16 @@ class Game:
             return
         if self.kp(getattr(pyxel, "KEY_AT", None)):
             self.status_command()
+            return
+        ctrl_command = self.ctrl_command_press()
+        if ctrl_command == "repeat":
+            self.repeat_message_command()
+            return
+        if ctrl_command == "redraw":
+            self.redraw_command()
+            return
+        if self.legal_space_command_press():
+            self.legal_space_command()
             return
         if self.btn_wait():  self.do_wait(); return
         if self.btn_search(): self.do_search(); return

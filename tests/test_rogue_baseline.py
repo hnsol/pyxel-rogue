@@ -13875,6 +13875,98 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_PLAY)
 
+    def test_rogue_544_repeat_message_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before CTRL('P'): msg(huh).
+        game = new_game(seed=5035)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.msg_text("old message")
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_CTRL, rogue.pyxel.KEY_P},
+                pressed=[rogue.pyxel.KEY_P],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.msgs[-1], "old message")
+
+    def test_rogue_544_redraw_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before CTRL('R'): wrefresh(curscr).
+        game = new_game(seed=5036)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.msg_text("keep me")
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_CTRL, rogue.pyxel.KEY_R},
+                pressed=[rogue.pyxel.KEY_R],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.msgs[-1], "keep me")
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertIsNone(game.cact)
+
+    def test_rogue_544_space_command_wakes_visible_monsters_without_turn(self):
+        # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ' ': after = FALSE.
+        game = new_game(seed=5037)
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in (5, 6, 7, 8):
+            game.tm[5][x] = rogue.T_CORR
+        game.rooms = []
+        game.p.x, game.p.y = 5, 5
+        game.msg_text("keep me")
+        monster = monster_at(8, 5, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+        game.visible = {(monster.x, monster.y)}
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            rogue.pyxel.set_input(
+                held={rogue.pyxel.KEY_SPACE},
+                pressed=[rogue.pyxel.KEY_SPACE],
+            )
+            game.begin_input()
+            game.upd_play()
+        finally:
+            rogue.RNG.rnd = old_rnd
+            rogue.pyxel.set_input()
+
+        self.assertTrue(monster.running)
+        self.assertEqual(game.turn, 0)
+        self.assertEqual(game.msgs[-1], "keep me")
+
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
         set_open_floor(game)

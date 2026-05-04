@@ -100,7 +100,7 @@ Keyboard:
 
 - Arrow keys / HJKL: Move
 - YUBN: Diagonal movement
-- Hold Space: Diagonal assist
+- Hold Space: Diagonal assist / press alone: no-op
 - Enter: Confirm / pick up / stairs / search one tile ahead
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
@@ -115,6 +115,8 @@ Keyboard:
 - ^: Trap Inspect (choose direction)
 - i: Inventory
 - ?: Help
+- Ctrl+P: Repeat last message
+- Ctrl+R: Redraw
 - m: Move onto without picking up
 - o: Assist menu
 - v: Version

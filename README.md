@@ -99,7 +99,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 - 矢印 / HJKL: 移動
 - YUBN: 斜め移動
-- Space押下中: 斜め補助モード
+- Space押下中: 斜め補助モード / 単独押下: no-op
 - Enter: 決定 / 拾う / 階段 / 正面1マスsearch
 - Enter+Esc: 足踏み
 - Shift+方向: ダッシュ
@@ -115,6 +115,8 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - ^: Trap Inspect（方向指定）
 - i: Inventory
 - ?: Help
+- Ctrl+P: 前メッセージ再表示
+- Ctrl+R: 再描画
 - m: Move onto（拾わずに移動）
 - o: 補助メニュー
 - v: Version
