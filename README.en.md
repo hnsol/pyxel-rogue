@@ -67,6 +67,12 @@ To start with Japanese text:
 PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 ```
 
+To try the bundled k8x12S font:
+
+```bash
+PYXEL_ROGUE_FONT=k8x12s uv run --with pyxel pyxel run rogue.py
+```
+
 Basic developer checks:
 
 ```bash
@@ -93,6 +99,7 @@ Gamepad:
 - A+B: Wait a turn
 - Select: Inventory; press Select again in inventory for the assist menu
 - Assist menu: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
+- Language / Palette / Pickup changes are saved for later games.
 - Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles
 - Select+D-pad: Inspect a discovered trap

@@ -67,6 +67,12 @@ uv run --with pyxel pyxel run rogue.py
 PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 ```
 
+比較用に k8x12S フォントで起動する場合:
+
+```bash
+PYXEL_ROGUE_FONT=k8x12s uv run --with pyxel pyxel run rogue.py
+```
+
 開発者向けの簡易チェック:
 
 ```bash
@@ -107,6 +113,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Esc: メニュー / キャンセル
 - Tab: 持ちもの。持ちもの表示中にもう一度Tabで補助メニュー
 - 補助メニュー: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
+- Language / Palette / Pickup の変更は保存され、次回以降のゲームにも反映されます。
 - Tab+Enter: quick throw
 - Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認

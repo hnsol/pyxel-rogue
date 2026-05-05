@@ -58,6 +58,7 @@ PAD_ACTION_GRID = (
     ("Call", "Discoveries", "Drop"),
 )
 PAD_ACTION_INITIAL = "Eat"
+PACK_GRID_MAX_ROWS = 9
 
 
 def action_index(actions, name):
@@ -97,4 +98,43 @@ def pad_menu_move(current_index, dx, dy, actions=MENU_ACTIONS, grid=PAD_ACTION_G
             name = grid[(y + dy * step) % len(grid)][x]
             if name is not None:
                 return action_index(actions, name)
+    return current_index
+
+
+def pack_grid_shape(count, max_rows=PACK_GRID_MAX_ROWS):
+    if count <= 0:
+        return (1, 0)
+    cols = (count + max_rows - 1) // max_rows
+    cols = max(1, min(3, cols))
+    rows = (count + cols - 1) // cols
+    return (cols, rows)
+
+
+def pack_grid_pos(index, count, max_rows=PACK_GRID_MAX_ROWS):
+    _cols, rows = pack_grid_shape(count, max_rows)
+    if rows <= 0:
+        return (0, 0)
+    return (index // rows, index % rows)
+
+
+def pack_grid_index(col, row, count, max_rows=PACK_GRID_MAX_ROWS):
+    _cols, rows = pack_grid_shape(count, max_rows)
+    if rows <= 0:
+        return 0
+    return min(count - 1, col * rows + row)
+
+
+def pack_grid_move(current_index, dx, dy, count, max_rows=PACK_GRID_MAX_ROWS):
+    if count <= 0:
+        return current_index
+    cols, rows = pack_grid_shape(count, max_rows)
+    col, row = pack_grid_pos(current_index, count, max_rows)
+    if dx:
+        target_col = (col + dx) % cols
+        return pack_grid_index(target_col, row, count, max_rows)
+    if dy:
+        start = col * rows
+        end = min(count, start + rows)
+        col_len = max(1, end - start)
+        return start + ((row + dy) % col_len)
     return current_index

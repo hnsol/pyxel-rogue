@@ -4,6 +4,7 @@ import os
 import random
 import subprocess
 import sys
+import tempfile
 import types
 import unittest
 
@@ -259,17 +260,47 @@ class RogueBaselineTest(unittest.TestCase):
             rogue_ui.pad_menu_move(rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS), -1, 0, rogue.MENU_ACTIONS),
             next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Quaff"),
         )
+        self.assertEqual(rogue_ui.pack_grid_shape(26), (3, 9))
+        self.assertEqual(rogue_ui.pack_grid_pos(0, 26), (0, 0))
+        self.assertEqual(rogue_ui.pack_grid_pos(9, 26), (1, 0))
+        self.assertEqual(rogue_ui.pack_grid_pos(25, 26), (2, 7))
+        self.assertEqual(rogue_ui.pack_grid_move(0, 1, 0, 26), 9)
+        self.assertEqual(rogue_ui.pack_grid_move(9, -1, 0, 26), 0)
+        self.assertEqual(rogue_ui.pack_grid_move(0, 0, -1, 26), 8)
+        self.assertEqual(rogue_ui.pack_grid_move(8, 0, 1, 26), 0)
+        self.assertEqual(rogue_ui.pack_grid_move(17, 1, 0, 26), 25)
         self.assertEqual((rogue.B_TAP_FRAMES, rogue.BACK_TAP_FRAMES), (8, 8))
 
     def test_layout_constants_are_split_without_changing_screen_geometry(self):
         import rogue_layout
 
+        expected_font = rogue_layout.normalize_font_id(os.environ.get("PYXEL_ROGUE_FONT"))
+        expected_metrics = rogue_layout.FONT_METRICS[expected_font]
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 360))
         self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
+        self.assertEqual((rogue.FONT_ASCII_W, rogue.FONT_CJK_W, rogue.FONT_LINE_H), expected_metrics)
+        self.assertEqual(rogue.FONT_ID, expected_font)
+        self.assertEqual(rogue_layout.normalize_font_id("k8x12S"), "k8x12s")
+        self.assertEqual(rogue_layout.normalize_font_id("unknown"), "umplus_j10r")
+        self.assertTrue(rogue.FONT_PATH.endswith("k8x12S.bdf" if expected_font == "k8x12s" else "umplus_j10r.bdf"))
+        self.assertTrue(os.path.exists(os.path.join(ROOT, "assets", "fonts", "k8x12S.bdf")))
+        self.assertTrue(os.path.exists(os.path.join(ROOT, "assets", "fonts", "k8x12.txt")))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (rogue_layout.ZV_PX_W, rogue_layout.ZV_PX_H))
         self.assertEqual((rogue.HUD_X, rogue.HUD_W), (rogue_layout.HUD_X, rogue_layout.HUD_W))
         self.assertEqual((rogue.MSG_LINES, rogue.MSG_COLS), (7, rogue_layout.MSG_COLS))
+
+    def test_ui_text_width_uses_layout_font_metrics(self):
+        game = new_game(seed=263)
+
+        old_ascii, old_cjk = rogue.FONT_ASCII_W, rogue.FONT_CJK_W
+        try:
+            rogue.FONT_ASCII_W = 7
+            rogue.FONT_CJK_W = 12
+            self.assertEqual(game.ui_text_width("AB薬"), 26)
+        finally:
+            rogue.FONT_ASCII_W = old_ascii
+            rogue.FONT_CJK_W = old_cjk
 
     def test_combat_message_keys_are_split_without_changing_order(self):
         import rogue_combat_text
@@ -288,6 +319,51 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.Settings, rogue_lang.Settings)
         self.assertEqual(rogue.Settings(language="xx").language, rogue.LANG_EN)
         self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
+
+    def test_settings_save_load_round_trips_language_palette_and_pickup(self):
+        import rogue_lang
+
+        old_file = rogue_lang.SETTINGS_FILE
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                rogue_lang.SETTINGS_FILE = os.path.join(td, "settings.json")
+                rogue_lang.save_settings(
+                    rogue.Settings(
+                        language=rogue.LANG_JA,
+                        auto_pickup=False,
+                        palette=rogue.PALETTE_IDS[-1],
+                    )
+                )
+
+                loaded = rogue_lang.load_settings()
+
+            self.assertEqual(loaded.language, rogue.LANG_JA)
+            self.assertFalse(loaded.auto_pickup)
+            self.assertEqual(loaded.palette, rogue.PALETTE_IDS[-1])
+        finally:
+            rogue_lang.SETTINGS_FILE = old_file
+
+    def test_option_changes_are_saved_and_auto_pickup_survives_new_game(self):
+        game = new_game(seed=3471)
+        saved = []
+        old_save = rogue.save_settings
+        try:
+            rogue.save_settings = lambda settings: saved.append(
+                (settings.language, settings.palette, settings.auto_pickup)
+            )
+
+            game.toggle_lang()
+            self.assertEqual(saved[-1][0], rogue.LANG_JA)
+
+            game.toggle_palette()
+            self.assertEqual(saved[-1][1], game.settings.palette)
+
+            game.toggle_auto_pickup()
+            self.assertFalse(saved[-1][2])
+            game.new_game()
+            self.assertFalse(game.auto_pickup)
+        finally:
+            rogue.save_settings = old_save
 
     def test_timing_constants_are_split_without_changing_values(self):
         import rogue_timing
@@ -8759,6 +8835,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.end_turn()
         self.assertEqual(game.p.state, "hungry")
         self.assertIn("You feel hungry.", game.msgs)
+        self.assertTrue(game.message_ack_pending)
 
         game.p.hp = 10
         game.p.quiet = 19
@@ -9255,13 +9332,98 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(s.startswith("a) scroll ") and len(s) > 18 for _, _, s, _ in inv_lines))
         self.assertTrue(any(s.startswith("b) ") and "two-handed sword" in s for _, _, s, _ in inv_lines))
         self.assertTrue(any(s.startswith("z)") for _, _, s, _ in inv_lines))
-        self.assertEqual({x for x, _, _, _ in inv_lines}, {38})
+        self.assertEqual(len({x for x, _, _, _ in inv_lines}), 2)
         first_item = next(c for c in inv_lines if c[2].startswith("a)"))
-        second_item = next(c for c in inv_lines if c[2].startswith("b)"))
+        fourteenth_item = next(c for c in inv_lines if c[2].startswith("n)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
         self.assertEqual(first_item[1] - calls[0][1], 15)
-        self.assertEqual(second_item[1] - first_item[1], 11)
+        self.assertGreater(fourteenth_item[0], first_item[0])
+        self.assertEqual(fourteenth_item[1], first_item[1])
         self.assertLessEqual(last_item[1], 320)
+
+    def test_item_picker_draws_pack_as_grid_with_current_cursor(self):
+        game = new_game(seed=371)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
+        game.fitems = list(game.p.inv)
+        game.cact = "Throw"
+        game.icur = 13
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_isel()
+
+        item_lines = [c for c in calls if len(c[2]) >= 4 and c[2][2:4] == ") "]
+        self.assertTrue(any(s.startswith(" a)") for _, _, s, _ in item_lines))
+        selected = next(c for c in item_lines if c[2].startswith(">n)"))
+        first = next(c for c in item_lines if c[2].startswith(" a)"))
+        self.assertGreater(selected[0], first[0])
+        self.assertEqual(selected[1], first[1])
+
+    def test_pack_grid_does_not_overtrim_item_names_in_picker_or_inventory(self):
+        game = new_game(seed=3711)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        game.fitems = list(game.p.inv)
+        game.cact = "Drop"
+        game.item_name = lambda it: "abcdefghijklmnopqrstuvwxyz"
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_isel()
+        game.draw_inventory()
+
+        self.assertTrue(any("abcdefghijklmnopqrstuvwxyz" in s for s in calls))
+
+    def test_inventory_uses_wide_pack_layout_and_shows_assist_hint(self):
+        game = new_game(seed=3712)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
+        calls = []
+        boxes = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_inventory()
+
+        inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
+        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
+        self.assertGreaterEqual(boxes[-1][2], rogue.SCR_W - 40)
+        self.assertTrue(any("Tab/Select: Assist" in s for _x, _y, s, _c in calls))
+
+    def test_item_picker_restores_previous_object_and_marks_cursor_gold_until_moved(self):
+        game = new_game(seed=372)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
+        target = game.p.inv[9]
+        game.last_item_by_action["Drop"] = target
+
+        game.start_item_action("Drop")
+
+        self.assertEqual(game.icur, 9)
+        self.assertTrue(game.item_cursor_restored)
+
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.draw_isel()
+        self.assertTrue(any(s.startswith(">j) food") and c == rogue.UI_RESTORED_CURSOR_COL for s, c in calls))
+        self.assertEqual(rogue.UI_RESTORED_CURSOR_COL, 27)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+        )
+        game.update()
+
+        self.assertEqual(game.icur, 10)
+        self.assertFalse(game.item_cursor_restored)
+
+    def test_item_picker_missing_previous_object_starts_at_a_without_gold_cursor(self):
+        game = new_game(seed=373)
+        old_item = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0), rogue.Item(rogue.CAT_FOOD, 0)]
+        game.last_item_by_action["Drop"] = old_item
+
+        game.start_item_action("Drop")
+
+        self.assertEqual(game.icur, 0)
+        self.assertFalse(game.item_cursor_restored)
 
     def test_hud_equipment_omits_inventory_worn_annotations(self):
         game = new_game(seed=36)
@@ -9287,34 +9449,186 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(c.startswith("a)") for c in calls))
         self.assertTrue(any(c.startswith("z)") for c in calls))
 
-    def test_message_log_uses_seven_rows_with_current_turn_highlighted(self):
+    def test_message_toast_uses_recent_rows_with_turn_age_colors(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
-        game.msgs = ["hidden", "one", "two", "three", "four", "five", "six", "latest"]
-        game.msg_turns = [0, 0, 0, 1, 1, 1, 1, 1]
-        game.turn = 1
+        game.msgs = ["hidden", "old", "dim", "latest"]
+        game.msg_turns = [0, 1, 5, 6]
+        game.turn = 6
 
         game.draw_msgs()
 
-        self.assertEqual(rogue.MSG_LINES, 7)
-        self.assertEqual([text for text, _ in calls], ["one", "two", "three", "four", "five", "six", "latest"])
-        self.assertEqual([color for _, color in calls], [6, 6, 30, 30, 30, 30, 30])
+        self.assertEqual(rogue.MSG_TOAST_LINES, 5)
+        self.assertEqual([text for text, _ in calls], ["old", "dim", "latest"])
+        self.assertEqual([color for _, color in calls], [6, 6, 30])
+        self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
+        self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
 
-    def test_message_before_end_turn_stays_highlighted_after_turn_advances(self):
+    def test_message_toast_hides_after_dim_turns_and_moves_up_only_near_bottom_player(self):
         game = new_game(seed=35)
         set_open_floor(game)
-        game.msgs = []
-        game.msg_turns = []
-        game.turn_msg_start = 0
         calls = []
-        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
 
-        game.msg_text("you hit the hobgoblin")
-        game.end_turn()
+        game.msgs = ["gone", "visible"]
+        game.msg_turns = [0, 2]
+        game.turn = 7
+        game.p.y = rogue.PLAY_Y_MIN
         game.draw_msgs()
 
-        self.assertEqual(calls, [("you hit the hobgoblin", 30)])
+        self.assertEqual([s for _, _, s, _ in calls], ["visible"])
+        default_y = calls[0][1]
+
+        calls.clear()
+        game.p.y = rogue.PLAY_Y_MAX - rogue.MSG_TOAST_LINES - 2
+        game.draw_msgs()
+        self.assertEqual(calls[0][1], default_y)
+
+        calls.clear()
+        game.p.y = rogue.PLAY_Y_MAX - 1
+        game.draw_msgs()
+        self.assertLess(calls[0][1], default_y)
+
+    def test_message_toast_position_uses_hysteresis_near_bottom_player(self):
+        game = new_game(seed=351)
+        set_open_floor(game)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.msgs = ["visible"]
+        game.msg_turns = [0]
+        game.turn = 0
+
+        game.p.y = rogue.PLAY_Y_MAX - 1
+        game.draw_msgs()
+        top_y = calls[0][1]
+
+        calls.clear()
+        game.p.y = rogue.PLAY_Y_MAX - 3
+        game.draw_msgs()
+        self.assertEqual(calls[0][1], top_y)
+
+        calls.clear()
+        game.p.y = rogue.PLAY_Y_MAX - rogue.MSG_TOAST_LINES - 3
+        game.draw_msgs()
+        self.assertGreater(calls[0][1], top_y)
+
+    def test_message_toast_moves_up_when_bottom_would_cover_player(self):
+        game = new_game(seed=352)
+        set_open_floor(game)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.msgs = ["visible"]
+        game.msg_turns = [0]
+        game.turn = 0
+        game.p.x = 20
+        game.p.y = rogue.PLAY_Y_MAX - 4
+
+        game.draw_msgs()
+
+        self.assertLess(calls[0][1], rogue.ZV_Y + rogue.ZV_PX_H // 2)
+
+    def test_message_toast_width_fits_text_instead_of_full_dungeon_width(self):
+        game = new_game(seed=375)
+        game.msgs = ["short"]
+        game.msg_turns = [0]
+        game.turn = 0
+        rect_calls = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            game.txt = lambda *args: None
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.rect = old_rect
+
+        self.assertTrue(rect_calls)
+        self.assertLess(rect_calls[-1][2], rogue.ZV_PX_W)
+        self.assertGreaterEqual(rect_calls[-1][2], rogue.FONT_ASCII_W * 40)
+
+    def test_message_toast_keeps_fixed_height_while_old_lines_expire(self):
+        game = new_game(seed=3751)
+        game.msgs = ["gone", "visible"]
+        game.msg_turns = [0, 5]
+        game.turn = 6
+        rect_calls = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            game.txt = lambda *args: None
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.rect = old_rect
+
+        self.assertEqual(rect_calls[-1][3], rogue.MSG_TOAST_LINES * rogue.MSG_LINE_H + 6)
+
+    def test_important_message_blocks_play_until_acknowledged(self):
+        game = new_game(seed=376)
+        set_open_floor(game)
+        game.p.x, game.p.y = 5, 5
+        game.msg_important("pyxel.pack_too_full")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+
+        self.assertEqual((game.p.x, game.p.y), (5, 5))
+        self.assertTrue(game.message_ack_pending)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_B}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_B})
+        game.update()
+
+        self.assertTrue(game.message_ack_pending)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertFalse(game.message_ack_pending)
+
+    def test_important_message_draws_ack_marker_until_acknowledged(self):
+        game = new_game(seed=3761)
+        game.msg_important("pyxel.pack_too_full")
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_msgs()
+
+        marker = [c for c in calls if c[2] == ">"]
+        self.assertTrue(marker)
+        self.assertEqual(marker[-1][3], rogue.UI_HILITE_COL)
+
+    def test_level_up_message_is_important(self):
+        game = new_game(seed=377)
+
+        game.p.level = 1
+        game.p.exp = game.p.EXP_T[1]
+        self.assertTrue(game.p.lvlup())
+        game.msg_important("misc.welcome_to_level_level", level=game.p.level)
+
+        self.assertTrue(game.message_ack_pending)
+
+    def test_message_toast_border_uses_solid_dither_after_translucent_fill(self):
+        game = new_game(seed=374)
+        game.msgs = ["visible"]
+        game.msg_turns = [0]
+        game.turn = 0
+        dither_calls = []
+        rect_calls = []
+        rectb_calls = []
+        old_dither, old_rect, old_rectb = rogue.pyxel.dither, rogue.pyxel.rect, rogue.pyxel.rectb
+        try:
+            rogue.pyxel.dither = lambda alpha=1.0: dither_calls.append(alpha)
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            rogue.pyxel.rectb = lambda *args: rectb_calls.append(args)
+            game.txt = lambda *args: None
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.dither = old_dither
+            rogue.pyxel.rect = old_rect
+            rogue.pyxel.rectb = old_rectb
+
+        self.assertTrue(rect_calls)
+        self.assertTrue(rectb_calls)
+        self.assertEqual(dither_calls[-1], 1.0)
 
     def test_keyboard_esc_opens_and_cancels_menu_back_to_play(self):
         game = new_game(seed=35)
@@ -11367,11 +11681,13 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         result_lines = [item for item in drawn if len(item) == 4 and item[1] == rogue.SCOREBOARD_HILITE_COL]
-        self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, 360, 56), result_lines)
-        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, 360, 69), result_lines)
+        first_x = max(114, 468 - game.ui_text_width("Ranking refreshed."))
+        second_x = max(114, 468 - game.ui_text_width("POST once per 24h."))
+        self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 56), result_lines)
+        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, second_x, 69), result_lines)
         for text, _c, x, _y in result_lines:
             if text in ("Ranking refreshed.", "POST once per 24h."):
-                self.assertLessEqual(x + len(text) * 6, 468)
+                self.assertLessEqual(x + game.ui_text_width(text), 468)
 
     def test_online_score_japanese_result_messages_split_on_sentence_end(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12674,14 +12990,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Wear")
 
         game.st = rogue.ST_ITEM
-        game.fitems = [rogue.Item(rogue.CAT_FOOD, 0), rogue.Item(rogue.CAT_FOOD, 0)]
+        game.fitems = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
         game.icur = 0
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertEqual(game.icur, 13)
+
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
         )
         game.update()
-        self.assertEqual(game.icur, 1)
+        self.assertEqual(game.icur, 14)
 
         game.open_aux()
         rogue.pyxel.set_input(
@@ -12747,6 +13070,107 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.cact, "Drop")
         self.assertEqual(game.st, rogue.ST_ITEM)
+
+    def test_action_menu_draws_keyboard_hints_in_english_and_japanese(self):
+        game = new_game(seed=4721)
+        game.open_menu()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_menu()
+
+        self.assertTrue(any("z)Zap" in s for s in calls))
+        self.assertTrue(any("t)Throw" in s for s in calls))
+
+        game.lang = rogue.LANG_JA
+        calls.clear()
+        game.draw_menu()
+
+        self.assertTrue(any("z)振る" in s for s in calls))
+        self.assertTrue(any("t)投げる" in s for s in calls))
+
+    def test_command_windows_have_staged_positions(self):
+        game = new_game(seed=4722)
+        boxes = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda *args: None
+
+        game.draw_menu()
+        action_box = boxes[-1]
+
+        boxes.clear()
+        game.dact = "Throw"
+        game.draw_dirp()
+        dir_box = boxes[-1]
+
+        boxes.clear()
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
+        game.fitems = list(game.p.inv)
+        game.cact = "Throw"
+        game.icur = 0
+        game.draw_isel()
+        item_box = boxes[-1]
+
+        map_center_x = rogue.ZV_X + rogue.ZV_PX_W // 2
+        map_center_y = rogue.ZV_Y + rogue.ZV_PX_H // 2
+        action_center = (action_box[0] + action_box[2] // 2, action_box[1] + action_box[3] // 2)
+        item_center = (item_box[0] + item_box[2] // 2, item_box[1] + item_box[3] // 2)
+        self.assertLess(action_center[0], map_center_x)
+        self.assertLess(action_center[1], map_center_y)
+        self.assertGreater(action_center[0], map_center_x - 100)
+        self.assertGreater(action_center[1], map_center_y - 80)
+        self.assertGreater(item_box[0], action_box[0])
+        self.assertGreater(item_box[1], action_box[1])
+        self.assertGreater(item_center[0], action_center[0])
+        self.assertGreater(item_center[1], action_center[1])
+        self.assertGreater(dir_box[0], action_box[0])
+
+    def test_command_chain_draws_previous_windows_under_current_prompt(self):
+        game = new_game(seed=4723)
+        game.action_origin = rogue.ST_MENU
+        game.cact = "Throw"
+        game.dact = None
+        game.throw_dir = (1, 0)
+        game.st = rogue.ST_ITEM
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(2)]
+        game.fitems = list(game.p.inv)
+        boxes = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda *args: None
+
+        game.draw()
+
+        self.assertEqual(boxes[-3:], ["-- Action --", "Direction? [D-pad/YUBN]", "-- Throw --"])
+
+    def test_command_chain_cancel_removes_only_top_window(self):
+        game = new_game(seed=4724)
+        game.action_origin = rogue.ST_MENU
+        game.cact = "Throw"
+        game.dact = None
+        game.throw_dir = (1, 0)
+        game.st = rogue.ST_ITEM
+
+        game.cancel_item_prompt()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Throw")
+
+        game.cancel_dir_prompt()
+
+        self.assertEqual(game.st, rogue.ST_MENU)
+
+    def test_quick_throw_item_cancel_returns_to_direction_prompt(self):
+        game = new_game(seed=4725)
+        game.action_origin = rogue.ST_PLAY
+        game.cact = "Throw"
+        game.dact = None
+        game.throw_dir = (1, 0)
+        game.st = rogue.ST_ITEM
+
+        game.cancel_item_prompt()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Throw")
 
     def test_select_tap_opens_inventory_then_select_tap_switches_to_assist(self):
         game = new_game(seed=473)
@@ -13768,8 +14192,9 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_B},
         )
         game.update()
-        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(game.st, rogue.ST_DIR)
         self.assertIsNone(game.throw_dir)
+        self.assertEqual(game.dact, "Throw")
 
     def test_select_direction_inspects_visible_trap_without_spending_turn(self):
         game = new_game(seed=51)
@@ -14514,6 +14939,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.death_cause, "an arrow killed you")
         self.assertIn("an arrow killed you", game.msgs)
         self.assertNotIn("oh no! An arrow shot you", game.msgs)
+
+    def test_player_hp_is_clamped_to_zero_after_lethal_trap_damage(self):
+        game = new_game(seed=641)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "arrow trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: True
+        game.p.hp = 1
+        old_roll = rogue.roll
+        rogue.roll = lambda s: 6
+        try:
+            game.trigger_trap(x, y)
+        finally:
+            rogue.roll = old_roll
+
+        self.assertEqual(game.p.hp, 0)
 
     def test_rogue_544_dart_trap_kill_uses_poisoned_dart_message(self):
         # Rogue 5.4.4 move.c:be_trapped() T_DART says "a poisoned dart killed you" on death.

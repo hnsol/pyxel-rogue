@@ -58,15 +58,22 @@ from rogue_items import (
     ICOL,
     ISYM,
 )
-from rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings
+from rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings
 from rogue_layout import (
     DEAD_ZONE_X,
     DEAD_ZONE_Y,
+    FONT_ASCII_W,
+    FONT_CJK_W,
+    FONT_ID,
+    FONT_LINE_H,
     HUD_W,
     HUD_X,
     HUD_Y,
     MSG_COLS,
     MSG_LINES,
+    MSG_TOAST_BRIGHT_TURNS,
+    MSG_TOAST_DIM_TURNS,
+    MSG_TOAST_LINES,
     MSG_LINE_H,
     MSG_X,
     MSG_Y,
@@ -189,6 +196,10 @@ from rogue_ui import (
     CALL_PRESETS,
     MENU_ACTIONS,
     PAD_ACTION_GRID,
+    PACK_GRID_MAX_ROWS,
+    pack_grid_move,
+    pack_grid_pos,
+    pack_grid_shape,
     pad_menu_initial_index,
     pad_menu_move,
     ST_AUX,
@@ -218,7 +229,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260505_0231"
+UI_BUILD = "260506_0303"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -354,12 +365,17 @@ SCOREBOARD_DIM_COL = 30
 UI_TEXT_COL = 30
 UI_SUBTEXT_COL = 9
 UI_HILITE_COL = 23
+UI_RESTORED_CURSOR_COL = 27
 
 # ===========================================================
 #  Font
 # ===========================================================
 _pyxel_dir = os.path.dirname(pyxel.__file__)
-FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
+FONT_PATHS = {
+    "umplus_j10r": os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf"),
+    "k8x12s": os.path.join(os.path.dirname(__file__), "assets", "fonts", "k8x12S.bdf"),
+}
+FONT_PATH = FONT_PATHS.get(FONT_ID, FONT_PATHS["umplus_j10r"])
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
 TITLE_FADE_FRAMES = 156
 LOGO_BGM_DELAY_FRAMES = 78
@@ -1304,7 +1320,7 @@ def start_inv():
 # ===========================================================
 class Game:
     def __init__(self):
-        self.settings = Settings()
+        self.settings = load_settings()
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
         self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
@@ -1409,6 +1425,11 @@ class Game:
             self.settings = Settings()
         return self.settings
 
+    def persist_settings(self):
+        saved = save_settings(self.ensure_settings())
+        if isinstance(saved, Settings):
+            self.settings = saved
+
     @property
     def lang(self):
         return self.ensure_settings().language
@@ -1502,6 +1523,7 @@ class Game:
         i = PALETTE_IDS.index(settings.palette) if settings.palette in PALETTE_IDS else 0
         settings.palette = PALETTE_IDS[(i + 1) % len(PALETTE_IDS)]
         self.apply_palette()
+        self.persist_settings()
         self.msg("pyxel.palette_set", palette=PALETTE_LABELS[settings.palette])
 
     def txt(self, x, y, s, c):
@@ -1510,7 +1532,7 @@ class Game:
     def ui_text_width(self, s):
         width = 0
         for ch in str(s):
-            width += 6 if ord(ch) < 128 else 10
+            width += FONT_ASCII_W if ord(ch) < 128 else FONT_CJK_W
         return width
 
     def item_name(self,it, describe=True):
@@ -1550,6 +1572,10 @@ class Game:
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
         self.cact = None; self.dact = None; self.fitems = []
+        self.last_item_by_action = {}
+        self.item_cursor_restored = False
+        self.message_ack_pending = False
+        self.msg_toast_side = "bottom"
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
         self.disc_scroll = 0
         self.turn_msg_start = 0
@@ -1564,7 +1590,6 @@ class Game:
         self.back_used = False; self.back_tap = False
         self.b_menu_guard = False
         self.diag_assist = False
-        self.auto_pickup = True
         self.dir_pending = None
         self.throw_anim = None
         self.turn_after_throw_anim = False
@@ -1730,17 +1755,23 @@ class Game:
             return int(entry.get("score", self.p.gold))
         return self.p.gold
 
-    def set_lang(self, lang):
+    def set_lang(self, lang, persist=False):
         self.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
         if hasattr(self, "ident"):
             self.ident.set_lang(self.lang)
+        if persist:
+            self.persist_settings()
 
     def toggle_lang(self):
-        self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN)
+        self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN, persist=True)
         self.msg("pyxel.language_japanese" if self.lang == LANG_JA else "pyxel.language_english")
 
     def toggle_online_language(self):
-        self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN)
+        self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN, persist=True)
+
+    def toggle_auto_pickup(self):
+        self.auto_pickup = not self.auto_pickup
+        self.persist_settings()
 
     def online_language_toggle_pressed(self):
         if self.key_lower(pyxel.KEY_L):
@@ -2212,6 +2243,10 @@ class Game:
     def msg_text(self,t):
         self._append_msg(t)
 
+    def msg_important(self,t,**kw):
+        self.msg(t, **kw)
+        self.message_ack_pending = True
+
     def combat_monster_name(self,m,upper=False, article_for_something=False):
         def random_monster_name():
             spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
@@ -2387,7 +2422,7 @@ class Game:
             gold.qty = rogue_fight.leprechaun_kill_gold_after_first(first_gold, self.p.depth, self.save_vs_magic(), goldcalc)
             m.pack.append(gold)
         if self.p.lvlup():
-            self.msg("misc.welcome_to_level_level", level=self.p.level)
+            self.msg_important("misc.welcome_to_level_level", level=self.p.level)
         self.remove_monster(m, was_kill=True)
         return mn
 
@@ -2535,6 +2570,7 @@ class Game:
             if self.p.hp<=0:
                 if not self.death_cause:
                     self.death_cause=f"killed by a {m.name}"
+                self.clamp_player_hp()
                 return
             if rogue_fight.attack_specials_allowed(rogue_monsters.is_cancelled(m)):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
@@ -2591,7 +2627,9 @@ class Game:
                     m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_hit(m.vf_hit)
                     self.p.held_by=m
                     self.p.hp-=1
-                    if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
+                    if self.p.hp<=0 and not self.death_cause:
+                        self.death_cause=f"killed by a {m.name}"
+                        self.clamp_player_hp()
                 if rogue_monsters.has_special(m, "steal_item"):
                     t=self.monster_has_magic_item_to_steal()
                     if t:
@@ -2600,7 +2638,9 @@ class Game:
         else:
             if m.sym == "F" and m.vf_hit > 0:
                 self.p.hp = rogue_fight.venus_flytrap_miss_hp(self.p.hp, m.vf_hit)
-                if self.p.hp<=0 and not self.death_cause: self.death_cause=f"killed by a {m.name}"
+                if self.p.hp<=0 and not self.death_cause:
+                    self.death_cause=f"killed by a {m.name}"
+                    self.clamp_player_hp()
             if rogue_fight.monster_attack_message_allowed(m.sym):
                 self.msg_text(self.monster_miss_message(mn))
         return rogue_fight.attack_result(monster_removed=False)
@@ -2821,7 +2861,7 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg("potions.you_feel_very_sick_now")
+                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg_important("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st,p.max_st=rogue_potions.gain_strength(p.st,p.max_st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
@@ -2888,7 +2928,7 @@ class Game:
             p.exp=rogue_levels.raise_level_exp(p.level,p.EXP_T)
             self.msg("potions.you_suddenly_feel_much_more_skillful")
             if p.lvlup():
-                self.msg("misc.welcome_to_level_level", level=p.level)
+                self.msg_important("misc.welcome_to_level_level", level=p.level)
         elif nm=="monster detection":
             if p.see_monsters > 0:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
@@ -2943,7 +2983,7 @@ class Game:
             self.haste_half_turn = False
             self.haste_no_command_half_turn = False
             self.fuses.extinguish("nohaste")
-            self.msg("misc.you_faint_from_exhaustion")
+            self.msg_important("misc.you_faint_from_exhaustion")
             return False
         self.p.haste = 1
         self.haste_half_turn = False
@@ -3461,6 +3501,7 @@ class Game:
                     if self.p.hp<=0 and not self.death_cause:
                         killer=rogue_sticks.bolt_death_cause(hero_started, source_monster.name if source_monster else None)
                         self.death_cause=f"killed by a {killer}"
+                    self.clamp_player_hp()
                     self.msg("sticks.you_are_hit_by_the_value", value=name)
                     return True
                 self.msg("sticks.the_value_whizzes_by_you", value=name)
@@ -3575,7 +3616,7 @@ class Game:
             self.p.exp += exp_gain
             self.msg("misc.value_this_food_tastes_awful", value="yuk")
             if self.p.lvlup():
-                self.msg("misc.welcome_to_level_level", level=self.p.level)
+                self.msg_important("misc.welcome_to_level_level", level=self.p.level)
         else:
             self.msg("misc.value_that_tasted_good", value="yum")
         self.consume_pack_item(it)
@@ -3897,7 +3938,7 @@ class Game:
                     if found:
                         if p.hallucinating > 0:
                             trap = rnd(len(TRAPS))
-                        self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
+                        self.msg_important("pyxel.have_found_trap", trap=self.trap_name(trap))
         if found:
             self.msg("pyxel.found_something")
         elif not quiet_fail:
@@ -3939,11 +3980,11 @@ class Game:
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
         self.clear_running_count()
         if name=="trap door":
-            self.msg("move.you_fell_into_a_trap")
+            self.msg_important("move.you_fell_into_a_trap")
             self.descend()
         elif name=="bear trap":
             self.p.no_move=rogue_move.bear_trap_no_move(self.p.no_move, BEARTIME)
-            self.msg("move.you_are_caught_in_a_bear_trap")
+            self.msg_important("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
             self.p.no_command=rogue_move.sleep_trap_no_command(self.p.no_command, SLEEPTIME)
             self.msg("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
@@ -3952,7 +3993,8 @@ class Game:
                 self.p.hp-=roll("1d6")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="an arrow killed you"
-                    self.msg("move.an_arrow_killed_you")
+                    self.msg_important("move.an_arrow_killed_you")
+                    self.clamp_player_hp()
                 else:
                     self.msg("move.oh_no_an_arrow_shot_you")
             else:
@@ -3965,7 +4007,8 @@ class Game:
                 self.p.hp-=roll("1d4")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="a poisoned dart killed you"
-                    self.msg("move.a_poisoned_dart_killed_you")
+                    self.msg_important("move.a_poisoned_dart_killed_you")
+                    self.clamp_player_hp()
                     return
                 poison_saved = self.save_vs_poison()
                 self.p.st = rogue_move.dart_poison_strength(
@@ -4019,7 +4062,7 @@ class Game:
         else:
             if self.p.hallucinating > 0:
                 trap = rnd(len(TRAPS))
-            self.msg("pyxel.have_found_trap", trap=self.trap_name(trap))
+            self.msg_important("pyxel.have_found_trap", trap=self.trap_name(trap))
 
     def do_action(self):
         p=self.p; px,py=p.x,p.y
@@ -4082,7 +4125,7 @@ class Game:
             self.gitems.remove(gi); self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
             return True
         gi.picked_up = was_picked_up
-        self.msg("pyxel.pack_too_full")
+        self.msg_important("pyxel.pack_too_full")
         return True
 
     def do_wait(self): self.end_turn()
@@ -4147,7 +4190,7 @@ class Game:
         self.mons=[mo for mo in self.mons if mo.alive]
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
-            self.msg("pyxel.died_restart"); self.enter_result_state("killed")
+            self.msg_important("pyxel.died_restart"); self.enter_result_state("killed")
         self.turn_msg_start = len(self.msgs)
 
     def decrement_no_command(self):
@@ -4219,11 +4262,16 @@ class Game:
         old_state = self.p.state
         m=self.p.hunger()
         if m:
-            self.msg(m)
+            self.msg_important(m)
         if rogue_daemons.stomach_stops_running(old_state, self.p.state):
             self.clear_running_count()
         if self.p.hp<=0 and not self.death_cause:
             self.death_cause="starved to death"
+        self.clamp_player_hp()
+
+    def clamp_player_hp(self):
+        if hasattr(self, "p") and self.p.hp < 0:
+            self.p.hp = 0
 
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):
@@ -4421,7 +4469,7 @@ class Game:
             self.msg("rings.you_arent_wearing_any_rings"); self.close_menu(); return
         if not self.fitems:
             self.msg("pyxel.nothing_to_action", action=aname.lower()); self.close_menu(); return
-        self.icur=0
+        self.icur, self.item_cursor_restored = self.initial_item_cursor(aname)
         if aname=="Throw":
             self.throw_dir=None; self.dact="Throw"; self.st=ST_DIR
         elif aname=="Call":
@@ -4434,12 +4482,24 @@ class Game:
         if not self.fitems: self.close_menu(); return
         self.confirm_item(self.fitems[self.icur])
 
+    def initial_item_cursor(self, action):
+        last = getattr(self, "last_item_by_action", {}).get(action)
+        if last in self.fitems:
+            return self.fitems.index(last), True
+        return 0, False
+
+    def remember_item_cursor(self, action, item):
+        if not hasattr(self, "last_item_by_action"):
+            self.last_item_by_action = {}
+        self.last_item_by_action[action] = item
+
     def confirm_item(self, it):
         a=self.cact
         if a=="Throw":
             if self.throw_dir:
                 dx,dy=self.throw_dir
                 self.p.facing=(dx,dy)
+                self.remember_item_cursor(a, it)
                 animating = self.throw(it,dx,dy)
                 self.close_menu()
                 if animating:
@@ -4450,6 +4510,7 @@ class Game:
                 self.dact="Throw"; self.st=ST_DIR
             return
         if a=="Zap":
+            self.remember_item_cursor(a, it)
             self.zap_item=it; self.dact="Zap"; self.st=ST_DIR
             return
         if a=="Identify":
@@ -4462,30 +4523,42 @@ class Game:
             if self.use_pot(it) is False:
                 self.close_menu()
                 return
+            self.remember_item_cursor(a, it)
         elif a=="Read":
-            if self.use_scr(it):
+            read_result = self.use_scr(it)
+            if read_result:
+                self.remember_item_cursor(a, it)
                 return  # use_scr set up next picker state; don't close yet.
-        elif a=="Eat":   self.eat(it)
+            if it.cat == CAT_SCR:
+                self.remember_item_cursor(a, it)
+        elif a=="Eat":
+            self.eat(it)
+            self.remember_item_cursor(a, it)
         elif a=="Wield":
             if self.wield(it) is False:
                 self.close_menu()
                 return
+            self.remember_item_cursor(a, it)
         elif a=="Wear":
             if self.wear(it) is False:
                 self.close_menu()
                 return
+            self.remember_item_cursor(a, it)
         elif a=="Put on":
             if self.put_on_ring(it) is False:
                 self.close_menu()
                 return
+            self.remember_item_cursor(a, it)
         elif a in ("Take off", "Take off armor", "Remove ring"):
             if self.takeoff(it) is False:
                 self.close_menu()
                 return
+            self.remember_item_cursor(a, it)
         elif a=="Drop":
             if self.drop(it) is False:
                 self.close_menu()
                 return
+            self.remember_item_cursor(a, it)
         self.close_menu(); self.end_turn()
 
     def dir_confirm(self,dx,dy):
@@ -4685,13 +4758,16 @@ class Game:
         self.msg("pack.item_is_not_a_valid_item", item=ch)
     def cancel_item_prompt(self):
         # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
-        if self.cact=="Throw" and self.throw_dir is not None and self.action_origin==ST_MENU:
-            self.st=ST_MENU
+        if self.cact=="Throw" and self.throw_dir is not None:
+            self.st=ST_DIR
+            self.dact="Throw"
+            self.throw_dir=None
         elif self.action_origin==ST_MENU:
             self.st=ST_MENU
         else:
             self.close_menu()
-        self.throw_dir=None
+        if self.st != ST_DIR:
+            self.throw_dir=None
     def cancel_call_prompt(self):
         # Rogue 5.4.4 command.c:call() returns without changing guesses on ESC.
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
@@ -5603,6 +5679,10 @@ class Game:
                 self.st=ST_PLAY
 
     def upd_play(self):
+        if getattr(self, "message_ack_pending", False):
+            if self.btn_a() or self.btn_start_tap():
+                self.message_ack_pending = False
+            return
         if self.p.no_command>0:
             self.msg("pyxel.unable_to_move")
             self.end_turn()
@@ -5684,8 +5764,11 @@ class Game:
                 return
             self.confirm_item(letter_item)
             return
+        dx=self.menu_horizontal_press()
+        if dx and self.fitems:
+            self.icur=pack_grid_move(self.icur,dx,0,len(self.fitems), self.pack_grid_max_rows(self.fitems)); self.item_cursor_restored=False; return
         dy=self.menu_vertical_press()
-        if dy and self.fitems: self.icur=(self.icur+dy)%len(self.fitems); return
+        if dy and self.fitems: self.icur=pack_grid_move(self.icur,0,dy,len(self.fitems), self.pack_grid_max_rows(self.fitems)); self.item_cursor_restored=False; return
         if self.btn_a(): self.item_confirm(); return
         if self.btn_overlay_cancel():
             self.cancel_item_prompt()
@@ -5787,7 +5870,7 @@ class Game:
         elif act=="Trap":
             self.start_trap_inspect()
         elif act=="Pickup":
-            self.auto_pickup = not self.auto_pickup
+            self.toggle_auto_pickup()
             self.msg("pyxel.pickup_on" if self.auto_pickup else "pyxel.pickup_off")
             self.st=ST_PLAY
         elif act=="Language":
@@ -5838,19 +5921,7 @@ class Game:
         self.draw_stat()
         self.draw_msgs()
         # Overlays
-        if self.st==ST_MENU: self.draw_menu()
-        elif self.st==ST_ITEM: self.draw_isel()
-        elif self.st==ST_CALL: self.draw_call_input()
-        elif self.st==ST_DISC: self.draw_disc()
-        elif self.st==ST_DIR: self.draw_dirp()
-        elif self.st==ST_AUX: self.draw_aux()
-        elif self.st==ST_INVENTORY: self.draw_inventory()
-        elif self.st==ST_HELP: self.draw_help()
-        elif self.st==ST_DEAD: self.draw_dead()
-        elif self.st==ST_WIN: self.draw_win()
-        elif self.st==ST_QUIT: self.draw_quit()
-        elif self.st==ST_QUIT_CONFIRM: self.draw_quit_confirm()
-        elif self.st==ST_SCORE: self.draw_score_screen()
+        self.draw_overlays()
 
     def draw_logo_screen(self):
         frame = getattr(self, "logo_frames", 0)
@@ -6094,6 +6165,7 @@ class Game:
                     self.txt(sx+1,sy+1,self.throw_anim["sym"],self.throw_anim["col"])
 
     def draw_stat(self):
+        self.clamp_player_hp()
         sx,sy=HUD_X,HUD_Y+28; p=self.p; hc=9 if p.hp>p.max_hp//3 else 22
         self.txt(sx,sy,f"Depth {p.depth}",9)
         sy+=11
@@ -6149,16 +6221,56 @@ class Game:
         last_index = len(self.msgs) - 1
         for mi,m in enumerate(reversed(self.msgs)):
             src_i = last_index - mi
-            same_turn = msg_turns and msg_turns[src_i] == self.turn
-            c=30 if same_turn or (not msg_turns and mi==0) else 6
+            age = 0 if not msg_turns else max(0, self.turn - msg_turns[src_i])
+            if age > MSG_TOAST_DIM_TURNS:
+                continue
+            c=30 if age <= MSG_TOAST_BRIGHT_TURNS else 6
             parts=[m[i:i+MSG_COLS] for i in range(0,len(m),MSG_COLS)] or [""]
             for part in reversed(parts):
                 rows.append((part,c))
-                if len(rows)>=MSG_LINES: break
-            if len(rows)>=MSG_LINES: break
+                if len(rows)>=MSG_TOAST_LINES: break
+            if len(rows)>=MSG_TOAST_LINES: break
         rows=list(reversed(rows))
+        if not rows:
+            return
+        side = getattr(self, "msg_toast_side", "bottom")
+        if side == "bottom" and self.p.y >= PLAY_Y_MAX - 1:
+            side = "top"
+        elif side == "top" and self.p.y <= PLAY_Y_MAX - MSG_TOAST_LINES - 3:
+            side = "bottom"
+        self.msg_toast_side = side
+        upper = side == "top"
+        max_text_w = max(self.ui_text_width(m) for m, _c in rows)
+        min_w = FONT_ASCII_W * 40
+        w = min(ZV_PX_W - 16, max(min_w, max_text_w + 16))
+        x = ZV_X + 8
+        h = MSG_TOAST_LINES * MSG_LINE_H + 6
+        top_y = ZV_Y + 4
+        bottom_y = ZV_Y + ZV_PX_H - h - 4
+        px = ZV_X + (self.p.x - self.cam_x) * TILE_W
+        py = ZV_Y + (self.p.y - self.cam_y) * TILE_H
+        def covers_player(toast_y):
+            return (
+                x - 6 <= px + TILE_W
+                and px <= x + w + 2
+                and toast_y - 5 <= py + TILE_H
+                and py <= toast_y + h + 2
+            )
+        if covers_player(bottom_y) and not covers_player(top_y):
+            upper = True
+        elif covers_player(top_y) and not covers_player(bottom_y):
+            upper = False
+        y = top_y if upper else bottom_y
+        self.msg_toast_side = "top" if upper else "bottom"
+        pyxel.dither(0.88)
+        pyxel.rect(x - 4, y - 3, w, h, 0)
+        pyxel.dither(1.0)
+        pyxel.rectb(x - 4, y - 3, w, h, 5)
         for i,(m,c) in enumerate(rows):
-            self.txt(MSG_X,MSG_Y+i*MSG_LINE_H,m,c)
+            self.txt(x, y+i*MSG_LINE_H, m, c)
+        if getattr(self, "message_ack_pending", False):
+            marker = ">"
+            self.txt(x + w - self.ui_text_width(marker) - 8, y + h - MSG_LINE_H - 1, marker, UI_HILITE_COL)
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
@@ -6166,9 +6278,49 @@ class Game:
         pyxel.rect(x,y,w,h,0); pyxel.rectb(x,y,w,h,5)
         if title: self.txt(x+4,y+3,title,27)
 
+    def draw_overlays(self):
+        if self.st==ST_MENU:
+            self.draw_menu()
+        elif self.st==ST_ITEM:
+            if self.action_origin==ST_MENU:
+                self.draw_menu()
+                if self.cact=="Throw" and self.throw_dir is not None:
+                    self.draw_dirp("Throw")
+            self.draw_isel()
+        elif self.st==ST_CALL:
+            if self.action_origin==ST_MENU:
+                self.draw_menu()
+            self.draw_call_input()
+        elif self.st==ST_DISC:
+            self.draw_disc()
+        elif self.st==ST_DIR:
+            if self.action_origin==ST_MENU:
+                self.draw_menu()
+                if self.dact=="Zap" and self.zap_item is not None:
+                    self.draw_isel()
+            self.draw_dirp()
+        elif self.st==ST_AUX:
+            self.draw_aux()
+        elif self.st==ST_INVENTORY:
+            self.draw_inventory()
+        elif self.st==ST_HELP:
+            self.draw_help()
+        elif self.st==ST_DEAD:
+            self.draw_dead()
+        elif self.st==ST_WIN:
+            self.draw_win()
+        elif self.st==ST_QUIT:
+            self.draw_quit()
+        elif self.st==ST_QUIT_CONFIRM:
+            self.draw_quit_confirm()
+        elif self.st==ST_SCORE:
+            self.draw_score_screen()
+
     def draw_menu(self):
-        bx,by=ZV_X+20,ZV_Y+8; cell_w=82; cell_h=18
+        cell_w=82; cell_h=18
         bw=cell_w*3+10; bh=cell_h*len(PAD_ACTION_GRID)+24
+        bx = 28
+        by = ZV_Y + (ZV_PX_H - bh) // 2 - 18
         self._box(bx,by,bw,bh,"-- Action --")
         for gy,row in enumerate(PAD_ACTION_GRID):
             for gx,nm in enumerate(row):
@@ -6180,20 +6332,40 @@ class Game:
                 selected=idx==self.mcur
                 c=27 if selected else 9
                 pre=">" if selected else " "
-                self.txt(x,y,f"{pre}{TextCatalog.menu(self.lang,nm)[:11]}",c)
+                self.txt(x,y,f"{pre}{self.menu_hint_label(nm)[:11]}",c)
+
+    def menu_hint_label(self, name):
+        hints = {
+            "Zap": "z",
+            "Throw": "t",
+            "Quaff": "q",
+            "Read": "r",
+            "Eat": "e",
+            "Wield": "W",
+            "Wear": "w",
+            "Take off": "T",
+            "Drop": "d",
+            "Call": "c",
+            "Discoveries": "D",
+            "Put on": "P",
+        }
+        label = TextCatalog.menu(self.lang, name)
+        key = hints.get(name)
+        return f"{key}){label}" if key else label
 
     def draw_isel(self):
-        bx,by=ZV_X+20,ZV_Y+8; n=min(len(self.fitems),10); bw=220; bh=n*14+20
-        self._box(bx,by,bw,bh,f"-- {self.cact} --")
-        st=max(0,self.icur-9)
-        for i,it in enumerate(self.fitems[st:st+10]):
-            ri=st+i; ty=by+16+i*14
-            idx=self.p.inv.index(it) if it in self.p.inv else 0
-            lt=chr(ord('a')+idx)
-            ln=self.item_name(it)
-            c=27 if ri==self.icur else 9
-            pre=">" if ri==self.icur else " "
-            self.txt(bx+4,ty,f"{pre}{lt}) {ln[:32]}",c)
+        bw, bh, cell_w = self.pack_grid_box_size(self.fitems)
+        bx = min(SCR_W - bw - 4, max(0, (SCR_W - bw) // 2 + 20))
+        by = min(SCR_H - bh - 4, max(ZV_Y, (SCR_H - bh) // 2 + 24))
+        self.draw_pack_grid(
+            bx,
+            by,
+            self.fitems,
+            f"-- {self.cact} --",
+            self.icur,
+            item_chars=26,
+            cell_w=cell_w,
+        )
 
     def draw_call_input(self):
         if self.call_item is None:
@@ -6220,10 +6392,12 @@ class Game:
             self.txt(bx + 6, by + 16 + i * 9, text[:60], col if col else 9)
         self.txt(bx + 4, by + bh - 10, hint, UI_TEXT_COL)
 
-    def draw_dirp(self):
-        bx,by=ZV_X+50,ZV_Y+90
-        title="Trap direction? [D-pad/YUBN]" if self.dact=="Trap" else "Direction? [D-pad/YUBN]"
-        self._box(bx,by,190 if self.dact=="Trap" else 170,20,title)
+    def draw_dirp(self, action=None):
+        action = action or self.dact
+        title="Trap direction? [D-pad/YUBN]" if action=="Trap" else "Direction? [D-pad/YUBN]"
+        bw = 190 if action == "Trap" else 170
+        bx, by = ZV_X + (ZV_PX_W - bw) // 2, ZV_Y + (ZV_PX_H - 20) // 2
+        self._box(bx,by,bw,20,title)
 
     def draw_aux(self):
         bx,by=ZV_X+20,ZV_Y+8; bw=120; bh=len(AUX_ACTIONS)*14+18
@@ -6234,13 +6408,64 @@ class Game:
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
     def draw_inventory(self):
-        bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
+        bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv)
+        bx,by=(SCR_W-bw)//2,20; bh=SCR_H-40
         self._box(bx,by,bw,bh,"=== Inventory ===")
-        p=self.p
-        inv_x0, inv_y0 = bx+8, by+18
-        for i,it in enumerate(p.inv):
-            lt=chr(ord('a')+i); ln=self.item_name(it)
-            self.txt(inv_x0,inv_y0+i*11,f"{lt}) {ln[:70]}",9)
+        self.draw_pack_grid_lines(
+            bx + 8,
+            by + 18,
+            self.p.inv,
+            None,
+            item_chars=40,
+            cell_w=cell_w,
+            max_rows=self.pack_grid_max_rows(self.p.inv),
+        )
+        self.txt(bx + 8, by + bh - 12, "Tab/Select: Assist", UI_SUBTEXT_COL)
+
+    def pack_grid_max_rows(self, items):
+        return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS
+
+    def pack_grid_box_size(self, items, cell_w=264):
+        count = len(items)
+        cols, rows = pack_grid_shape(count, self.pack_grid_max_rows(items))
+        bw = max(220, cols * cell_w + 12)
+        bh = max(34, rows * 11 + 24)
+        return bw, bh, cell_w
+
+    def draw_pack_grid(self, bx, by, items, title, current_index=None, item_chars=38, cell_w=264):
+        bw, bh, cell_w = self.pack_grid_box_size(items, cell_w)
+        self._box(bx, by, bw, bh, title)
+        self.draw_pack_grid_lines(
+            bx + 8,
+            by + 16,
+            items,
+            current_index,
+            item_chars=item_chars,
+            cell_w=cell_w,
+            max_rows=self.pack_grid_max_rows(items),
+        )
+
+    def draw_pack_grid_lines(self, x0, y0, items, current_index=None, item_chars=24, cell_w=170, max_rows=PACK_GRID_MAX_ROWS):
+        count = len(items)
+        for ri, it in enumerate(items):
+            gx, gy = pack_grid_pos(ri, count, max_rows)
+            x = x0 + gx * cell_w
+            y = y0 + gy * 11
+            idx = self.p.inv.index(it) if it in self.p.inv else 0
+            lt = chr(ord('a') + idx)
+            ln = self.item_name(it)
+            selected = current_index is not None and ri == current_index
+            if selected and getattr(self, "item_cursor_restored", False):
+                c = UI_RESTORED_CURSOR_COL
+            elif selected:
+                c = UI_HILITE_COL
+            else:
+                c = 9
+            if current_index is None:
+                self.txt(x, y, f"{lt}) {ln[:item_chars]}", c)
+            else:
+                pre = ">" if selected else " "
+                self.txt(x, y, f"{pre}{lt}) {ln[:item_chars]}", c)
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
