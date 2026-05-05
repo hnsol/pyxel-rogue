@@ -277,7 +277,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         expected_font = rogue_layout.normalize_font_id(os.environ.get("PYXEL_ROGUE_FONT"))
         expected_metrics = rogue_layout.FONT_METRICS[expected_font]
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 300))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 276))
         self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
         self.assertEqual((rogue.FONT_ASCII_W, rogue.FONT_CJK_W, rogue.FONT_LINE_H), expected_metrics)
         self.assertEqual(rogue.FONT_ID, expected_font)
@@ -5636,7 +5636,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("your armor weakens", game.msgs)
 
     def test_full_map_layout_baseline(self):
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 300))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 276))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
         self.assertEqual(rogue.HUD_W, rogue.SCR_W - rogue.HUD_X - 4)
@@ -9333,14 +9333,16 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(s.startswith("a) scroll ") and len(s) > 18 for _, _, s, _ in inv_lines))
         self.assertTrue(any(s.startswith("b) ") and "two-handed sword" in s for _, _, s, _ in inv_lines))
         self.assertTrue(any(s.startswith("z)") for _, _, s, _ in inv_lines))
-        self.assertEqual(len({x for x, _, _, _ in inv_lines}), 1)
         first_item = next(c for c in inv_lines if c[2].startswith("a)"))
         second_item = next(c for c in inv_lines if c[2].startswith("b)"))
+        mid_item = next(c for c in inv_lines if c[2].startswith("n)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
         self.assertEqual(first_item[1] - calls[0][1], 15)
         self.assertEqual(second_item[0], first_item[0])
         self.assertGreater(second_item[1], first_item[1])
-        self.assertLessEqual(last_item[1], 320)
+        self.assertGreater(mid_item[0], first_item[0])
+        self.assertEqual(mid_item[1], first_item[1])
+        self.assertLessEqual(last_item[1] + rogue.MSG_LINE_H, rogue.SCR_H)
 
     def test_item_picker_draws_pack_as_grid_with_current_cursor(self):
         game = new_game(seed=371)
@@ -9385,8 +9387,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_inventory()
 
         inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
-        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 1)
-        self.assertGreaterEqual(boxes[-1][2], rogue.SCR_W - 40)
+        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
+        self.assertLessEqual(boxes[-1][1] + boxes[-1][3], rogue.SCR_H)
         self.assertTrue(any("Tab/Select: Assist" in s for _x, _y, s, _c in calls))
 
     def test_inventory_stays_one_column_for_ten_items(self):
@@ -9814,6 +9816,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_dead()
 
         bx, by, bw, bh, _title = box[0]
+        self.assertLessEqual(by + bh, rogue.SCR_H)
         self.assertFalse(any("Stay here" in s or s.startswith("B ") for _x, _y, s in drawn))
         for x, y, s in drawn:
             self.assertGreaterEqual(x, bx)
@@ -11576,12 +11579,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Syncing scores...", text)
         self.assertIn("Please wait.", text)
         self.assertIn("Ends in 03h 12m 45s  UTC 2026-05-01 00:00", text)
-        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 103), drawn)
-        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 90), drawn)
+        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 82), drawn)
+        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 70), drawn)
         self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 222), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
-        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 90)), drawn.index(("box", (156, 116, 268, 82, "sync"))))
+        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 70)), drawn.index(("box", (156, 116, 268, 82, "sync"))))
 
     def test_online_score_sync_box_shows_refreshing_when_post_is_not_allowed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -11675,9 +11678,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 90), drawn)
-        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 103), drawn)
-        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 116), drawn)
+        self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 70), drawn)
+        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 82), drawn)
+        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 94), drawn)
 
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -11698,9 +11701,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         y_by_text = {item[0]: item[3] for item in drawn if len(item) == 4 and isinstance(item[0], str)}
-        self.assertEqual(y_by_text["Ranking refreshed."], 56)
-        self.assertEqual(y_by_text["No local scores yet."], 69)
-        self.assertEqual(y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"], 252)
+        self.assertEqual(y_by_text["Ranking refreshed."], 40)
+        self.assertEqual(y_by_text["No local scores yet."], 52)
+        self.assertEqual(y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"], 224)
 
     def test_online_score_long_result_splits_inside_scoreboard_box(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -11722,8 +11725,8 @@ class RogueBaselineTest(unittest.TestCase):
         result_lines = [item for item in drawn if len(item) == 4 and item[1] == rogue.SCOREBOARD_HILITE_COL]
         first_x = max(114, 468 - game.ui_text_width("Ranking refreshed."))
         second_x = max(114, 468 - game.ui_text_width("POST once per 24h."))
-        self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 56), result_lines)
-        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, second_x, 69), result_lines)
+        self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 40), result_lines)
+        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, second_x, 52), result_lines)
         for text, _c, x, _y in result_lines:
             if text in ("Ranking refreshed.", "POST once per 24h."):
                 self.assertLessEqual(x + game.ui_text_width(text), 468)
@@ -11767,6 +11770,42 @@ class RogueBaselineTest(unittest.TestCase):
             text, _c, x, _y = item
             if text in ("ランキング更新。", "POSTは24時間に1回。"):
                 self.assertLessEqual(x + game.ui_text_width(text), 468)
+
+    def test_online_score_screen_fits_steamdeck_browser_height(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_WEEKLY: [
+                {"score": 1000 - i, "player_name": f"p{i}", "result_flags": "killed", "level": i + 1, "killer": "bat"}
+                for i in range(10)
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = False
+        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.online_score_load_result = "Scoreboard cache updated."
+        game.scoreboard_period_ends_line = lambda period: "This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"
+        game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+        boxes = []
+        texts = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda x, y, s, c: texts.append((x, y, str(s), c))
+
+        game.draw_online_score_screen()
+
+        self.assertTrue(boxes)
+        self.assertTrue(texts)
+        for x, y, w, h, _title in boxes:
+            self.assertGreaterEqual(x, 0)
+            self.assertGreaterEqual(y, 0)
+            self.assertLessEqual(x + w, rogue.SCR_W)
+            self.assertLessEqual(y + h, rogue.SCR_H)
+        for _x, y, _s, _c in texts:
+            self.assertGreaterEqual(y, 0)
+            self.assertLessEqual(y + rogue.MSG_LINE_H, rogue.SCR_H)
 
     def test_enter_online_scoreboard_clears_stale_no_local_scores_when_local_score_exists(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12034,7 +12073,11 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.blt_calls[0][0], (0, 0, game.title_bg, 0, 0, rogue.SCR_W, rogue.SCR_H))
-        self.assertIn(((344, 228, 174, 84, 0), {}), rogue.pyxel.rect_calls)
+        title_rect = next(args for args, _kw in rogue.pyxel.rect_calls if args[2:4] == (174, 84))
+        self.assertGreaterEqual(title_rect[0], 0)
+        self.assertGreaterEqual(title_rect[1], 0)
+        self.assertLessEqual(title_rect[0] + title_rect[2], rogue.SCR_W)
+        self.assertLessEqual(title_rect[1] + title_rect[3], rogue.SCR_H)
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
         self.assertFalse(any(text == "ローグ" for text, _c, _x in calls))
         self.assertFalse(any(text == "ver 5.4" for text, _c, _x in calls))
@@ -12070,7 +12113,8 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.dither_calls[0], 1.0)
-        self.assertIn(((344, 228, 174, 84, 0), {}), rogue.pyxel.rect_calls)
+        title_rect = next(args for args, _kw in rogue.pyxel.rect_calls if args[2:4] == (174, 84))
+        self.assertLessEqual(title_rect[1] + title_rect[3], rogue.SCR_H)
 
     def test_title_start_during_fade_only_finishes_fade(self):
         game = rogue.Game.__new__(rogue.Game)

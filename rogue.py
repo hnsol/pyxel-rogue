@@ -229,7 +229,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_0322"
+UI_BUILD = "260506_0342"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -5964,7 +5964,7 @@ class Game:
             return
         items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
         x = 372
-        y = 238
+        y = min(238, SCR_H - 92)
         pyxel.dither(0.8)
         pyxel.rect(x - 28, y - 10, 174, 84, 0)
         pyxel.dither(1.0)
@@ -6006,10 +6006,10 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_title_weekly"),
             SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
         }.get(period, self.online_text("score_title_local"))
-        self._box(98, 48, 380, 286, f"{title} - {self.scoreboard_period_label(period)}")
+        self._box(98, 28, 380, SCR_H - 40, f"{title} - {self.scoreboard_period_label(period)}")
         scores = self.display_online_period_scores(period)
-        self.txt(120, 74, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
-        y = 90
+        self.txt(120, 56, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
+        y = 70
         player_name = str(self.current_score_player_name()).upper()[:16]
         display_scores = scores[:10]
         for i, entry in enumerate(display_scores, start=1):
@@ -6020,21 +6020,21 @@ class Game:
             if current_result:
                 line = self.mark_current_score_line(line)
             self.txt(120, y, line[:56], col)
-            y += 13
+            y += 12
         if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
         hint = self.online_sync_hint_line()[:58]
         if hint:
-            self.txt(114, 268, hint, SCOREBOARD_DIM_COL)
+            self.txt(114, 238, hint, SCOREBOARD_DIM_COL)
         if period != SCOREBOARD_PERIOD_LOCAL:
-            self.txt(114, 252, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
+            self.txt(114, 224, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
             for i, msg in enumerate(self.online_result_lines(self.online_sync_result)):
-                self.txt(max(114, 468 - self.ui_text_width(msg)), 56 + i * 13, msg, SCOREBOARD_HILITE_COL)
+                self.txt(max(114, 468 - self.ui_text_width(msg)), 40 + i * 12, msg, SCOREBOARD_HILITE_COL)
         if getattr(self, "online_score_load_result", ""):
-            self.txt(114, 236, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
-        self.txt(114, 312, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
+            self.txt(114, 210, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
+        self.txt(114, 252, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
             self._box(156, 116, 268, 82, self.online_text("sync_title"))
             lines = self.online_sync_box_lines()
@@ -6410,9 +6410,12 @@ class Game:
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
     def draw_inventory(self):
-        cell_w = max(220, SCR_W - 24)
-        bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv, cell_w=cell_w, max_rows=max(1, len(self.p.inv)))
-        bx,by=(SCR_W-bw)//2,20; bh=SCR_H-40
+        by=20; bh=SCR_H-40
+        max_rows = max(1, (bh - 34) // 11)
+        cols, _rows = pack_grid_shape(len(self.p.inv), max_rows)
+        cell_w = max(220, SCR_W - 24) if cols <= 1 else max(220, (SCR_W - 24) // cols)
+        bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv, cell_w=cell_w, max_rows=max_rows)
+        bx=(SCR_W-bw)//2
         self._box(bx,by,bw,bh,"=== Inventory ===")
         self.draw_pack_grid_lines(
             bx + 8,
@@ -6421,7 +6424,7 @@ class Game:
             None,
             item_chars=40,
             cell_w=cell_w,
-            max_rows=max(1, len(self.p.inv)),
+            max_rows=max_rows,
         )
         self.txt(bx + 8, by + bh - 12, "Tab/Select: Assist", UI_SUBTEXT_COL)
 
@@ -6561,7 +6564,7 @@ class Game:
             self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=24
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
             return
-        bx,by=88,24; bw=340; bh=292
+        bx,by=88,24; bw=340; bh=min(292, SCR_H - by - 8)
         self._box(bx,by,bw,bh,"=== R.I.P. ===")
         p=self.p; x=bx+18; y=by+24
         killer=self.death_killer_name()
