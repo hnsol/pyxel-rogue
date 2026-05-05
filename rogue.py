@@ -229,7 +229,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_0303"
+UI_BUILD = "260506_0322"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -6270,7 +6270,8 @@ class Game:
             self.txt(x, y+i*MSG_LINE_H, m, c)
         if getattr(self, "message_ack_pending", False):
             marker = ">"
-            self.txt(x + w - self.ui_text_width(marker) - 8, y + h - MSG_LINE_H - 1, marker, UI_HILITE_COL)
+            if (getattr(pyxel, "frame_count", 0) // 15) % 2 == 0:
+                self.txt(x + w - self.ui_text_width(marker) - 12, y + h - MSG_LINE_H - 4, marker, UI_HILITE_COL)
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
@@ -6319,7 +6320,7 @@ class Game:
     def draw_menu(self):
         cell_w=82; cell_h=18
         bw=cell_w*3+10; bh=cell_h*len(PAD_ACTION_GRID)+24
-        bx = 28
+        bx = 4 if SCR_W < 576 else 28
         by = ZV_Y + (ZV_PX_H - bh) // 2 - 18
         self._box(bx,by,bw,bh,"-- Action --")
         for gy,row in enumerate(PAD_ACTION_GRID):
@@ -6354,7 +6355,8 @@ class Game:
         return f"{key}){label}" if key else label
 
     def draw_isel(self):
-        bw, bh, cell_w = self.pack_grid_box_size(self.fitems)
+        cell_w = min(264, max(180, (SCR_W - 24) // 2))
+        bw, bh, cell_w = self.pack_grid_box_size(self.fitems, cell_w=cell_w)
         bx = min(SCR_W - bw - 4, max(0, (SCR_W - bw) // 2 + 20))
         by = min(SCR_H - bh - 4, max(ZV_Y, (SCR_H - bh) // 2 + 24))
         self.draw_pack_grid(
@@ -6408,7 +6410,8 @@ class Game:
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
     def draw_inventory(self):
-        bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv)
+        cell_w = max(220, SCR_W - 24)
+        bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv, cell_w=cell_w, max_rows=max(1, len(self.p.inv)))
         bx,by=(SCR_W-bw)//2,20; bh=SCR_H-40
         self._box(bx,by,bw,bh,"=== Inventory ===")
         self.draw_pack_grid_lines(
@@ -6418,16 +6421,16 @@ class Game:
             None,
             item_chars=40,
             cell_w=cell_w,
-            max_rows=self.pack_grid_max_rows(self.p.inv),
+            max_rows=max(1, len(self.p.inv)),
         )
         self.txt(bx + 8, by + bh - 12, "Tab/Select: Assist", UI_SUBTEXT_COL)
 
     def pack_grid_max_rows(self, items):
         return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS
 
-    def pack_grid_box_size(self, items, cell_w=264):
+    def pack_grid_box_size(self, items, cell_w=264, max_rows=None):
         count = len(items)
-        cols, rows = pack_grid_shape(count, self.pack_grid_max_rows(items))
+        cols, rows = pack_grid_shape(count, self.pack_grid_max_rows(items) if max_rows is None else max_rows)
         bw = max(220, cols * cell_w + 12)
         bh = max(34, rows * 11 + 24)
         return bw, bh, cell_w

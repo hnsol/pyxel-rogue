@@ -49,6 +49,7 @@ def install_pyxel_mock():
     pyxel.blt = lambda *a, **kw: pyxel.blt_calls.append((a, kw))
     pyxel.dither_calls = []
     pyxel.dither = lambda alpha=1.0: pyxel.dither_calls.append(alpha)
+    pyxel.frame_count = 0
     pyxel.play_calls = []
     pyxel.stop_calls = []
     pyxel.play = lambda *a, **kw: pyxel.play_calls.append((a, kw))
@@ -276,7 +277,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         expected_font = rogue_layout.normalize_font_id(os.environ.get("PYXEL_ROGUE_FONT"))
         expected_metrics = rogue_layout.FONT_METRICS[expected_font]
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 360))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 300))
         self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
         self.assertEqual((rogue.FONT_ASCII_W, rogue.FONT_CJK_W, rogue.FONT_LINE_H), expected_metrics)
         self.assertEqual(rogue.FONT_ID, expected_font)
@@ -5635,10 +5636,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("your armor weakens", game.msgs)
 
     def test_full_map_layout_baseline(self):
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 360))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (576, 300))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
-        self.assertEqual(rogue.HUD_W, 78)
+        self.assertEqual(rogue.HUD_W, rogue.SCR_W - rogue.HUD_X - 4)
         self.assertEqual(rogue.MSG_LINES, 7)
         self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"])
 
@@ -9332,13 +9333,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(s.startswith("a) scroll ") and len(s) > 18 for _, _, s, _ in inv_lines))
         self.assertTrue(any(s.startswith("b) ") and "two-handed sword" in s for _, _, s, _ in inv_lines))
         self.assertTrue(any(s.startswith("z)") for _, _, s, _ in inv_lines))
-        self.assertEqual(len({x for x, _, _, _ in inv_lines}), 2)
+        self.assertEqual(len({x for x, _, _, _ in inv_lines}), 1)
         first_item = next(c for c in inv_lines if c[2].startswith("a)"))
-        fourteenth_item = next(c for c in inv_lines if c[2].startswith("n)"))
+        second_item = next(c for c in inv_lines if c[2].startswith("b)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
         self.assertEqual(first_item[1] - calls[0][1], 15)
-        self.assertGreater(fourteenth_item[0], first_item[0])
-        self.assertEqual(fourteenth_item[1], first_item[1])
+        self.assertEqual(second_item[0], first_item[0])
+        self.assertGreater(second_item[1], first_item[1])
         self.assertLessEqual(last_item[1], 320)
 
     def test_item_picker_draws_pack_as_grid_with_current_cursor(self):
@@ -9384,9 +9385,20 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_inventory()
 
         inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
-        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
+        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 1)
         self.assertGreaterEqual(boxes[-1][2], rogue.SCR_W - 40)
         self.assertTrue(any("Tab/Select: Assist" in s for _x, _y, s, _c in calls))
+
+    def test_inventory_stays_one_column_for_ten_items(self):
+        game = new_game(seed=3713)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(10)]
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_inventory()
+
+        inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
+        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 1)
 
     def test_item_picker_restores_previous_object_and_marks_cursor_gold_until_moved(self):
         game = new_game(seed=372)
@@ -9595,6 +9607,33 @@ class RogueBaselineTest(unittest.TestCase):
         marker = [c for c in calls if c[2] == ">"]
         self.assertTrue(marker)
         self.assertEqual(marker[-1][3], rogue.UI_HILITE_COL)
+
+    def test_important_message_ack_marker_blinks_inside_toast_frame(self):
+        game = new_game(seed=3762)
+        game.msg_important("pyxel.pack_too_full")
+        calls = []
+        rectb_calls = []
+        old_rectb = rogue.pyxel.rectb
+        old_frame = rogue.pyxel.frame_count
+        try:
+            rogue.pyxel.rectb = lambda *args: rectb_calls.append(args)
+            game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+            rogue.pyxel.frame_count = 0
+            game.draw_msgs()
+            marker = next(c for c in calls if c[2] == ">")
+            bx, by, bw, bh, _col = rectb_calls[-1]
+            self.assertGreater(marker[0], bx)
+            self.assertLess(marker[0] + game.ui_text_width(marker[2]), bx + bw)
+            self.assertGreater(marker[1], by)
+            self.assertLess(marker[1] + rogue.MSG_LINE_H, by + bh)
+
+            calls.clear()
+            rogue.pyxel.frame_count = 16
+            game.draw_msgs()
+            self.assertFalse(any(c[2] == ">" for c in calls))
+        finally:
+            rogue.pyxel.rectb = old_rectb
+            rogue.pyxel.frame_count = old_frame
 
     def test_level_up_message_is_important(self):
         game = new_game(seed=377)
