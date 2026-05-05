@@ -67,12 +67,6 @@ To start with Japanese text:
 PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 ```
 
-To try the bundled k8x12S font:
-
-```bash
-PYXEL_ROGUE_FONT=k8x12s uv run --with pyxel pyxel run rogue.py
-```
-
 Basic developer checks:
 
 ```bash

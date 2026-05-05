@@ -275,17 +275,10 @@ class RogueBaselineTest(unittest.TestCase):
     def test_layout_constants_are_split_without_changing_screen_geometry(self):
         import rogue_layout
 
-        expected_font = rogue_layout.normalize_font_id(os.environ.get("PYXEL_ROGUE_FONT"))
-        expected_metrics = rogue_layout.FONT_METRICS[expected_font]
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (564, 276))
         self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
-        self.assertEqual((rogue.FONT_ASCII_W, rogue.FONT_CJK_W, rogue.FONT_LINE_H), expected_metrics)
-        self.assertEqual(rogue.FONT_ID, expected_font)
-        self.assertEqual(rogue_layout.normalize_font_id("k8x12S"), "k8x12s")
-        self.assertEqual(rogue_layout.normalize_font_id("unknown"), "umplus_j10r")
-        self.assertTrue(rogue.FONT_PATH.endswith("k8x12S.bdf" if expected_font == "k8x12s" else "umplus_j10r.bdf"))
-        self.assertTrue(os.path.exists(os.path.join(ROOT, "assets", "fonts", "k8x12S.bdf")))
-        self.assertTrue(os.path.exists(os.path.join(ROOT, "assets", "fonts", "k8x12.txt")))
+        self.assertEqual((rogue.FONT_ASCII_W, rogue.FONT_CJK_W, rogue.FONT_LINE_H), (6, 10, 12))
+        self.assertTrue(rogue.FONT_PATH.endswith("umplus_j10r.bdf"))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
         self.assertEqual(rogue.ZV_Y, (rogue.SCR_H - rogue.ZV_PX_H) // 2)
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (rogue_layout.ZV_PX_W, rogue_layout.ZV_PX_H))
@@ -2944,7 +2937,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, 1)
         self.assertEqual(game.tm[py][px + 1], rogue.T_DOOR)
-        self.assertIn("You found something!", game.msgs)
+        self.assertIn("a secret door", game.msgs)
+        self.assertNotIn("You found something!", game.msgs)
 
     def test_rogue_544_ring_teleportation_rolls_after_turn(self):
         # Rogue 5.4.4 command.c: R_TELEPORT teleports on rnd(50) == 0 after a turn.
@@ -5152,7 +5146,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
 
         self.assertEqual(game.tm[py][px - 1], rogue.T_TRAP)
-        self.assertIn("You found something!", game.msgs)
+        self.assertNotIn("You found something!", game.msgs)
         self.assertTrue(any("bear trap" in msg for msg in game.msgs))
 
     def test_rogue_544_confusion_does_not_change_search_probinc(self):
@@ -9497,15 +9491,15 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
-        game.msgs = ["hidden", "old", "dim", "latest"]
-        game.msg_turns = [0, 1, 5, 6]
+        game.msgs = ["hidden", "faint", "dim", "soft", "latest"]
+        game.msg_turns = [0, 1, 2, 4, 6]
         game.turn = 6
 
         game.draw_msgs()
 
         self.assertEqual(rogue.MSG_TOAST_LINES, 5)
-        self.assertEqual([text for text, _ in calls], ["old", "dim", "latest"])
-        self.assertEqual([color for _, color in calls], [6, 6, 30])
+        self.assertEqual([text for text, _ in calls], ["faint", "dim", "soft", "latest"])
+        self.assertEqual([color for _, color in calls], [6, 7, 8, 30])
         self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
         self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
 
@@ -9544,6 +9538,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.msgs = ["visible"]
             game.msg_turns = [0]
             game.turn = 0
+            game.msg_toast_rows = rogue.MSG_TOAST_LINES
             game.p.x = 12
             game.p.y = rogue.PLAY_Y_MAX - 2
 
@@ -9566,6 +9561,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.msgs = ["visible " * 8]
             game.msg_turns = [0]
             game.turn = 0
+            game.msg_toast_rows = rogue.MSG_TOAST_LINES
             game.p.x = 40
             game.p.y = rogue.PLAY_Y_MAX - 2
 
@@ -9588,6 +9584,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.msgs = ["visible"]
             game.msg_turns = [0]
             game.turn = 0
+            game.msg_toast_rows = rogue.MSG_TOAST_LINES
             game.msg_toast_side = "right_bottom"
             game.p.x = 12
             game.p.y = rogue.PLAY_Y_MIN + 10
@@ -9598,6 +9595,87 @@ class RogueBaselineTest(unittest.TestCase):
 
         bx, _by, bw, _bh, _col = rect_calls[-1]
         self.assertEqual(bx, rogue.ZV_X + rogue.ZV_PX_W - bw - 4)
+
+    def test_message_toast_keeps_bottom_when_only_stairs_are_under_right_bottom(self):
+        game = new_game(seed=354)
+        set_open_floor(game)
+        rect_calls = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            game.txt = lambda *args: None
+            game.msgs = ["visible " * 8]
+            game.msg_turns = [0]
+            game.turn = 0
+            game.msg_toast_rows = rogue.MSG_TOAST_LINES
+            game.p.x = 5
+            game.p.y = rogue.PLAY_Y_MAX - 2
+            game.tm[rogue.PLAY_Y_MAX - 2][68] = rogue.T_STAIR
+            game.visible.add((68, rogue.PLAY_Y_MAX - 2))
+
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.rect = old_rect
+
+        bx, by, bw, _bh, _col = rect_calls[-1]
+        self.assertEqual(bx, rogue.ZV_X + rogue.ZV_PX_W - bw - 4)
+        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
+
+    def test_message_toast_prefers_stairs_over_visible_monster(self):
+        game = new_game(seed=355)
+        set_open_floor(game)
+        rect_calls = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            game.txt = lambda *args: None
+            game.msgs = ["visible " * 8]
+            game.msg_turns = [0]
+            game.turn = 0
+            game.msg_toast_rows = rogue.MSG_TOAST_LINES
+            game.p.x = 40
+            game.p.y = rogue.PLAY_Y_MIN + 3
+            game.tm[rogue.PLAY_Y_MAX - 2][18] = rogue.T_STAIR
+            game.visible.add((18, rogue.PLAY_Y_MAX - 2))
+            monster = rogue.Monster(68, rogue.PLAY_Y_MAX - 2, "H", "hobgoblin", 8, 1, 5, "1x8", 3, "")
+            game.mons = [monster]
+            game.visible.add((monster.x, monster.y))
+
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.rect = old_rect
+
+        bx, by, bw, _bh, _col = rect_calls[-1]
+        self.assertEqual(bx, rogue.ZV_X + 4)
+        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
+
+    def test_message_toast_treats_detected_monsters_as_lower_priority_than_seen_monsters(self):
+        game = new_game(seed=356)
+        set_open_floor(game)
+        rect_calls = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            game.txt = lambda *args: None
+            game.msgs = ["visible " * 8]
+            game.msg_turns = [0]
+            game.turn = 0
+            game.msg_toast_rows = rogue.MSG_TOAST_LINES
+            game.p.x = 40
+            game.p.y = rogue.PLAY_Y_MIN + 3
+            game.p.see_monsters = 20
+            detected = rogue.Monster(18, rogue.PLAY_Y_MAX - 2, "H", "hobgoblin", 8, 1, 5, "1x8", 3, "")
+            seen = rogue.Monster(68, rogue.PLAY_Y_MAX - 2, "B", "bat", 4, 1, 8, "1x2", 1, "")
+            game.mons = [detected, seen]
+            game.visible.add((seen.x, seen.y))
+
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.rect = old_rect
+
+        bx, by, bw, _bh, _col = rect_calls[-1]
+        self.assertEqual(bx, rogue.ZV_X + 4)
+        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
 
     def test_message_toast_width_fits_text_instead_of_full_dungeon_width(self):
         game = new_game(seed=375)
@@ -9617,16 +9695,47 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLess(rect_calls[-1][2], rogue.ZV_PX_W)
         self.assertGreaterEqual(rect_calls[-1][2], rogue.FONT_ASCII_W * 40)
 
-    def test_message_toast_keeps_fixed_height_while_old_lines_expire(self):
+    def test_message_toast_height_latches_while_old_lines_expire(self):
         game = new_game(seed=3751)
         game.msgs = ["gone", "visible"]
         game.msg_turns = [0, 5]
-        game.turn = 6
+        game.turn = 5
         rect_calls = []
         old_rect = rogue.pyxel.rect
         try:
             rogue.pyxel.rect = lambda *args: rect_calls.append(args)
             game.txt = lambda *args: None
+            game.draw_msgs()
+            self.assertEqual(rect_calls[-1][3], 2 * rogue.MSG_LINE_H + 6)
+
+            game.turn = 6
+            game.draw_msgs()
+            self.assertEqual(rect_calls[-1][3], 2 * rogue.MSG_LINE_H + 6)
+
+            before = len(rect_calls)
+            game.turn = 11
+            game.draw_msgs()
+        finally:
+            rogue.pyxel.rect = old_rect
+
+        self.assertEqual(len(rect_calls), before)
+        self.assertEqual(game.msg_toast_rows, 0)
+
+    def test_message_toast_height_grows_with_added_rows_up_to_limit(self):
+        game = new_game(seed=3752)
+        game.msgs = ["one"]
+        game.msg_turns = [0]
+        game.turn = 0
+        rect_calls = []
+        old_rect = rogue.pyxel.rect
+        try:
+            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
+            game.txt = lambda *args: None
+            game.draw_msgs()
+            self.assertEqual(rect_calls[-1][3], rogue.MSG_LINE_H + 6)
+
+            game.msgs = ["one", "two", "three", "four", "five", "six"]
+            game.msg_turns = [0, 0, 0, 0, 0, 0]
             game.draw_msgs()
         finally:
             rogue.pyxel.rect = old_rect
@@ -12968,6 +13077,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.dashing)
         self.assertEqual(game.dash_d, (1, -1))
 
+    def test_keyboard_shift_vi_diagonal_keys_start_dash(self):
+        for key, direction in (
+            (rogue.pyxel.KEY_Y, (-1, -1)),
+            (rogue.pyxel.KEY_U, (1, -1)),
+            (rogue.pyxel.KEY_B, (-1, 1)),
+            (rogue.pyxel.KEY_N, (1, 1)),
+        ):
+            with self.subTest(key=key):
+                game = new_game(seed=451)
+                set_open_floor(game)
+                rogue.pyxel.set_input(
+                    held={rogue.pyxel.KEY_SHIFT, key},
+                    pressed={key},
+                )
+
+                game.update()
+
+                self.assertTrue(game.dashing)
+                self.assertEqual(game.dash_d, direction)
+
     def test_rogue_544_dash_stops_for_item_in_look_ahead_zone(self):
         # Rogue 5.4.4 misc.c:look() stops door_stop running on visible non-terrain ahead.
         game = new_game(seed=46)
@@ -14904,7 +15033,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.tm[py + 1][px], rogue.T_CORR)
         self.assertEqual(game.tm[py][px - 1], rogue.T_TRAP)
         self.assertEqual(game.turn, 1)
-        self.assertIn("You found something!", game.msgs)
+        self.assertIn("a secret door", game.msgs)
+        self.assertTrue(any("arrow trap" in msg for msg in game.msgs))
+        self.assertNotIn("You found something!", game.msgs)
 
     def test_search_failure_keeps_hidden_features_hidden(self):
         game = new_game(seed=58)
@@ -14922,7 +15053,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.tm[py][px + 1], rogue.T_VWALL)
         self.assertEqual(game.tm[py][px - 1], rogue.T_FLOOR)
-        self.assertIn("You find nothing.", game.msgs)
+        self.assertNotIn("You find nothing.", game.msgs)
+        self.assertEqual(game.msgs, ["Hello rogue54, welcome to the Dungeons of Doom!"])
 
     def test_stepping_on_hidden_bear_trap_reveals_it_and_spends_turn(self):
         game = new_game(seed=59)

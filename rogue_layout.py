@@ -1,22 +1,6 @@
-import os
-
 from rogue_map import MAP_W, PLAY_H
 
-DEFAULT_FONT_ID = "umplus_j10r"
-FONT_IDS = ("umplus_j10r", "k8x12s")
-FONT_METRICS = {
-    "umplus_j10r": (6, 10, 12),
-    "k8x12s": (4, 8, 12),
-}
-
-
-def normalize_font_id(value):
-    font_id = str(value or DEFAULT_FONT_ID).lower()
-    return font_id if font_id in FONT_IDS else DEFAULT_FONT_ID
-
-
-FONT_ID = normalize_font_id(os.environ.get("PYXEL_ROGUE_FONT"))
-FONT_ASCII_W, FONT_CJK_W, FONT_LINE_H = FONT_METRICS[FONT_ID]
+FONT_ASCII_W, FONT_CJK_W, FONT_LINE_H = 6, 10, 12
 SCR_W, SCR_H = 564, 276
 TILE_W, TILE_H = 6, 12
 ZV_COLS, ZV_ROWS = MAP_W, PLAY_H
@@ -37,3 +21,4 @@ MSG_COLS = (SCR_W - MSG_X * 2) // FONT_ASCII_W
 MSG_TOAST_LINES = 5
 MSG_TOAST_BRIGHT_TURNS = 0
 MSG_TOAST_DIM_TURNS = 5
+MSG_TOAST_FADE_COLORS = ((0, 30), (2, 8), (4, 7), (5, 6))

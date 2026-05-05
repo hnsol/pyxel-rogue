@@ -64,7 +64,6 @@ from rogue_layout import (
     DEAD_ZONE_Y,
     FONT_ASCII_W,
     FONT_CJK_W,
-    FONT_ID,
     FONT_LINE_H,
     HUD_W,
     HUD_X,
@@ -73,6 +72,7 @@ from rogue_layout import (
     MSG_LINES,
     MSG_TOAST_BRIGHT_TURNS,
     MSG_TOAST_DIM_TURNS,
+    MSG_TOAST_FADE_COLORS,
     MSG_TOAST_LINES,
     MSG_LINE_H,
     MSG_X,
@@ -229,7 +229,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_0418"
+UI_BUILD = "260506_0500"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -371,11 +371,7 @@ UI_RESTORED_CURSOR_COL = 27
 #  Font
 # ===========================================================
 _pyxel_dir = os.path.dirname(pyxel.__file__)
-FONT_PATHS = {
-    "umplus_j10r": os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf"),
-    "k8x12s": os.path.join(os.path.dirname(__file__), "assets", "fonts", "k8x12S.bdf"),
-}
-FONT_PATH = FONT_PATHS.get(FONT_ID, FONT_PATHS["umplus_j10r"])
+FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
 TITLE_FADE_FRAMES = 156
 LOGO_BGM_DELAY_FRAMES = 78
@@ -1314,6 +1310,12 @@ def start_inv():
     f=Item(CAT_FOOD,0)              # ration
     return rogue_init.initial_pack_order(f,a,w,b,ar),w,a
 
+def msg_toast_color(age):
+    for max_age, color in MSG_TOAST_FADE_COLORS:
+        if age <= max_age:
+            return color
+    return MSG_TOAST_FADE_COLORS[-1][1]
+
 
 # ===========================================================
 #  GAME
@@ -1576,6 +1578,7 @@ class Game:
         self.item_cursor_restored = False
         self.message_ack_pending = False
         self.msg_toast_side = "bottom"
+        self.msg_toast_rows = 0
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
         self.disc_scroll = 0
         self.turn_msg_start = 0
@@ -3930,6 +3933,8 @@ class Game:
                 hidden=self.hidden_tiles.get((nx,ny))
                 if hidden==T_DOOR and rogue_search.reveals_secret_door(rnd(5+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
+                    if found:
+                        self.msg("command.a_secret_door")
                 elif hidden==T_CORR and rogue_search.reveals_secret_passage(rnd(3+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
                 elif (nx,ny) in self.traps and self.tm[ny][nx]!=T_TRAP and rogue_search.reveals_trap(rnd(2+probinc), probinc):
@@ -3939,10 +3944,6 @@ class Game:
                         if p.hallucinating > 0:
                             trap = rnd(len(TRAPS))
                         self.msg_important("pyxel.have_found_trap", trap=self.trap_name(trap))
-        if found:
-            self.msg("pyxel.found_something")
-        elif not quiet_fail:
-            self.msg("pyxel.find_nothing")
         if found:
             self.update_fov()
         if spend_turn:
@@ -4690,6 +4691,10 @@ class Game:
         return (dx,dy) if (dx or dy) else None
 
     def held_dir(self):
+        if self.kh(pyxel.KEY_Y): return (-1,-1)
+        if self.kh(pyxel.KEY_U): return (1,-1)
+        if self.kh(pyxel.KEY_B): return (-1,1)
+        if self.kh(pyxel.KEY_N): return (1,1)
         u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
         dx = -1 if l and not r else 1 if r and not l else 0
         dy = -1 if u and not d else 1 if d and not u else 0
@@ -6224,7 +6229,7 @@ class Game:
             age = 0 if not msg_turns else max(0, self.turn - msg_turns[src_i])
             if age > MSG_TOAST_DIM_TURNS:
                 continue
-            c=30 if age <= MSG_TOAST_BRIGHT_TURNS else 6
+            c = msg_toast_color(age)
             parts=[m[i:i+MSG_COLS] for i in range(0,len(m),MSG_COLS)] or [""]
             for part in reversed(parts):
                 rows.append((part,c))
@@ -6232,11 +6237,14 @@ class Game:
             if len(rows)>=MSG_TOAST_LINES: break
         rows=list(reversed(rows))
         if not rows:
+            self.msg_toast_rows = 0
             return
+        toast_rows = min(MSG_TOAST_LINES, max(getattr(self, "msg_toast_rows", 0), len(rows)))
+        self.msg_toast_rows = toast_rows
         max_text_w = max(self.ui_text_width(m) for m, _c in rows)
         min_w = FONT_ASCII_W * 40
         w = min(ZV_PX_W - 16, max(min_w, max_text_w + 16))
-        h = MSG_TOAST_LINES * MSG_LINE_H + 6
+        h = toast_rows * MSG_LINE_H + 6
         top_y = ZV_Y + 4
         bottom_y = ZV_Y + ZV_PX_H - h - 4
         px = ZV_X + (self.p.x - self.cam_x) * TILE_W
@@ -6248,8 +6256,8 @@ class Game:
                 TILE_W * (horizontal_tiles * 2 + 1),
                 TILE_H * (vertical_tiles * 2 + 1),
             )
-        avoid = avoid_rect(10, 5)
-        release_avoid = avoid_rect(12, 6)
+        hero_rect = (px, py, TILE_W, TILE_H)
+        hero_near_rect = avoid_rect(6, 3)
         left_x = ZV_X + 8
         right_x = ZV_X + ZV_PX_W - w
         candidates = (
@@ -6266,24 +6274,56 @@ class Game:
                 and ry < ay + ah
                 and ay < ry + rh
             )
-        candidate_by_name = {candidate[0]: candidate for candidate in candidates}
-        current = candidate_by_name.get(getattr(self, "msg_toast_side", ""))
-        chosen = None
-        if current and not covers_rect(current[1], current[2], avoid):
-            current_index = candidates.index(current)
-            for candidate in candidates[:current_index]:
-                if not covers_rect(candidate[1], candidate[2], release_avoid):
-                    chosen = candidate
-                    break
-            if chosen is None:
-                chosen = current
-        if chosen is None:
-            for candidate in candidates:
-                if not covers_rect(candidate[1], candidate[2], avoid):
-                    chosen = candidate
-                    break
-        if chosen is None:
-            chosen = candidates[-1]
+        def toast_rect(toast_x, toast_y):
+            return (toast_x - 4, toast_y - 3, w, h)
+        def screen_cell_rect(mx, my):
+            sx = ZV_X + (mx - self.cam_x) * TILE_W
+            sy = ZV_Y + (my - self.cam_y) * TILE_H
+            if sx + TILE_W < ZV_X or sx > ZV_X + ZV_PX_W:
+                return None
+            if sy + TILE_H < ZV_Y or sy > ZV_Y + ZV_PX_H:
+                return None
+            return (sx, sy, TILE_W, TILE_H)
+        def cell_is_drawn(mx, my):
+            return self.p.blind <= 0 and ((mx, my) in self.visible or (mx, my) in self.explored)
+        def score_candidate(name, toast_x, toast_y):
+            score = 800 if name == "left_top" else 0
+            current = getattr(self, "msg_toast_side", "")
+            if current and current != name:
+                score += 30
+            if covers_rect(toast_x, toast_y, hero_rect):
+                score += 10000
+            if covers_rect(toast_x, toast_y, hero_near_rect):
+                score += 1200
+            for mo in self.mons:
+                if not getattr(mo, "alive", True):
+                    continue
+                mrect = screen_cell_rect(mo.x, mo.y)
+                if not mrect or not covers_rect(toast_x, toast_y, mrect):
+                    continue
+                if self.monster_is_seen(mo):
+                    score += 1000
+                elif self.can_detect_monsters():
+                    score += 200
+            for yy in range(PLAY_Y_MIN, PLAY_Y_MAX + 1):
+                for xx in range(MAP_W):
+                    tile = self.tm[yy][xx]
+                    if tile not in (T_STAIR, T_TRAP):
+                        continue
+                    if not cell_is_drawn(xx, yy):
+                        continue
+                    crect = screen_cell_rect(xx, yy)
+                    if not crect or not covers_rect(toast_x, toast_y, crect):
+                        continue
+                    score += 700 if tile == T_STAIR else 300
+            for item in self.gitems:
+                if not cell_is_drawn(item.x, item.y):
+                    continue
+                irect = screen_cell_rect(item.x, item.y)
+                if irect and covers_rect(toast_x, toast_y, irect):
+                    score += 100
+            return score
+        chosen = min(candidates, key=lambda candidate: score_candidate(*candidate))
         name, x, y = chosen
         self.msg_toast_side = name
         pyxel.dither(0.88)

@@ -67,12 +67,6 @@ uv run --with pyxel pyxel run rogue.py
 PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 ```
 
-比較用に k8x12S フォントで起動する場合:
-
-```bash
-PYXEL_ROGUE_FONT=k8x12s uv run --with pyxel pyxel run rogue.py
-```
-
 開発者向けの簡易チェック:
 
 ```bash
