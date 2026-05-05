@@ -107,6 +107,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Esc: メニュー / キャンセル
 - Tab: 持ちもの。持ちもの表示中にもう一度Tabで補助メニュー
 - 補助メニュー: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
+- Language / Palette / Pickup の変更は保存され、次回以降のゲームにも反映されます。
 - Tab+Enter: quick throw
 - Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認
@@ -138,7 +139,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 実装済みの概要:
 
-- Rogue 5.4.4 準拠の80x24論理マップ、80x22地形表示、576x360の16:10寄りレイアウト、短縮装備表示つき右HUD、7行下ログ
+- Rogue 5.4.4 準拠の80x24論理マップ、80x22地形表示、564x276のSteamDeckブラウザ向けレイアウト、短縮装備表示つき右HUD、toast型メッセージ
 - 3x3セクターのダンジョン生成、部屋、通路、ドア
 - 26種モンスター、戦闘、空腹、HP自然回復
 - ポーション、巻物、食料、武器、防具、指輪、識別、インベントリ、呪い

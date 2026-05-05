@@ -1991,18 +1991,6 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
-  "pyxel.find_nothing": {
-    "source": "rogue.py:2063",
-    "params": [],
-    "ja_status": "manual",
-    "origin": "pyxel-rogue"
-  },
-  "pyxel.found_something": {
-    "source": "rogue.py:2061",
-    "params": [],
-    "ja_status": "manual",
-    "origin": "pyxel-rogue"
-  },
   "pyxel.gold_pieces": {
     "source": "rogue.py:2213",
     "params": [

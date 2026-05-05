@@ -93,6 +93,7 @@ Gamepad:
 - A+B: Wait a turn
 - Select: Inventory; press Select again in inventory for the assist menu
 - Assist menu: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
+- Language / Palette / Pickup changes are saved for later games.
 - Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles
 - Select+D-pad: Inspect a discovered trap
@@ -138,7 +139,7 @@ Use Zap from the menu to choose a wand or staff, then choose a direction.
 
 Implemented overview:
 
-- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 576x360 near-16:10 layout, right-side HUD with abbreviated equipment, and seven-line bottom log
+- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 564x276 Steam Deck browser-oriented layout, right-side HUD with abbreviated equipment, and toast messages
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses
