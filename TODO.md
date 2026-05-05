@@ -28,6 +28,8 @@
 
 目的: Rogue 5.4.4 のゲームロジックを完成させ、原作と同じ挙動か検証できる状態に近づける。
 
+機能面の完了判定: 2026-05-05 時点で、26階 Amulet 出現、Amulet 帰還勝利、指輪・杖・罠・隠し要素、chase / sticks / daemon / fuse / monster AI / 戦闘 / ダンジョン生成の主要攻略判断に効く Rogue 5.4.4 忠実度作業は完了扱いとする。今後見つかった細部差分は Phase 4 再オープンではなく、Phase 4 後の Rogue 5.4.4 監査 backlog として扱う。難易度設計、Wizard mode、セーブ、UI・履歴は機能面の Phase 4 忠実度完了条件に含めない。
+
 進め方: ゲームメカニクスは常に Rogue 5.4.4 C ソースを一次情報にする。各 Phase 4 タスクは、該当する原作ファイル・関数・定数・テーブルの確認、Rogue 5.4.4 期待値テスト、実装、英語/日本語テストの順で進める。既知バグや忠実度修正は、現状追認テストではなく Rogue 5.4.4 C ソースに基づく期待値テストを先に追加してから直す。baseline テストは、翻訳層やUI整理で壊れてほしくない現状の保護に使う。
 
 罠・隠し要素の実装では、Rogue 5.4.4 の `new_level.c`, `passages.c`, `command.c`, `move.c` にある生成頻度、発見率、ターン消費、踏んだ時の効果を明示してから実装する。推測、現代ローグライクの慣習、Rogue2.Official、既存 Pyxel 実装をゲーム挙動の正解にしない。
@@ -41,7 +43,7 @@
 
 完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
 
-終盤の推奨順:
+終盤の推奨順（完了済み）:
 
 1. chase / passage / door / destination（`chase.c:do_chase()` / `chase()`）
 2. sticks / bolt / cancellation / Dragon breath（`sticks.c:do_zap()` / `fire_bolt()`, `chase.c:do_chase()`）
@@ -399,7 +401,7 @@
 - [x] Rogue 5.4.4 `things.c:inv_name()` 準拠で、`GOLD` の inventory name を gold value 表示にする
 - [x] Rogue 5.4.4 `command.c:command()` / `fight.c:attack()` / `remove_mon()` 準拠で、`f/F` fight-to-death の方向指定、対象選択、`to_death` 継続、HP停止、target死亡解除を接続
 - [x] Rogue 5.4.4 `command.c:command()` / `misc.c:get_dir()` / `pack.c:get_item()` / `reset_last()` 準拠で、`a` again command の last command / direction / item 再利用、ターン非消費 command と illegal command の repeat、方向キャンセル復元、使い切り item repeat の message / turn を接続
-- [ ] 原作 Rogue 5.4.4 との照合用期待値テスト拡充
+- [x] 原作 Rogue 5.4.4 との照合用期待値テスト拡充（Phase 4 機能面の完了監査として、Amulet / 勝利 / ring / stick / trap / chase / daemon / fuse / dungeon / combat の代表パスを確認済み）
 - [x] **巻物 18種化**（`rogue.h:S_* / MAXSCROLLS=18`、`scrolls.c:read_scroll()`）
   - [x] `S_CONFUSE` monster confusion（次攻撃時にモンスター混乱、`your hands begin to glow red`）
   - [x] `S_ID_POTION` / `S_ID_SCROLL` / `S_ID_WEAPON` / `S_ID_ARMOR` / `S_ID_R_OR_S` の識別分化（インタラクティブ対象選択 UI 実装済み、`wizard.c:whatis()` 準拠）
@@ -614,5 +616,5 @@
 - [x] Rogue 5.4.4 メッセージ全文監査（`vendor/rogue544` の `msg()` / `addmsg()` 抽出と catalog 化）
 - [ ] メッセージ履歴画面のテスト（Select -> Select -> Log、ターン非消費）
 - [x] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
-- [ ] 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加
+- [x] Phase 4 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加（今後見つかる差分は Phase 4 後の監査 backlog で同じ運用を継続）
 - [x] Rogue 5.4.4 `rogue.h:NUMCOLS/NUMLINES/STATLINE`, `move.c:do_move()`, `rooms.c:bsze` 準拠のマップ寸法・地形領域テスト追加

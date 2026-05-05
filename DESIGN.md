@@ -6,11 +6,13 @@
 
 プロジェクト名・体験名は `Rogue V5 on Pyxel` とする。ゲームメカニクスの基準は Rogue 5.4.4 だが、プロジェクト全体は Rogue V5 系の Pyxel 版として扱う。
 
-最終目標は、Pyxel 版をクリアしたら本物の Rogue 5.4.4 をクリアしたと言える状態にすること。現在の最優先は Rogue 5.4.4 のゲームメカニクス忠実化である。表示・入力・学習支援は、その忠実化を妨げない範囲で進める。
+最終目標は、Pyxel 版をクリアしたら本物の Rogue 5.4.4 をクリアしたと言える状態にすること。2026-05-05 時点で、機能面の Phase 4 Rogue 5.4.4 ゲームメカニクス忠実化は完了扱いとする。表示・入力・学習支援は、その忠実化を妨げない範囲で進める。
 
 実装は、原作と同じロジックか検証できる構造を優先する。表示・入力・移植性の都合で Pyxel 向けの実装差分が必要な場合も、ゲームロジックは原作と照合しやすく保つ。
 
-Phase 4 終盤の優先順位は、原作入力の細部よりも「Rogue on Pyxel をクリアしたらローグをクリアしたと言える」攻略判断に効く要素を優先する。具体的には `chase.c:do_chase()` / `chase()` の通路・扉・目的地、`sticks.c:do_zap()` / `fire_bolt()` と Dragon breath / cancellation、Xeroc 横断監査、daemon/fuse 回帰テストの順で進める。`command.c:command()` の count / again / cancel などの入力残差は、体験差が小さいものは Phase 4 完了後の原作入力監査へ回す。
+Phase 4 終盤では、原作入力の細部よりも「Rogue on Pyxel をクリアしたらローグをクリアしたと言える」攻略判断に効く要素を優先した。`chase.c:do_chase()` / `chase()` の通路・扉・目的地、`sticks.c:do_zap()` / `fire_bolt()` と Dragon breath / cancellation、Xeroc 横断監査、daemon/fuse 回帰テストは完了済み。`command.c:command()` の count / again / cancel などの入力残差で体験差が小さいものは、Phase 4 後の原作入力監査へ回す。
+
+今後見つかる Rogue 5.4.4 細部差分は Phase 4 再オープンではなく、Phase 4 後の Rogue 5.4.4 監査 backlog として扱う。難易度設計、Wizard mode、セーブ、UI・履歴は機能面の Phase 4 完了条件に含めない。
 
 短期的にはバージョン選択機能の優先度を下げ、Rogue 5.4.4 を単一ターゲットとして忠実度を上げる。将来の Rogue V5 系を含むバージョン切替に備えて、ゲームロジック、文言、入力・描画の依存方向は分離しやすく保つが、今はバージョン別分岐を先行追加しない。
 
