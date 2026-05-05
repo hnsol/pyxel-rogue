@@ -17,7 +17,7 @@ def normalize_font_id(value):
 
 FONT_ID = normalize_font_id(os.environ.get("PYXEL_ROGUE_FONT"))
 FONT_ASCII_W, FONT_CJK_W, FONT_LINE_H = FONT_METRICS[FONT_ID]
-SCR_W, SCR_H = 576, 276
+SCR_W, SCR_H = 564, 276
 TILE_W, TILE_H = 6, 12
 ZV_COLS, ZV_ROWS = MAP_W, PLAY_H
 ZV_PX_W = ZV_COLS * TILE_W
@@ -25,7 +25,7 @@ ZV_PX_H = ZV_ROWS * TILE_H
 DEAD_ZONE_X = 8
 DEAD_ZONE_Y = 5
 
-ZV_X, ZV_Y = 4, 1
+ZV_X, ZV_Y = 4, (SCR_H - ZV_PX_H) // 2
 HUD_X = ZV_X + ZV_PX_W + 10
 HUD_Y = ZV_Y
 HUD_W = SCR_W - HUD_X - 4

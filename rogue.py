@@ -229,7 +229,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_0342"
+UI_BUILD = "260506_0418"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -6169,8 +6169,8 @@ class Game:
         sx,sy=HUD_X,HUD_Y+28; p=self.p; hc=9 if p.hp>p.max_hp//3 else 22
         self.txt(sx,sy,f"Depth {p.depth}",9)
         sy+=11
-        self.txt(sx,sy,f"Turn {self.turn}",6); sy+=13
-        self.txt(sx,sy,f"HP {p.hp}/{p.max_hp}",hc); sy+=11
+        self.txt(sx,sy,f"Gold {p.gold}",29); sy+=11
+        self.txt(sx,sy,f"Hp {p.hp}/{p.max_hp}",hc); sy+=11
         bw=HUD_W-10; pyxel.rect(sx,sy,bw,4,1)
         if p.max_hp>0:
             if self.last_hp_seen is not None and p.hp < self.last_hp_seen:
@@ -6183,11 +6183,11 @@ class Game:
             pyxel.rect(sx,sy,cur_w,4,22 if p.hp<=p.max_hp//3 else 9)
             self.last_hp_seen = p.hp
         sy+=12
-        self.txt(sx,sy,f"Lv {p.level} Exp {p.exp}",9); sy+=11
         self.txt(sx,sy,f"Str {p.st}/{p.max_st}",9)
         sy+=11
         self.txt(sx,sy,f"Arm {p.ac}",9); sy+=11
-        self.txt(sx,sy,f"Gold {p.gold}",29); sy+=11
+        self.txt(sx,sy,f"Lv {p.level}",9); sy+=11
+        self.txt(sx,sy,f"Exp {p.exp}",9); sy+=11
         self.txt(sx,sy,"Move Corner" if self.diag_assist else "Move 8-way",27 if self.diag_assist else 9); sy+=11
         self.txt(sx,sy,"Pick Auto" if self.auto_pickup else "Pick Manual",9 if self.auto_pickup else 23); sy+=11
         state = p.state if p.state else "normal"
@@ -6197,9 +6197,9 @@ class Game:
         self.txt(sx,sy,"-- Equip --",27); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
         an=self.hud_equip_name(p.arm) if p.arm else "no armor"
-        self.txt(sx,sy,f"W {wn[:11]}",9); sy+=11
-        self.txt(sx,sy,f"A {an[:11]}",9); sy+=16
-        self.txt(sx,sy,"-- Effect --",27); sy+=11
+        self.txt(sx,sy,wn[:11],9); sy+=11
+        self.txt(sx,sy,an[:11],9); sy+=16
+        self.txt(sx,sy,"-- Eff --",27); sy+=11
         eff=[]
         if p.state=="hungry": eff.append("Hungry")
         elif p.state=="weak": eff.append("Weak")
@@ -6233,35 +6233,59 @@ class Game:
         rows=list(reversed(rows))
         if not rows:
             return
-        side = getattr(self, "msg_toast_side", "bottom")
-        if side == "bottom" and self.p.y >= PLAY_Y_MAX - 1:
-            side = "top"
-        elif side == "top" and self.p.y <= PLAY_Y_MAX - MSG_TOAST_LINES - 3:
-            side = "bottom"
-        self.msg_toast_side = side
-        upper = side == "top"
         max_text_w = max(self.ui_text_width(m) for m, _c in rows)
         min_w = FONT_ASCII_W * 40
         w = min(ZV_PX_W - 16, max(min_w, max_text_w + 16))
-        x = ZV_X + 8
         h = MSG_TOAST_LINES * MSG_LINE_H + 6
         top_y = ZV_Y + 4
         bottom_y = ZV_Y + ZV_PX_H - h - 4
         px = ZV_X + (self.p.x - self.cam_x) * TILE_W
         py = ZV_Y + (self.p.y - self.cam_y) * TILE_H
-        def covers_player(toast_y):
+        def avoid_rect(horizontal_tiles, vertical_tiles):
             return (
-                x - 6 <= px + TILE_W
-                and px <= x + w + 2
-                and toast_y - 5 <= py + TILE_H
-                and py <= toast_y + h + 2
+                px - horizontal_tiles * TILE_W,
+                py - vertical_tiles * TILE_H,
+                TILE_W * (horizontal_tiles * 2 + 1),
+                TILE_H * (vertical_tiles * 2 + 1),
             )
-        if covers_player(bottom_y) and not covers_player(top_y):
-            upper = True
-        elif covers_player(top_y) and not covers_player(bottom_y):
-            upper = False
-        y = top_y if upper else bottom_y
-        self.msg_toast_side = "top" if upper else "bottom"
+        avoid = avoid_rect(10, 5)
+        release_avoid = avoid_rect(12, 6)
+        left_x = ZV_X + 8
+        right_x = ZV_X + ZV_PX_W - w
+        candidates = (
+            ("left_bottom", left_x, bottom_y),
+            ("right_bottom", right_x, bottom_y),
+            ("left_top", left_x, top_y),
+        )
+        def covers_rect(toast_x, toast_y, area):
+            ax, ay, aw, ah = area
+            rx, ry, rw, rh = toast_x - 4, toast_y - 3, w, h
+            return (
+                rx < ax + aw
+                and ax < rx + rw
+                and ry < ay + ah
+                and ay < ry + rh
+            )
+        candidate_by_name = {candidate[0]: candidate for candidate in candidates}
+        current = candidate_by_name.get(getattr(self, "msg_toast_side", ""))
+        chosen = None
+        if current and not covers_rect(current[1], current[2], avoid):
+            current_index = candidates.index(current)
+            for candidate in candidates[:current_index]:
+                if not covers_rect(candidate[1], candidate[2], release_avoid):
+                    chosen = candidate
+                    break
+            if chosen is None:
+                chosen = current
+        if chosen is None:
+            for candidate in candidates:
+                if not covers_rect(candidate[1], candidate[2], avoid):
+                    chosen = candidate
+                    break
+        if chosen is None:
+            chosen = candidates[-1]
+        name, x, y = chosen
+        self.msg_toast_side = name
         pyxel.dither(0.88)
         pyxel.rect(x - 4, y - 3, w, h, 0)
         pyxel.dither(1.0)
@@ -6320,7 +6344,7 @@ class Game:
     def draw_menu(self):
         cell_w=82; cell_h=18
         bw=cell_w*3+10; bh=cell_h*len(PAD_ACTION_GRID)+24
-        bx = 4 if SCR_W < 576 else 28
+        bx = 18
         by = ZV_Y + (ZV_PX_H - bh) // 2 - 18
         self._box(bx,by,bw,bh,"-- Action --")
         for gy,row in enumerate(PAD_ACTION_GRID):
