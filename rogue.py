@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0110"
+UI_BUILD = "260507_0116"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -2566,6 +2566,13 @@ class Game:
             text = text[:-1]
         elif text.endswith(".") and not text.endswith("..."):
             text = text[:-1]
+        return text
+
+    def message_display_text(self, text):
+        text = str(text)
+        # Rogue 5.4.4 io.c:endmsg() uppercases message starts except pack letters.
+        if text[:1].islower() and not (len(text) > 1 and text[1] == ")"):
+            text = text[0].upper() + text[1:]
         return text
 
     def refresh_msg_toast_block(self):
@@ -7486,7 +7493,7 @@ class Game:
             if age > MSG_TOAST_DIM_TURNS:
                 continue
             c = msg_toast_color(age)
-            parts = self.wrap_msg_toast_text(m)
+            parts = self.wrap_msg_toast_text(self.message_display_text(m))
             for pi, part in enumerate(parts):
                 rows.append((part, c, age, pi == 0, src_i))
         rows = rows[-MSG_TOAST_LINES:]
@@ -7719,7 +7726,7 @@ class Game:
         if self.log_scroll < max_scroll:
             self.txt(bx + bw - 16, by + bh - 34, "v", UI_SUBTEXT_COL)
         for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
-            self.txt(bx + 8, by + 28 + i * 11, str(text)[:72], UI_TEXT_COL)
+            self.txt(bx + 8, by + 28 + i * 11, self.message_display_text(text)[:72], UI_TEXT_COL)
         self.draw_log_scrollbar(bx, by, bw, bh, len(lines), visible, max_scroll)
         self.txt(bx + 8, by + bh - 12, self.info_guide_label(), UI_SUBTEXT_COL)
 

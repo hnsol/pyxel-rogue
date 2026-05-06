@@ -10687,7 +10687,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         calls = [(s, c) for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
         self.assertEqual(rogue.MSG_TOAST_LINES, 7)
-        self.assertEqual([text for text, _ in calls], ["faint", "dim", "soft", "fresh", "latest"])
+        self.assertEqual([text for text, _ in calls], ["Faint", "Dim", "Soft", "Fresh", "Latest"])
         self.assertEqual([color for _, color in calls], [3, 3, 6, 5, 9])
         self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
         self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
@@ -10703,7 +10703,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_msgs()
 
         body = [c for c in calls if c[2] not in (">", "!") and c[3] != rogue.MSG_TOAST_SHADOW_COL]
-        self.assertEqual([c[2] for c in body], ["old", "new"])
+        self.assertEqual([c[2] for c in body], ["Old", "New"])
 
     def test_message_toast_grid_home_block_uses_80_by_22_map(self):
         self.assertEqual(rogue.msg_toast_home_block(0, rogue.PLAY_Y_MIN), (0, 0))
@@ -10750,8 +10750,8 @@ class RogueBaselineTest(unittest.TestCase):
         x, y = rogue.msg_toast_block_origin(block, game.msg_toast_rows)
         self.assertIn((x + 1, y + 1, ">", rogue.MSG_TOAST_SHADOW_COL), calls)
         self.assertIn((x, y, ">", 9), calls)
-        self.assertIn((x + 2 * rogue.FONT_ASCII_W + 1, y + 1, "visible", rogue.MSG_TOAST_SHADOW_COL), calls)
-        self.assertIn((x + 2 * rogue.FONT_ASCII_W, y, "visible", 9), calls)
+        self.assertIn((x + 2 * rogue.FONT_ASCII_W + 1, y + 1, "Visible", rogue.MSG_TOAST_SHADOW_COL), calls)
+        self.assertIn((x + 2 * rogue.FONT_ASCII_W, y, "Visible", 9), calls)
         self.assertEqual(game.msg_toast_block, block)
 
     def test_message_toast_wraps_at_23_columns(self):
@@ -10765,7 +10765,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL]
         self.assertEqual(rogue.MSG_COLS, 23)
-        self.assertEqual(body, [">", "abcdefghijklmnopqrstuvw", "xyz"])
+        self.assertEqual(body, [">", "Abcdefghijklmnopqrstuvw", "xyz"])
 
     def test_message_toast_right_block_text_stays_inside_map_width(self):
         game = new_game(seed=3754)
@@ -10783,7 +10783,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_msgs()
 
         text_calls = [c for c in calls if c[2] not in (">", "!") and c[3] != rogue.MSG_TOAST_SHADOW_COL]
-        self.assertEqual([c[2] for c in text_calls], ["you have defeated the", "bat"])
+        self.assertEqual([c[2] for c in text_calls], ["You have defeated the", "bat"])
         self.assertEqual([c[0] for c in text_calls], [346, 346])
         for x, _y, text, _col in text_calls:
             self.assertLessEqual(x + game.ui_text_width(text), rogue.ZV_X + rogue.ZV_PX_W)
@@ -10832,7 +10832,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた！"), ["大こうもりに見事な一撃を与", "えた！"])
         self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた？"), ["大こうもりに見事な一撃を与", "えた？"])
 
-    def test_message_log_normalizes_sentence_case_and_terminal_stops(self):
+    def test_message_log_normalizes_rogue54_sentence_case_and_terminal_stops(self):
         game = new_game(seed=3761)
         game.msgs = []
         game.msg_turns = []
@@ -10856,6 +10856,23 @@ class RogueBaselineTest(unittest.TestCase):
             "大こうもりに見事な一撃を与えた！",
         ])
 
+    def test_message_toast_and_log_apply_rogue54_display_capitalization(self):
+        game = new_game(seed=3762)
+        game.msgs = ["you wield the mace", "a) food"]
+        game.msg_turns = [game.turn, game.turn]
+        game.log_scroll = 0
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_msgs()
+        self.assertIn("You wield the mace", calls)
+        self.assertIn("a) food", calls)
+
+        calls.clear()
+        game.draw_log()
+        self.assertIn("You wield the mace", calls)
+        self.assertIn("a) food", calls)
+
     def test_message_toast_height_latches_while_old_lines_expire(self):
         game = new_game(seed=3751)
         game.msgs = ["gone", "visible"]
@@ -10865,13 +10882,13 @@ class RogueBaselineTest(unittest.TestCase):
         game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
         game.draw_msgs()
         self.assertEqual(game.msg_toast_rows, 2)
-        first_visible = next(c for c in calls if c[2] == "visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+        first_visible = next(c for c in calls if c[2] == "Visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
 
         calls.clear()
         game.turn = 6
         game.draw_msgs()
         self.assertEqual(game.msg_toast_rows, 2)
-        shifted_visible = next(c for c in calls if c[2] == "visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+        shifted_visible = next(c for c in calls if c[2] == "Visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
         self.assertEqual(shifted_visible[1], first_visible[1])
 
         game.turn = 11
@@ -10986,7 +11003,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
             rogue.pyxel.frame_count = 0
             game.draw_msgs()
-            line = next(c for c in calls if c[2] == "pack too full" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+            line = next(c for c in calls if c[2] == "Pack too full" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
             marker = next(c for c in calls if c[2] == "!" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
             self.assertEqual(marker[0], line[0] - 2 * rogue.FONT_ASCII_W)
             self.assertEqual(marker[1], line[1])
@@ -11012,7 +11029,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn((">", rogue.MSG_TOAST_SHADOW_COL), calls)
         self.assertIn((">", 9), calls)
-        self.assertIn(("pack too full", 9), calls)
+        self.assertIn(("Pack too full", 9), calls)
 
     def test_level_up_message_is_important(self):
         game = new_game(seed=377)
@@ -14825,8 +14842,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_log()
 
-        self.assertIn("message 29", calls)
-        self.assertNotIn("message 00", calls)
+        self.assertIn("Message 29", calls)
+        self.assertNotIn("Message 00", calls)
 
         game.log_scroll = 0
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_UP}, pressed={rogue.pyxel.KEY_UP})
@@ -14998,7 +15015,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.rectb = old_rectb
 
         guide = next(c for c in calls if "Select/Tab" in c[2])
-        log_lines = [c for c in calls if c[2].startswith("message ")]
+        log_lines = [c for c in calls if c[2].startswith("Message ")]
         self.assertLess(max(y for _x, y, _s, _c in log_lines), guide[1] - rogue.MSG_LINE_H)
         self.assertTrue(any(s == "^" for _x, _y, s, _c in calls))
         self.assertTrue(any(s == "v" for _x, _y, s, _c in calls))
