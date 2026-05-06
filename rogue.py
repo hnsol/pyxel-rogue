@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0054"
+UI_BUILD = "260507_0110"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -368,7 +368,7 @@ SCOREBOARD_HILITE_COL = 23
 SCOREBOARD_TEXT_COL = 30
 SCOREBOARD_DIM_COL = 30
 UI_TEXT_COL = 30
-UI_SUBTEXT_COL = 9
+UI_SUBTEXT_COL = 6
 UI_HILITE_COL = 23
 UI_SECTION_COL = 31
 UI_SELECTED_COL = UI_HILITE_COL
@@ -3593,6 +3593,7 @@ class Game:
         self.command_look()
         self.disc_scroll = 0
         self.disc_lines = self._disc_lines(RNG.rnd)
+        self.disc_return_state = self.st if self.st == ST_MENU else ST_PLAY
         self.st = ST_DISC
         self.command_look_done = False
 
@@ -4547,6 +4548,7 @@ class Game:
 
     def open_help_command(self):
         self.command_look()
+        self.help_return_state = ST_PLAY
         self.st = ST_HELP
         self.command_look_done = False
 
@@ -6773,8 +6775,11 @@ class Game:
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
         elif self.st==ST_HELP:
+            if self.btn_overlay_cancel():
+                self.st=getattr(self, "help_return_state", ST_PLAY)
+                return
             if self.btn_any_key():
-                self.st=ST_PLAY
+                self.st=getattr(self, "help_return_state", ST_PLAY)
         elif self.st==ST_INVENTORY:
             if self.menu_horizontal_press() > 0:
                 self.open_log()
@@ -7070,7 +7075,7 @@ class Game:
             self.disc_scroll = max(0, min(self.disc_scroll + dy, max_scroll))
             return
         if self.btn_a() or self.btn_overlay_cancel():
-            self.st = ST_PLAY; return
+            self.st = getattr(self, "disc_return_state", ST_PLAY); return
 
     def upd_dir(self):
         d=self.dir_prompt_press()
@@ -7118,7 +7123,9 @@ class Game:
         if not self.btn_a(): return
         act=AUX_ACTIONS[self.acur]
         if act=="Inventory": self.st=ST_INVENTORY
-        elif act=="Help": self.st=ST_HELP
+        elif act=="Help":
+            self.help_return_state=ST_PLAY
+            self.st=ST_HELP
         elif act=="Search":
             self.st=ST_PLAY
             self.do_search()
@@ -7449,12 +7456,12 @@ class Game:
         if state != "normal":
             self.txt(sx,sy,f"Food {state}",22); sy+=11
         sy+=6
-        self.txt(sx,sy,self.ui_heading("Equip", UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
+        self.txt(sx,sy,self.ui_heading(TextCatalog.msg(self.lang, "ui.equip"), UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
         an=self.hud_equip_name(p.arm) if p.arm else "no armor"
         self.txt(sx,sy,wn[:11],9); sy+=11
         self.txt(sx,sy,an[:11],9); sy+=16
-        self.txt(sx,sy,self.ui_heading("Eff", UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
+        self.txt(sx,sy,self.ui_heading(TextCatalog.msg(self.lang, "ui.effects"), UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
         eff=[]
         if p.state=="hungry": eff.append("Hungry")
         elif p.state=="weak": eff.append("Weak")
@@ -7572,7 +7579,7 @@ class Game:
         bw=cell_w*3+10; bh=cell_h*len(PAD_ACTION_GRID)+24
         bx = 18
         by = ZV_Y + (ZV_PX_H - bh) // 2 - 18
-        self._box(bx,by,bw,bh,self.ui_heading("Action", UI_HEADING_PANEL))
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.menu(self.lang, "Action"), UI_HEADING_PANEL))
         for gy,row in enumerate(PAD_ACTION_GRID):
             for gx,nm in enumerate(row):
                 try:
@@ -7613,7 +7620,7 @@ class Game:
             bx,
             by,
             self.fitems,
-            self.ui_heading(self.cact, UI_HEADING_PANEL),
+            self.ui_heading(TextCatalog.menu(self.lang, self.cact), UI_HEADING_PANEL),
             self.icur,
             item_chars=26,
             cell_w=cell_w,
@@ -7625,7 +7632,7 @@ class Game:
             return
         prompt = TextCatalog.msg(self.lang, "misc.what_to_call_it")
         bx, by = ZV_X + 20, ZV_Y + 60; bw = 240; bh = 36
-        self._box(bx, by, bw, bh, self.ui_heading(self.cact, UI_HEADING_PANEL))
+        self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.menu(self.lang, self.cact), UI_HEADING_PANEL))
         self.txt(bx + 4, by + 14, f"{prompt}", UI_TEXT_COL)
         cursor = "_" if (pyxel.frame_count // 15) % 2 == 0 else " "
         self.txt(bx + 4, by + 24, f"> {self.call_input}{cursor}", UI_SELECTED_COL)
@@ -7646,14 +7653,17 @@ class Game:
 
     def draw_dirp(self, action=None):
         action = action or self.dact
-        title="Trap direction? [D-pad/YUBN]" if action=="Trap" else "Direction? [D-pad/YUBN]"
-        bw = 190 if action == "Trap" else 170
+        title = TextCatalog.msg(
+            self.lang,
+            "ui.trap_direction_prompt" if action == "Trap" else "ui.direction_prompt",
+        )
+        bw = max(170, self.ui_text_width(title) + 12)
         bx, by = ZV_X + (ZV_PX_W - bw) // 2, ZV_Y + (ZV_PX_H - 20) // 2
         self._box(bx,by,bw,20,title)
 
     def draw_aux(self):
         bx,by=ZV_X+20,ZV_Y+8; bw=120; bh=len(AUX_ACTIONS)*14+18
-        self._box(bx,by,bw,bh,self.ui_heading("Assist", UI_HEADING_PANEL))
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.menu(self.lang, "Assist"), UI_HEADING_PANEL))
         for i,nm in enumerate(AUX_ACTIONS):
             ty=by+16+i*14; c=UI_SELECTED_COL if i==self.acur else UI_TEXT_COL
             pre=">" if i==self.acur else " "
@@ -7771,8 +7781,8 @@ class Game:
                 self.txt(x, y, f"{pre}{lt}) {ln[:item_chars]}", c)
 
     def draw_help(self):
-        bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
-        self._box(bx,by,bw,bh,self.ui_heading("Help", UI_HEADING_SCREEN))
+        bx,by=20,12; bw=SCR_W-40; bh=SCR_H-24
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.menu(self.lang, "Help"), UI_HEADING_SCREEN))
         gamepad=[
             self.ui_heading("Gamepad", UI_HEADING_SECTION),
             "D-pad       Move/Dir",

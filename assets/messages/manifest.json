@@ -1043,6 +1043,18 @@
     "ja_status": "manual",
     "origin": "msg()"
   },
+  "menu.action": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "menu.assist": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "menu.call": {
     "source": "rogue.py:287",
     "params": [],
@@ -1073,6 +1085,12 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "menu.identify": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "menu.inventory": {
     "source": "rogue.py:287",
     "params": [],
@@ -1097,6 +1115,12 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "menu.picky_inventory": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "menu.put_on": {
     "source": "rogue.py:287",
     "params": [],
@@ -1115,6 +1139,12 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "menu.remove_ring": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "menu.search": {
     "source": "rogue.py:287",
     "params": [],
@@ -1123,6 +1153,12 @@
   },
   "menu.take_off": {
     "source": "rogue.py:287",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "menu.take_off_armor": {
+    "source": "rogue.py:UI",
     "params": [],
     "ja_status": "manual",
     "origin": "pyxel-rogue"
@@ -1153,6 +1189,30 @@
   },
   "menu.zap": {
     "source": "rogue.py:287",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.direction_prompt": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.effects": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.equip": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.trap_direction_prompt": {
+    "source": "rogue.py:UI",
     "params": [],
     "ja_status": "manual",
     "origin": "pyxel-rogue"

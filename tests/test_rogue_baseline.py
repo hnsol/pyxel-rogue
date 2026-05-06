@@ -11145,6 +11145,18 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_HELP)
 
+    def test_gamepad_b_closes_help_without_opening_action_menu(self):
+        game = new_game(seed=351)
+        game.st = rogue.ST_HELP
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_B}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_B})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
     def test_keyboard_space_holds_diagonal_assist_only_while_pressed(self):
         game = new_game(seed=35)
         set_open_floor(game)
@@ -14627,6 +14639,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.cact, "Drop")
         self.assertEqual(game.st, rogue.ST_ITEM)
 
+    def test_discoveries_cancel_from_action_menu_returns_to_action_menu(self):
+        game = new_game(seed=47201)
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Discoveries")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_A}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_A})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_DISC)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_B}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_B})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_MENU)
+
     def test_action_menu_draws_keyboard_hints_in_english_and_japanese(self):
         game = new_game(seed=4721)
         game.open_menu()
@@ -14696,7 +14722,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw()
 
-        self.assertEqual(boxes[-3:], ["-- Action --", "Direction? [D-pad/YUBN]", "-- Throw --"])
+        self.assertEqual(boxes[-3:], ["-- Action --", "Direction? [D-pad/hjklyubn]", "-- Throw --"])
 
     def test_command_chain_cancel_removes_only_top_window(self):
         game = new_game(seed=4724)
@@ -14894,6 +14920,46 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("-- Eat --", boxes)
         self.assertTrue(any(s.startswith(">") and c == rogue.UI_SELECTED_COL for s, c in calls))
+
+    def test_command_titles_and_direction_prompt_localize_in_japanese(self):
+        game = new_game(seed=473431)
+        game.lang = rogue.LANG_JA
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.open_menu()
+        game.draw_menu()
+        self.assertIn("-- 行動 --", boxes)
+
+        boxes.clear()
+        game.fitems = list(game.p.inv)
+        game.icur = 0
+        game.cact = "Read"
+        game.draw_isel()
+        self.assertIn("-- 読む --", boxes)
+
+        boxes.clear()
+        game.cact = "Eat"
+        game.call_item = game.p.inv[0]
+        game.call_input = ""
+        game.draw_call_input()
+        self.assertIn("-- 食べる --", boxes)
+
+        boxes.clear()
+        game.dact = "Trap"
+        game.draw_dirp()
+        self.assertIn("罠の方向? [D-pad/hjklyubn]", boxes)
+
+        boxes.clear()
+        game.draw_aux()
+        self.assertIn("-- 補助 --", boxes)
+
+        game.draw_stat()
+        self.assertIn(("-- 装備 --", rogue.UI_SECTION_COL), calls)
+        self.assertIn(("-- 効果 --", rogue.UI_SECTION_COL), calls)
 
     def test_score_death_name_and_help_apply_heading_color_roles(self):
         game = new_game(seed=47344)
@@ -18314,6 +18380,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(body)
         self.assertEqual(set(headers), {rogue.HELP_HEADER_COL})
         self.assertEqual(set(body), {rogue.HELP_TEXT_COL})
+
+    def test_help_text_leaves_bottom_padding_inside_frame(self):
+        game = new_game(seed=562)
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_help()
+
+        bx, by, bw, bh, _title = boxes[0]
+        bottom_limit = by + bh - 16
+        for x, y, text, _col in calls:
+            if text:
+                self.assertLessEqual(y, bottom_limit)
+                self.assertGreaterEqual(x, bx + 4)
+                self.assertLessEqual(x + game.ui_text_width(text), bx + bw - 4)
 
     def test_rogue54_rnd_and_trap_spawn_frequency_shape(self):
         self.assertEqual(rogue.rnd(0), 0)
