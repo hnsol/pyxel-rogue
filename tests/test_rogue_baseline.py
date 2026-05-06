@@ -14807,15 +14807,40 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(log_box[4], "")
         self.assertEqual([s for *_xy, s, _c in inventory_calls].count("Inventory"), 1)
         self.assertEqual([s for *_xy, s, _c in calls].count("Log"), 1)
-        self.assertTrue(any("D-pad/Arrows" in s for *_xy, s, _c in inventory_calls))
-        self.assertTrue(any("D-pad/Arrows" in s for *_xy, s, _c in calls))
+        self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in inventory_calls))
+        self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in calls))
 
         game.lang = rogue.LANG_JA
         calls.clear()
         game.draw_log()
         text = [s for *_xy, s, _c in calls]
         self.assertIn("ログ", text)
-        self.assertTrue(any("D-pad/矢印" in s and "補助" in s for s in text))
+        self.assertTrue(any("左右: タブ切替" in s and "補助メニュー" in s for s in text))
+
+    def test_log_draws_scroll_position_and_keeps_gap_above_controls(self):
+        game = new_game(seed=4735)
+        game.msgs = [f"message {i:02d}" for i in range(60)]
+        game.msg_turns = [0] * len(game.msgs)
+        game.log_scroll = 20
+        calls = []
+        rects = []
+        old_rect = rogue.pyxel.rect
+        old_rectb = rogue.pyxel.rectb
+        try:
+            rogue.pyxel.rect = lambda *args: rects.append(args)
+            rogue.pyxel.rectb = lambda *args: rects.append(args)
+            game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+            game.draw_log()
+        finally:
+            rogue.pyxel.rect = old_rect
+            rogue.pyxel.rectb = old_rectb
+
+        guide = next(c for c in calls if "Select/Tab" in c[2])
+        log_lines = [c for c in calls if c[2].startswith("message ")]
+        self.assertLess(max(y for _x, y, _s, _c in log_lines), guide[1] - rogue.MSG_LINE_H)
+        self.assertTrue(any(s == "^" for _x, _y, s, _c in calls))
+        self.assertTrue(any(s == "v" for _x, _y, s, _c in calls))
+        self.assertTrue(any(len(r) >= 5 and r[-1] == rogue.UI_HILITE_COL and r[2] <= 4 for r in rects))
 
     def test_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=48)

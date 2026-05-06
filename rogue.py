@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0030"
+UI_BUILD = "260507_0033"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -7070,7 +7070,7 @@ class Game:
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
 
     def log_visible_rows(self):
-        return max(1, (SCR_H - 74) // 11)
+        return max(1, (SCR_H - 86) // 11)
 
     def open_log(self):
         self.st = ST_LOG
@@ -7661,8 +7661,8 @@ class Game:
 
     def info_guide_label(self):
         if self.lang == LANG_JA:
-            return "D-pad/矢印: タブ   Select/Tab: 補助"
-        return "D-pad/Arrows: Tab   Select/Tab: Assist"
+            return "左右: タブ切替   Select/Tab: 補助メニュー"
+        return "Left/Right: Switch tabs   Select/Tab: Assist menu"
 
     def draw_info_tabs(self, x, y, active):
         for name in ("Inventory", "Log"):
@@ -7678,9 +7678,26 @@ class Game:
         visible = self.log_visible_rows()
         max_scroll = max(0, len(lines) - visible)
         self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
+        if self.log_scroll > 0:
+            self.txt(bx + bw - 16, by + 28, "^", UI_SUBTEXT_COL)
+        if self.log_scroll < max_scroll:
+            self.txt(bx + bw - 16, by + bh - 34, "v", UI_SUBTEXT_COL)
         for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
             self.txt(bx + 8, by + 28 + i * 11, str(text)[:72], UI_TEXT_COL)
+        self.draw_log_scrollbar(bx, by, bw, bh, len(lines), visible, max_scroll)
         self.txt(bx + 8, by + bh - 12, self.info_guide_label(), UI_SUBTEXT_COL)
+
+    def draw_log_scrollbar(self, bx, by, bw, bh, total, visible, max_scroll):
+        if total <= visible:
+            return
+        track_x = bx + bw - 8
+        track_y = by + 28
+        track_h = bh - 62
+        pyxel.rect(track_x, track_y, 2, track_h, UI_SUBTEXT_COL)
+        thumb_h = max(8, track_h * visible // max(visible, total))
+        travel = max(1, track_h - thumb_h)
+        thumb_y = track_y + (travel * self.log_scroll // max(1, max_scroll))
+        pyxel.rect(track_x - 1, thumb_y, 4, thumb_h, UI_HILITE_COL)
 
     def pack_grid_max_rows(self, items):
         return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS
