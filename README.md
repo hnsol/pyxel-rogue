@@ -1,8 +1,8 @@
 [[English](README.en.md) | 日本語]
 
-# Pyxel Rogue
+# Rogue V5 on Pyxel
 
-オリジナルのローグ（Rogue 5.4.4）を Pyxel で再現します。
+Rogue V5 on Pyxel は、オリジナルのローグ（Rogue 5.4.4）を Pyxel で再現するプロジェクトです。
 
 目指しているのは「この Pyxel 版をクリアしたら、Rogue 5.4.4 をクリアしたと言える」状態にすること。Rogue V5 系の手触りを大事にしながら、ゲームメカニクスは Rogue 5.4.4 のソースを一次情報にし、表示・入力・移植性は Pyxel / Pyxel Web で遊びやすい形へ調整しています。
 
@@ -18,15 +18,16 @@
 
 ## スクリーンショット
 
-![Pyxel Rogue screenshot](docs/images/pyxel-rogue-screenshot.png)
+![Rogue V5 on Pyxel screenshot](docs/images/pyxel-rogue-screenshot.png)
 
-Rogue 5.4.4 準拠の80桁ASCIIマップ、右HUD、下ログを表示したプレイ画面。
+プレイ画面。Rogue 5.4.4 準拠の80桁ASCIIマップ、右HUD。携帯機でも遊びやすい、近接メッセージログ。
+戦闘や拾得のメッセージをプレイヤーの近くに表示し、小さな画面でもマップから目を離さず状況を追えます。
 
 ## Webで遊ぶ
 
 ブラウザでは Pyxel Web Launcher から起動できます。
 
-[Pyxel Rogue をWebで起動する](https://kitao.github.io/pyxel/web/launcher/?run=hnsol/pyxel-rogue/master/rogue&gamepad=enabled)
+[Rogue V5 on Pyxel をWebで起動する](https://kitao.github.io/pyxel/web/launcher/?run=hnsol/pyxel-rogue/master/rogue&gamepad=enabled)
 
 Web版は Python や Pyxel を手元に入れずに試せます。ゲームパッドを有効にしていますので、スマートフォンやタブレットでも遊べます。
 

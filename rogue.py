@@ -73,7 +73,10 @@ from rogue_layout import (
     MSG_TOAST_BRIGHT_TURNS,
     MSG_TOAST_DIM_TURNS,
     MSG_TOAST_FADE_COLORS,
+    MSG_TOAST_GRID_COL_EDGES,
+    MSG_TOAST_GRID_ROW_EDGES,
     MSG_TOAST_LINES,
+    MSG_TOAST_SHADOW_COL,
     MSG_LINE_H,
     MSG_X,
     MSG_Y,
@@ -231,6 +234,7 @@ from rogue_ui import (
 
 RNG = RogueRng(random)
 UI_BUILD = "260507_0010"
+MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -402,14 +406,21 @@ TITLE_BGM_MMLS = (
     )),
     " ".join(_title_bgm_part("K0 Q100 T92 L16 @0 V109", _TITLE_BGM_CH2_BODY) for _ in range(4)),
 )
-TITLE_BG_PALETTE = (
-    0x000000, 0x011447, 0x01081B, 0x010000, 0x0B4517, 0x27465F, 0x01091C, 0x01091B,
-    0x013010, 0xDC8A04, 0x2B4965, 0x325B7F, 0x011758, 0x046C24, 0x081618, 0x000500,
-    0x1A323F, 0xFEFCDC, 0x000D3D, 0x04174B, 0x01071E, 0x010100, 0x392C1E, 0x112230,
-    0x01144E, 0x010104, 0x010B2A, 0x00070C, 0x123326, 0x020408, 0x0E090C, 0x05080E,
-    0x01050E, 0x84683A, 0x010A15, 0x030712, 0x00000A, 0x082034, 0xDCBA5A, 0x0D5A30,
-    0x1B4545, 0x011333, 0x00042C, 0x424B51, 0x011E34, 0x6B833D, 0x011734, 0x082F32,
+TITLE_BG_EXTRA_PALETTE = (
+    0xF6E19B, 0xCCAA5F, 0xCA8301, 0xBE800E, 0xBF7A03, 0x776546, 0x545B23, 0x4F5032,
+    0x59432A, 0x453E32, 0x364310, 0x34362A, 0x273718, 0x223025, 0x232C1E, 0x1A2B1C,
+    0x272219, 0x1A2319, 0x162415, 0x161D19, 0x10201C, 0x0F1B16, 0x0D1612, 0x0C100D,
+    0x04172A, 0x021221, 0x011022, 0x02101B, 0x010E1C, 0x050D0A, 0x0A0805, 0x050706,
+    0x030809, 0x030404, 0x020508, 0x010307, 0x010203, 0x00060C, 0x000604, 0x000000,
 )
+TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
+TITLE_MENU_X = 248
+TITLE_MENU_Y = 158
+TITLE_MENU_W = 174
+TITLE_MENU_H = 84
+TITLE_MENU_SELECTED_COL = 31
+TITLE_MENU_TEXT_COL = 5
+TITLE_MENU_BORDER_COL = 28
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
@@ -1398,6 +1409,56 @@ def msg_toast_color(age):
             return color
     return MSG_TOAST_FADE_COLORS[-1][1]
 
+def _clamp_to_grid_index(value, edges):
+    for i in range(len(edges) - 1):
+        if value < edges[i + 1]:
+            return i
+    return len(edges) - 2
+
+def msg_toast_home_block(x, y):
+    col = _clamp_to_grid_index(max(0, min(MAP_W - 1, x)), MSG_TOAST_GRID_COL_EDGES)
+    row_y = max(0, min(PLAY_H - 1, y - PLAY_Y_MIN))
+    row = _clamp_to_grid_index(row_y, MSG_TOAST_GRID_ROW_EDGES)
+    return (col, row)
+
+def _sign(value):
+    return (value > 0) - (value < 0)
+
+def _valid_msg_toast_block(block):
+    col, row = block
+    return 0 <= col <= 2 and 0 <= row <= 2
+
+def pick_msg_toast_block(home, last_intent_dir=(0, 0)):
+    dx, dy = last_intent_dir
+    sx, sy = _sign(dx), _sign(dy)
+    if sy:
+        target = (home[0], home[1] - sy)
+        if _valid_msg_toast_block(target) and target != home:
+            return target
+    if sx:
+        target = (home[0] - sx, home[1])
+        if _valid_msg_toast_block(target) and target != home:
+            return target
+    priority = (
+        (home[0], home[1] + 1),
+        (home[0], home[1] - 1),
+        (home[0] - 1, home[1]),
+        (home[0] + 1, home[1]),
+    )
+    for block in priority:
+        if _valid_msg_toast_block(block) and block != home:
+            return block
+    raise RuntimeError("no valid message toast block")
+
+def msg_toast_block_origin(block, rows=1):
+    col, row = block
+    start_col = MSG_TOAST_GRID_COL_EDGES[col]
+    start_row = MSG_TOAST_GRID_ROW_EDGES[row]
+    return (
+        ZV_X + start_col * TILE_W + FONT_ASCII_W,
+        ZV_Y + start_row * TILE_H + 2,
+    )
+
 
 # ===========================================================
 #  GAME
@@ -1492,8 +1553,7 @@ class Game:
 
     def enter_title_screen(self):
         self.apply_title_palette()
-        self.start_title_bgm()
-        self.title_fade_frames = 0
+        self.title_fade_frames = 0 if getattr(self, "title_bgm_started", False) else TITLE_FADE_FRAMES
         self.st = ST_TITLE
 
     def enter_post_logo(self):
@@ -1645,6 +1705,42 @@ class Game:
             width += FONT_ASCII_W if ord(ch) < 128 else FONT_CJK_W
         return width
 
+    def wrap_msg_toast_text(self, text):
+        limit = MSG_COLS * FONT_ASCII_W
+        rows = []
+        line = ""
+        width = 0
+        last_space = -1
+        text = str(text)
+        if text.endswith("。"):
+            text = text[:-1]
+        use_space_wrap = all(ord(ch) < 128 for ch in text)
+        for ch in text:
+            ch_width = FONT_ASCII_W if ord(ch) < 128 else FONT_CJK_W
+            if line and width + ch_width > limit:
+                if ch in MSG_KINSOKU_LINE_START:
+                    carry = line[-1] + ch
+                    line = line[:-1]
+                    if line:
+                        rows.append(line)
+                    line = carry
+                    width = self.ui_text_width(line)
+                elif use_space_wrap and last_space > 0:
+                    rows.append(line[:last_space])
+                    line = line[last_space + 1:] + ch
+                    width = self.ui_text_width(line)
+                else:
+                    rows.append(line)
+                    line = ch
+                    width = ch_width
+                last_space = line.rfind(" ") if use_space_wrap else -1
+            else:
+                line += ch
+                width += ch_width
+                if use_space_wrap and ch == " ":
+                    last_space = len(line) - 1
+        return rows + ([line] if line else [""])
+
     def item_name(self,it, describe=True):
         name=self.ident.name(it)
         if describe and it is self.p.wpn: return f"{name} (weapon in hand)"
@@ -1685,9 +1781,11 @@ class Game:
         self.last_item_by_action = {}
         self.item_cursor_restored = False
         self.message_ack_pending = False
-        self.msg_toast_side = "bottom"
+        self.msg_toast_block = None
         self.msg_toast_rows = 0
         self.log_scroll = 0
+        self.last_intent_dir = (0, 0)
+        self.msg_toast_reposition_needed = True
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
         self.identify_symbol_pending = False
         self.fight_kamikaze_pending = False
@@ -1755,6 +1853,7 @@ class Game:
         self.daemons.start("stomach", rogue_daemons.AFTER)
         self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
+        self.turn_msg_start = len(self.msgs)
 
     def result_level(self, outcome):
         return self.max_depth if outcome == "winner" else self.p.depth
@@ -1959,6 +2058,8 @@ class Game:
         self._center_cam(); self.update_fov()
         if self.p.hallucinating > 0:
             self.run_visuals()
+        self.msg_toast_block = None
+        self.msg_toast_reposition_needed = True
 
     def usable_rooms(self):
         return [room for room in self.rooms if room.usable] or self.rooms
@@ -2441,11 +2542,38 @@ class Game:
             self.msg_turns = [self.turn] * len(self.msgs)
         self.msgs.append(text)
         self.msg_turns.append(self.turn)
+        if getattr(self, "msg_toast_block", None) is None or getattr(self, "msg_toast_reposition_needed", False):
+            self.refresh_msg_toast_block()
         if len(self.msgs) > 100:
             drop = len(self.msgs) - 100
             self.msgs = self.msgs[drop:]
             self.msg_turns = self.msg_turns[drop:]
             self.turn_msg_start = max(0, self.turn_msg_start - drop)
+
+    def refresh_msg_toast_block(self):
+        home = msg_toast_home_block(self.p.x, self.p.y)
+        self.msg_toast_block = pick_msg_toast_block(home, getattr(self, "last_intent_dir", (0, 0)))
+        self.msg_toast_reposition_needed = False
+
+    def set_last_intent_dir(self, dx, dy):
+        if dx or dy:
+            self.last_intent_dir = (_sign(dx), _sign(dy))
+            self.msg_toast_reposition_needed = True
+
+    def msg_toast_block_with_margin_contains_player(self, margin=1):
+        block = getattr(self, "msg_toast_block", None)
+        if block is None or not getattr(self, "msgs", None):
+            return False
+        col, row = block
+        left = MSG_TOAST_GRID_COL_EDGES[col] - margin
+        right = MSG_TOAST_GRID_COL_EDGES[col + 1] - 1 + margin
+        top = PLAY_Y_MIN + MSG_TOAST_GRID_ROW_EDGES[row] - margin
+        bottom = PLAY_Y_MIN + MSG_TOAST_GRID_ROW_EDGES[row + 1] - 1 + margin
+        return left <= self.p.x <= right and top <= self.p.y <= bottom
+
+    def move_msg_toast_if_player_enters_margin(self):
+        if self.msg_toast_block_with_margin_contains_player():
+            self.refresh_msg_toast_block()
 
     def msg(self,t,**kw):
         self._append_msg(TextCatalog.msg(self.lang,t,**kw))
@@ -2838,14 +2966,14 @@ class Game:
                     self.fight_to_death = False
             if rogue_fight.attack_specials_allowed(rogue_monsters.is_cancelled(m)):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
-                    self.rust_armor()
+                    self.rust_armor(important=True)
                 if rogue_monsters.has_special(m, "steal_gold"):
                     old_gold = self.p.gold
                     first_loss = goldcalc(self.p.depth)
                     loss=rogue_fight.leprechaun_gold_loss_after_first(first_loss, self.p.depth, self.save_vs_magic(), goldcalc)
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
-                        self.msg("fight.your_purse_feels_lighter")
+                        self.msg_important("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return rogue_fight.attack_result(monster_removed=True)
                 if rogue_monsters.has_special(m, "poison"):
                     self.p.st, poison_result = rogue_fight.poison_bite_strength(
@@ -2855,7 +2983,7 @@ class Game:
                     )
                     poison_msg = rogue_fight.poison_bite_message_key(poison_result, terse=False)
                     if poison_msg:
-                        self.msg(poison_msg)
+                        self.msg_important(poison_msg)
                 if rogue_monsters.has_special(m, "drain_level") and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,
@@ -2869,7 +2997,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg("fight.you_suddenly_feel_weaker")
+                    self.msg_important("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "drain") and rogue_fight.drain_hits("V", rnd):
                     self.p.hp, self.p.max_hp, died = rogue_fight.max_hp_drain(
                         self.p.hp, self.p.max_hp, lambda: roll("1d3")
@@ -2878,7 +3006,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg("fight.you_suddenly_feel_weaker")
+                    self.msg_important("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "freeze"):
                     self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
                         self.p.no_command, BORE_LEVEL, rnd
@@ -2886,7 +3014,7 @@ class Game:
                     if hypothermia:
                         self.p.hp=0; self.death_cause="hypothermia"
                     if should_message:
-                        self.msg("fight.you_are_frozen", subject=self.combat_monster_name(m, article_for_something=True))
+                        self.msg_important("fight.you_are_frozen", subject=self.combat_monster_name(m, article_for_something=True))
                 if rogue_monsters.has_special(m, "hold"):
                     m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_hit(m.vf_hit)
                     self.p.held_by=m
@@ -2897,7 +3025,7 @@ class Game:
                 if rogue_monsters.has_special(m, "steal_item"):
                     t=self.monster_has_magic_item_to_steal()
                     if t:
-                        self.p.rm_item(t); self.msg("fight.she_stole_target", target=self.ident.name(t))
+                        self.p.rm_item(t); self.msg_important("fight.she_stole_target", target=self.ident.name(t))
                         self.remove_monster(m); return rogue_fight.attack_result(monster_removed=True)
         else:
             if m.sym == "F" and m.vf_hit > 0:
@@ -4218,6 +4346,8 @@ class Game:
                 self.dashing = False
             old_pos = (p.x, p.y)
             p.x, p.y = nx, ny
+            self.set_last_intent_dir(dx, dy)
+            self.move_msg_toast_if_player_enters_margin()
             if self.tm[ny][nx] == T_STAIR:
                 self.seen_stairs = True
             trapped = gi is None and (nx,ny) in self.traps and self.tm[ny][nx] in (T_FLOOR, T_TRAP)
@@ -4350,7 +4480,7 @@ class Game:
         elif name=="mysterious trap":
             self.mysterious_trap_msg()
 
-    def rust_armor(self):
+    def rust_armor(self, important=False):
         # C: move.c:rust_armor()
         arm=self.p.arm
         if not self.can_rust_armor(arm):
@@ -4360,11 +4490,17 @@ class Game:
             rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM),
         )
         if result == "vanish":
-            self.msg("move.the_rust_vanishes_instantly")
+            if important:
+                self.msg_important("move.the_rust_vanishes_instantly")
+            else:
+                self.msg("move.the_rust_vanishes_instantly")
             return
         arm.ench-=1
         self.p.recalc_ac()
-        self.msg("move.your_armor_weakens")
+        if important:
+            self.msg_important("move.your_armor_weakens")
+        else:
+            self.msg("move.your_armor_weakens")
 
     def can_rust_armor(self, arm):
         # C: move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
@@ -6409,7 +6545,6 @@ class Game:
             if self.title_bgm_stop_wait <= 0:
                 self.prepare_title_new_game()
             return
-        self.start_title_bgm()
         if getattr(self, "title_fade_frames", TITLE_FADE_FRAMES) < TITLE_FADE_FRAMES:
             if self.btn_any_key():
                 self.title_fade_frames = TITLE_FADE_FRAMES
@@ -7069,16 +7204,16 @@ class Game:
         if title_alpha < 1.0:
             return
         items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
-        x = 372
-        y = min(238, SCR_H - 92)
+        x = TITLE_MENU_X
+        y = min(TITLE_MENU_Y, SCR_H - TITLE_MENU_H + 10)
         pyxel.dither(0.8)
-        pyxel.rect(x - 28, y - 10, 174, 84, 0)
+        pyxel.rect(x - 28, y - 10, TITLE_MENU_W, TITLE_MENU_H, 0)
         pyxel.dither(1.0)
-        pyxel.rectb(x - 28, y - 10, 174, 84, 17)
+        pyxel.rectb(x - 28, y - 10, TITLE_MENU_W, TITLE_MENU_H, TITLE_MENU_BORDER_COL)
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
-            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 9)
-            self.txt(x, y + i * 24, item, 9 if i == cur else 17)
+            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", TITLE_MENU_SELECTED_COL)
+            self.txt(x, y + i * 24, item, TITLE_MENU_SELECTED_COL if i == cur else TITLE_MENU_TEXT_COL)
 
     def draw_name_input(self):
         self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_HILITE_COL)
@@ -7325,118 +7460,40 @@ class Game:
         rows=[]
         msg_turns = self.msg_turns if len(getattr(self, "msg_turns", [])) == len(self.msgs) else []
         last_index = len(self.msgs) - 1
-        for mi,m in enumerate(reversed(self.msgs)):
-            src_i = last_index - mi
+        for src_i,m in enumerate(self.msgs):
             age = 0 if not msg_turns else max(0, self.turn - msg_turns[src_i])
             if age > MSG_TOAST_DIM_TURNS:
                 continue
             c = msg_toast_color(age)
-            parts=[m[i:i+MSG_COLS] for i in range(0,len(m),MSG_COLS)] or [""]
-            for part in reversed(parts):
-                rows.append((part,c))
-                if len(rows)>=MSG_TOAST_LINES: break
-            if len(rows)>=MSG_TOAST_LINES: break
-        rows=list(reversed(rows))
+            parts = self.wrap_msg_toast_text(m)
+            for pi, part in enumerate(parts):
+                rows.append((part, c, age, pi == 0, src_i))
+        rows = rows[-MSG_TOAST_LINES:]
         if not rows:
             self.msg_toast_rows = 0
+            self.msg_toast_block = None
+            self.msg_toast_reposition_needed = True
             return
         toast_rows = min(MSG_TOAST_LINES, max(getattr(self, "msg_toast_rows", 0), len(rows)))
         self.msg_toast_rows = toast_rows
-        max_text_w = max(self.ui_text_width(m) for m, _c in rows)
-        min_w = FONT_ASCII_W * 40
-        w = min(ZV_PX_W - 16, max(min_w, max_text_w + 16))
-        h = toast_rows * MSG_LINE_H + 6
-        top_y = ZV_Y + 4
-        bottom_y = ZV_Y + ZV_PX_H - h - 4
-        px = ZV_X + (self.p.x - self.cam_x) * TILE_W
-        py = ZV_Y + (self.p.y - self.cam_y) * TILE_H
-        def avoid_rect(horizontal_tiles, vertical_tiles):
-            return (
-                px - horizontal_tiles * TILE_W,
-                py - vertical_tiles * TILE_H,
-                TILE_W * (horizontal_tiles * 2 + 1),
-                TILE_H * (vertical_tiles * 2 + 1),
-            )
-        hero_rect = (px, py, TILE_W, TILE_H)
-        hero_near_rect = avoid_rect(6, 3)
-        left_x = ZV_X + 8
-        right_x = ZV_X + ZV_PX_W - w
-        candidates = (
-            ("left_bottom", left_x, bottom_y),
-            ("right_bottom", right_x, bottom_y),
-            ("left_top", left_x, top_y),
-        )
-        def covers_rect(toast_x, toast_y, area):
-            ax, ay, aw, ah = area
-            rx, ry, rw, rh = toast_x - 4, toast_y - 3, w, h
-            return (
-                rx < ax + aw
-                and ax < rx + rw
-                and ry < ay + ah
-                and ay < ry + rh
-            )
-        def toast_rect(toast_x, toast_y):
-            return (toast_x - 4, toast_y - 3, w, h)
-        def screen_cell_rect(mx, my):
-            sx = ZV_X + (mx - self.cam_x) * TILE_W
-            sy = ZV_Y + (my - self.cam_y) * TILE_H
-            if sx + TILE_W < ZV_X or sx > ZV_X + ZV_PX_W:
-                return None
-            if sy + TILE_H < ZV_Y or sy > ZV_Y + ZV_PX_H:
-                return None
-            return (sx, sy, TILE_W, TILE_H)
-        def cell_is_drawn(mx, my):
-            return self.p.blind <= 0 and ((mx, my) in self.visible or (mx, my) in self.explored)
-        def score_candidate(name, toast_x, toast_y):
-            score = 800 if name == "left_top" else 0
-            current = getattr(self, "msg_toast_side", "")
-            if current and current != name:
-                score += 30
-            if covers_rect(toast_x, toast_y, hero_rect):
-                score += 10000
-            if covers_rect(toast_x, toast_y, hero_near_rect):
-                score += 1200
-            for mo in self.mons:
-                if not getattr(mo, "alive", True):
-                    continue
-                mrect = screen_cell_rect(mo.x, mo.y)
-                if not mrect or not covers_rect(toast_x, toast_y, mrect):
-                    continue
-                if self.monster_is_seen(mo):
-                    score += 1000
-                elif self.can_detect_monsters():
-                    score += 200
-            for yy in range(PLAY_Y_MIN, PLAY_Y_MAX + 1):
-                for xx in range(MAP_W):
-                    tile = self.tm[yy][xx]
-                    if tile not in (T_STAIR, T_TRAP):
-                        continue
-                    if not cell_is_drawn(xx, yy):
-                        continue
-                    crect = screen_cell_rect(xx, yy)
-                    if not crect or not covers_rect(toast_x, toast_y, crect):
-                        continue
-                    score += 700 if tile == T_STAIR else 300
-            for item in self.gitems:
-                if not cell_is_drawn(item.x, item.y):
-                    continue
-                irect = screen_cell_rect(item.x, item.y)
-                if irect and covers_rect(toast_x, toast_y, irect):
-                    score += 100
-            return score
-        chosen = min(candidates, key=lambda candidate: score_candidate(*candidate))
-        name, x, y = chosen
-        self.msg_toast_side = name
-        pyxel.dither(0.88)
-        pyxel.rect(x - 4, y - 3, w, h, 0)
-        pyxel.dither(1.0)
-        pyxel.rectb(x - 4, y - 3, w, h, 5)
-        for i,(m,c) in enumerate(rows):
-            self.txt(x, y+i*MSG_LINE_H, m, c)
-        if getattr(self, "message_ack_pending", False):
-            marker = ">"
-            if (getattr(pyxel, "frame_count", 0) // 15) % 2 == 0:
-                self.txt(x + w - self.ui_text_width(marker) - 12, y + h - MSG_LINE_H - 4, marker, UI_HILITE_COL)
+        if getattr(self, "msg_toast_block", None) is None:
+            self.refresh_msg_toast_block()
+        x, y = msg_toast_block_origin(self.msg_toast_block, toast_rows)
+        y += (toast_rows - len(rows)) * MSG_LINE_H
+        ack_pending = getattr(self, "message_ack_pending", False)
+        blink_on = (getattr(pyxel, "frame_count", 0) // 15) % 2 == 0
+        for i,(m,c,age,first_part,src_i) in enumerate(rows):
+            ty = y+i*MSG_LINE_H
+            important = ack_pending and first_part and src_i == last_index
+            marker = "!" if important else (">" if age == 0 and first_part else "")
+            text_col = UI_HILITE_COL if important else c
+            marker_col = UI_HILITE_COL if important else c
+            text_x = x + 2 * FONT_ASCII_W
+            if marker and (not important or blink_on):
+                self.txt(x + 1, ty + 1, marker, MSG_TOAST_SHADOW_COL)
+                self.txt(x, ty, marker, marker_col)
+            self.txt(text_x + 1, ty + 1, m, MSG_TOAST_SHADOW_COL)
+            self.txt(text_x, ty, m, text_col)
 
     # ---------- Overlays ----------
     def _box(self,x,y,w,h,title=""):
