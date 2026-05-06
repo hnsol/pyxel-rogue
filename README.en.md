@@ -91,7 +91,7 @@ Gamepad:
 - B tap: Menu / cancel
 - B hold + D-pad: Dash
 - A+B: Wait a turn
-- Select: Inventory; press Select again in inventory for the assist menu
+- Select: Inventory; press left/right in inventory to switch to Log; press Select again for the assist menu
 - Assist menu: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
 - Language / Palette / Pickup changes are saved for later games.
 - Select+A: Quick throw (choose direction, then item)
@@ -107,7 +107,7 @@ Keyboard:
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
 - Esc: Menu / cancel
-- Tab: Inventory; press Tab again in inventory for the assist menu
+- Tab: Inventory; press left/right in inventory to switch to Log; press Tab again for the assist menu
 - Tab+Enter: Quick throw
 - Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap

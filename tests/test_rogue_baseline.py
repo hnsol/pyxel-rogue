@@ -10445,7 +10445,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_inventory()
 
         text = [s for _, _, s, _ in calls]
-        self.assertIn("=== Inventory ===", text)
+        self.assertIn("=== Inventory | Log ===", text)
+        self.assertIn("Inventory", text)
+        self.assertIn("Log", text)
         self.assertNotIn("-- Equip --", text)
         self.assertFalse(any(s.startswith(("Depth", "Turn", "Hp ", "Lv ", "Str ", "Arm ", "Gold", "Food")) for s in text))
 
@@ -10457,7 +10459,7 @@ class RogueBaselineTest(unittest.TestCase):
         second_item = next(c for c in inv_lines if c[2].startswith("b)"))
         mid_item = next(c for c in inv_lines if c[2].startswith("n)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
-        self.assertEqual(first_item[1] - calls[0][1], 15)
+        self.assertEqual(first_item[1] - calls[0][1], 25)
         self.assertEqual(second_item[0], first_item[0])
         self.assertGreater(second_item[1], first_item[1])
         self.assertGreater(mid_item[0], first_item[0])
@@ -14557,6 +14559,71 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input()
         game.update()
         self.assertEqual(game.st, rogue.ST_AUX)
+
+    def test_inventory_and_log_switch_like_tabs_without_spending_turns(self):
+        game = new_game(seed=4731)
+        start_turn = game.turn
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
+        game.update()
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_LOG)
+        self.assertEqual(game.turn, start_turn)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_LEFT}, pressed={rogue.pyxel.KEY_LEFT})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_INVENTORY)
+        self.assertEqual(game.turn, start_turn)
+
+    def test_log_select_opens_assist_and_cancel_keys_return_to_play(self):
+        game = new_game(seed=4732)
+        game.open_log()
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
+        game.update()
+        rogue.pyxel.set_input()
+        game.update()
+        self.assertEqual(game.st, rogue.ST_AUX)
+
+        for key in (rogue.pyxel.KEY_RETURN, rogue.pyxel.KEY_ESCAPE, rogue.pyxel.KEY_I):
+            with self.subTest(key=key):
+                game.open_log()
+                rogue.pyxel.set_input(held={key}, pressed={key})
+                game.update()
+                self.assertEqual(game.st, rogue.ST_PLAY)
+
+        game.open_log()
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_B}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_B})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_log_draws_latest_messages_and_scrolls_within_bounds(self):
+        game = new_game(seed=4733)
+        game.msgs = [f"message {i:02d}" for i in range(30)]
+        game.msg_turns = [0] * len(game.msgs)
+        game.open_log()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_log()
+
+        self.assertIn("message 29", calls)
+        self.assertNotIn("message 00", calls)
+
+        game.log_scroll = 0
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_UP}, pressed={rogue.pyxel.KEY_UP})
+        game.update()
+        self.assertEqual(game.log_scroll, 0)
+
+        game.log_scroll = 999
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
+        game.update()
+        self.assertLess(game.log_scroll, len(game.msgs))
 
     def test_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=48)

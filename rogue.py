@@ -211,6 +211,7 @@ from rogue_ui import (
     ST_INVENTORY,
     ST_ITEM,
     ST_LOADING,
+    ST_LOG,
     ST_LOGO,
     ST_MENU,
     ST_NAME,
@@ -229,7 +230,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_1849"
+UI_BUILD = "260507_0010"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -1686,6 +1687,7 @@ class Game:
         self.message_ack_pending = False
         self.msg_toast_side = "bottom"
         self.msg_toast_rows = 0
+        self.log_scroll = 0
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
         self.identify_symbol_pending = False
         self.fight_kamikaze_pending = False
@@ -6625,10 +6627,14 @@ class Game:
             if self.btn_any_key():
                 self.st=ST_PLAY
         elif self.st==ST_INVENTORY:
-            if self.btn_back():
+            if self.menu_horizontal_press() > 0:
+                self.open_log()
+            elif self.btn_back():
                 self.open_aux()
             elif self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
                 self.st=ST_PLAY
+        elif self.st==ST_LOG:
+            self.upd_log()
 
     def upd_play(self):
         if getattr(self, "message_ack_pending", False):
@@ -6927,6 +6933,34 @@ class Game:
     def open_aux(self):
         self.st=ST_AUX; self.acur=0; self.dir_pending=None
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
+
+    def log_visible_rows(self):
+        return max(1, (SCR_H - 74) // 11)
+
+    def open_log(self):
+        self.st = ST_LOG
+        self.dir_pending = None
+        max_scroll = max(0, len(getattr(self, "msgs", [])) - self.log_visible_rows())
+        self.log_scroll = max_scroll
+
+    def upd_log(self):
+        dx = self.menu_horizontal_press()
+        if dx < 0:
+            self.st = ST_INVENTORY
+            return
+        visible = self.log_visible_rows()
+        max_scroll = max(0, len(getattr(self, "msgs", [])) - visible)
+        dy = self.menu_vertical_press()
+        if dy:
+            self.log_scroll = max(0, min(getattr(self, "log_scroll", 0) + dy, max_scroll))
+            return
+        self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
+        if self.btn_back():
+            self.open_aux()
+            return
+        if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
+            self.st = ST_PLAY
+            return
 
     def upd_aux(self):
         dy=self.menu_vertical_press()
@@ -7435,6 +7469,8 @@ class Game:
             self.draw_aux()
         elif self.st==ST_INVENTORY:
             self.draw_inventory()
+        elif self.st==ST_LOG:
+            self.draw_log()
         elif self.st==ST_HELP:
             self.draw_help()
         elif self.st==ST_DEAD:
@@ -7547,10 +7583,11 @@ class Game:
         cell_w = max(220, SCR_W - 24) if cols <= 1 else max(220, (SCR_W - 24) // cols)
         bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv, cell_w=cell_w, max_rows=max_rows)
         bx=(SCR_W-bw)//2
-        self._box(bx,by,bw,bh,"=== Inventory ===")
+        self._box(bx,by,bw,bh,"=== Inventory | Log ===")
+        self.draw_info_tabs(bx + 8, by + 8, "Inventory")
         self.draw_pack_grid_lines(
             bx + 8,
-            by + 18,
+            by + 28,
             self.p.inv,
             None,
             item_chars=40,
@@ -7558,6 +7595,29 @@ class Game:
             max_rows=max_rows,
         )
         self.txt(bx + 8, by + bh - 12, "Tab/Select: Assist", UI_SUBTEXT_COL)
+
+    def info_tab_label(self, name):
+        if self.lang == LANG_JA:
+            return {"Inventory": "Inventory", "Log": "ログ"}.get(name, name)
+        return name
+
+    def draw_info_tabs(self, x, y, active):
+        for name in ("Inventory", "Log"):
+            col = UI_HILITE_COL if name == active else UI_SUBTEXT_COL
+            self.txt(x, y, self.info_tab_label(name), col)
+            x += self.ui_text_width(self.info_tab_label(name)) + 10
+
+    def draw_log(self):
+        bx, by = 20, 20; bw = SCR_W - 40; bh = SCR_H - 40
+        self._box(bx, by, bw, bh, "=== Inventory | Log ===")
+        self.draw_info_tabs(bx + 8, by + 8, "Log")
+        lines = list(getattr(self, "msgs", []))[-100:]
+        visible = self.log_visible_rows()
+        max_scroll = max(0, len(lines) - visible)
+        self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
+        for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
+            self.txt(bx + 8, by + 28 + i * 11, str(text)[:72], UI_TEXT_COL)
+        self.txt(bx + 8, by + bh - 12, "Left/Right: Tab   Tab/Select: Assist", UI_SUBTEXT_COL)
 
     def pack_grid_max_rows(self, items):
         return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS

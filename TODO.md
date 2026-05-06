@@ -543,7 +543,7 @@
   - `8bit-bgm-generator` 調査
   - `pyxel-hadegame` の `pyxelhg/bgm/bgm_generator.py` 確認
   - Pyxel Webでも破綻しない鳴らし方を検証
-- [ ] メッセージ履歴画面（Select -> Select -> Log、直近50〜100件、ターン非消費）
+- [x] メッセージ履歴画面（Select -> Inventory -> 右 -> Log、直近100件、ターン非消費）
 - [x] 投擲アイテムの飛翔アニメーション
 - [ ] ダメージフラッシュ等のアニメーション
 - [ ] GBC風インタフェース刷新（優先度低。詳細は `DESIGN_ARCHIVE.md` 参照）
@@ -614,7 +614,7 @@
 - [x] RNG helper を導入し、Rogue 5.4.4 準拠・seed 再現性・Pyxel MCP の `random.randint` 警告の扱いを整理する
 - [x] Rogue2.Official `mesg_J` / `mesg_E` に基づく文言辞書の拡充
 - [x] Rogue 5.4.4 メッセージ全文監査（`vendor/rogue544` の `msg()` / `addmsg()` 抽出と catalog 化）
-- [ ] メッセージ履歴画面のテスト（Select -> Select -> Log、ターン非消費）
+- [x] メッセージ履歴画面のテスト（Select -> Inventory -> 右 -> Log、ターン非消費）
 - [x] 英語 / 日本語で同じ seed・操作ならゲーム状態が一致するテストケースを増やす
 - [x] Phase 4 忠実度修正ごとに Rogue 5.4.4 期待値テストを追加（今後見つかる差分は Phase 4 後の監査 backlog で同じ運用を継続）
 - [x] Rogue 5.4.4 `rogue.h:NUMCOLS/NUMLINES/STATLINE`, `move.c:do_move()`, `rooms.c:bsze` 準拠のマップ寸法・地形領域テスト追加
