@@ -10537,6 +10537,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Inventory", text)
         self.assertIn("Log", text)
         self.assertNotIn("=== Inventory | Log ===", text)
+        self.assertIn("-- ", text)
+        self.assertIn(" --", text)
         self.assertNotIn("-- Equip --", text)
         self.assertFalse(any(s.startswith(("Depth", "Turn", "Hp ", "Lv ", "Str ", "Arm ", "Gold", "Food")) for s in text))
 
@@ -10586,6 +10588,19 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_inventory()
 
         self.assertTrue(any("abcdefghijklmnopqrstuvwxyz" in s for s in calls))
+
+    def test_item_picker_uses_wide_labels_for_long_item_names(self):
+        game = new_game(seed=37111)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        game.fitems = list(game.p.inv)
+        game.cact = "Drop"
+        game.item_name = lambda it: "abcdefghijklmnopqrstuvwxyz0123456789"
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_isel()
+
+        self.assertTrue(any("abcdefghijklmnopqrstuvwxyz0123456789" in s for s in calls))
 
     def test_inventory_uses_wide_pack_layout_and_shows_assist_hint(self):
         game = new_game(seed=3712)
@@ -14877,6 +14892,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(log_box[4], "")
         self.assertEqual([s for *_xy, s, _c in inventory_calls].count("Inventory"), 1)
         self.assertEqual([s for *_xy, s, _c in calls].count("Log"), 1)
+        self.assertIn(("-- ", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
+        self.assertIn((" --", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in inventory_calls))
         self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in calls))
 
@@ -14905,13 +14922,16 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_info_tabs(0, 0, "Inventory")
 
+        self.assertEqual(calls[0], ("-- ", rogue.UI_SECTION_COL))
         self.assertIn(("Inventory", rogue.UI_SELECTED_COL), calls)
-        self.assertIn(("Log", rogue.UI_SECTION_COL), calls)
+        self.assertIn((" | ", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Log", rogue.UI_TEXT_COL), calls)
+        self.assertEqual(calls[-1], (" --", rogue.UI_SECTION_COL))
 
         calls.clear()
         game.draw_info_tabs(0, 0, "Log")
 
-        self.assertIn(("Inventory", rogue.UI_SECTION_COL), calls)
+        self.assertIn(("Inventory", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Log", rogue.UI_SELECTED_COL), calls)
 
     def test_command_and_item_pick_screens_use_panel_titles_and_selection_color(self):

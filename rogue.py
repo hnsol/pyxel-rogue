@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0116"
+UI_BUILD = "260507_0126"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -7629,7 +7629,7 @@ class Game:
             self.fitems,
             self.ui_heading(TextCatalog.menu(self.lang, self.cact), UI_HEADING_PANEL),
             self.icur,
-            item_chars=26,
+            item_chars=40,
             cell_w=cell_w,
         )
 
@@ -7708,10 +7708,16 @@ class Game:
         return "Left/Right: Switch tabs   Select/Tab: Assist menu"
 
     def draw_info_tabs(self, x, y, active):
-        for name in ("Inventory", "Log"):
-            col = UI_SELECTED_COL if name == active else UI_SECTION_COL
-            self.txt(x, y, self.info_tab_label(name), col)
-            x += self.ui_text_width(self.info_tab_label(name)) + 10
+        parts = [
+            ("-- ", UI_SECTION_COL),
+            (self.info_tab_label("Inventory"), UI_SELECTED_COL if active == "Inventory" else UI_TEXT_COL),
+            (" | ", UI_TEXT_COL),
+            (self.info_tab_label("Log"), UI_SELECTED_COL if active == "Log" else UI_TEXT_COL),
+            (" --", UI_SECTION_COL),
+        ]
+        for text, col in parts:
+            self.txt(x, y, text, col)
+            x += self.ui_text_width(text)
 
     def draw_log(self):
         bx, by, bw, bh = self.info_window_rect()
