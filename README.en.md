@@ -139,7 +139,7 @@ Use Zap from the menu to choose a wand or staff, then choose a direction.
 
 Implemented overview:
 
-- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 564x276 Steam Deck browser-oriented layout, right-side HUD with abbreviated equipment, and toast messages
+- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 564x276 Steam Deck browser-oriented layout, right-side HUD with abbreviated equipment, and proximity message logs that stay readable on handhelds
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses
