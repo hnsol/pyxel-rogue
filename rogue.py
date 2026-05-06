@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0010"
+UI_BUILD = "260507_0025"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -7634,13 +7634,11 @@ class Game:
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
     def draw_inventory(self):
-        by=20; bh=SCR_H-40
+        bx, by, bw, bh = self.info_window_rect()
         max_rows = max(1, (bh - 34) // 11)
         cols, _rows = pack_grid_shape(len(self.p.inv), max_rows)
         cell_w = max(220, SCR_W - 24) if cols <= 1 else max(220, (SCR_W - 24) // cols)
-        bw, _pack_h, cell_w = self.pack_grid_box_size(self.p.inv, cell_w=cell_w, max_rows=max_rows)
-        bx=(SCR_W-bw)//2
-        self._box(bx,by,bw,bh,"=== Inventory | Log ===")
+        self._box(bx,by,bw,bh)
         self.draw_info_tabs(bx + 8, by + 8, "Inventory")
         self.draw_pack_grid_lines(
             bx + 8,
@@ -7651,12 +7649,20 @@ class Game:
             cell_w=cell_w,
             max_rows=max_rows,
         )
-        self.txt(bx + 8, by + bh - 12, "Tab/Select: Assist", UI_SUBTEXT_COL)
+        self.txt(bx + 8, by + bh - 12, self.info_guide_label(), UI_SUBTEXT_COL)
+
+    def info_window_rect(self):
+        return (20, 20, SCR_W - 40, SCR_H - 40)
 
     def info_tab_label(self, name):
         if self.lang == LANG_JA:
-            return {"Inventory": "Inventory", "Log": "ログ"}.get(name, name)
+            return {"Inventory": "持ちもの", "Log": "ログ"}.get(name, name)
         return name
+
+    def info_guide_label(self):
+        if self.lang == LANG_JA:
+            return "左右: タブ   Tab/Select: 補助"
+        return "Left/Right: Tab   Tab/Select: Assist"
 
     def draw_info_tabs(self, x, y, active):
         for name in ("Inventory", "Log"):
@@ -7665,8 +7671,8 @@ class Game:
             x += self.ui_text_width(self.info_tab_label(name)) + 10
 
     def draw_log(self):
-        bx, by = 20, 20; bw = SCR_W - 40; bh = SCR_H - 40
-        self._box(bx, by, bw, bh, "=== Inventory | Log ===")
+        bx, by, bw, bh = self.info_window_rect()
+        self._box(bx, by, bw, bh)
         self.draw_info_tabs(bx + 8, by + 8, "Log")
         lines = list(getattr(self, "msgs", []))[-100:]
         visible = self.log_visible_rows()
@@ -7674,7 +7680,7 @@ class Game:
         self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
         for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
             self.txt(bx + 8, by + 28 + i * 11, str(text)[:72], UI_TEXT_COL)
-        self.txt(bx + 8, by + bh - 12, "Left/Right: Tab   Tab/Select: Assist", UI_SUBTEXT_COL)
+        self.txt(bx + 8, by + bh - 12, self.info_guide_label(), UI_SUBTEXT_COL)
 
     def pack_grid_max_rows(self, items):
         return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS

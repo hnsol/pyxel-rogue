@@ -10531,9 +10531,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_inventory()
 
         text = [s for _, _, s, _ in calls]
-        self.assertIn("=== Inventory | Log ===", text)
         self.assertIn("Inventory", text)
         self.assertIn("Log", text)
+        self.assertNotIn("=== Inventory | Log ===", text)
         self.assertNotIn("-- Equip --", text)
         self.assertFalse(any(s.startswith(("Depth", "Turn", "Hp ", "Lv ", "Str ", "Arm ", "Gold", "Food")) for s in text))
 
@@ -10545,7 +10545,7 @@ class RogueBaselineTest(unittest.TestCase):
         second_item = next(c for c in inv_lines if c[2].startswith("b)"))
         mid_item = next(c for c in inv_lines if c[2].startswith("n)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
-        self.assertEqual(first_item[1] - calls[0][1], 25)
+        self.assertEqual(first_item[1] - calls[0][1], 20)
         self.assertEqual(second_item[0], first_item[0])
         self.assertGreater(second_item[1], first_item[1])
         self.assertGreater(mid_item[0], first_item[0])
@@ -14770,6 +14770,38 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
         game.update()
         self.assertLess(game.log_scroll, len(game.msgs))
+
+    def test_inventory_and_log_use_same_window_and_localized_tabs(self):
+        game = new_game(seed=4734)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_inventory()
+        inventory_box = boxes[-1]
+        inventory_calls = list(calls)
+
+        boxes.clear()
+        calls.clear()
+        game.draw_log()
+        log_box = boxes[-1]
+
+        self.assertEqual(inventory_box[:4], log_box[:4])
+        self.assertEqual(inventory_box[4], "")
+        self.assertEqual(log_box[4], "")
+        self.assertEqual([s for *_xy, s, _c in inventory_calls].count("Inventory"), 1)
+        self.assertEqual([s for *_xy, s, _c in calls].count("Log"), 1)
+        self.assertTrue(any("Left/Right" in s for *_xy, s, _c in inventory_calls))
+        self.assertTrue(any("Left/Right" in s for *_xy, s, _c in calls))
+
+        game.lang = rogue.LANG_JA
+        calls.clear()
+        game.draw_log()
+        text = [s for *_xy, s, _c in calls]
+        self.assertIn("ログ", text)
+        self.assertTrue(any("左右" in s and "補助" in s for s in text))
 
     def test_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=48)
