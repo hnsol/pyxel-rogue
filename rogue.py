@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0126"
+UI_BUILD = "260507_0138"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -5173,7 +5173,7 @@ class Game:
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
     def close_menu(self):
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
-        self.throw_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
+        self.throw_dir=None; self.zap_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
         self.b_menu_guard=False; self.dir_pending=None; self.command_look_done=False
 
@@ -5217,19 +5217,25 @@ class Game:
             not self.fitems
             and self.action_origin == ST_PLAY
             and not p.inv
-            and aname in ("Throw", "Drop", "Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Zap", "Call")
+            and aname in ("Drop", "Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Call")
         ):
             self.msg("pack.you_arent_carrying_anything"); self.close_menu(); return
         if aname=="Take off armor" and not self.fitems:
             self.msg("armor.you_arent_wearing_any_armor"); self.close_menu(); return
         if aname=="Remove ring" and not self.fitems:
             self.msg("rings.you_arent_wearing_any_rings"); self.close_menu(); return
+        if aname in ("Throw", "Zap"):
+            self.icur, self.item_cursor_restored = self.initial_item_cursor(aname)
+            self.throw_dir=None
+            self.zap_dir=None
+            self.zap_item=None
+            self.dact=aname
+            self.st=ST_DIR
+            return
         if not self.fitems:
             self.msg("pyxel.nothing_to_action", action=aname.lower()); self.close_menu(); return
         self.icur, self.item_cursor_restored = self.initial_item_cursor(aname)
-        if aname=="Throw":
-            self.throw_dir=None; self.dact="Throw"; self.st=ST_DIR
-        elif aname=="Call":
+        if aname=="Call":
             self.call_item=None; self.call_input=CALL_PRESETS[0]; self.call_preset_idx=0
             self.st=ST_CALL
         else:
@@ -5270,8 +5276,19 @@ class Game:
                 self.dact="Throw"; self.st=ST_DIR
             return
         if a=="Zap":
-            self.remember_item_cursor(a, it)
-            self.zap_item=it; self.dact="Zap"; self.st=ST_DIR
+            if getattr(self, "zap_dir", None):
+                self.command_look()
+                dx,dy=self.zap_dir
+                self.p.facing=(dx,dy)
+                self.remember_item_cursor(a, it)
+                self.zap_item=it
+                spent_turn = self.zap_stick(it,dx,dy)
+                self.clear_repeat_item_if_gone(it)
+                self.close_menu()
+                if spent_turn:
+                    self.end_turn()
+            else:
+                self.dact="Zap"; self.st=ST_DIR
             return
         if a=="Identify":
             # Rogue 5.4.4 wizard.c:whatis() — player selected item to identify.
@@ -5347,12 +5364,18 @@ class Game:
             return
         if self.dact=="Zap":
             if self.zap_item is None:
-                self.remember_repeat_dir(dx,dy)
-                self.p.facing=(dx,dy)
-                self.command_look()
-                self.msg("pack.you_arent_carrying_anything")
-                self.close_menu()
-                self.end_turn()
+                if self.fitems:
+                    self.remember_repeat_dir(dx,dy)
+                    self.zap_dir=(dx,dy)
+                    self.dact=None
+                    self.st=ST_ITEM
+                else:
+                    self.remember_repeat_dir(dx,dy)
+                    self.p.facing=(dx,dy)
+                    self.command_look()
+                    self.msg("pack.you_arent_carrying_anything")
+                    self.close_menu()
+                    self.end_turn()
                 return
             if self.zap_item:
                 self.remember_repeat_dir(dx,dy)
@@ -5856,12 +5879,17 @@ class Game:
             self.st=ST_DIR
             self.dact="Throw"
             self.throw_dir=None
+        elif self.cact=="Zap" and getattr(self, "zap_dir", None) is not None:
+            self.st=ST_DIR
+            self.dact="Zap"
+            self.zap_dir=None
         elif self.action_origin==ST_MENU:
             self.st=ST_MENU
         else:
             self.close_menu()
         if self.st != ST_DIR:
             self.throw_dir=None
+            self.zap_dir=None
     def cancel_call_prompt(self):
         # Rogue 5.4.4 command.c:call() returns without changing guesses on ESC.
         if (
@@ -5884,6 +5912,7 @@ class Game:
             self.dact=None
         elif self.dact in ("Throw", "Zap"):
             self.dact=None
+            self.zap_dir=None
             self.zap_item=None
             if self.action_origin==ST_MENU:
                 self.st=ST_MENU
@@ -7547,8 +7576,10 @@ class Game:
         elif self.st==ST_ITEM:
             if self.action_origin==ST_MENU:
                 self.draw_menu()
-                if self.cact=="Throw" and self.throw_dir is not None:
-                    self.draw_dirp("Throw")
+            if self.cact=="Throw" and self.throw_dir is not None:
+                self.draw_dirp("Throw")
+            if self.cact=="Zap" and getattr(self, "zap_dir", None) is not None:
+                self.draw_dirp("Zap")
             self.draw_isel()
         elif self.st==ST_CALL:
             if self.action_origin==ST_MENU:

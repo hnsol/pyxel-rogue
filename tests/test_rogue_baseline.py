@@ -14754,7 +14754,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw()
 
-        self.assertEqual(boxes[-3:], ["-- Action --", "Direction? [D-pad/hjklyubn]", "-- Throw --"])
+        self.assertEqual(boxes[-3:], ["-- Action --", "Which direction?", "-- Throw --"])
 
     def test_command_chain_cancel_removes_only_top_window(self):
         game = new_game(seed=4724)
@@ -14988,7 +14988,7 @@ class RogueBaselineTest(unittest.TestCase):
         boxes.clear()
         game.dact = "Trap"
         game.draw_dirp()
-        self.assertIn("罠の方向? [D-pad/hjklyubn]", boxes)
+        self.assertIn("どの方向?", boxes)
 
         boxes.clear()
         game.draw_aux()
@@ -16200,6 +16200,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(game.turn, 1)
         self.assertIn("you aren't carrying anything", game.msgs[-1])
+
+    def test_rogue_544_zap_prompts_direction_before_item_picker(self):
+        game = new_game(seed=506041)
+        set_open_floor(game)
+        stick = rogue.Item(rogue.CAT_STICK, 0, charges=1)
+        game.p.inv = [stick]
+
+        rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_Z])
+        game.begin_input()
+        game.upd_play()
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.dact, "Zap")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed=[rogue.pyxel.KEY_RIGHT])
+        game.begin_input()
+        game.upd_dir()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.cact, "Zap")
+        self.assertEqual(game.zap_dir, (1, 0))
 
     def test_rogue_544_again_command_reuses_move_on_direction(self):
         # Rogue 5.4.4 misc.c:get_dir() reuses last_dir when again is TRUE.
