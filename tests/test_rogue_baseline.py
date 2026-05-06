@@ -12103,7 +12103,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.txt = lambda x, y, s, c: calls.append(str(s))
 
         game.draw_online_register_screen()
-        self.assertIn("B cancels.", "\n".join(calls))
+        self.assertIn("B/Esc cancels.", "\n".join(calls))
         self.assertNotIn("Local names show", "\n".join(calls))
 
         calls.clear()
@@ -12413,11 +12413,12 @@ class RogueBaselineTest(unittest.TestCase):
 
         text = "\n".join(calls)
         self.assertIn("Select/L Change Language（言語切替）", text)
-        self.assertIn("A/Start OK  B LOCAL ONLY", text)
-        self.assertIn("A/Start OK  B BACK", text)
-        self.assertIn("A/Start save", text)
+        self.assertIn("A/Enter OK  B/Esc LOCAL ONLY", text)
+        self.assertIn("A/Enter OK  B/Esc BACK", text)
+        self.assertIn("A/Enter save", text)
         self.assertNotIn("A NEXT/END", text)
         self.assertNotIn("UP/DOWN CHANGE", text)
+        self.assertNotIn("LEFT/RIGHT MOVE", text)
 
     def test_online_registration_language_hint_is_below_action_hint(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12431,7 +12432,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_register_screen()
 
-        self.assertIn((138, 216, "A/Start 決定  B ローカルのみ", rogue.UI_HILITE_COL), calls)
+        self.assertIn((138, 216, "A/Enter 決定  B/Esc ローカルのみ", rogue.UI_HILITE_COL), calls)
         self.assertIn((138, 230, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
         self.assertNotIn((314, 42, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
 
@@ -13247,7 +13248,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("得点 名前", text)
         self.assertIn("ace*: 3階で中断。", text)
         self.assertIn("ローカルのみ。Selectでオンライン登録。", text)
-        self.assertIn("左右:ボード  Select:通信/登録  B:戻る", text)
+        self.assertIn("D-pad/矢印:ボード  Select/Tab:通信/登録  B/Esc:戻る", text)
         self.assertIn("名前登録で1日1回投稿できます。", text)
         self.assertIn("ランキング更新。", text)
         self.assertIn("POSTは24時間に1回。", text)
@@ -13464,6 +13465,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any(text == "ver 5.4" for text, _c, _x in calls))
         self.assertTrue(any(text == "START" and c == rogue.TITLE_MENU_SELECTED_COL for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
+
+    def test_name_input_guides_list_gamepad_before_keyboard(self):
+        game = new_game(seed=6101)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_name_input()
+        text = "\n".join(calls)
+
+        self.assertIn("D-pad/Arrows: Change/Move", text)
+        self.assertIn("A/Enter NEXT/END  Start/Space OK  B/Esc DEL", text)
+        self.assertNotIn("UP/DOWN CHANGE", text)
+        self.assertNotIn("LEFT/RIGHT MOVE", text)
 
     def test_title_menu_uses_readable_flexoki_slots_on_title_palette(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -14793,15 +14807,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(log_box[4], "")
         self.assertEqual([s for *_xy, s, _c in inventory_calls].count("Inventory"), 1)
         self.assertEqual([s for *_xy, s, _c in calls].count("Log"), 1)
-        self.assertTrue(any("Left/Right" in s for *_xy, s, _c in inventory_calls))
-        self.assertTrue(any("Left/Right" in s for *_xy, s, _c in calls))
+        self.assertTrue(any("D-pad/Arrows" in s for *_xy, s, _c in inventory_calls))
+        self.assertTrue(any("D-pad/Arrows" in s for *_xy, s, _c in calls))
 
         game.lang = rogue.LANG_JA
         calls.clear()
         game.draw_log()
         text = [s for *_xy, s, _c in calls]
         self.assertIn("ログ", text)
-        self.assertTrue(any("左右" in s and "補助" in s for s in text))
+        self.assertTrue(any("D-pad/矢印" in s and "補助" in s for s in text))
 
     def test_diagonal_attack_is_blocked_through_door_corner(self):
         game = new_game(seed=48)

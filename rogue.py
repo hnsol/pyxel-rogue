@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0027"
+UI_BUILD = "260507_0030"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -242,8 +242,8 @@ ONLINE_UI_TEXT = {
     LANG_EN: {
         "confirm_title": "Online Scoreboard",
         "confirm_prompt": "Register a name for online scores?",
-        "confirm_register": "A/Start register",
-        "confirm_local": "B local only",
+        "confirm_register": "A/Enter register",
+        "confirm_local": "B/Esc local only",
         "confirm_mark": "Local-only names show a trailing *.",
         "language_hint": "Select/L Change Language（言語切替）",
         "score_title_local": "My Rogue Chronicle",
@@ -251,9 +251,9 @@ ONLINE_UI_TEXT = {
         "score_title_season": "Season Legends",
         "score_period_local": "Local",
         "score_header": "   Score Name",
-        "score_hint": "LEFT/RIGHT BOARDS  SELECT SYNC/REGISTER  B BACK",
+        "score_hint": "D-pad/Arrows BOARDS  Select/Tab SYNC/REGISTER  B/Esc BACK",
         "score_register_prompt": "Register a name to sync once per day.",
-        "score_register_hint": "A/Select register   B local only",
+        "score_register_hint": "A/Enter register   B/Esc local only",
         "score_register_mark": "Local-only names show a trailing *.",
         "period_week": "This Week",
         "period_season": "This Season",
@@ -262,21 +262,21 @@ ONLINE_UI_TEXT = {
         "post_after": "POST after",
         "register_title": "Online Registration",
         "register_prompt": "Register an 8-char lowercase name.",
-        "register_cancel": "B cancels.",
-        "register_local": "B keeps local-only mode. Local names show *.",
-        "register_hint": "A/Start OK  B LOCAL ONLY",
-        "register_cancel_hint": "A/Start OK  B CANCEL",
+        "register_cancel": "B/Esc cancels.",
+        "register_local": "B/Esc keeps local-only mode. Local names show *.",
+        "register_hint": "A/Enter OK  B/Esc LOCAL ONLY",
+        "register_cancel_hint": "A/Enter OK  B/Esc CANCEL",
         "local_confirm_title": "Local Only",
         "local_confirm_prompt": "Save this name for local play only?",
-        "local_confirm_ok": "A/Start save",
-        "local_confirm_cancel": "B cancel",
+        "local_confirm_ok": "A/Enter save",
+        "local_confirm_cancel": "B/Esc cancel",
         "pin_title": "6-Digit PIN",
         "pin_server": "This PIN is stored on the server",
         "pin_reuse": "without encryption. Do not reuse it.",
         "pin_link_title": "Verify PIN",
         "pin_link_server": "This name exists on the server.",
         "pin_link_reuse": "Enter its PIN to link this device.",
-        "pin_hint": "A/Start OK  B BACK",
+        "pin_hint": "A/Enter OK  B/Esc BACK",
         "sync_title": "sync",
         "sync_scores": "Syncing scores...",
         "refresh_ranking": "Refreshing ranking...",
@@ -304,8 +304,8 @@ ONLINE_UI_TEXT = {
     LANG_JA: {
         "confirm_title": "オンラインスコア",
         "confirm_prompt": "オンラインスコアに名前を登録しますか?",
-        "confirm_register": "A/Start 登録",
-        "confirm_local": "B ローカルのみ",
+        "confirm_register": "A/Enter 登録",
+        "confirm_local": "B/Esc ローカルのみ",
         "confirm_mark": "ローカル名には * が付きます。",
         "language_hint": "Select/L Change Language（言語切替）",
         "score_title_local": "冒険の記録",
@@ -313,9 +313,9 @@ ONLINE_UI_TEXT = {
         "score_title_season": "シーズンレジェンド",
         "score_period_local": "ローカル",
         "score_header": "   得点 名前",
-        "score_hint": "左右:ボード  Select:通信/登録  B:戻る",
+        "score_hint": "D-pad/矢印:ボード  Select/Tab:通信/登録  B/Esc:戻る",
         "score_register_prompt": "名前登録で1日1回投稿できます。",
-        "score_register_hint": "A/Select 登録  B ローカルのみ",
+        "score_register_hint": "A/Enter 登録  B/Esc ローカルのみ",
         "score_register_mark": "ローカル名には * が付きます。",
         "period_week": "今週",
         "period_season": "今シーズン",
@@ -324,21 +324,21 @@ ONLINE_UI_TEXT = {
         "post_after": "POST可能",
         "register_title": "オンライン登録",
         "register_prompt": "8文字の小文字名を登録し、通信で確認します。",
-        "register_cancel": "B キャンセル",
-        "register_local": "Bでローカルのみ。ローカル名は * 付き。",
-        "register_hint": "A/Start 決定  B ローカルのみ",
-        "register_cancel_hint": "A/Start 決定  B キャンセル",
+        "register_cancel": "B/Esc キャンセル",
+        "register_local": "B/Escでローカルのみ。ローカル名は * 付き。",
+        "register_hint": "A/Enter 決定  B/Esc ローカルのみ",
+        "register_cancel_hint": "A/Enter 決定  B/Esc キャンセル",
         "local_confirm_title": "ローカル専用",
         "local_confirm_prompt": "この名前をローカル専用で保存しますか?",
-        "local_confirm_ok": "A/Start 保存",
-        "local_confirm_cancel": "B キャンセル",
+        "local_confirm_ok": "A/Enter 保存",
+        "local_confirm_cancel": "B/Esc キャンセル",
         "pin_title": "6桁PIN",
         "pin_server": "PINはサーバに平文保存されます。",
         "pin_reuse": "他の場所のパスワードを使わないでください。",
         "pin_link_title": "PIN確認",
         "pin_link_server": "この名前はサーバにあります。",
         "pin_link_reuse": "本人ならPINを入力してください。",
-        "pin_hint": "A/Start 決定  B 戻る",
+        "pin_hint": "A/Enter 決定  B/Esc 戻る",
         "sync_title": "通信",
         "sync_scores": "スコア同期中...",
         "refresh_ranking": "ランキング更新中...",
@@ -7225,8 +7225,8 @@ class Game:
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(154, 210, "UP/DOWN CHANGE  LEFT/RIGHT MOVE", UI_TEXT_COL)
-        self.txt(184, 226, "A NEXT/END  START OK  B DEL", UI_TEXT_COL)
+        self.txt(124, 210, "D-pad/Arrows: Change/Move", UI_TEXT_COL)
+        self.txt(132, 226, "A/Enter NEXT/END  Start/Space OK  B/Esc DEL", UI_TEXT_COL)
 
     def draw_online_confirm_screen(self):
         self._box(116, 84, 348, 132, self.online_text("confirm_title"))
@@ -7661,8 +7661,8 @@ class Game:
 
     def info_guide_label(self):
         if self.lang == LANG_JA:
-            return "左右: タブ   Select/Tab: 補助"
-        return "Left/Right: Tab   Select/Tab: Assist"
+            return "D-pad/矢印: タブ   Select/Tab: 補助"
+        return "D-pad/Arrows: Tab   Select/Tab: Assist"
 
     def draw_info_tabs(self, x, y, active):
         for name in ("Inventory", "Log"):
