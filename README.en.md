@@ -1,8 +1,8 @@
 [English | [日本語](README.md)]
 
-# Pyxel Rogue
+# Rogue V5 on Pyxel
 
-Pyxel Rogue is an ASCII-based roguelike made with Pyxel, aiming to recreate the original Rogue experience.
+Rogue V5 on Pyxel is an ASCII-based roguelike made with Pyxel, aiming to recreate the original Rogue experience.
 
 The goal is for clearing this Pyxel version to mean that you could clear real Rogue 5.4.4. It keeps the feel of the Rogue V5 line in mind, uses the Rogue 5.4.4 C source as the primary reference for game mechanics, and adapts display, input, and portability for Pyxel and Pyxel Web.
 
@@ -18,7 +18,7 @@ For detailed design notes, see [DESIGN.md](DESIGN.md). For the task list and cur
 
 ## Screenshot
 
-![Pyxel Rogue screenshot](docs/images/pyxel-rogue-screenshot.png)
+![Rogue V5 on Pyxel screenshot](docs/images/pyxel-rogue-screenshot.png)
 
 Gameplay view with the Rogue 5.4.4-style 80-column ASCII map, right-side HUD, and bottom log.
 
@@ -26,7 +26,7 @@ Gameplay view with the Rogue 5.4.4-style 80-column ASCII map, right-side HUD, an
 
 You can launch the game in a browser with Pyxel Web Launcher.
 
-[Launch Pyxel Rogue on the Web](https://kitao.github.io/pyxel/web/launcher/?run=hnsol/pyxel-rogue/master/rogue&gamepad=enabled)
+[Launch Rogue V5 on Pyxel on the Web](https://kitao.github.io/pyxel/web/launcher/?run=hnsol/pyxel-rogue/master/rogue&gamepad=enabled)
 
 The web version lets you try the game without installing Python or Pyxel locally. The URL enables the virtual gamepad, which is useful for phones and tablets.
 
