@@ -27,13 +27,13 @@ class CombatMessageTests(unittest.TestCase):
         game = new_game(seed=101)
         with ForcedRnd(2):
             msg = game.player_hit_message("the hobgoblin")
-        self.assertEqual(msg, "You have injured the hobgoblin")
+        self.assertEqual(msg, "you have injured the hobgoblin")
 
     def test_player_miss_message_uses_fight_c_variants(self):
         game = new_game(seed=102)
         with ForcedRnd(1):
             msg = game.player_miss_message("the hobgoblin")
-        self.assertEqual(msg, "You swing and miss the hobgoblin")
+        self.assertEqual(msg, "you swing and miss the hobgoblin")
 
     def test_monster_hit_message_uses_fight_c_variants(self):
         game = new_game(seed=103)

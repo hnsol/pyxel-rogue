@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0047"
+UI_BUILD = "260507_0054"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -2065,6 +2065,8 @@ class Game:
             self.run_visuals()
         self.msg_toast_block = None
         self.msg_toast_reposition_needed = True
+        if getattr(self, "msgs", None):
+            self.refresh_msg_toast_block()
 
     def usable_rooms(self):
         return [room for room in self.rooms if room.usable] or self.rooms
@@ -2545,6 +2547,7 @@ class Game:
     def _append_msg(self, text):
         if len(getattr(self, "msg_turns", [])) != len(self.msgs):
             self.msg_turns = [self.turn] * len(self.msgs)
+        text = self.normalize_log_message(text)
         self.msgs.append(text)
         self.msg_turns.append(self.turn)
         if getattr(self, "msg_toast_block", None) is None or getattr(self, "msg_toast_reposition_needed", False):
@@ -2554,6 +2557,16 @@ class Game:
             self.msgs = self.msgs[drop:]
             self.msg_turns = self.msg_turns[drop:]
             self.turn_msg_start = max(0, self.turn_msg_start - drop)
+
+    def normalize_log_message(self, text):
+        text = str(text)
+        if text.startswith("You "):
+            text = "you " + text[4:]
+        if text.endswith("。"):
+            text = text[:-1]
+        elif text.endswith(".") and not text.endswith("..."):
+            text = text[:-1]
+        return text
 
     def refresh_msg_toast_block(self):
         home = msg_toast_home_block(self.p.x, self.p.y)
@@ -4755,9 +4768,7 @@ class Game:
             self.msg("pyxel.wrenching_sensation_gut")
             self.end_turn()
             return
-        self.msg("pyxel.descend_to_depth", depth=p.depth + 1)
         self.descend()
-        self.msg("pyxel.dungeon_depth", depth=p.depth)
         self.end_turn()
 
     def stairs_down_command(self):
@@ -4770,9 +4781,7 @@ class Game:
             self.msg("command.i_see_no_way_down")
             self.command_look_done = False
             return
-        self.msg("pyxel.descend_to_depth", depth=self.p.depth + 1)
         self.descend()
-        self.msg("pyxel.dungeon_depth", depth=self.p.depth)
         self.command_look_done = False
         self.end_turn()
 

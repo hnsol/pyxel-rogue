@@ -2277,7 +2277,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((food.x, food.y), game.visible)
         self.assertIn((food.x, food.y), game.explored)
         self.assertNotIn((potion.x, potion.y), game.visible)
-        self.assertIn("Your nose tingles and you smell food.", game.msgs)
+        self.assertIn("your nose tingles and you smell food", game.msgs)
 
     def test_rogue_544_scroll_food_detection_without_food_does_not_identify(self):
         # Rogue 5.4.4 scrolls.c:S_FDET leaves scr_info unknown when no FOOD is present.
@@ -3617,7 +3617,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(game.ident.pk[kind])
         self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
-        self.assertNotIn("You sense monsters.", game.msgs)
+        self.assertNotIn("you sense monsters", game.msgs)
 
     def test_rogue_544_monster_detection_visible_monsters_use_feeling_message(self):
         # Rogue 5.4.4 potions.c:turn_see(FALSE) reports add_new only for monsters not already see_monst().
@@ -3633,7 +3633,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.use_pot(potion)
 
         self.assertIn("you have a strange feeling for a moment, then it passes", game.msgs)
-        self.assertNotIn("You sense monsters.", game.msgs)
+        self.assertNotIn("you sense monsters", game.msgs)
 
     def test_rogue_544_monster_detection_unseen_room_monster_senses_monsters(self):
         # Rogue 5.4.4 potions.c:turn_see(FALSE) sets add_new when chase.c:see_monst() is false.
@@ -3648,7 +3648,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_pot(potion)
 
-        self.assertIn("You sense monsters.", game.msgs)
+        self.assertIn("you sense monsters", game.msgs)
         self.assertNotIn("you have a strange feeling for a moment, then it passes", game.msgs)
 
     def test_rogue_544_magic_detection_sees_monster_pack_magic(self):
@@ -5647,11 +5647,12 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_pot(rogue.Item(rogue.CAT_POT, potion_kind))
 
-        self.assertIn("oh, wow!  You're floating in the air!", game.msgs)
+        self.assertIn("oh, wow!  you're floating in the air!", game.msgs)
         self.assertNotIn("you start to float in the air", game.msgs)
 
     def test_rogue_544_land_while_hallucinating_uses_high_message(self):
-        # Rogue 5.4.4 daemons.c:land() uses choose_str("bummer!  You've hit the ground", ...).
+        # Rogue 5.4.4 daemons.c:land() uses choose_str("bummer!  You've hit the ground", ...);
+        # the Pyxel message catalog normalizes player-facing logs to lowercase you.
         game = new_game(seed=316)
         game.p.levitating = 1
         game.p.hallucinating = 10
@@ -5659,7 +5660,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.land()
 
         self.assertEqual(game.p.levitating, 0)
-        self.assertIn("bummer!  You've hit the ground", game.msgs)
+        self.assertIn("bummer!  you've hit the ground", game.msgs)
         self.assertNotIn("you float gently to the ground", game.msgs)
 
     def test_rogue_544_legacy_levitation_counter_lands_with_high_message(self):
@@ -5674,7 +5675,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.end_turn()
 
         self.assertEqual(game.p.levitating, 0)
-        self.assertIn("bummer!  You've hit the ground", game.msgs)
+        self.assertIn("bummer!  you've hit the ground", game.msgs)
         self.assertNotIn("you float gently to the ground", game.msgs)
 
     def test_rogue_544_potion_hallucination_uses_spread_seeduration_and_comes_down(self):
@@ -5703,7 +5704,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.p.hallucinating, 0)
         self.assertEqual(game.fuses.remaining("come_down"), 0)
-        self.assertIn("Everything looks SO boring now.", game.msgs)
+        self.assertIn("Everything looks SO boring now", game.msgs)
 
     def test_rogue_544_hallucination_starts_visuals_before_daemon(self):
         # Rogue 5.4.4 potions.c:P_LSD starts daemons.c:visuals as a BEFORE daemon on first trip.
@@ -6082,7 +6083,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn(item, game.gitems)
         self.assertNotIn(item, game.p.inv)
-        self.assertIn("You can't.  You're floating off the ground!", game.msgs)
+        self.assertIn("you can't.  you're floating off the ground!", game.msgs)
 
         game.gitems = []
         game.tm[game.p.y][game.p.x] = rogue.T_STAIR
@@ -6091,7 +6092,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.do_action()
 
         self.assertEqual(game.p.depth, old_depth)
-        self.assertIn("You can't.  You're floating off the ground!", game.msgs)
+        self.assertIn("you can't.  you're floating off the ground!", game.msgs)
 
         game.tm[game.p.y][game.p.x] = rogue.T_FLOOR
         x, y = game.p.x + 1, game.p.y
@@ -6208,7 +6209,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.use_pot(potion)
 
         self.assertEqual(game.p.hallucinating, 0)
-        self.assertIn("Everything looks SO boring now.", game.msgs)
+        self.assertIn("Everything looks SO boring now", game.msgs)
 
     def test_rogue_544_poison_potion_uses_original_sick_message(self):
         # Rogue 5.4.4 potions.c:P_POISON says "you feel very sick now" after chg_str().
@@ -6475,7 +6476,7 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(
             rogue.TextCatalog.msg(rogue.LANG_JA, "command.no_monster_there"),
-            "その方向には怪物がいない。",
+            "その方向には怪物がいない",
         )
 
     def test_text_catalog_falls_back_to_english_for_missing_ja_key(self):
@@ -7196,7 +7197,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.p.ring_l, left)
         self.assertIs(game.p.ring_r, right)
         self.assertEqual(game.turn, turn + 1)
-        self.assertIn("You already have a ring on each hand.", game.msgs)
+        self.assertIn("you already have a ring on each hand", game.msgs)
 
     def test_rogue_544_rings_helper_ring_on_result_matches_ring_on_gates(self):
         # Rogue 5.4.4 rings.c:ring_on() gates non-ring, current ring, and wearing-two.
@@ -9769,7 +9770,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.do_action()
 
         self.assertEqual(game.st, rogue.ST_WIN)
-        self.assertIn("You escaped with the Amulet of Yendor!", game.msgs)
+        self.assertIn("you escaped with the Amulet of Yendor!", game.msgs)
 
     def test_ident_table_names_in_both_languages(self):
         random.seed(3)
@@ -9855,7 +9856,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.lang, rogue.LANG_JA)
         self.assertEqual(game.ident.lang, rogue.LANG_JA)
         self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertIn("言語: 日本語。", game.msgs)
+        self.assertIn("言語: 日本語", game.msgs)
         self.assertEqual(
             before,
             (
@@ -9881,7 +9882,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.lang, rogue.LANG_EN)
         self.assertEqual(game.ident.lang, rogue.LANG_EN)
-        self.assertIn("Language: English.", game.msgs)
+        self.assertIn("Language: English", game.msgs)
 
     def test_settings_collect_display_and_input_options_without_changing_state(self):
         game = new_game(seed=240, lang=rogue.LANG_JA)
@@ -9984,7 +9985,7 @@ class RogueBaselineTest(unittest.TestCase):
                 rogue.pyxel.colors[: len(rogue.FLEXOKI_LIGHT_PALETTE)],
                 rogue.FLEXOKI_LIGHT_PALETTE,
             )
-            self.assertIn("Palette: Flexoki Light.", game.msgs)
+            self.assertIn("Palette: Flexoki Light", game.msgs)
             self.assertEqual(
                 before,
                 (
@@ -10010,7 +10011,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.food = rogue.MORETIME * 2
         game.end_turn()
         self.assertEqual(game.p.state, "hungry")
-        self.assertIn("You feel hungry.", game.msgs)
+        self.assertIn("you feel hungry", game.msgs)
         self.assertTrue(game.message_ack_pending)
 
         game.p.hp = 10
@@ -10054,6 +10055,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, 1)
         self.assertEqual(game.p.depth, old_depth + 1)
+        self.assertFalse(any("descend" in msg.lower() for msg in game.msgs))
+        self.assertFalse(any("depth" in msg.lower() for msg in game.msgs[1:]))
 
     def test_first_move_auto_pickup_does_not_refresh_welcome_message_age(self):
         game = new_game(seed=3101)
@@ -10828,6 +10831,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた。"), ["大こうもりに見事な一撃を与", "えた"])
         self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた！"), ["大こうもりに見事な一撃を与", "えた！"])
         self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた？"), ["大こうもりに見事な一撃を与", "えた？"])
+
+    def test_message_log_normalizes_sentence_case_and_terminal_stops(self):
+        game = new_game(seed=3761)
+        game.msgs = []
+        game.msg_turns = []
+
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "pyxel.wield_item", item="mace"), "you wield the mace")
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "fight.player_hit", target="the bat"), "you hit the bat")
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_JA, "pyxel.pick_up_item", item="食料"), "食料を手に入れた")
+
+        game.msg_text("You wield the mace.")
+        game.msg_text("you can't.  It appears to be cursed.")
+        game.msg_text("You descend to depth 2...")
+        game.lang = rogue.LANG_JA
+        game.msg_text("大こうもりに見事な一撃を与えた。")
+        game.msg_text("大こうもりに見事な一撃を与えた！")
+
+        self.assertEqual(game.msgs, [
+            "you wield the mace",
+            "you can't.  It appears to be cursed",
+            "you descend to depth 2...",
+            "大こうもりに見事な一撃を与えた",
+            "大こうもりに見事な一撃を与えた！",
+        ])
 
     def test_message_toast_height_latches_while_old_lines_expire(self):
         game = new_game(seed=3751)
@@ -14041,7 +14068,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.use_pot(potion)
 
         self.assertEqual(game.p.hallucinating, 0)
-        self.assertIn("Everything looks SO boring now.", game.msgs)
+        self.assertIn("Everything looks SO boring now", game.msgs)
 
     def test_rogue_544_come_down_blind_suppresses_boring_message(self):
         # Rogue 5.4.4 daemons.c:come_down() returns before msg() while ISBLIND.
@@ -14052,7 +14079,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.come_down()
 
         self.assertEqual(game.p.hallucinating, 0)
-        self.assertNotIn("Everything looks SO boring now.", game.msgs)
+        self.assertNotIn("Everything looks SO boring now", game.msgs)
 
     def test_rogue_544_healing_can_raise_max_hp_by_one(self):
         # Rogue 5.4.4 potions.c:P_HEALING sets hp = ++max_hp, then uses a plain msg.
@@ -16673,7 +16700,7 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input()
 
         self.assertEqual(game.st, rogue.ST_WIN)
-        self.assertIn("You escaped with the Amulet of Yendor!", game.msgs)
+        self.assertIn("you escaped with the Amulet of Yendor!", game.msgs)
 
     def test_visible_mean_monster_can_wake_and_run(self):
         game = new_game(seed=502)
@@ -17868,7 +17895,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertIn("You have found arrow trap.", game.msgs)
+        self.assertIn("you have found arrow trap", game.msgs)
 
     def test_trap_inspect_reports_no_trap_and_does_not_reveal_hidden_traps(self):
         game = new_game(seed=52)
@@ -17906,7 +17933,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(game.turn, 0)
-        self.assertIn("You have found bear trap.", game.msgs)
+        self.assertIn("you have found bear trap", game.msgs)
 
     def test_keyboard_caret_enters_trap_direction_prompt(self):
         game = new_game(seed=54)
@@ -17929,7 +17956,7 @@ class RogueBaselineTest(unittest.TestCase):
         )
         game.update()
         self.assertEqual(game.turn, 0)
-        self.assertIn("You have found teleport trap.", game.msgs)
+        self.assertIn("you have found teleport trap", game.msgs)
 
     def test_keyboard_rogue_commands_start_existing_actions_only_in_play(self):
         cases = [
@@ -18096,7 +18123,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
 
         self.assertEqual(game.st, rogue.ST_ITEM)
-        self.assertIn("「m」は持ちものではない。", game.msgs)
+        self.assertIn("「m」は持ちものではない", game.msgs)
 
     def test_rogue_544_item_overlay_shift_letter_is_invalid_uppercase_packch(self):
         # Rogue 5.4.4 pack.c:get_item() compares readchar() to lowercase o_packch;
@@ -18882,7 +18909,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.rnd = old_rnd
 
-        self.assertIn("red火花がよろいの上で踊った。", game.msgs)
+        self.assertIn("red火花がよろいの上で踊った", game.msgs)
         self.assertNotIn("redの火花がよろいの上で踊った。", game.msgs)
 
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
