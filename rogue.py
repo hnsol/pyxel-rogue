@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0025"
+UI_BUILD = "260507_0027"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -7661,8 +7661,8 @@ class Game:
 
     def info_guide_label(self):
         if self.lang == LANG_JA:
-            return "左右: タブ   Tab/Select: 補助"
-        return "Left/Right: Tab   Tab/Select: Assist"
+            return "左右: タブ   Select/Tab: 補助"
+        return "Left/Right: Tab   Select/Tab: Assist"
 
     def draw_info_tabs(self, x, y, active):
         for name in ("Inventory", "Log"):

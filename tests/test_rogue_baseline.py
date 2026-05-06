@@ -10597,7 +10597,7 @@ class RogueBaselineTest(unittest.TestCase):
         inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
         self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
         self.assertLessEqual(boxes[-1][1] + boxes[-1][3], rogue.SCR_H)
-        self.assertTrue(any("Tab/Select: Assist" in s for _x, _y, s, _c in calls))
+        self.assertTrue(any("Select/Tab: Assist" in s for _x, _y, s, _c in calls))
 
     def test_inventory_stays_one_column_for_ten_items(self):
         game = new_game(seed=3713)
@@ -18154,6 +18154,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("--- Gamepad ---", text)
         self.assertIn("--- Keyboard: Pad ---", text)
         self.assertIn("--- Keyboard commands ---", text)
+        self.assertNotIn("Tab/Select", text)
         self.assertIn("Enter+Esc", text)
         self.assertIn("</> Stairs", text)
         self.assertIn("q Quaff", text)
