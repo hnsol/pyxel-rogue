@@ -9491,15 +9491,15 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
-        game.msgs = ["hidden", "faint", "dim", "soft", "latest"]
-        game.msg_turns = [0, 1, 2, 4, 6]
+        game.msgs = ["hidden", "faint", "dim", "soft", "fresh", "latest"]
+        game.msg_turns = [0, 1, 2, 4, 5, 6]
         game.turn = 6
 
         game.draw_msgs()
 
         self.assertEqual(rogue.MSG_TOAST_LINES, 5)
-        self.assertEqual([text for text, _ in calls], ["faint", "dim", "soft", "latest"])
-        self.assertEqual([color for _, color in calls], [6, 7, 8, 30])
+        self.assertEqual([text for text, _ in calls], ["faint", "dim", "soft", "fresh", "latest"])
+        self.assertEqual([color for _, color in calls], [3, 3, 6, 5, 9])
         self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
         self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
 
