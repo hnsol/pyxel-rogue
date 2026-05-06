@@ -8901,6 +8901,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 1)
         self.assertEqual(game.p.depth, old_depth + 1)
 
+    def test_stairs_reposition_message_toast_for_new_player_block(self):
+        game = new_game(seed=3111)
+        set_open_floor(game)
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+        game.msg_toast_block = (1, 1)
+        game.msg_toast_reposition_needed = False
+        game.last_intent_dir = (0, 0)
+        game.random_room_tile = lambda room, tiles: (2, rogue.PLAY_Y_MIN + 1)
+
+        game.use_stairs()
+
+        self.assertEqual(rogue.msg_toast_home_block(game.p.x, game.p.y), (0, 0))
+        self.assertEqual(game.msg_toast_block, (0, 1))
+
     def test_auto_pickup_can_be_toggled_and_manual_pickup_still_works(self):
         game = new_game(seed=32)
         game.mons = []
@@ -9497,250 +9511,210 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_msgs()
 
-        self.assertEqual(rogue.MSG_TOAST_LINES, 5)
-        self.assertEqual([text for text, _ in calls], ["faint", "dim", "soft", "fresh", "latest"])
-        self.assertEqual([color for _, color in calls], [3, 3, 6, 5, 9])
+        calls = [(s, c) for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+        self.assertEqual(rogue.MSG_TOAST_LINES, 7)
+        self.assertEqual([text for text, _ in calls], ["latest", "fresh", "soft", "dim", "faint"])
+        self.assertEqual([color for _, color in calls], [9, 5, 6, 3, 3])
         self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
         self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
 
-    def test_message_toast_hides_after_dim_turns_and_defaults_to_left_bottom(self):
+    def test_message_toast_grid_home_block_uses_80_by_22_map(self):
+        self.assertEqual(rogue.msg_toast_home_block(0, rogue.PLAY_Y_MIN), (0, 0))
+        self.assertEqual(rogue.msg_toast_home_block(26, rogue.PLAY_Y_MIN + 6), (0, 0))
+        self.assertEqual(rogue.msg_toast_home_block(27, rogue.PLAY_Y_MIN + 7), (1, 1))
+        self.assertEqual(rogue.msg_toast_home_block(79, rogue.PLAY_Y_MAX), (2, 2))
+
+    def test_message_toast_neighbor_prefers_opposite_last_intent_direction(self):
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 0)), (0, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 1)), (1, 0))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 1)), (1, 0))
+
+    def test_message_toast_neighbor_falls_back_deterministically_at_edges(self):
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 0)), (1, 2))
+        self.assertEqual(rogue.pick_msg_toast_block((0, 0), (-1, -1)), (0, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((2, 2), (1, 1)), (2, 1))
+
+    def test_message_toast_draws_in_neighbor_block_with_shadow_without_frame(self):
         game = new_game(seed=35)
-        set_open_floor(game)
         calls = []
         rect_calls = []
-        old_rect = rogue.pyxel.rect
-        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        rectb_calls = []
+        old_rect, old_rectb = rogue.pyxel.rect, rogue.pyxel.rectb
         try:
             rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.msgs = ["gone", "visible"]
-            game.msg_turns = [0, 2]
-            game.turn = 7
-            game.p.x = 60
-            game.p.y = rogue.PLAY_Y_MIN
-
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        self.assertEqual([s for _, _, s, _ in calls], ["visible"])
-        bx, by, _bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + 4)
-        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
-
-    def test_message_toast_moves_right_bottom_when_left_bottom_would_cover_player_area(self):
-        game = new_game(seed=351)
-        set_open_floor(game)
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.msgs = ["visible"]
-            game.msg_turns = [0]
-            game.turn = 0
-            game.msg_toast_rows = rogue.MSG_TOAST_LINES
-            game.p.x = 12
-            game.p.y = rogue.PLAY_Y_MAX - 2
-
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        bx, by, bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + rogue.ZV_PX_W - bw - 4)
-        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
-
-    def test_message_toast_moves_left_top_when_both_bottom_positions_cover_player_area(self):
-        game = new_game(seed=352)
-        set_open_floor(game)
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.msgs = ["visible " * 8]
-            game.msg_turns = [0]
-            game.turn = 0
-            game.msg_toast_rows = rogue.MSG_TOAST_LINES
+            rogue.pyxel.rectb = lambda *args: rectb_calls.append(args)
+            game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+            game.msgs = []
+            game.msg_turns = []
+            game.msg_toast_block = None
+            game.msg_toast_reposition_needed = True
             game.p.x = 40
-            game.p.y = rogue.PLAY_Y_MAX - 2
-
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        bx, by, _bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + 4)
-        self.assertLess(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
-
-    def test_message_toast_position_uses_hysteresis_before_returning_left_bottom(self):
-        game = new_game(seed=353)
-        set_open_floor(game)
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.msgs = ["visible"]
-            game.msg_turns = [0]
-            game.turn = 0
-            game.msg_toast_rows = rogue.MSG_TOAST_LINES
-            game.msg_toast_side = "right_bottom"
-            game.p.x = 12
             game.p.y = rogue.PLAY_Y_MIN + 10
-
+            game.last_intent_dir = (1, 0)
+            game.msg_text("visible")
             game.draw_msgs()
         finally:
             rogue.pyxel.rect = old_rect
+            rogue.pyxel.rectb = old_rectb
 
-        bx, _by, bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + rogue.ZV_PX_W - bw - 4)
+        self.assertFalse(rect_calls)
+        self.assertFalse(rectb_calls)
+        block = rogue.msg_toast_home_block(0, game.p.y)
+        x, y = rogue.msg_toast_block_origin(block, game.msg_toast_rows)
+        self.assertIn((x + 1, y + 1, ">", rogue.MSG_TOAST_SHADOW_COL), calls)
+        self.assertIn((x, y, ">", 9), calls)
+        self.assertIn((x + 2 * rogue.FONT_ASCII_W + 1, y + 1, "visible", rogue.MSG_TOAST_SHADOW_COL), calls)
+        self.assertIn((x + 2 * rogue.FONT_ASCII_W, y, "visible", 9), calls)
+        self.assertEqual(game.msg_toast_block, block)
 
-    def test_message_toast_keeps_bottom_when_only_stairs_are_under_right_bottom(self):
-        game = new_game(seed=354)
-        set_open_floor(game)
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.msgs = ["visible " * 8]
-            game.msg_turns = [0]
-            game.turn = 0
-            game.msg_toast_rows = rogue.MSG_TOAST_LINES
-            game.p.x = 5
-            game.p.y = rogue.PLAY_Y_MAX - 2
-            game.tm[rogue.PLAY_Y_MAX - 2][68] = rogue.T_STAIR
-            game.visible.add((68, rogue.PLAY_Y_MAX - 2))
-
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        bx, by, bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + rogue.ZV_PX_W - bw - 4)
-        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
-
-    def test_message_toast_prefers_stairs_over_visible_monster(self):
-        game = new_game(seed=355)
-        set_open_floor(game)
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.msgs = ["visible " * 8]
-            game.msg_turns = [0]
-            game.turn = 0
-            game.msg_toast_rows = rogue.MSG_TOAST_LINES
-            game.p.x = 40
-            game.p.y = rogue.PLAY_Y_MIN + 3
-            game.tm[rogue.PLAY_Y_MAX - 2][18] = rogue.T_STAIR
-            game.visible.add((18, rogue.PLAY_Y_MAX - 2))
-            monster = rogue.Monster(68, rogue.PLAY_Y_MAX - 2, "H", "hobgoblin", 8, 1, 5, "1x8", 3, "")
-            game.mons = [monster]
-            game.visible.add((monster.x, monster.y))
-
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        bx, by, bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + 4)
-        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
-
-    def test_message_toast_treats_detected_monsters_as_lower_priority_than_seen_monsters(self):
-        game = new_game(seed=356)
-        set_open_floor(game)
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.msgs = ["visible " * 8]
-            game.msg_turns = [0]
-            game.turn = 0
-            game.msg_toast_rows = rogue.MSG_TOAST_LINES
-            game.p.x = 40
-            game.p.y = rogue.PLAY_Y_MIN + 3
-            game.p.see_monsters = 20
-            detected = rogue.Monster(18, rogue.PLAY_Y_MAX - 2, "H", "hobgoblin", 8, 1, 5, "1x8", 3, "")
-            seen = rogue.Monster(68, rogue.PLAY_Y_MAX - 2, "B", "bat", 4, 1, 8, "1x2", 1, "")
-            game.mons = [detected, seen]
-            game.visible.add((seen.x, seen.y))
-
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        bx, by, bw, _bh, _col = rect_calls[-1]
-        self.assertEqual(bx, rogue.ZV_X + 4)
-        self.assertGreater(by, rogue.ZV_Y + rogue.ZV_PX_H // 2)
-
-    def test_message_toast_width_fits_text_instead_of_full_dungeon_width(self):
+    def test_message_toast_wraps_at_23_columns(self):
         game = new_game(seed=375)
-        game.msgs = ["short"]
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.msgs = ["abcdefghijklmnopqrstuvwxyz"]
         game.msg_turns = [0]
         game.turn = 0
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
+        game.draw_msgs()
 
-        self.assertTrue(rect_calls)
-        self.assertLess(rect_calls[-1][2], rogue.ZV_PX_W)
-        self.assertGreaterEqual(rect_calls[-1][2], rogue.FONT_ASCII_W * 40)
+        body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL]
+        self.assertEqual(rogue.MSG_COLS, 23)
+        self.assertEqual(body, [">", "abcdefghijklmnopqrstuvw", "xyz"])
+
+    def test_message_toast_right_block_text_stays_inside_map_width(self):
+        game = new_game(seed=3754)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.msgs = []
+        game.msg_turns = []
+        game.msg_toast_block = None
+        game.msg_toast_reposition_needed = True
+        game.p.x = 40
+        game.p.y = rogue.PLAY_Y_MIN + 10
+        game.last_intent_dir = (-1, 0)
+
+        game.msg_text("you have defeated the bat")
+        game.draw_msgs()
+
+        text_calls = [c for c in calls if c[2] not in (">", "!") and c[3] != rogue.MSG_TOAST_SHADOW_COL]
+        self.assertEqual([c[2] for c in text_calls], ["you have defeated the", "bat"])
+        self.assertEqual([c[0] for c in text_calls], [346, 346])
+        for x, _y, text, _col in text_calls:
+            self.assertLessEqual(x + game.ui_text_width(text), rogue.ZV_X + rogue.ZV_PX_W)
+
+    def test_message_toast_wraps_english_before_space_without_leading_space(self):
+        game = new_game(seed=3757)
+        self.assertEqual(game.wrap_msg_toast_text("you have defeated the bat"), ["you have defeated the", "bat"])
+
+    def test_message_toast_wraps_cjk_by_pixel_width_inside_map(self):
+        game = new_game(seed=3756, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.msgs = []
+        game.msg_turns = []
+        game.msg_toast_block = None
+        game.msg_toast_reposition_needed = True
+        game.p.x = 40
+        game.p.y = rogue.PLAY_Y_MIN + 10
+        game.last_intent_dir = (-1, 0)
+
+        game.msg_text("大こうもりに見事な一撃を与えた。")
+        game.draw_msgs()
+
+        text_calls = [c for c in calls if c[2] not in (">", "!") and c[3] != rogue.MSG_TOAST_SHADOW_COL]
+        self.assertEqual([c[2] for c in text_calls], ["大こうもりに見事な一撃を与", "えた"])
+        for x, _y, text, _col in text_calls:
+            self.assertLessEqual(x + game.ui_text_width(text), rogue.ZV_X + rogue.ZV_PX_W)
+
+    def test_message_toast_avoids_japanese_kinsoku_at_line_start(self):
+        game = new_game(seed=3758, lang=rogue.LANG_JA)
+        base = "あいうえおかきくけこさしす"
+        for mark in "、。！？":
+            with self.subTest(mark=mark):
+                self.assertEqual(game.wrap_msg_toast_text(base + mark + "x"), [base[:-1], base[-1] + mark + "x"])
+
+    def test_message_toast_strips_trailing_japanese_full_stop_but_keeps_marks(self):
+        game = new_game(seed=3759, lang=rogue.LANG_JA)
+        self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた。"), ["大こうもりに見事な一撃を与", "えた"])
+        self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた！"), ["大こうもりに見事な一撃を与", "えた！"])
+        self.assertEqual(game.wrap_msg_toast_text("大こうもりに見事な一撃を与えた？"), ["大こうもりに見事な一撃を与", "えた？"])
 
     def test_message_toast_height_latches_while_old_lines_expire(self):
         game = new_game(seed=3751)
         game.msgs = ["gone", "visible"]
         game.msg_turns = [0, 5]
         game.turn = 5
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.draw_msgs()
-            self.assertEqual(rect_calls[-1][3], 2 * rogue.MSG_LINE_H + 6)
+        game.txt = lambda *args: None
+        game.draw_msgs()
+        self.assertEqual(game.msg_toast_rows, 2)
 
-            game.turn = 6
-            game.draw_msgs()
-            self.assertEqual(rect_calls[-1][3], 2 * rogue.MSG_LINE_H + 6)
+        game.turn = 6
+        game.draw_msgs()
+        self.assertEqual(game.msg_toast_rows, 2)
 
-            before = len(rect_calls)
-            game.turn = 11
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
-
-        self.assertEqual(len(rect_calls), before)
+        game.turn = 11
+        game.draw_msgs()
         self.assertEqual(game.msg_toast_rows, 0)
+        self.assertIsNone(game.msg_toast_block)
 
     def test_message_toast_height_grows_with_added_rows_up_to_limit(self):
         game = new_game(seed=3752)
         game.msgs = ["one"]
         game.msg_turns = [0]
         game.turn = 0
-        rect_calls = []
-        old_rect = rogue.pyxel.rect
-        try:
-            rogue.pyxel.rect = lambda *args: rect_calls.append(args)
-            game.txt = lambda *args: None
-            game.draw_msgs()
-            self.assertEqual(rect_calls[-1][3], rogue.MSG_LINE_H + 6)
+        game.txt = lambda *args: None
+        game.draw_msgs()
+        self.assertEqual(game.msg_toast_rows, 1)
 
-            game.msgs = ["one", "two", "three", "four", "five", "six"]
-            game.msg_turns = [0, 0, 0, 0, 0, 0]
-            game.draw_msgs()
-        finally:
-            rogue.pyxel.rect = old_rect
+        game.msgs = ["one", "two", "three", "four", "five", "six", "seven", "eight"]
+        game.msg_turns = [0] * len(game.msgs)
+        game.draw_msgs()
 
-        self.assertEqual(rect_calls[-1][3], rogue.MSG_TOAST_LINES * rogue.MSG_LINE_H + 6)
+        self.assertEqual(game.msg_toast_rows, rogue.MSG_TOAST_LINES)
+
+    def test_message_toast_recalculates_block_only_after_successful_movement(self):
+        game = new_game(seed=3753)
+        set_open_floor(game)
+        game.p.x = 40
+        game.p.y = rogue.PLAY_Y_MIN + 10
+        game.last_intent_dir = (1, 0)
+        game.txt = lambda *args: None
+        game.msgs = []
+        game.msg_turns = []
+        game.msg_toast_block = None
+        game.msg_toast_reposition_needed = True
+        game.msg_text("one")
+        first = game.msg_toast_block
+
+        game.turn = rogue.MSG_TOAST_DIM_TURNS
+        game.draw_msgs()
+        self.assertEqual(game.msg_toast_block, first)
+
+        game.msg_text("two")
+        self.assertEqual(game.msg_toast_block, first)
+
+        game.try_move(0, 1)
+        game.msg_text("three")
+        self.assertNotEqual(game.msg_toast_block, first)
+
+    def test_message_toast_repositions_when_player_enters_one_tile_margin(self):
+        game = new_game(seed=3755)
+        set_open_floor(game)
+        game.msgs = []
+        game.msg_turns = []
+        game.txt = lambda *args: None
+        game.p.x = 40
+        game.p.y = rogue.PLAY_Y_MIN + 10
+        game.last_intent_dir = (1, 0)
+        game.msg_toast_block = None
+        game.msg_toast_reposition_needed = True
+        game.msg_text("visible")
+        first = game.msg_toast_block
+
+        game.p.x = rogue.MSG_TOAST_GRID_COL_EDGES[first[0] + 1] + 1
+        game.p.y = rogue.PLAY_Y_MIN + rogue.MSG_TOAST_GRID_ROW_EDGES[first[1]] + 1
+        game.try_move(-1, 0)
+
+        self.assertNotEqual(game.msg_toast_block, first)
 
     def test_important_message_blocks_play_until_acknowledged(self):
         game = new_game(seed=376)
@@ -9766,42 +9740,56 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_important_message_draws_ack_marker_until_acknowledged(self):
         game = new_game(seed=3761)
+        game.msgs = []
+        game.msg_turns = []
         game.msg_important("pyxel.pack_too_full")
         calls = []
         game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
 
         game.draw_msgs()
 
-        marker = [c for c in calls if c[2] == ">"]
+        marker = [c for c in calls if c[2] == "!"]
         self.assertTrue(marker)
         self.assertEqual(marker[-1][3], rogue.UI_HILITE_COL)
 
-    def test_important_message_ack_marker_blinks_inside_toast_frame(self):
+    def test_important_message_ack_marker_blinks_after_latest_message(self):
         game = new_game(seed=3762)
+        game.msgs = []
+        game.msg_turns = []
         game.msg_important("pyxel.pack_too_full")
         calls = []
-        rectb_calls = []
-        old_rectb = rogue.pyxel.rectb
         old_frame = rogue.pyxel.frame_count
         try:
-            rogue.pyxel.rectb = lambda *args: rectb_calls.append(args)
             game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
             rogue.pyxel.frame_count = 0
             game.draw_msgs()
-            marker = next(c for c in calls if c[2] == ">")
-            bx, by, bw, bh, _col = rectb_calls[-1]
-            self.assertGreater(marker[0], bx)
-            self.assertLess(marker[0] + game.ui_text_width(marker[2]), bx + bw)
-            self.assertGreater(marker[1], by)
-            self.assertLess(marker[1] + rogue.MSG_LINE_H, by + bh)
+            line = next(c for c in calls if c[2] == "pack too full" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+            marker = next(c for c in calls if c[2] == "!" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+            self.assertEqual(marker[0], line[0] - 2 * rogue.FONT_ASCII_W)
+            self.assertEqual(marker[1], line[1])
+            self.assertEqual(line[3], rogue.UI_HILITE_COL)
 
             calls.clear()
             rogue.pyxel.frame_count = 16
             game.draw_msgs()
-            self.assertFalse(any(c[2] == ">" for c in calls))
+            self.assertFalse(any(c[2] == "!" for c in calls))
         finally:
-            rogue.pyxel.rectb = old_rectb
             rogue.pyxel.frame_count = old_frame
+
+    def test_important_message_marker_returns_to_new_message_marker_after_ack(self):
+        game = new_game(seed=3763)
+        game.msgs = []
+        game.msg_turns = []
+        game.msg_important("pyxel.pack_too_full")
+        game.message_ack_pending = False
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_msgs()
+
+        self.assertIn((">", rogue.MSG_TOAST_SHADOW_COL), calls)
+        self.assertIn((">", 9), calls)
+        self.assertIn(("pack too full", 9), calls)
 
     def test_level_up_message_is_important(self):
         game = new_game(seed=377)
@@ -9813,7 +9801,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(game.message_ack_pending)
 
-    def test_message_toast_border_uses_solid_dither_after_translucent_fill(self):
+    def test_message_toast_does_not_use_dithered_panel(self):
         game = new_game(seed=374)
         game.msgs = ["visible"]
         game.msg_turns = [0]
@@ -9833,9 +9821,9 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.rect = old_rect
             rogue.pyxel.rectb = old_rectb
 
-        self.assertTrue(rect_calls)
-        self.assertTrue(rectb_calls)
-        self.assertEqual(dither_calls[-1], 1.0)
+        self.assertFalse(rect_calls)
+        self.assertFalse(rectb_calls)
+        self.assertFalse(dither_calls)
 
     def test_keyboard_esc_opens_and_cancels_menu_back_to_play(self):
         game = new_game(seed=35)
@@ -12199,6 +12187,20 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+
+    def test_returning_to_title_does_not_restart_title_bgm(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.title_bgm_loaded = True
+        game.title_bgm_started = False
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        rogue.pyxel.play_calls.clear()
+
+        game.enter_title_screen()
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(rogue.pyxel.play_calls, [])
 
     def test_title_bgm_uses_user_supplied_three_channel_mml(self):
         digest = hashlib.sha256("\n".join(rogue.TITLE_BGM_MMLS).encode()).hexdigest()
