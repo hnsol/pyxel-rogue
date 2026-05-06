@@ -6727,6 +6727,63 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("she stole purple potion!", game.msgs)
         self.assertNotIn("She stole your purple potion!", game.msgs)
 
+    def test_rogue_544_monster_attack_special_messages_require_ack(self):
+        cases = [
+            ("R", "rattlesnake", "poison", lambda game: setattr(game.p, "st", 10), lambda game: setattr(game, "save_vs_poison", lambda: False)),
+            ("I", "ice monster", "freeze", lambda game: setattr(game.p, "no_command", 0), lambda game: None),
+            ("W", "wraith", "drain_level", lambda game: setattr(game.p, "exp", 10), lambda game: None),
+            ("V", "vampire", "drain", lambda game: setattr(game.p, "max_hp", 20), lambda game: None),
+            ("L", "leprechaun", "steal_gold", lambda game: setattr(game.p, "gold", 100), lambda game: setattr(game, "save_vs_magic", lambda: True)),
+        ]
+        old_drain_hits = rogue.rogue_fight.drain_hits
+        try:
+            rogue.rogue_fight.drain_hits = lambda sym, rnd: True
+            for sym, name, flags, setup_player, setup_game in cases:
+                with self.subTest(sym=sym):
+                    game = new_game(seed=3061)
+                    set_open_floor(game)
+                    game.message_ack_pending = False
+                    game.p.hp = 99
+                    setup_player(game)
+                    setup_game(game)
+                    monster = monster_at(game.p.x + 1, game.p.y, sym, name, 10, 20, 100, "0x0", 5, flags)
+                    game.mons = [monster]
+                    game.roll_monster_attack = lambda m: (True, 0)
+
+                    game.m_attack(monster)
+
+                    self.assertTrue(game.message_ack_pending)
+        finally:
+            rogue.rogue_fight.drain_hits = old_drain_hits
+
+    def test_rogue_544_aquator_attack_rust_message_requires_ack(self):
+        game = new_game(seed=3062)
+        set_open_floor(game)
+        game.message_ack_pending = False
+        game.p.arm = rogue.Item(rogue.CAT_ARM, 1, ench=0)
+        game.p.recalc_ac()
+        aquator = monster_at(game.p.x + 1, game.p.y, "A", "aquator", 10, 20, 100, "0x0", 5, "rust")
+        game.mons = [aquator]
+        game.roll_monster_attack = lambda m: (True, 0)
+
+        game.m_attack(aquator)
+
+        self.assertTrue(game.message_ack_pending)
+
+    def test_rogue_544_nymph_steal_message_requires_ack(self):
+        game = new_game(seed=3063)
+        set_open_floor(game)
+        game.message_ack_pending = False
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+        nymph = monster_at(game.p.x + 1, game.p.y, "N", "nymph", 10, 20, 100, "0x0", 5, "steal_item")
+        game.mons = [nymph]
+        game.roll_monster_attack = lambda m: (True, 0)
+
+        game.m_attack(nymph)
+
+        self.assertTrue(game.message_ack_pending)
+
     def test_rogue_544_monster_attack_death_stops_before_special_effect(self):
         # Rogue 5.4.4 fight.c:attack() calls rip.c:death(), which exits before the special switch.
         game = new_game(seed=307)
@@ -12300,11 +12357,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreaterEqual(title_rect[1], 0)
         self.assertLessEqual(title_rect[0] + title_rect[2], rogue.SCR_W)
         self.assertLessEqual(title_rect[1] + title_rect[3], rogue.SCR_H)
+        self.assertEqual(title_rect[0], rogue.TITLE_MENU_X - 28)
+        self.assertLess(title_rect[0], rogue.SCR_W // 2)
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
         self.assertFalse(any(text == "ローグ" for text, _c, _x in calls))
         self.assertFalse(any(text == "ver 5.4" for text, _c, _x in calls))
-        self.assertTrue(any(text == "START" and c == 9 for text, c, _x in calls))
+        self.assertTrue(any(text == "START" and c == rogue.TITLE_MENU_SELECTED_COL for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
+
+    def test_title_menu_uses_readable_flexoki_slots_on_title_palette(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.player_name = "ACE"
+        game.title_cursor = 2
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c, x))
+        rogue.pyxel.rectb_calls.clear()
+
+        game.draw_title_screen()
+
+        self.assertIn(("START", rogue.TITLE_MENU_TEXT_COL, rogue.TITLE_MENU_X), calls)
+        self.assertIn(("ONLINE RANKING", rogue.TITLE_MENU_TEXT_COL, rogue.TITLE_MENU_X), calls)
+        self.assertIn((f"NAME: {game.current_player_name()}", rogue.TITLE_MENU_SELECTED_COL, rogue.TITLE_MENU_X), calls)
+        self.assertEqual(rogue.pyxel.rectb_calls[-1][0][-1], rogue.TITLE_MENU_BORDER_COL)
+        self.assertEqual(rogue.TITLE_MENU_SELECTED_COL, 31)
+        self.assertEqual(rogue.TITLE_MENU_TEXT_COL, 5)
 
     def test_title_background_dither_fades_in_and_input_finishes_fade(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12375,6 +12454,17 @@ class RogueBaselineTest(unittest.TestCase):
                 del rogue.pyxel.colors
             else:
                 rogue.pyxel.colors = old_colors
+
+    def test_title_background_palette_keeps_flexoki_ui_slots_and_covers_image_indices(self):
+        from PIL import Image
+
+        image_path = os.path.join(ROOT, "assets", "images", "title_background.png")
+        image = Image.open(image_path)
+        used_indices = set(image.tobytes())
+
+        self.assertEqual(image.mode, "P")
+        self.assertEqual(tuple(rogue.TITLE_BG_PALETTE[: len(rogue.FLEXOKI_DARK_PALETTE)]), tuple(rogue.FLEXOKI_DARK_PALETTE))
+        self.assertLess(max(used_indices), len(rogue.TITLE_BG_PALETTE))
 
     def test_palette_application_does_not_append_to_fixed_pyxel_colors(self):
         class FixedColors:

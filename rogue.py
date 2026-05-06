@@ -232,7 +232,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_1516"
+UI_BUILD = "260506_1616"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -405,14 +405,21 @@ TITLE_BGM_MMLS = (
     )),
     " ".join(_title_bgm_part("K0 Q100 T92 L16 @0 V109", _TITLE_BGM_CH2_BODY) for _ in range(4)),
 )
-TITLE_BG_PALETTE = (
-    0x000000, 0x011447, 0x01081B, 0x010000, 0x0B4517, 0x27465F, 0x01091C, 0x01091B,
-    0x013010, 0xDC8A04, 0x2B4965, 0x325B7F, 0x011758, 0x046C24, 0x081618, 0x000500,
-    0x1A323F, 0xFEFCDC, 0x000D3D, 0x04174B, 0x01071E, 0x010100, 0x392C1E, 0x112230,
-    0x01144E, 0x010104, 0x010B2A, 0x00070C, 0x123326, 0x020408, 0x0E090C, 0x05080E,
-    0x01050E, 0x84683A, 0x010A15, 0x030712, 0x00000A, 0x082034, 0xDCBA5A, 0x0D5A30,
-    0x1B4545, 0x011333, 0x00042C, 0x424B51, 0x011E34, 0x6B833D, 0x011734, 0x082F32,
+TITLE_BG_EXTRA_PALETTE = (
+    0xF6E19B, 0xCCAA5F, 0xCA8301, 0xBE800E, 0xBF7A03, 0x776546, 0x545B23, 0x4F5032,
+    0x59432A, 0x453E32, 0x364310, 0x34362A, 0x273718, 0x223025, 0x232C1E, 0x1A2B1C,
+    0x272219, 0x1A2319, 0x162415, 0x161D19, 0x10201C, 0x0F1B16, 0x0D1612, 0x0C100D,
+    0x04172A, 0x021221, 0x011022, 0x02101B, 0x010E1C, 0x050D0A, 0x0A0805, 0x050706,
+    0x030809, 0x030404, 0x020508, 0x010307, 0x010203, 0x00060C, 0x000604, 0x000000,
 )
+TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
+TITLE_MENU_X = 248
+TITLE_MENU_Y = 158
+TITLE_MENU_W = 174
+TITLE_MENU_H = 84
+TITLE_MENU_SELECTED_COL = 31
+TITLE_MENU_TEXT_COL = 5
+TITLE_MENU_BORDER_COL = 28
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
@@ -2698,14 +2705,14 @@ class Game:
                 return
             if rogue_fight.attack_specials_allowed(rogue_monsters.is_cancelled(m)):
                 if rogue_monsters.has_special(m, "rust") and self.can_rust_armor(self.p.arm):
-                    self.rust_armor()
+                    self.rust_armor(important=True)
                 if rogue_monsters.has_special(m, "steal_gold"):
                     old_gold = self.p.gold
                     first_loss = goldcalc(self.p.depth)
                     loss=rogue_fight.leprechaun_gold_loss_after_first(first_loss, self.p.depth, self.save_vs_magic(), goldcalc)
                     self.p.gold=max(0,self.p.gold-loss)
                     if self.p.gold != old_gold:
-                        self.msg("fight.your_purse_feels_lighter")
+                        self.msg_important("fight.your_purse_feels_lighter")
                     self.remove_monster(m); return rogue_fight.attack_result(monster_removed=True)
                 if rogue_monsters.has_special(m, "poison"):
                     self.p.st, poison_result = rogue_fight.poison_bite_strength(
@@ -2715,7 +2722,7 @@ class Game:
                     )
                     poison_msg = rogue_fight.poison_bite_message_key(poison_result, terse=False)
                     if poison_msg:
-                        self.msg(poison_msg)
+                        self.msg_important(poison_msg)
                 if rogue_monsters.has_special(m, "drain_level") and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,
@@ -2729,7 +2736,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg("fight.you_suddenly_feel_weaker")
+                    self.msg_important("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "drain") and rogue_fight.drain_hits("V", rnd):
                     self.p.hp, self.p.max_hp, died = rogue_fight.max_hp_drain(
                         self.p.hp, self.p.max_hp, lambda: roll("1d3")
@@ -2738,7 +2745,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg("fight.you_suddenly_feel_weaker")
+                    self.msg_important("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "freeze"):
                     self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
                         self.p.no_command, BORE_LEVEL, rnd
@@ -2746,7 +2753,7 @@ class Game:
                     if hypothermia:
                         self.p.hp=0; self.death_cause="hypothermia"
                     if should_message:
-                        self.msg("fight.you_are_frozen", subject=self.combat_monster_name(m, article_for_something=True))
+                        self.msg_important("fight.you_are_frozen", subject=self.combat_monster_name(m, article_for_something=True))
                 if rogue_monsters.has_special(m, "hold"):
                     m.vf_hit, m.damage_expr = rogue_fight.venus_flytrap_hit(m.vf_hit)
                     self.p.held_by=m
@@ -2757,7 +2764,7 @@ class Game:
                 if rogue_monsters.has_special(m, "steal_item"):
                     t=self.monster_has_magic_item_to_steal()
                     if t:
-                        self.p.rm_item(t); self.msg("fight.she_stole_target", target=self.ident.name(t))
+                        self.p.rm_item(t); self.msg_important("fight.she_stole_target", target=self.ident.name(t))
                         self.remove_monster(m); return rogue_fight.attack_result(monster_removed=True)
         else:
             if m.sym == "F" and m.vf_hit > 0:
@@ -4149,7 +4156,7 @@ class Game:
         elif name=="mysterious trap":
             self.mysterious_trap_msg()
 
-    def rust_armor(self):
+    def rust_armor(self, important=False):
         # C: move.c:rust_armor()
         arm=self.p.arm
         if not self.can_rust_armor(arm):
@@ -4159,11 +4166,17 @@ class Game:
             rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTARM),
         )
         if result == "vanish":
-            self.msg("move.the_rust_vanishes_instantly")
+            if important:
+                self.msg_important("move.the_rust_vanishes_instantly")
+            else:
+                self.msg("move.the_rust_vanishes_instantly")
             return
         arm.ench-=1
         self.p.recalc_ac()
-        self.msg("move.your_armor_weakens")
+        if important:
+            self.msg_important("move.your_armor_weakens")
+        else:
+            self.msg("move.your_armor_weakens")
 
     def can_rust_armor(self, arm):
         # C: move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
@@ -6090,16 +6103,16 @@ class Game:
         if title_alpha < 1.0:
             return
         items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
-        x = 372
-        y = min(238, SCR_H - 92)
+        x = TITLE_MENU_X
+        y = min(TITLE_MENU_Y, SCR_H - TITLE_MENU_H + 10)
         pyxel.dither(0.8)
-        pyxel.rect(x - 28, y - 10, 174, 84, 0)
+        pyxel.rect(x - 28, y - 10, TITLE_MENU_W, TITLE_MENU_H, 0)
         pyxel.dither(1.0)
-        pyxel.rectb(x - 28, y - 10, 174, 84, 17)
+        pyxel.rectb(x - 28, y - 10, TITLE_MENU_W, TITLE_MENU_H, TITLE_MENU_BORDER_COL)
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
-            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", 9)
-            self.txt(x, y + i * 24, item, 9 if i == cur else 17)
+            self.txt(x - 15, y + i * 24, ">" if i == cur else " ", TITLE_MENU_SELECTED_COL)
+            self.txt(x, y + i * 24, item, TITLE_MENU_SELECTED_COL if i == cur else TITLE_MENU_TEXT_COL)
 
     def draw_name_input(self):
         self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_HILITE_COL)
