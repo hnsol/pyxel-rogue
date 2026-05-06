@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0033"
+UI_BUILD = "260507_0047"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -370,7 +370,12 @@ SCOREBOARD_DIM_COL = 30
 UI_TEXT_COL = 30
 UI_SUBTEXT_COL = 9
 UI_HILITE_COL = 23
+UI_SECTION_COL = 31
+UI_SELECTED_COL = UI_HILITE_COL
 UI_RESTORED_CURSOR_COL = 27
+UI_HEADING_SCREEN = "screen"
+UI_HEADING_PANEL = "panel"
+UI_HEADING_SECTION = "section"
 
 # ===========================================================
 #  Font
@@ -426,7 +431,7 @@ INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
-HELP_HEADER_COL = 31
+HELP_HEADER_COL = UI_SECTION_COL
 HELP_TEXT_COL = 30
 
 # ===========================================================
@@ -3551,7 +3556,7 @@ class Game:
         result = []
 
         def section(label, cat, table, known_arr, guess_arr):
-            result.append((27, f"-- {label} --"))
+            result.append((UI_SECTION_COL, f"-- {label} --"))
             found = 0
             order = rogue_things.discovery_order(len(table), rnd_func) if rnd_func else range(len(table))
             for i in order:
@@ -7216,20 +7221,20 @@ class Game:
             self.txt(x, y + i * 24, item, TITLE_MENU_SELECTED_COL if i == cur else TITLE_MENU_TEXT_COL)
 
     def draw_name_input(self):
-        self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_HILITE_COL)
+        self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_SECTION_COL)
         chars = getattr(self, "name_chars", [])
         display = "".join(chars).ljust(8)[:8]
         base_x, y = 216, 136
         for i, ch in enumerate(display):
-            col = UI_HILITE_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
+            col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
-        end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
+        end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(124, 210, "D-pad/Arrows: Change/Move", UI_TEXT_COL)
-        self.txt(132, 226, "A/Enter NEXT/END  Start/Space OK  B/Esc DEL", UI_TEXT_COL)
+        self.txt(124, 210, "D-pad/Arrows: Change/Move", UI_SUBTEXT_COL)
+        self.txt(132, 226, "A/Enter NEXT/END  Start/Space OK  B/Esc DEL", UI_SUBTEXT_COL)
 
     def draw_online_confirm_screen(self):
-        self._box(116, 84, 348, 132, self.online_text("confirm_title"))
+        self._box(116, 84, 348, 132, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
         self.txt(140, 110, self.online_text("confirm_prompt"), UI_TEXT_COL)
         self.txt(140, 132, self.online_text("confirm_register"), UI_HILITE_COL)
         self.txt(140, 150, self.online_text("confirm_local"), UI_TEXT_COL)
@@ -7247,7 +7252,7 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_title_weekly"),
             SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
         }.get(period, self.online_text("score_title_local"))
-        self._box(98, 28, 380, SCR_H - 40, f"{title} - {self.scoreboard_period_label(period)}")
+        self._box(98, 28, 380, SCR_H - 40, self.ui_heading(f"{title} - {self.scoreboard_period_label(period)}", UI_HEADING_SCREEN))
         scores = self.display_online_period_scores(period)
         self.txt(120, 56, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
         y = 70
@@ -7277,18 +7282,18 @@ class Game:
             self.txt(114, 210, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
         self.txt(114, 252, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
-            self._box(156, 116, 268, 82, self.online_text("sync_title"))
+            self._box(156, 116, 268, 82, self.ui_heading(self.online_text("sync_title"), UI_HEADING_PANEL))
             lines = self.online_sync_box_lines()
             self.txt(184, 146, lines[0][:34], SCOREBOARD_HILITE_COL)
             self.txt(184, 160, lines[1][:34], SCOREBOARD_HILITE_COL)
         if getattr(self, "online_register_prompt", False):
-            self._box(148, 104, 282, 92, self.online_text("confirm_title"))
+            self._box(148, 104, 282, 92, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
             self.txt(168, 126, self.online_text("score_register_prompt"), UI_TEXT_COL)
             self.txt(168, 144, self.online_text("score_register_hint"), UI_HILITE_COL)
             self.txt(168, 162, self.online_text("score_register_mark"), UI_TEXT_COL)
 
     def draw_online_register_screen(self):
-        self._box(112, 58, 356, 210, self.online_text("register_title"))
+        self._box(112, 58, 356, 210, self.ui_heading(self.online_text("register_title"), UI_HEADING_SCREEN))
         self.txt(138, 84, self.online_text("register_prompt"), UI_TEXT_COL)
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         local_hint = profile.get("local_only", True) or self.online_register_name_changed()
@@ -7297,9 +7302,9 @@ class Game:
         display = "".join(chars).ljust(USER_NAME_MAX)[:USER_NAME_MAX]
         base_x, y = 174, 138
         for i, ch in enumerate(display):
-            col = UI_HILITE_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
+            col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
-        end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
+        end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
         self.txt(138, 216, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_HILITE_COL)
         self.draw_online_language_hint(138, 230)
@@ -7310,7 +7315,7 @@ class Game:
 
     def draw_online_pin_screen(self):
         is_link = getattr(self, "online_password_mode", "register") == "link"
-        self._box(126, 58, 328, 210, self.online_text("pin_link_title" if is_link else "pin_title"))
+        self._box(126, 58, 328, 210, self.ui_heading(self.online_text("pin_link_title" if is_link else "pin_title"), UI_HEADING_SCREEN))
         user_name = getattr(self, "online_pending_user_name", "rogue54")
         self.txt(150, 84, f"User: {user_name}", UI_TEXT_COL)
         self.txt(150, 104, self.online_text("pin_link_server" if is_link else "pin_server"), UI_TEXT_COL)
@@ -7318,9 +7323,9 @@ class Game:
         chars = getattr(self, "online_password_chars", ["0"] * 6)
         base_x, y = 206, 152
         for i, ch in enumerate(chars):
-            col = UI_HILITE_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
+            col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 18, y, ch, col)
-        end_col = UI_HILITE_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
+        end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
         self.txt(base_x + 122, y, "END", end_col)
         self.txt(150, 226, self.online_text("pin_hint"), UI_HILITE_COL)
         self.draw_online_language_hint(150, 240)
@@ -7330,7 +7335,7 @@ class Game:
             self.txt(150, 254, self.online_sync_result[:46], UI_HILITE_COL)
 
     def draw_online_local_confirm_screen(self):
-        self._box(112, 86, 356, 130, self.online_text("local_confirm_title"))
+        self._box(112, 86, 356, 130, self.ui_heading(self.online_text("local_confirm_title"), UI_HEADING_PANEL))
         name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
         self.txt(138, 112, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
         self.txt(138, 132, f"Name: {name}*", UI_HILITE_COL)
@@ -7429,18 +7434,18 @@ class Game:
         self.txt(sx,sy,f"Arm {p.ac}",9); sy+=11
         self.txt(sx,sy,f"Lv {p.level}",9); sy+=11
         self.txt(sx,sy,f"Exp {p.exp}",9); sy+=11
-        self.txt(sx,sy,"Move Corner" if self.diag_assist else "Move 8-way",27 if self.diag_assist else 9); sy+=11
-        self.txt(sx,sy,"Pick Auto" if self.auto_pickup else "Pick Manual",9 if self.auto_pickup else 23); sy+=11
+        self.txt(sx,sy,"Move Corner" if self.diag_assist else "Move 8-way",UI_SELECTED_COL if self.diag_assist else UI_TEXT_COL); sy+=11
+        self.txt(sx,sy,"Pick Auto" if self.auto_pickup else "Pick Manual",UI_TEXT_COL if self.auto_pickup else UI_SELECTED_COL); sy+=11
         state = p.state if p.state else "normal"
         if state != "normal":
             self.txt(sx,sy,f"Food {state}",22); sy+=11
         sy+=6
-        self.txt(sx,sy,"-- Equip --",27); sy+=11
+        self.txt(sx,sy,self.ui_heading("Equip", UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
         an=self.hud_equip_name(p.arm) if p.arm else "no armor"
         self.txt(sx,sy,wn[:11],9); sy+=11
         self.txt(sx,sy,an[:11],9); sy+=16
-        self.txt(sx,sy,"-- Eff --",27); sy+=11
+        self.txt(sx,sy,self.ui_heading("Eff", UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
         eff=[]
         if p.state=="hungry": eff.append("Hungry")
         elif p.state=="weak": eff.append("Weak")
@@ -7496,10 +7501,22 @@ class Game:
             self.txt(text_x, ty, m, text_col)
 
     # ---------- Overlays ----------
+    def ui_heading(self, label, level):
+        if level == UI_HEADING_SCREEN:
+            return f"=== {label} ==="
+        if level == UI_HEADING_PANEL:
+            return f"-- {label} --"
+        if level == UI_HEADING_SECTION:
+            return f"--- {label} ---"
+        return str(label)
+
+    def ui_heading_col(self, level):
+        return UI_SECTION_COL
+
     def _box(self,x,y,w,h,title=""):
         pyxel.dither(1.0)
         pyxel.rect(x,y,w,h,0); pyxel.rectb(x,y,w,h,5)
-        if title: self.txt(x+4,y+3,title,27)
+        if title: self.txt(x+4,y+3,title,UI_SECTION_COL)
 
     def draw_overlays(self):
         if self.st==ST_MENU:
@@ -7546,7 +7563,7 @@ class Game:
         bw=cell_w*3+10; bh=cell_h*len(PAD_ACTION_GRID)+24
         bx = 18
         by = ZV_Y + (ZV_PX_H - bh) // 2 - 18
-        self._box(bx,by,bw,bh,"-- Action --")
+        self._box(bx,by,bw,bh,self.ui_heading("Action", UI_HEADING_PANEL))
         for gy,row in enumerate(PAD_ACTION_GRID):
             for gx,nm in enumerate(row):
                 try:
@@ -7555,7 +7572,7 @@ class Game:
                     continue
                 x=bx+5+gx*cell_w; y=by+17+gy*cell_h
                 selected=idx==self.mcur
-                c=27 if selected else 9
+                c=UI_SELECTED_COL if selected else UI_TEXT_COL
                 pre=">" if selected else " "
                 self.txt(x,y,f"{pre}{self.menu_hint_label(nm)[:11]}",c)
 
@@ -7587,7 +7604,7 @@ class Game:
             bx,
             by,
             self.fitems,
-            f"-- {self.cact} --",
+            self.ui_heading(self.cact, UI_HEADING_PANEL),
             self.icur,
             item_chars=26,
             cell_w=cell_w,
@@ -7599,16 +7616,16 @@ class Game:
             return
         prompt = TextCatalog.msg(self.lang, "misc.what_to_call_it")
         bx, by = ZV_X + 20, ZV_Y + 60; bw = 240; bh = 36
-        self._box(bx, by, bw, bh, f"-- {self.cact} --")
-        self.txt(bx + 4, by + 14, f"{prompt}", 9)
+        self._box(bx, by, bw, bh, self.ui_heading(self.cact, UI_HEADING_PANEL))
+        self.txt(bx + 4, by + 14, f"{prompt}", UI_TEXT_COL)
         cursor = "_" if (pyxel.frame_count // 15) % 2 == 0 else " "
-        self.txt(bx + 4, by + 24, f"> {self.call_input}{cursor}", 27)
+        self.txt(bx + 4, by + 24, f"> {self.call_input}{cursor}", UI_SELECTED_COL)
 
     def draw_disc(self):
         bx, by = 20, 12; bw = SCR_W - 40; bh = SCR_H - 80
         title = TextCatalog.msg(self.lang, "misc.discoveries_title")
         hint  = TextCatalog.msg(self.lang, "misc.discoveries_hint")
-        self._box(bx, by, bw, bh, f"=== {title} ===")
+        self._box(bx, by, bw, bh, self.ui_heading(title, UI_HEADING_SCREEN))
         lines = getattr(self, "disc_lines", None) or self._disc_lines()
         visible = (bh - 24) // 9
         start = self.disc_scroll
@@ -7627,9 +7644,9 @@ class Game:
 
     def draw_aux(self):
         bx,by=ZV_X+20,ZV_Y+8; bw=120; bh=len(AUX_ACTIONS)*14+18
-        self._box(bx,by,bw,bh,"-- Assist --")
+        self._box(bx,by,bw,bh,self.ui_heading("Assist", UI_HEADING_PANEL))
         for i,nm in enumerate(AUX_ACTIONS):
-            ty=by+16+i*14; c=27 if i==self.acur else 9
+            ty=by+16+i*14; c=UI_SELECTED_COL if i==self.acur else UI_TEXT_COL
             pre=">" if i==self.acur else " "
             self.txt(bx+4,ty,f"{pre} {TextCatalog.menu(self.lang,nm)}",c)
 
@@ -7666,7 +7683,7 @@ class Game:
 
     def draw_info_tabs(self, x, y, active):
         for name in ("Inventory", "Log"):
-            col = UI_HILITE_COL if name == active else UI_SUBTEXT_COL
+            col = UI_SELECTED_COL if name == active else UI_SECTION_COL
             self.txt(x, y, self.info_tab_label(name), col)
             x += self.ui_text_width(self.info_tab_label(name)) + 10
 
@@ -7735,9 +7752,9 @@ class Game:
             if selected and getattr(self, "item_cursor_restored", False):
                 c = UI_RESTORED_CURSOR_COL
             elif selected:
-                c = UI_HILITE_COL
+                c = UI_SELECTED_COL
             else:
-                c = 9
+                c = UI_TEXT_COL
             if current_index is None:
                 self.txt(x, y, f"{lt}) {ln[:item_chars]}", c)
             else:
@@ -7746,9 +7763,9 @@ class Game:
 
     def draw_help(self):
         bx,by=30,20; bw=SCR_W-60; bh=SCR_H-40
-        self._box(bx,by,bw,bh,"=== Help ===")
+        self._box(bx,by,bw,bh,self.ui_heading("Help", UI_HEADING_SCREEN))
         gamepad=[
-            "--- Gamepad ---",
+            self.ui_heading("Gamepad", UI_HEADING_SECTION),
             "D-pad       Move/Dir",
             "Hold Start  Diag assist",
             "A           Action",
@@ -7762,7 +7779,7 @@ class Game:
             "Select+dir  Inspect trap",
         ]
         keyboard=[
-            "--- Keyboard: Pad ---",
+            self.ui_heading("Keyboard: Pad", UI_HEADING_SECTION),
             "Arrows/HJKL Move/Dir",
             "YUBN        Diagonal",
             "Hold Space  Diag assist",
@@ -7784,7 +7801,7 @@ class Game:
                 ln=keyboard[i]; self.txt(bx+250,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
             y+=11
         y+=8
-        self.txt(bx+8,y,"--- Keyboard commands ---",HELP_HEADER_COL); y+=11
+        self.txt(bx+8,y,self.ui_heading("Keyboard commands", UI_HEADING_SECTION),HELP_HEADER_COL); y+=11
         commands=[
             ". Wait   </> Stairs s Search   t Throw   ^ Trap",
             "i Inv    I Inv item ? Help     / Identify",
@@ -7798,7 +7815,7 @@ class Game:
 
     def draw_top_scores(self, bx=412, by=30):
         bw=156; bh=144
-        self._box(bx, by, bw, bh, TextCatalog.msg(self.lang, "ui.top_10"))
+        self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.top_10"), UI_HEADING_PANEL))
         scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
         y = by + 16
         for i, entry in enumerate(scores[:10], start=1):
@@ -7811,7 +7828,7 @@ class Game:
 
     def draw_score_screen(self):
         bx,by=118,34; bw=340; bh=220
-        self._box(bx, by, bw, bh)
+        self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.top_10"), UI_HEADING_SCREEN))
         scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
         y = by + 14
         for i, line in enumerate(format_top_score_lines(scores)):
@@ -7824,7 +7841,7 @@ class Game:
     def draw_dead(self):
         if not self.options.get("tombstone", True):
             bx,by=105,42; bw=270; bh=190
-            self._box(bx,by,bw,bh,"=== R.I.P. ===")
+            self._box(bx,by,bw,bh,self.ui_heading("R.I.P.", UI_HEADING_SCREEN))
             p=self.p; x=bx+18; y=by+24
             self.txt(x,y,"Here lies a brave rogue.",UI_TEXT_COL); y+=22
             self.txt(x,y,f"Cause: {self.death_cause or 'died'}",UI_TEXT_COL); y+=18
@@ -7837,7 +7854,7 @@ class Game:
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
             return
         bx,by=88,24; bw=340; bh=min(292, SCR_H - by - 8)
-        self._box(bx,by,bw,bh,"=== R.I.P. ===")
+        self._box(bx,by,bw,bh,self.ui_heading("R.I.P.", UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+24
         killer=self.death_killer_name()
         name=self.options.get("name","rogue")
@@ -7855,7 +7872,7 @@ class Game:
 
     def draw_win(self):
         bx,by=82,50; bw=334; bh=176
-        self._box(bx,by,bw,bh,"=== Victory ===")
+        self._box(bx,by,bw,bh,self.ui_heading("Victory", UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+26
         self.txt(x,y,"You escaped from the Dungeons of Doom",UI_HILITE_COL); y+=16
         self.txt(x,y,"with the Amulet of Yendor.",UI_HILITE_COL); y+=24
@@ -7867,13 +7884,13 @@ class Game:
 
     def draw_quit_confirm(self):
         bx,by=176,132; bw=224; bh=56
-        self._box(bx,by,bw,bh,"-- Quit --")
+        self._box(bx,by,bw,bh,self.ui_heading("Quit", UI_HEADING_PANEL))
         self.txt(bx+12, by+20, TextCatalog.msg(self.lang, "main.really_quit"), UI_HILITE_COL)
         self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), UI_TEXT_COL)
 
     def draw_quit(self):
         bx,by=96,60; bw=300; bh=148
-        self._box(bx,by,bw,bh,"=== Quit ===")
+        self._box(bx,by,bw,bh,self.ui_heading("Quit", UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+24
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),UI_HILITE_COL); y+=24
         self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14

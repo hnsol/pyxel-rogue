@@ -12924,7 +12924,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("UTC", text)
         self.assertIn("Score Name", text)
         self.assertIn(" 1   346 masatora: killed on level 4 by an orc.", text)
-        self.assertIn("'sync'", text)
+        self.assertIn("-- sync --", text)
         self.assertIn("ace", text)
         self.assertIn("killed", text)
         self.assertIn("bat", text)
@@ -12936,7 +12936,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 222), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
-        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 70)), drawn.index(("box", (156, 116, 268, 82, "sync"))))
+        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 70)), drawn.index(("box", (156, 116, 268, 82, "-- sync --"))))
 
     def test_online_score_sync_box_shows_refreshing_when_post_is_not_allowed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -14816,6 +14816,75 @@ class RogueBaselineTest(unittest.TestCase):
         text = [s for *_xy, s, _c in calls]
         self.assertIn("ログ", text)
         self.assertTrue(any("左右: タブ切替" in s and "補助メニュー" in s for s in text))
+
+    def test_ui_heading_levels_and_semantic_colors_are_systematic(self):
+        game = new_game(seed=47341)
+
+        self.assertEqual(game.ui_heading("Inventory", rogue.UI_HEADING_SCREEN), "=== Inventory ===")
+        self.assertEqual(game.ui_heading("Assist", rogue.UI_HEADING_PANEL), "-- Assist --")
+        self.assertEqual(game.ui_heading("Gamepad", rogue.UI_HEADING_SECTION), "--- Gamepad ---")
+        self.assertEqual(game.ui_heading_col(rogue.UI_HEADING_SCREEN), rogue.UI_SECTION_COL)
+        self.assertEqual(game.ui_heading_col(rogue.UI_HEADING_PANEL), rogue.UI_SECTION_COL)
+        self.assertEqual(game.ui_heading_col(rogue.UI_HEADING_SECTION), rogue.UI_SECTION_COL)
+        self.assertEqual(rogue.UI_SELECTED_COL, rogue.UI_HILITE_COL)
+
+    def test_inventory_log_tabs_use_selection_and_structure_colors(self):
+        game = new_game(seed=47342)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_info_tabs(0, 0, "Inventory")
+
+        self.assertIn(("Inventory", rogue.UI_SELECTED_COL), calls)
+        self.assertIn(("Log", rogue.UI_SECTION_COL), calls)
+
+        calls.clear()
+        game.draw_info_tabs(0, 0, "Log")
+
+        self.assertIn(("Inventory", rogue.UI_SECTION_COL), calls)
+        self.assertIn(("Log", rogue.UI_SELECTED_COL), calls)
+
+    def test_command_and_item_pick_screens_use_panel_titles_and_selection_color(self):
+        game = new_game(seed=47343)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.open_menu()
+        game.draw_menu()
+
+        self.assertIn("-- Action --", boxes)
+        self.assertTrue(any(s.startswith(">") and c == rogue.UI_SELECTED_COL for s, c in calls))
+
+        boxes.clear()
+        calls.clear()
+        game.fitems = list(game.p.inv)
+        game.icur = 0
+        game.cact = "Eat"
+        game.draw_isel()
+
+        self.assertIn("-- Eat --", boxes)
+        self.assertTrue(any(s.startswith(">") and c == rogue.UI_SELECTED_COL for s, c in calls))
+
+    def test_score_death_name_and_help_apply_heading_color_roles(self):
+        game = new_game(seed=47344)
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_score_screen()
+        game.draw_dead()
+        game.draw_name_input()
+        game.draw_help()
+
+        self.assertIn("=== Top 10 ===", boxes)
+        self.assertIn("=== R.I.P. ===", boxes)
+        self.assertIn(("YOUR NAME", rogue.UI_SECTION_COL), calls)
+        self.assertTrue(any(s.startswith("---") and c == rogue.UI_SECTION_COL for s, c in calls))
+        self.assertTrue(any("D-pad/Arrows" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
 
     def test_log_draws_scroll_position_and_keeps_gap_above_controls(self):
         game = new_game(seed=4735)
