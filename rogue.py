@@ -232,7 +232,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260506_1507"
+UI_BUILD = "260506_1516"
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -1464,7 +1464,7 @@ class Game:
 
     def enter_title_screen(self):
         self.apply_title_palette()
-        self.title_fade_frames = 0
+        self.title_fade_frames = 0 if getattr(self, "title_bgm_started", False) else TITLE_FADE_FRAMES
         self.st = ST_TITLE
 
     def enter_post_logo(self):
@@ -1599,6 +1599,7 @@ class Game:
         text = str(text)
         if text.endswith("。"):
             text = text[:-1]
+        use_space_wrap = all(ord(ch) < 128 for ch in text)
         for ch in text:
             ch_width = FONT_ASCII_W if ord(ch) < 128 else FONT_CJK_W
             if line and width + ch_width > limit:
@@ -1609,7 +1610,7 @@ class Game:
                         rows.append(line)
                     line = carry
                     width = self.ui_text_width(line)
-                elif last_space > 0:
+                elif use_space_wrap and last_space > 0:
                     rows.append(line[:last_space])
                     line = line[last_space + 1:] + ch
                     width = self.ui_text_width(line)
@@ -1617,11 +1618,11 @@ class Game:
                     rows.append(line)
                     line = ch
                     width = ch_width
-                last_space = line.rfind(" ")
+                last_space = line.rfind(" ") if use_space_wrap else -1
             else:
                 line += ch
                 width += ch_width
-                if ch == " ":
+                if use_space_wrap and ch == " ":
                     last_space = len(line) - 1
         return rows + ([line] if line else [""])
 
@@ -1712,6 +1713,7 @@ class Game:
         self.fuses.fuse("swander", RNG.spread(WANDERTIME), rogue_daemons.AFTER)
         self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
+        self.turn_msg_start = len(self.msgs)
 
     def result_level(self, outcome):
         return self.max_depth if outcome == "winner" else self.p.depth
@@ -6344,8 +6346,7 @@ class Game:
         rows=[]
         msg_turns = self.msg_turns if len(getattr(self, "msg_turns", [])) == len(self.msgs) else []
         last_index = len(self.msgs) - 1
-        for mi,m in enumerate(reversed(self.msgs)):
-            src_i = last_index - mi
+        for src_i,m in enumerate(self.msgs):
             age = 0 if not msg_turns else max(0, self.turn - msg_turns[src_i])
             if age > MSG_TOAST_DIM_TURNS:
                 continue
@@ -6353,8 +6354,7 @@ class Game:
             parts = self.wrap_msg_toast_text(m)
             for pi, part in enumerate(parts):
                 rows.append((part, c, age, pi == 0, src_i))
-                if len(rows)>=MSG_TOAST_LINES: break
-            if len(rows)>=MSG_TOAST_LINES: break
+        rows = rows[-MSG_TOAST_LINES:]
         if not rows:
             self.msg_toast_rows = 0
             self.msg_toast_block = None
@@ -6365,6 +6365,7 @@ class Game:
         if getattr(self, "msg_toast_block", None) is None:
             self.refresh_msg_toast_block()
         x, y = msg_toast_block_origin(self.msg_toast_block, toast_rows)
+        y += (toast_rows - len(rows)) * MSG_LINE_H
         ack_pending = getattr(self, "message_ack_pending", False)
         blink_on = (getattr(pyxel, "frame_count", 0) // 15) % 2 == 0
         for i,(m,c,age,first_part,src_i) in enumerate(rows):

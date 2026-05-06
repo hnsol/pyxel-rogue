@@ -8901,6 +8901,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 1)
         self.assertEqual(game.p.depth, old_depth + 1)
 
+    def test_first_move_auto_pickup_does_not_refresh_welcome_message_age(self):
+        game = new_game(seed=3101)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        gold = rogue.Item(rogue.CAT_GOLD, 0)
+        gold.qty = 17
+        gold.x, gold.y = x, y
+        game.gitems = [gold]
+
+        game.try_move(1, 0)
+
+        self.assertEqual(game.turn, 1)
+        self.assertEqual(game.msgs[-2:], ["Hello rogue54, welcome to the Dungeons of Doom!", "17 gold pieces"])
+        self.assertEqual(game.msg_turns[-2:], [0, 1])
+
     def test_stairs_reposition_message_toast_for_new_player_block(self):
         game = new_game(seed=3111)
         set_open_floor(game)
@@ -9513,10 +9528,23 @@ class RogueBaselineTest(unittest.TestCase):
 
         calls = [(s, c) for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
         self.assertEqual(rogue.MSG_TOAST_LINES, 7)
-        self.assertEqual([text for text, _ in calls], ["latest", "fresh", "soft", "dim", "faint"])
-        self.assertEqual([color for _, color in calls], [9, 5, 6, 3, 3])
+        self.assertEqual([text for text, _ in calls], ["faint", "dim", "soft", "fresh", "latest"])
+        self.assertEqual([color for _, color in calls], [3, 3, 6, 5, 9])
         self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
         self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
+
+    def test_message_toast_draws_old_messages_above_new_messages(self):
+        game = new_game(seed=3501)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.msgs = ["old", "new"]
+        game.msg_turns = [0, 1]
+        game.turn = 1
+
+        game.draw_msgs()
+
+        body = [c for c in calls if c[2] not in (">", "!") and c[3] != rogue.MSG_TOAST_SHADOW_COL]
+        self.assertEqual([c[2] for c in body], ["old", "new"])
 
     def test_message_toast_grid_home_block_uses_80_by_22_map(self):
         self.assertEqual(rogue.msg_toast_home_block(0, rogue.PLAY_Y_MIN), (0, 0))
@@ -9625,6 +9653,13 @@ class RogueBaselineTest(unittest.TestCase):
         for x, _y, text, _col in text_calls:
             self.assertLessEqual(x + game.ui_text_width(text), rogue.ZV_X + rogue.ZV_PX_W)
 
+    def test_message_toast_wraps_cjk_sentence_by_pixel_width_not_space(self):
+        game = new_game(seed=3760, lang=rogue.LANG_JA)
+        self.assertEqual(
+            game.wrap_msg_toast_text("やあ rogue54a、運命の洞窟へようこそ。"),
+            ["やあ rogue54a、運命の洞窟", "へようこそ"],
+        )
+
     def test_message_toast_avoids_japanese_kinsoku_at_line_start(self):
         game = new_game(seed=3758, lang=rogue.LANG_JA)
         base = "あいうえおかきくけこさしす"
@@ -9643,13 +9678,18 @@ class RogueBaselineTest(unittest.TestCase):
         game.msgs = ["gone", "visible"]
         game.msg_turns = [0, 5]
         game.turn = 5
-        game.txt = lambda *args: None
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
         game.draw_msgs()
         self.assertEqual(game.msg_toast_rows, 2)
+        first_visible = next(c for c in calls if c[2] == "visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
 
+        calls.clear()
         game.turn = 6
         game.draw_msgs()
         self.assertEqual(game.msg_toast_rows, 2)
+        shifted_visible = next(c for c in calls if c[2] == "visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+        self.assertEqual(shifted_visible[1], first_visible[1])
 
         game.turn = 11
         game.draw_msgs()
@@ -12194,6 +12234,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.title_bgm_loaded = True
         game.title_bgm_started = False
         game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        game.title_cursor = 0
+        rogue.pyxel.set_input()
         rogue.pyxel.play_calls.clear()
 
         game.enter_title_screen()
@@ -12201,6 +12243,18 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertEqual(rogue.pyxel.play_calls, [])
+        self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
+
+    def test_entering_title_with_startup_bgm_keeps_title_fade(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.title_bgm_started = True
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+
+        game.enter_title_screen()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.title_fade_frames, 0)
 
     def test_title_bgm_uses_user_supplied_three_channel_mml(self):
         digest = hashlib.sha256("\n".join(rogue.TITLE_BGM_MMLS).encode()).hexdigest()
