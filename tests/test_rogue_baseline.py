@@ -10726,15 +10726,38 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.msg_toast_home_block(27, rogue.PLAY_Y_MIN + 7), (1, 1))
         self.assertEqual(rogue.msg_toast_home_block(79, rogue.PLAY_Y_MAX), (2, 2))
 
-    def test_message_toast_neighbor_prefers_opposite_last_intent_direction(self):
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 0)), (0, 1))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 1)), (1, 0))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 1)), (1, 0))
+    def test_message_toast_prefers_forward_two_blocks_when_available(self):
+        self.assertEqual(rogue.pick_msg_toast_block((0, 1), (1, 0)), (2, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((2, 1), (-1, 0)), (0, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 2), (0, -1)), (1, 0))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 0), (0, 1)), (1, 2))
+
+    def test_message_toast_uses_side_candidates_when_forward_two_is_unavailable(self):
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 0)), (1, 2))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (-1, 0)), (1, 2))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, -1)), (0, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 1)), (0, 1))
 
     def test_message_toast_neighbor_falls_back_deterministically_at_edges(self):
         self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 0)), (1, 2))
         self.assertEqual(rogue.pick_msg_toast_block((0, 0), (-1, -1)), (0, 1))
         self.assertEqual(rogue.pick_msg_toast_block((2, 2), (1, 1)), (2, 1))
+
+    def test_message_toast_intent_uses_recent_four_step_sum(self):
+        game = new_game(seed=3502)
+
+        for move in [(1, 0), (1, 0), (1, 0), (0, -1)]:
+            game.set_last_intent_dir(*move)
+
+        self.assertEqual(game.last_intent_dir, (1, 0))
+
+    def test_message_toast_intent_switches_after_recent_four_steps_dominate(self):
+        game = new_game(seed=3503)
+
+        for move in [(1, 0), (0, -1), (0, -1), (0, -1)]:
+            game.set_last_intent_dir(*move)
+
+        self.assertEqual(game.last_intent_dir, (0, -1))
 
     def test_message_toast_draws_in_neighbor_block_with_shadow_without_frame(self):
         game = new_game(seed=35)
@@ -10761,7 +10784,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertFalse(rect_calls)
         self.assertFalse(rectb_calls)
-        block = rogue.msg_toast_home_block(0, game.p.y)
+        home = rogue.msg_toast_home_block(game.p.x, game.p.y)
+        block = rogue.pick_msg_toast_block(home, game.last_intent_dir)
         x, y = rogue.msg_toast_block_origin(block, game.msg_toast_rows)
         self.assertIn((x + 1, y + 1, ">", rogue.MSG_TOAST_SHADOW_COL), calls)
         self.assertIn((x, y, ">", 9), calls)
@@ -10788,8 +10812,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
         game.msgs = []
         game.msg_turns = []
-        game.msg_toast_block = None
-        game.msg_toast_reposition_needed = True
+        game.msg_toast_block = (2, 1)
+        game.msg_toast_reposition_needed = False
         game.p.x = 40
         game.p.y = rogue.PLAY_Y_MIN + 10
         game.last_intent_dir = (-1, 0)

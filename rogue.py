@@ -233,7 +233,8 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_0138"
+UI_BUILD = "260507_1036"
+MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -1433,23 +1434,40 @@ def _valid_msg_toast_block(block):
     col, row = block
     return 0 <= col <= 2 and 0 <= row <= 2
 
+def _dominant_msg_toast_dir(dx, dy):
+    sx, sy = _sign(dx), _sign(dy)
+    if not sx and not sy:
+        return (0, 0)
+    if abs(dx) > abs(dy):
+        return (sx, 0)
+    if abs(dy) > abs(dx):
+        return (0, sy)
+    if sx:
+        return (sx, 0)
+    return (0, sy)
+
 def pick_msg_toast_block(home, last_intent_dir=(0, 0)):
     dx, dy = last_intent_dir
-    sx, sy = _sign(dx), _sign(dy)
-    if sy:
-        target = (home[0], home[1] - sy)
-        if _valid_msg_toast_block(target) and target != home:
-            return target
+    sx, sy = _dominant_msg_toast_dir(dx, dy)
     if sx:
-        target = (home[0] - sx, home[1])
-        if _valid_msg_toast_block(target) and target != home:
-            return target
-    priority = (
-        (home[0], home[1] + 1),
-        (home[0], home[1] - 1),
-        (home[0] - 1, home[1]),
-        (home[0] + 1, home[1]),
-    )
+        priority = (
+            (home[0] + sx * 2, home[1]),
+            (home[0], home[1] + 1),
+            (home[0], home[1] - 1),
+        )
+    elif sy:
+        priority = (
+            (home[0], home[1] + sy * 2),
+            (home[0] - 1, home[1]),
+            (home[0] + 1, home[1]),
+        )
+    else:
+        priority = (
+            (home[0], home[1] + 1),
+            (home[0], home[1] - 1),
+            (home[0] - 1, home[1]),
+            (home[0] + 1, home[1]),
+        )
     for block in priority:
         if _valid_msg_toast_block(block) and block != home:
             return block
@@ -1790,6 +1808,7 @@ class Game:
         self.msg_toast_rows = 0
         self.log_scroll = 0
         self.last_intent_dir = (0, 0)
+        self.msg_toast_intent_history = []
         self.msg_toast_reposition_needed = True
         self.call_input = ""; self.call_preset_idx = 0; self.call_item = None
         self.identify_symbol_pending = False
@@ -2582,7 +2601,17 @@ class Game:
 
     def set_last_intent_dir(self, dx, dy):
         if dx or dy:
-            self.last_intent_dir = (_sign(dx), _sign(dy))
+            step = (_sign(dx), _sign(dy))
+            history = list(getattr(self, "msg_toast_intent_history", []))
+            history.append(step)
+            history = history[-MSG_TOAST_INTENT_HISTORY:]
+            sx = sum(x for x, _ in history)
+            sy = sum(y for _, y in history)
+            if sx or sy:
+                self.last_intent_dir = _dominant_msg_toast_dir(sx, sy)
+            else:
+                self.last_intent_dir = step
+            self.msg_toast_intent_history = history
             self.msg_toast_reposition_needed = True
 
     def msg_toast_block_with_margin_contains_player(self, margin=1):
