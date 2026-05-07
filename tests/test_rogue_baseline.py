@@ -10726,17 +10726,17 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.msg_toast_home_block(27, rogue.PLAY_Y_MIN + 7), (1, 1))
         self.assertEqual(rogue.msg_toast_home_block(79, rogue.PLAY_Y_MAX), (2, 2))
 
-    def test_message_toast_prefers_forward_two_blocks_when_available(self):
-        self.assertEqual(rogue.pick_msg_toast_block((0, 1), (1, 0)), (2, 1))
-        self.assertEqual(rogue.pick_msg_toast_block((2, 1), (-1, 0)), (0, 1))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 2), (0, -1)), (1, 0))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 0), (0, 1)), (1, 2))
+    def test_message_toast_prefers_forward_neighbor_when_available(self):
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 0)), (2, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (-1, 0)), (0, 1))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, -1)), (1, 0))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 1)), (1, 2))
 
-    def test_message_toast_uses_side_candidates_when_forward_two_is_unavailable(self):
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (1, 0)), (1, 2))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (-1, 0)), (1, 2))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, -1)), (0, 1))
-        self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 1)), (0, 1))
+    def test_message_toast_uses_side_candidates_when_forward_neighbor_is_unavailable(self):
+        self.assertEqual(rogue.pick_msg_toast_block((2, 1), (1, 0)), (2, 2))
+        self.assertEqual(rogue.pick_msg_toast_block((0, 1), (-1, 0)), (0, 2))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 0), (0, -1)), (0, 0))
+        self.assertEqual(rogue.pick_msg_toast_block((1, 2), (0, 1)), (0, 2))
 
     def test_message_toast_neighbor_falls_back_deterministically_at_edges(self):
         self.assertEqual(rogue.pick_msg_toast_block((1, 1), (0, 0)), (1, 2))
@@ -10953,7 +10953,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_message_toast_recalculates_block_only_after_successful_movement(self):
         game = new_game(seed=3753)
         set_open_floor(game)
-        game.p.x = 40
+        game.p.x = 10
         game.p.y = rogue.PLAY_Y_MIN + 10
         game.last_intent_dir = (1, 0)
         game.txt = lambda *args: None
@@ -10989,9 +10989,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.msg_text("visible")
         first = game.msg_toast_block
 
-        game.p.x = rogue.MSG_TOAST_GRID_COL_EDGES[first[0] + 1] + 1
+        game.p.x = rogue.MSG_TOAST_GRID_COL_EDGES[first[0]] - 1
         game.p.y = rogue.PLAY_Y_MIN + rogue.MSG_TOAST_GRID_ROW_EDGES[first[1]] + 1
-        game.try_move(-1, 0)
+        game.try_move(1, 0)
 
         self.assertNotEqual(game.msg_toast_block, first)
 

@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_1036"
+UI_BUILD = "260507_1247"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -1451,13 +1451,13 @@ def pick_msg_toast_block(home, last_intent_dir=(0, 0)):
     sx, sy = _dominant_msg_toast_dir(dx, dy)
     if sx:
         priority = (
-            (home[0] + sx * 2, home[1]),
+            (home[0] + sx, home[1]),
             (home[0], home[1] + 1),
             (home[0], home[1] - 1),
         )
     elif sy:
         priority = (
-            (home[0], home[1] + sy * 2),
+            (home[0], home[1] + sy),
             (home[0] - 1, home[1]),
             (home[0] + 1, home[1]),
         )
