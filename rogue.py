@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_2331"
+UI_BUILD = "260507_2340"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -247,7 +247,7 @@ ONLINE_UI_TEXT = {
         "confirm_local": "B/Esc local only",
         "confirm_mark": "Local-only names show a trailing *.",
         "language_hint": "Select/L Change Language（言語切替）",
-        "score_title": "Online Scoreboard",
+        "score_title": "Scoreboard",
         "score_title_local": "My Rogue Chronicle",
         "score_title_weekly": "Weekly Rivals",
         "score_title_season": "Season Legends",
@@ -255,7 +255,7 @@ ONLINE_UI_TEXT = {
         "score_tab_weekly": "Weekly",
         "score_tab_season": "Season",
         "score_header": "   Score Name",
-        "score_hint": "D-pad/Arrows BOARDS  Select/Tab SYNC/REGISTER  B/Esc BACK",
+        "score_hint": "Left/Right: Boards   Select/Tab: Sync/Register   B/Esc: Back",
         "score_register_prompt": "Register a name to sync once per day.",
         "score_register_hint": "A/Enter register   B/Esc local only",
         "score_register_mark": "Local-only names show a trailing *.",
@@ -312,15 +312,15 @@ ONLINE_UI_TEXT = {
         "confirm_local": "B/Esc ローカルのみ",
         "confirm_mark": "ローカル名には * が付きます。",
         "language_hint": "Select/L Change Language（言語切替）",
-        "score_title": "オンラインスコア",
+        "score_title": "スコアボード",
         "score_title_local": "冒険の記録",
         "score_title_weekly": "週間ライバル",
         "score_title_season": "シーズンレジェンド",
         "score_period_local": "ローカル",
         "score_tab_weekly": "週間",
-        "score_tab_season": "季節",
+        "score_tab_season": "シーズン",
         "score_header": "   得点 名前",
-        "score_hint": "D-pad/矢印:ボード  Select/Tab:通信/登録  B/Esc:戻る",
+        "score_hint": "左右: ボード切替   Select/Tab: 通信/登録   B/Esc: 戻る",
         "score_register_prompt": "名前登録で1日1回投稿できます。",
         "score_register_hint": "A/Enter 登録  B/Esc ローカルのみ",
         "score_register_mark": "ローカル名には * が付きます。",
@@ -371,15 +371,15 @@ ONLINE_UI_TEXT = {
         "Registration failed.": "登録失敗。",
     },
 }
-SCOREBOARD_HILITE_COL = 23
-SCOREBOARD_TEXT_COL = 30
-SCOREBOARD_DIM_COL = 30
 UI_TEXT_COL = 30
 UI_SUBTEXT_COL = 6
 UI_HILITE_COL = 23
 UI_SECTION_COL = 31
 UI_SELECTED_COL = UI_HILITE_COL
 UI_RESTORED_CURSOR_COL = 27
+SCOREBOARD_HILITE_COL = UI_HILITE_COL
+SCOREBOARD_TEXT_COL = UI_TEXT_COL
+SCOREBOARD_DIM_COL = UI_SUBTEXT_COL
 UI_HEADING_SCREEN = "screen"
 UI_HEADING_PANEL = "panel"
 UI_HEADING_SECTION = "section"
@@ -5286,13 +5286,25 @@ class Game:
             self.st=ST_DIR
             return
         if not self.fitems:
-            self.msg("pyxel.nothing_to_action", action=aname.lower()); self.close_menu(); return
+            self.msg(self.nothing_to_action_msg_key(aname), action=aname.lower()); self.close_menu(); return
         self.icur, self.item_cursor_restored = self.initial_item_cursor(aname)
         if aname=="Call":
             self.call_item=None; self.call_input=CALL_PRESETS[0]; self.call_preset_idx=0
             self.st=ST_CALL
         else:
             self.st=ST_ITEM
+
+    def nothing_to_action_msg_key(self, aname):
+        return {
+            "Call": "pyxel.nothing_to_call",
+            "Eat": "pyxel.nothing_to_eat",
+            "Put on": "rings.no_rings",
+            "Quaff": "pyxel.nothing_to_quaff",
+            "Read": "scrolls.nothing_to_read",
+            "Wear": "pyxel.nothing_to_wear",
+            "Wield": "pyxel.nothing_to_wield",
+            "Zap": "pyxel.nothing_to_zap",
+        }.get(aname, "pyxel.nothing_to_action")
 
     def item_confirm(self):
         if not self.fitems: self.close_menu(); return
@@ -7175,7 +7187,7 @@ class Game:
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
 
     def log_visible_rows(self):
-        return max(1, (SCR_H - 86) // 11)
+        return max(1, (SCR_H - 98) // 11)
 
     def open_log(self):
         self.st = ST_LOG
@@ -7219,12 +7231,26 @@ class Game:
             return
         visible = self.log_visible_rows()
         max_scroll = max(0, len(getattr(self, "msgs", [])) - visible)
-        dy = self.menu_vertical_press()
+        dy = self.log_vertical_repeat()
         if dy:
             self.log_scroll = max(0, min(getattr(self, "log_scroll", 0) + dy, max_scroll))
             return
         self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
         self.upd_info_common()
+
+    def log_vertical_repeat(self):
+        if self.menu_vertical_press():
+            self.log_repeat_frame = pyxel.frame_count
+            return self.menu_vertical_press()
+        held = -1 if self._held_up() else 1 if self._held_dn() else 0
+        if not held:
+            self.log_repeat_frame = pyxel.frame_count
+            return 0
+        last = getattr(self, "log_repeat_frame", pyxel.frame_count)
+        if pyxel.frame_count - last >= 4:
+            self.log_repeat_frame = pyxel.frame_count
+            return held
+        return 0
 
     def upd_help(self):
         self.upd_info_common()
@@ -7391,6 +7417,11 @@ class Game:
             self.txt(x, y, text, col)
             x += self.ui_text_width(text)
 
+    def draw_score_title_line(self, x, y, title, period):
+        self.txt(x, y, title, UI_SECTION_COL)
+        x += self.ui_text_width(f"{title} ")
+        self.txt(x, y, self.scoreboard_period_label(period), UI_SUBTEXT_COL)
+
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
@@ -7400,9 +7431,8 @@ class Game:
             SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
         }.get(period, self.online_text("score_title_local"))
         self._box(98, 28, 380, SCR_H - 40, self.ui_heading(self.online_text("score_title"), UI_HEADING_SCREEN))
-        self.txt(120, 56, title, UI_SECTION_COL)
-        self.draw_score_period_tabs(120, 68, period)
-        self.txt(120, 80, self.scoreboard_period_label(period), UI_SUBTEXT_COL)
+        self.draw_score_period_tabs(120, 56, period)
+        self.draw_score_title_line(120, 70, title, period)
         scores = self.display_online_period_scores(period)
         self.txt(120, 94, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
         y = 108
@@ -7416,20 +7446,21 @@ class Game:
             if current_result:
                 line = self.mark_current_score_line(line)
             self.txt(120, y, line[:56], col)
-            y += 12
+            y += 10
         if not scores:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
+        info_y = 210
+        if getattr(self, "online_score_load_result", ""):
+            self.txt(114, info_y, self.online_score_load_result[:58], SCOREBOARD_DIM_COL)
+        if period != SCOREBOARD_PERIOD_LOCAL:
+            self.txt(114, 224, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         hint = self.online_sync_hint_line()[:58]
         if hint:
             self.txt(114, 238, hint, SCOREBOARD_DIM_COL)
-        if period != SCOREBOARD_PERIOD_LOCAL:
-            self.txt(114, 224, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
             for i, msg in enumerate(self.online_result_lines(self.online_sync_result)):
                 self.txt(max(114, 468 - self.ui_text_width(msg)), 40 + i * 12, msg, SCOREBOARD_HILITE_COL)
-        if getattr(self, "online_score_load_result", ""):
-            self.txt(114, 210, self.online_score_load_result[:58], SCOREBOARD_HILITE_COL)
         self.txt(114, 252, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
             self._box(156, 116, 268, 82, self.ui_heading(self.online_text("sync_title"), UI_HEADING_PANEL))
@@ -7439,7 +7470,7 @@ class Game:
         if getattr(self, "online_register_prompt", False):
             self._box(148, 104, 282, 92, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
             self.txt(168, 126, self.online_text("score_register_prompt"), UI_TEXT_COL)
-            self.txt(168, 144, self.online_text("score_register_hint"), UI_HILITE_COL)
+            self.txt(168, 144, self.online_text("score_register_hint"), UI_SUBTEXT_COL)
             self.txt(168, 162, self.online_text("score_register_mark"), UI_TEXT_COL)
 
     def draw_online_register_screen(self):
@@ -7456,7 +7487,7 @@ class Game:
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(138, 216, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_HILITE_COL)
+        self.txt(138, 216, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(138, 230)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
             self.txt(138, 246, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
@@ -7477,7 +7508,7 @@ class Game:
             self.txt(base_x + i * 18, y, ch, col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
         self.txt(base_x + 122, y, "END", end_col)
-        self.txt(150, 226, self.online_text("pin_hint"), UI_HILITE_COL)
+        self.txt(150, 226, self.online_text("pin_hint"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(150, 240)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
             self.txt(150, 254, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
@@ -7822,11 +7853,11 @@ class Game:
         max_rows = max(1, (bh - 34) // 11)
         cols, _rows = pack_grid_shape(len(self.p.inv), max_rows)
         cell_w = max(220, SCR_W - 24) if cols <= 1 else max(220, (SCR_W - 24) // cols)
-        self._box(bx,by,bw,bh)
-        self.draw_info_tabs(bx + 8, by + 8, "Inventory")
+        self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
+        self.draw_info_tabs(bx + 8, by + 20, "Inventory")
         self.draw_pack_grid_lines(
             bx + 8,
-            by + 28,
+            by + 40,
             self.p.inv,
             None,
             item_chars=40,
@@ -7843,9 +7874,16 @@ class Game:
             return {"Inventory": "持ちもの", "Log": "ログ", "Help": "ヘルプ"}.get(name, name)
         return name
 
-    def info_guide_label(self):
+    def info_title_label(self):
+        return "情報" if self.lang == LANG_JA else "Info"
+
+    def info_guide_label(self, active=None):
         if self.lang == LANG_JA:
+            if active == "Log":
+                return "上下: スクロール   左右: タブ切替   Select/Tab: 補助メニュー"
             return "左右: タブ切替   Select/Tab: 補助メニュー"
+        if active == "Log":
+            return "Up/Down: Scroll   Left/Right: Switch tabs   Select/Tab: Assist menu"
         return "Left/Right: Switch tabs   Select/Tab: Assist menu"
 
     def draw_info_tabs(self, x, y, active):
@@ -7864,26 +7902,26 @@ class Game:
 
     def draw_log(self):
         bx, by, bw, bh = self.info_window_rect()
-        self._box(bx, by, bw, bh)
-        self.draw_info_tabs(bx + 8, by + 8, "Log")
+        self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
+        self.draw_info_tabs(bx + 8, by + 20, "Log")
         lines = list(getattr(self, "msgs", []))[-100:]
         visible = self.log_visible_rows()
         max_scroll = max(0, len(lines) - visible)
         self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
         if self.log_scroll > 0:
-            self.txt(bx + bw - 16, by + 28, "^", UI_SUBTEXT_COL)
+            self.txt(bx + bw - 16, by + 40, "^", UI_SUBTEXT_COL)
         if self.log_scroll < max_scroll:
             self.txt(bx + bw - 16, by + bh - 34, "v", UI_SUBTEXT_COL)
         for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
-            self.txt(bx + 8, by + 28 + i * 11, self.message_display_text(text)[:72], UI_TEXT_COL)
+            self.txt(bx + 8, by + 40 + i * 11, self.message_display_text(text)[:72], UI_TEXT_COL)
         self.draw_log_scrollbar(bx, by, bw, bh, len(lines), visible, max_scroll)
-        self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
+        self.txt(bx + 8, by + bh - 16, self.info_guide_label("Log"), UI_SUBTEXT_COL)
 
     def draw_log_scrollbar(self, bx, by, bw, bh, total, visible, max_scroll):
         if total <= visible:
             return
         track_x = bx + bw - 8
-        track_y = by + 28
+        track_y = by + 40
         track_h = bh - 62
         pyxel.rect(track_x, track_y, 2, track_h, UI_SUBTEXT_COL)
         thumb_h = max(8, track_h * visible // max(visible, total))
@@ -7938,33 +7976,61 @@ class Game:
 
     def draw_help(self):
         bx, by, bw, bh = self.info_window_rect()
-        self._box(bx, by, bw, bh)
-        self.draw_info_tabs(bx + 8, by + 8, "Help")
-        gamepad=[
-            self.ui_heading("Gamepad", UI_HEADING_SECTION),
-            "D-pad       Move/Dir",
-            "Start       Diag assist",
-            "A Action    A+B Wait",
-            "B Menu      B+dir Dash",
-            "Select      Info",
-            "Info+Select Assist menu",
-            "Select+A    Throw",
-            "Select+B    Search",
-            "Select+dir  Inspect trap",
-        ]
-        keyboard=[
-            self.ui_heading("Keyboard: Pad", UI_HEADING_SECTION),
-            "Arrows/HJKL Move/Dir",
-            "YUBN        Diagonal",
-            "Space       Diag assist",
-            "Enter Action Enter+Esc Wait",
-            "Esc Menu    Shift+dir Dash",
-            "Tab         Info",
-            "Info+Tab    Assist menu",
-            "Tab+Enter   Throw",
-            "Tab+Esc Search  Tab+dir Trap",
-        ]
-        y=by+42
+        self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
+        self.draw_info_tabs(bx + 8, by + 20, "Help")
+        if self.lang == LANG_JA:
+            gamepad=[
+                self.ui_heading("ゲームパッド", UI_HEADING_SECTION),
+                "D-pad       移動/方向",
+                "Start       斜め補助",
+                "A 行動      A+B 足踏み",
+                "B メニュー  B+方向 ダッシュ",
+                "Select      持ちもの",
+                "持ちもの+Select 補助メニュー",
+                "Select+A    投げる",
+                "Select+B    探す",
+                "Select+方向 罠を見る",
+            ]
+            keyboard=[
+                self.ui_heading("キーボード", UI_HEADING_SECTION),
+                "矢印/HJKL   移動/方向",
+                "YUBN        斜め",
+                "Space       斜め補助",
+                "Enter 行動  Enter+Esc 足踏み",
+                "Esc メニュー Shift+方向 ダッシュ",
+                "Tab         持ちもの",
+                "持ちもの+Tab 補助メニュー",
+                "Tab+Enter   投げる",
+                "Tab+Esc 探す  Tab+方向 罠",
+            ]
+            commands_title = self.ui_heading("キーボードコマンド", UI_HEADING_SECTION)
+        else:
+            gamepad=[
+                self.ui_heading("Gamepad", UI_HEADING_SECTION),
+                "D-pad       Move/Dir",
+                "Start       Diag assist",
+                "A Action    A+B Wait",
+                "B Menu      B+dir Dash",
+                "Select      Inventory",
+                "Inventory+Select Assist menu",
+                "Select+A    Throw",
+                "Select+B    Search",
+                "Select+dir  Inspect trap",
+            ]
+            keyboard=[
+                self.ui_heading("Keyboard: Pad", UI_HEADING_SECTION),
+                "Arrows/HJKL Move/Dir",
+                "YUBN        Diagonal",
+                "Space       Diag assist",
+                "Enter Action Enter+Esc Wait",
+                "Esc Menu    Shift+dir Dash",
+                "Tab         Inventory",
+                "Inventory+Tab Assist menu",
+                "Tab+Enter   Throw",
+                "Tab+Esc Search  Tab+dir Trap",
+            ]
+            commands_title = self.ui_heading("Keyboard commands", UI_HEADING_SECTION)
+        y=by+50
         line_h = FONT_LINE_H
         for i in range(max(len(gamepad), len(keyboard))):
             if i < len(gamepad):
@@ -7972,7 +8038,7 @@ class Game:
             if i < len(keyboard):
                 ln=keyboard[i]; self.txt(bx+250,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
             y+=line_h
-        self.txt(bx+8,y,self.ui_heading("Keyboard commands", UI_HEADING_SECTION),HELP_HEADER_COL); y+=line_h
+        self.txt(bx+8,y,commands_title,HELP_HEADER_COL); y+=line_h
         commands=[
             (". Wait </> Stairs s Search ^ Trap", "t Throw d Drop"),
             ("i Inv I Inv item ? Help / Identify", "m Move f Fight a Again R Remove"),
@@ -7982,7 +8048,7 @@ class Game:
             self.txt(bx+8,y,left,HELP_TEXT_COL)
             self.txt(bx+250,y,right,HELP_TEXT_COL)
             y+=line_h
-        self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
+        self.txt(bx + 8, by + bh - 16, self.info_guide_label("Help"), UI_SUBTEXT_COL)
 
     def draw_top_scores(self, bx=412, by=30):
         bw=156; bh=144
@@ -8003,11 +8069,11 @@ class Game:
         scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
         y = by + 14
         for i, line in enumerate(format_top_score_lines(scores)):
-            self.txt(bx + 12, y, line, 10 if i == 0 else 9)
+            self.txt(bx + 12, y, line, SCOREBOARD_HILITE_COL if i == 0 else SCOREBOARD_TEXT_COL)
             y += 14
         if not scores:
             self.txt(bx + 12, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), UI_TEXT_COL)
-        self.txt(bx + 12, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_new_game"), 10)
+        self.txt(bx + 12, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_new_game"), UI_HILITE_COL)
 
     def draw_dead(self):
         if not self.options.get("tombstone", True):
@@ -8043,10 +8109,10 @@ class Game:
 
     def draw_win(self):
         bx,by=82,50; bw=334; bh=176
-        self._box(bx,by,bw,bh,self.ui_heading("Victory", UI_HEADING_SCREEN))
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_victory"), UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+26
-        self.txt(x,y,"You escaped from the Dungeons of Doom",UI_HILITE_COL); y+=16
-        self.txt(x,y,"with the Amulet of Yendor.",UI_HILITE_COL); y+=24
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_1"),UI_HILITE_COL); y+=16
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_2"),UI_HILITE_COL); y+=24
         self.txt(x,y,f"Gold:  {p.gold}",UI_HILITE_COL); y+=14
         self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
         self.txt(x,y,f"Exp:   {p.exp}",UI_TEXT_COL); y+=14
@@ -8055,19 +8121,19 @@ class Game:
 
     def draw_quit_confirm(self):
         bx,by=176,132; bw=224; bh=56
-        self._box(bx,by,bw,bh,self.ui_heading("Quit", UI_HEADING_PANEL))
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_quit"), UI_HEADING_PANEL))
         self.txt(bx+12, by+20, TextCatalog.msg(self.lang, "main.really_quit"), UI_HILITE_COL)
-        self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), UI_TEXT_COL)
+        self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), UI_SUBTEXT_COL)
 
     def draw_quit(self):
         bx,by=96,60; bw=300; bh=148
-        self._box(bx,by,bw,bh,self.ui_heading("Quit", UI_HEADING_SCREEN))
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_quit"), UI_HEADING_PANEL))
         p=self.p; x=bx+18; y=by+24
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),UI_HILITE_COL); y+=24
         self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
         self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
         self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=26
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_SUBTEXT_COL)
 
 # ===========================================================
 if __name__=="__main__":

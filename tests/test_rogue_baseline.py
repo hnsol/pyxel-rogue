@@ -10564,7 +10564,8 @@ class RogueBaselineTest(unittest.TestCase):
         second_item = next(c for c in inv_lines if c[2].startswith("b)"))
         mid_item = next(c for c in inv_lines if c[2].startswith("n)"))
         last_item = next(c for c in inv_lines if c[2].startswith("z)"))
-        self.assertEqual(first_item[1] - calls[0][1], 20)
+        tab_line = next(c for c in calls if c[2] == "-- ")
+        self.assertEqual(first_item[1] - tab_line[1], 20)
         self.assertEqual(second_item[0], first_item[0])
         self.assertGreater(second_item[1], first_item[1])
         self.assertGreater(mid_item[0], first_item[0])
@@ -12541,7 +12542,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_register_screen()
 
-        self.assertIn((138, 216, "A/Enter 決定  B/Esc ローカルのみ", rogue.UI_HILITE_COL), calls)
+        self.assertIn((138, 216, "A/Enter 決定  B/Esc ローカルのみ", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn((138, 230, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
         self.assertNotIn((314, 42, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
 
@@ -13045,9 +13046,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Syncing scores...", text)
         self.assertIn("Please wait.", text)
         self.assertIn("Ends in 03h 12m 45s  UTC 2026-05-01 00:00", text)
-        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 120), drawn)
+        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 118), drawn)
         self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108), drawn)
-        self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 222), drawn)
+        self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 208), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
         self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108)), drawn.index(("box", (156, 116, 268, 82, "-- Sync --"))))
@@ -13145,8 +13146,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
-        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 120), drawn)
-        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 132), drawn)
+        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 118), drawn)
+        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 128), drawn)
 
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13351,12 +13352,52 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn(("Season Legends", rogue.UI_SECTION_COL, 120, 56), drawn)
-        self.assertIn(("-- ", rogue.UI_SECTION_COL, 120, 68), drawn)
-        self.assertIn(("Local", rogue.UI_TEXT_COL, 138, 68), drawn)
-        self.assertIn(("Weekly", rogue.UI_TEXT_COL, 186, 68), drawn)
-        self.assertIn(("Season", rogue.UI_SELECTED_COL, 240, 68), drawn)
-        self.assertIn(("2026-Spring", rogue.UI_SUBTEXT_COL, 120, 80), drawn)
+        self.assertIn(("-- ", rogue.UI_SECTION_COL, 120, 56), drawn)
+        self.assertIn(("Local", rogue.UI_TEXT_COL, 138, 56), drawn)
+        self.assertIn(("Weekly", rogue.UI_TEXT_COL, 186, 56), drawn)
+        self.assertIn(("Season", rogue.UI_SELECTED_COL, 240, 56), drawn)
+        self.assertIn(("Season Legends", rogue.UI_SECTION_COL, 120, 70), drawn)
+        self.assertIn(("2026-Spring", rogue.UI_SUBTEXT_COL, 210, 70), drawn)
+
+    def test_online_scoreboard_japanese_tabs_title_order_and_bottom_info_are_dim(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.lang = rogue.LANG_JA
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        game.online_period = rogue.SCOREBOARD_PERIOD_SEASON
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_SEASON: [
+                {"score": 1000 - i, "player_name": f"p{i}", "result_flags": "killed", "level": i + 1, "killer": "bat"}
+                for i in range(10)
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_SEASON}
+        game.online_syncing = False
+        game.online_register_prompt = False
+        game.online_score_load_result = "Scoreboard cache updated."
+        game.scoreboard_period_label = lambda period, timestamp=None: "2026-Spring"
+        game.scoreboard_period_ends_line = lambda period: "This Season ends in 1w at UTC 2026-06-01 00:00"
+        game.online_sync_hint_line = lambda: "Posted UTC 05-03 03:45 / POST after 05-04 03:45"
+        game.load_online_period_scores = lambda *args, **kwargs: game.online_score_cache[rogue.SCOREBOARD_PERIOD_SEASON]
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        self.assertIn(("ローカル", rogue.UI_TEXT_COL, 138, 56), drawn)
+        self.assertIn(("週間", rogue.UI_TEXT_COL, 196, 56), drawn)
+        self.assertIn(("シーズン", rogue.UI_SELECTED_COL, 234, 56), drawn)
+        title = ("シーズンレジェンド", rogue.UI_SECTION_COL, 120, 70)
+        period = ("2026-Spring", rogue.UI_SUBTEXT_COL, 120 + game.ui_text_width("シーズンレジェンド "), 70)
+        self.assertIn(title, drawn)
+        self.assertIn(period, drawn)
+        bottom = [item for item in drawn if len(item) == 4 and item[3] in (210, 224, 238, 252)]
+        self.assertTrue(bottom)
+        self.assertTrue(all(item[1] == rogue.SCOREBOARD_DIM_COL for item in bottom))
+        score_rows = [item for item in drawn if len(item) == 4 and item[0][:2].strip().isdigit()]
+        self.assertLess(max(y for _s, _c, _x, y in score_rows), 210)
 
     def test_online_scoreboard_uses_current_language_after_registration_toggle(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13391,7 +13432,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("得点 名前", text)
         self.assertIn("ace*: 3階で中断。", text)
         self.assertIn("ローカルのみ。Selectでオンライン登録。", text)
-        self.assertIn("D-pad/矢印:ボード  Select/Tab:通信/登録  B/Esc:戻る", text)
+        self.assertIn("左右: ボード切替   Select/Tab: 通信/登録   B/Esc: 戻る", text)
         self.assertIn("名前登録で1日1回投稿できます。", text)
         self.assertIn("ランキング更新。", text)
         self.assertIn("POSTは24時間に1回。", text)
@@ -14999,6 +15040,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_LOG)
         self.assertEqual(game.log_scroll, max(0, len(game.msgs) - game.log_visible_rows()))
 
+    def test_log_scroll_repeats_while_direction_is_held(self):
+        game = new_game(seed=47332)
+        game.msgs = [f"message {i:02d}" for i in range(60)]
+        game.msg_turns = [0] * len(game.msgs)
+        game.open_log()
+        start = game.log_scroll
+        old_frame = rogue.pyxel.frame_count
+        try:
+            rogue.pyxel.frame_count = 100
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_UP}, pressed={rogue.pyxel.KEY_UP})
+            game.update()
+            first = game.log_scroll
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_UP}, pressed=set())
+            rogue.pyxel.frame_count = 104
+            game.update()
+            second = game.log_scroll
+        finally:
+            rogue.pyxel.frame_count = old_frame
+            rogue.pyxel.set_input()
+
+        self.assertEqual(first, start - 1)
+        self.assertEqual(second, start - 2)
+
     def test_inventory_log_and_help_use_same_window_and_localized_tabs(self):
         game = new_game(seed=4734)
         game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
@@ -15015,6 +15079,7 @@ class RogueBaselineTest(unittest.TestCase):
         calls.clear()
         game.draw_log()
         log_box = boxes[-1]
+        log_calls = list(calls)
 
         boxes.clear()
         calls.clear()
@@ -15023,21 +15088,24 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(inventory_box[:4], log_box[:4])
         self.assertEqual(inventory_box[:4], help_box[:4])
-        self.assertEqual(inventory_box[4], "")
-        self.assertEqual(log_box[4], "")
-        self.assertEqual(help_box[4], "")
+        self.assertEqual(inventory_box[4], "=== Info ===")
+        self.assertEqual(log_box[4], "=== Info ===")
+        self.assertEqual(help_box[4], "=== Info ===")
         self.assertEqual([s for *_xy, s, _c in inventory_calls].count("Inventory"), 1)
         self.assertEqual([s for *_xy, s, _c in calls].count("Log"), 1)
         self.assertIn("Help", [s for *_xy, s, _c in calls])
         self.assertIn(("-- ", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertIn((" --", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in inventory_calls))
-        self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in calls))
+        self.assertTrue(any("Up/Down: Scroll" in s and "Left/Right: Switch tabs" in s for *_xy, s, _c in log_calls))
+        self.assertTrue(any("Left/Right: Switch tabs" in s and "Assist menu" in s for *_xy, s, _c in calls))
 
         game.lang = rogue.LANG_JA
+        boxes.clear()
         calls.clear()
         game.draw_help()
         text = [s for *_xy, s, _c in calls]
+        self.assertEqual(boxes[-1][4], "=== 情報 ===")
         self.assertIn("ヘルプ", text)
         self.assertIn("ログ", text)
         self.assertTrue(any("左右: タブ切替" in s and "補助メニュー" in s for s in text))
@@ -15162,6 +15230,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(s.startswith("---") and c == rogue.UI_SECTION_COL for s, c in calls))
         self.assertTrue(any("D-pad/Arrows" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
 
+    def test_result_screens_use_semantic_colors_and_localized_titles(self):
+        game = new_game(seed=473441)
+        game.lang = rogue.LANG_JA
+        game.result_scores = [
+            {"score": 740, "player_name": "ace", "result_flags": "killed", "level": 8, "killer": "troll"},
+            {"score": 624, "player_name": "bob", "result_flags": "quit", "level": 5, "killer": ""},
+        ]
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_score_screen()
+        game.draw_win()
+        game.draw_quit()
+
+        self.assertIn("=== Top 10 ===", boxes)
+        self.assertIn("=== 勝利 ===", boxes)
+        self.assertIn("-- 終了 --", boxes)
+        self.assertIn(("Top Ten Scores:", rogue.SCOREBOARD_HILITE_COL), calls)
+        self.assertTrue(any("740 ace" in s and c == rogue.SCOREBOARD_TEXT_COL for s, c in calls))
+        self.assertTrue(any("624 bob" in s and c == rogue.SCOREBOARD_TEXT_COL for s, c in calls))
+        self.assertIn(("A / Start  新しいゲーム", rogue.UI_HILITE_COL), calls)
+        self.assertIn(("ダンジョンから脱出した", rogue.UI_HILITE_COL), calls)
+        self.assertTrue(any(s.startswith("Gold:") and c == rogue.UI_HILITE_COL for s, c in calls))
+        self.assertTrue(any(s.startswith("Level:") and c == rogue.UI_TEXT_COL for s, c in calls))
+
     def test_name_input_screen_uses_localized_screen_frame_and_subtext(self):
         game = new_game(seed=47345)
         game.lang = rogue.LANG_JA
@@ -15175,6 +15270,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("=== 名前入力 ===", boxes)
         self.assertIn(("名前", rogue.UI_SECTION_COL), calls)
         self.assertTrue(any("D-pad/矢印" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
+
+    def test_empty_read_and_put_on_messages_use_object_names_in_japanese(self):
+        game = new_game(seed=47346, lang=rogue.LANG_JA)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+
+        game.st = rogue.ST_MENU
+        game.start_item_action("Read")
+        self.assertIn("読むものがない", game.msgs)
+        self.assertNotIn("readものがない", "\n".join(game.msgs).lower())
+
+        game.msgs.clear()
+        game.st = rogue.ST_MENU
+        game.start_item_action("Put on")
+        self.assertIn("指輪はない", game.msgs)
+        self.assertNotIn("put onものがない", "\n".join(game.msgs).lower())
+
+        game.msgs.clear()
+        game.st = rogue.ST_MENU
+        game.start_item_action("Quaff")
+        self.assertIn("飲むものがない", game.msgs)
+        self.assertNotIn("quaffものがない", "\n".join(game.msgs).lower())
 
     def test_online_sync_overlay_uses_panel_frame_and_localized_status_roles(self):
         game = rogue.Game.__new__(rogue.Game)
