@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_1523"
+UI_BUILD = "260507_1542"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -281,7 +281,7 @@ ONLINE_UI_TEXT = {
         "pin_link_server": "This name exists on the server.",
         "pin_link_reuse": "Enter its PIN to link this device.",
         "pin_hint": "A/Enter OK  B/Esc BACK",
-        "sync_title": "sync",
+        "sync_title": "Sync",
         "sync_scores": "Syncing scores...",
         "refresh_ranking": "Refreshing ranking...",
         "please_wait": "Please wait.",
@@ -7346,7 +7346,9 @@ class Game:
             self.txt(x, y + i * 24, item, TITLE_MENU_SELECTED_COL if i == cur else TITLE_MENU_TEXT_COL)
 
     def draw_name_input(self):
-        self.txt(SCR_W // 2 - 30, 72, "YOUR NAME", UI_SECTION_COL)
+        bx, by, bw, bh = 112, 58, 356, 210
+        self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.name_entry"), UI_HEADING_SCREEN))
+        self.txt(138, 84, TextCatalog.msg(self.lang, "ui.name_entry_label"), UI_SECTION_COL)
         chars = getattr(self, "name_chars", [])
         display = "".join(chars).ljust(8)[:8]
         base_x, y = 216, 136
@@ -7355,8 +7357,8 @@ class Game:
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(124, 210, "D-pad/Arrows: Change/Move", UI_SUBTEXT_COL)
-        self.txt(132, 226, "A/Enter NEXT/END  Start/Space OK  B/Esc DEL", UI_SUBTEXT_COL)
+        self.txt(124, 210, TextCatalog.msg(self.lang, "ui.name_entry_move_hint"), UI_SUBTEXT_COL)
+        self.txt(132, 226, TextCatalog.msg(self.lang, "ui.name_entry_ok_hint"), UI_SUBTEXT_COL)
 
     def draw_online_confirm_screen(self):
         self._box(116, 84, 348, 132, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))

@@ -13038,7 +13038,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("UTC", text)
         self.assertIn("Score Name", text)
         self.assertIn(" 1   346 masatora: killed on level 4 by an orc.", text)
-        self.assertIn("-- sync --", text)
+        self.assertIn("-- Sync --", text)
         self.assertIn("ace", text)
         self.assertIn("killed", text)
         self.assertIn("bat", text)
@@ -13050,7 +13050,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 222), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
-        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108)), drawn.index(("box", (156, 116, 268, 82, "-- sync --"))))
+        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108)), drawn.index(("box", (156, 116, 268, 82, "-- Sync --"))))
 
     def test_online_score_sync_box_shows_refreshing_when_post_is_not_allowed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -15146,7 +15146,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=47344)
         boxes = []
         calls = []
-        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
 
         game.draw_score_screen()
@@ -15154,11 +15154,51 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_name_input()
         game.draw_help()
 
-        self.assertIn("=== Top 10 ===", boxes)
-        self.assertIn("=== R.I.P. ===", boxes)
-        self.assertIn(("YOUR NAME", rogue.UI_SECTION_COL), calls)
+        titles = [title for *_box, title in boxes]
+        self.assertIn("=== Top 10 ===", titles)
+        self.assertIn("=== R.I.P. ===", titles)
+        self.assertIn("=== Name Entry ===", titles)
+        self.assertIn(("Name", rogue.UI_SECTION_COL), calls)
         self.assertTrue(any(s.startswith("---") and c == rogue.UI_SECTION_COL for s, c in calls))
         self.assertTrue(any("D-pad/Arrows" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
+
+    def test_name_input_screen_uses_localized_screen_frame_and_subtext(self):
+        game = new_game(seed=47345)
+        game.lang = rogue.LANG_JA
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_name_input()
+
+        self.assertIn("=== 名前入力 ===", boxes)
+        self.assertIn(("名前", rogue.UI_SECTION_COL), calls)
+        self.assertTrue(any("D-pad/矢印" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
+
+    def test_online_sync_overlay_uses_panel_frame_and_localized_status_roles(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.lang = rogue.LANG_EN
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        game.online_score_cache = {rogue.SCOREBOARD_PERIOD_WEEKLY: []}
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = True
+        game.online_sync_post_allowed = True
+        game.online_register_prompt = False
+        game.load_online_period_scores = lambda *args, **kwargs: []
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append(title)
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_online_score_screen()
+
+        self.assertIn("-- Sync --", boxes)
+        self.assertIn(("Syncing scores...", rogue.SCOREBOARD_HILITE_COL), calls)
+        self.assertIn(("Please wait.", rogue.SCOREBOARD_HILITE_COL), calls)
 
     def test_log_draws_scroll_position_and_keeps_gap_above_controls(self):
         game = new_game(seed=4735)

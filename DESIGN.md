@@ -77,6 +77,8 @@ Rogue 5.4.4 準拠のため、内部ダンジョン座標は `rogue.h` の `NUMC
 
 UIの構造検討は疑似Markdownで行い、実装時も同じ語彙へ寄せる。`[frame:panel]` は枠付きオーバーレイの `-- Title --`、`[frame:screen]` は結果・名前入力・スコアなど全画面級の `=== Title ===`、`[frame:prompt]` は方向入力などの小プロンプト、`[frame:inline-section]` はHUD内の `-- Equip --` / `-- Cond --` のような枠なし小見出しを表す。`[role:section]` は見出し構造色、`[role:text]` は通常本文、`[role:hilite]` は選択中・重要・特殊状態、`[role:restore]` は前回選択復元、`[role:subtext]` は操作ヒントに使う。新しいUI要素を追加するときはこの frame / role に分類し、合わない場合は先にこの体系を更新する。
 
+名前入力は `## === Name Entry === [frame:screen]` として扱い、入力欄のラベルは `[role:section]`、文字カーソルと `END` は `[role:hilite]`、操作説明は `[role:subtext]` に置く。オンライン同期中の一時表示はスコア画面内の `### -- Sync -- [frame:panel]` として扱い、通信中メッセージは重要な進行状態として `[role:hilite]` にする。
+
 右HUDは、基礎ステータスの後に `Food Normal` と `Ctl 8w Auto` を置く。斜め補助や手動拾いのような通常と違う操作状態は `Ctl Diag Man` としてまとめ、特殊状態色で目立たせる。装備は従来通り `-- Equip --` の下へ短縮名を置き、状態一覧は幅に収まる `-- Cond --` を使う。
 
 ミニマップと全体マップUIは廃止する。元祖ローグでは、見えているASCIIダンジョン表示そのものが地図であり、別レイヤーの地図UIを足すと探索体験が現代ローグライク寄りになりすぎるため。探索情報はメインASCII表示に集約する。
@@ -286,7 +288,7 @@ run 停止条件は Rogue 5.4.4 の `move.c:do_run()` / `do_move()` と `misc.c:
 
 ## 死亡画面とスコア
 
-死亡画面はブラウザ・携帯機でのテストプレイを続けやすくする移植UIとして追加する。Depth、Level、Gold、Exp、Turn、死因を表示し、A または Start で新規ゲームへ戻れるようにする。
+死亡画面はブラウザ・携帯機でのテストプレイを続けやすくする移植UIとして追加する。`## === R.I.P. === [frame:screen]` として扱い、墓石本文と Depth / Level / Exp / Turn は `[role:text]`、Gold と次画面へ進む操作は `[role:hilite]` にする。A または Start でスコア画面へ進める。
 
 スコア保存はゲームメカニクスの外側に置く。`vendor/rogue544/rip.c:score()`、`rip.c:death()`、`rip.c:killname()`、`rip.c:total_winner()`、`main.c:quit()` を基準に、死亡は Gold の 90% を墓石表示とスコアに使い、starvation / hypothermia / arrow / dart / bolt の死因名と冠詞も `killname()` に合わせる。quit は Gold 100%、勝利は Gold に所持品売却額を加えた値を採用する。ローカル保存は JSON / localStorage とし、旧スコア形式は開発中リセットとして v2 storage へ切り替える。スコアボードは Info 風の `Local | Weekly | Season` タブで切り替えつつ、画面見出しとして My Rogue Chronicle / Weekly Rivals / Seasonal Legends の名称を残す。My Rogue Chronicle はローカル履歴を即表示する。Daily は廃止し、Weekly / Season は同一期間・同一 player_name の最高点だけを表示する。Season は Spring 3-5月、Summer 6-8月、Fall 9-11月、Winter 12-2月の固定季節制とする。
 
