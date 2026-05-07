@@ -10474,7 +10474,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.pyxel.rect = old_rect
 
-    def test_inventory_overlay_and_hud_show_v5_exp_and_trimmed_mode_labels(self):
+    def test_inventory_overlay_and_hud_show_v5_exp_and_compact_control_summary(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
@@ -10491,17 +10491,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any("Diag OFF" in c for c in calls))
         self.assertFalse(any("Pickup ON" in c for c in calls))
         self.assertFalse(any("Lang EN" in c for c in calls))
-        self.assertIn("Move 8-way", calls)
-        self.assertIn("Pick Auto", calls)
+        self.assertIn("Food Normal", calls)
+        self.assertIn("Ctl 8w Auto", calls)
+        self.assertFalse(any(c.startswith("Move ") for c in calls))
+        self.assertFalse(any(c.startswith("Pick ") for c in calls))
 
         game.diag_assist = True
         game.auto_pickup = False
         calls.clear()
         game.draw_stat()
-        self.assertIn("Move Corner", calls)
-        self.assertIn("Pick Manual", calls)
+        self.assertIn("Food Normal", calls)
+        self.assertIn("Ctl Diag Man", calls)
         self.assertFalse(any("Diag ON" in c for c in calls))
         self.assertFalse(any("Pickup OFF" in c for c in calls))
+
+        game.lang = rogue.LANG_JA
+        calls.clear()
+        game.draw_stat()
+        self.assertIn("食料 通常", calls)
+        self.assertIn("操作 斜め 手動", calls)
+        self.assertIn("-- 状態 --", calls)
+
+        game.p.state = "hungry"
+        calls.clear()
+        game.draw_stat()
+        self.assertIn("食料 空腹", calls)
 
     def test_hud_mode_lines_do_not_shift_equipment(self):
         game = new_game(seed=35)
@@ -10512,7 +10526,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.auto_pickup = True
         game.draw_stat()
         normal_equip_y = next(y for _x, y, s in calls if s == "-- Equip --")
-        normal_effect_y = next(y for _x, y, s in calls if s == "-- Eff --")
+        normal_cond_y = next(y for _x, y, s in calls if s == "-- Cond --")
 
         calls.clear()
         game.diag_assist = True
@@ -10520,7 +10534,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_stat()
 
         self.assertEqual(next(y for _x, y, s in calls if s == "-- Equip --"), normal_equip_y)
-        self.assertEqual(next(y for _x, y, s in calls if s == "-- Eff --"), normal_effect_y)
+        self.assertEqual(next(y for _x, y, s in calls if s == "-- Cond --"), normal_cond_y)
 
     def test_inventory_overlay_lists_pack_without_status_or_equipment_sections(self):
         game = new_game(seed=35)
@@ -15020,7 +15034,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_stat()
         self.assertIn(("-- 装備 --", rogue.UI_SECTION_COL), calls)
-        self.assertIn(("-- 効果 --", rogue.UI_SECTION_COL), calls)
+        self.assertIn(("-- 状態 --", rogue.UI_SECTION_COL), calls)
 
     def test_score_death_name_and_help_apply_heading_color_roles(self):
         game = new_game(seed=47344)

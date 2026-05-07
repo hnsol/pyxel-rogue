@@ -1199,6 +1199,36 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "ui.ctrl": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.ctrl_8way": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.ctrl_auto": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.ctrl_diag": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.ctrl_manual": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "ui.effects": {
     "source": "rogue.py:UI",
     "params": [],
@@ -1206,6 +1236,36 @@
     "origin": "pyxel-rogue"
   },
   "ui.equip": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.food": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.food_faint": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.food_hungry": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.food_normal": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.food_weak": {
     "source": "rogue.py:UI",
     "params": [],
     "ja_status": "manual",

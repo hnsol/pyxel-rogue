@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_1247"
+UI_BUILD = "260507_1402"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -7515,11 +7515,20 @@ class Game:
         self.txt(sx,sy,f"Arm {p.ac}",9); sy+=11
         self.txt(sx,sy,f"Lv {p.level}",9); sy+=11
         self.txt(sx,sy,f"Exp {p.exp}",9); sy+=11
-        self.txt(sx,sy,"Move Corner" if self.diag_assist else "Move 8-way",UI_SELECTED_COL if self.diag_assist else UI_TEXT_COL); sy+=11
-        self.txt(sx,sy,"Pick Auto" if self.auto_pickup else "Pick Manual",UI_TEXT_COL if self.auto_pickup else UI_SELECTED_COL); sy+=11
         state = p.state if p.state else "normal"
-        if state != "normal":
-            self.txt(sx,sy,f"Food {state}",22); sy+=11
+        food_col = 22 if state != "normal" else UI_TEXT_COL
+        food_key = {
+            "normal": "ui.food_normal",
+            "hungry": "ui.food_hungry",
+            "weak": "ui.food_weak",
+            "faint": "ui.food_faint",
+        }.get(state)
+        food_state = TextCatalog.msg(self.lang, food_key) if food_key else state.title()
+        self.txt(sx,sy,f"{TextCatalog.msg(self.lang, 'ui.food')} {food_state}",food_col); sy+=11
+        move_label = TextCatalog.msg(self.lang, "ui.ctrl_diag" if self.diag_assist else "ui.ctrl_8way")
+        pick_label = TextCatalog.msg(self.lang, "ui.ctrl_auto" if self.auto_pickup else "ui.ctrl_manual")
+        ctrl_col = UI_SELECTED_COL if self.diag_assist or not self.auto_pickup else UI_TEXT_COL
+        self.txt(sx,sy,f"{TextCatalog.msg(self.lang, 'ui.ctrl')} {move_label} {pick_label}",ctrl_col); sy+=11
         sy+=6
         self.txt(sx,sy,self.ui_heading(TextCatalog.msg(self.lang, "ui.equip"), UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
         wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
