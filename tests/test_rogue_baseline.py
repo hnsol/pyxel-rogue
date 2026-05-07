@@ -14709,6 +14709,40 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.cact, "Drop")
         self.assertEqual(game.st, rogue.ST_ITEM)
 
+    def test_action_menu_restores_limited_previous_action_until_cursor_moves(self):
+        game = new_game(seed=4721)
+        potion = rogue.Item(rogue.CAT_POT, 0)
+        game.p.inv = [potion]
+
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Quaff")
+        game.menu_select()
+        self.assertEqual(game.st, rogue.ST_ITEM)
+
+        game.close_menu()
+        game.open_menu()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Quaff")
+        self.assertTrue(game.menu_cursor_restored)
+
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.draw_menu()
+        self.assertTrue(any(s.startswith(">q)") and c == rogue.UI_RESTORED_CURSOR_COL for s, c in calls))
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+        )
+        game.update()
+        self.assertFalse(game.menu_cursor_restored)
+
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Drop")
+        game.menu_select()
+        game.close_menu()
+        game.open_menu()
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Eat")
+        self.assertFalse(game.menu_cursor_restored)
+
     def test_discoveries_cancel_from_action_menu_returns_to_action_menu(self):
         game = new_game(seed=47201)
         game.open_menu()
@@ -14846,6 +14880,8 @@ class RogueBaselineTest(unittest.TestCase):
     def test_info_inventory_log_help_switch_like_tabs_without_spending_turns(self):
         game = new_game(seed=4731)
         start_turn = game.turn
+        game.msgs = [f"message {i:02d}" for i in range(30)]
+        game.msg_turns = [0] * len(game.msgs)
 
         rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
         game.update()
@@ -14856,6 +14892,7 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
         game.update()
         self.assertEqual(game.st, rogue.ST_LOG)
+        self.assertEqual(game.log_scroll, max(0, len(game.msgs) - game.log_visible_rows()))
         self.assertEqual(game.turn, start_turn)
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
@@ -14914,6 +14951,19 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
         game.update()
         self.assertLess(game.log_scroll, len(game.msgs))
+
+    def test_log_tab_entry_starts_at_latest_messages(self):
+        game = new_game(seed=47331)
+        game.msgs = [f"message {i:02d}" for i in range(30)]
+        game.msg_turns = [0] * len(game.msgs)
+        game.st = rogue.ST_INVENTORY
+        game.log_scroll = 0
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_LOG)
+        self.assertEqual(game.log_scroll, max(0, len(game.msgs) - game.log_visible_rows()))
 
     def test_inventory_log_and_help_use_same_window_and_localized_tabs(self):
         game = new_game(seed=4734)
@@ -18523,6 +18573,22 @@ class RogueBaselineTest(unittest.TestCase):
                 self.assertLessEqual(y, bottom_limit)
                 self.assertGreaterEqual(x, bx + 4)
                 self.assertLessEqual(x + game.ui_text_width(text), bx + bw - 4)
+
+    def test_help_text_does_not_overlap_bottom_guide(self):
+        game = new_game(seed=5621)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_help()
+
+        guide_y = next(y for _x, y, s, _c in calls if "Left/Right" in s)
+        body_rows = [
+            y for _x, y, s, c in calls
+            if s
+            and c == rogue.HELP_TEXT_COL
+            and not s.startswith(("Inventory", "Log", "Help"))
+        ]
+        self.assertLessEqual(max(body_rows) + rogue.FONT_LINE_H, guide_y - 2)
 
     def test_rogue54_rnd_and_trap_spawn_frequency_shape(self):
         self.assertEqual(rogue.rnd(0), 0)

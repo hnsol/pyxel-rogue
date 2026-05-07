@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_1449"
+UI_BUILD = "260507_1514"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -1803,6 +1803,8 @@ class Game:
         self.cact = None; self.dact = None; self.fitems = []
         self.last_item_by_action = {}
         self.item_cursor_restored = False
+        self.last_menu_action = None
+        self.menu_cursor_restored = False
         self.message_ack_pending = False
         self.msg_toast_block = None
         self.msg_toast_rows = 0
@@ -5197,17 +5199,33 @@ class Game:
             self.dash_restart_guard=True
 
     # ---------- Menu logic ----------
+    def restorable_menu_actions(self):
+        return ("Quaff", "Read", "Eat", "Zap", "Throw")
+
+    def action_index_by_name(self, name):
+        for i, (action_name, _cat) in enumerate(MENU_ACTIONS):
+            if action_name == name:
+                return i
+        return None
+
     def open_menu(self):
-        self.st=ST_MENU; self.mcur=pad_menu_initial_index(MENU_ACTIONS); self.dir_pending=None
+        restored = getattr(self, "last_menu_action", None)
+        restored_index = self.action_index_by_name(restored) if restored in self.restorable_menu_actions() else None
+        self.st=ST_MENU
+        self.mcur=restored_index if restored_index is not None else pad_menu_initial_index(MENU_ACTIONS)
+        self.menu_cursor_restored=restored_index is not None
+        self.dir_pending=None
         self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
     def close_menu(self):
         self.st=ST_PLAY; self.mcur=self.icur=0; self.cact=None; self.dact=None; self.fitems=[]
         self.throw_dir=None; self.zap_dir=None; self.zap_item=None; self.action_origin=ST_PLAY
         self.call_item=None; self.call_input=""; self.call_preset_idx=0
         self.b_menu_guard=False; self.dir_pending=None; self.command_look_done=False
+        self.menu_cursor_restored=False
 
     def menu_select(self):
         aname,cat = MENU_ACTIONS[self.mcur]
+        self.last_menu_action = aname if aname in self.restorable_menu_actions() else None
         if aname=="Discoveries":
             self.open_discoveries()
             return
@@ -7034,9 +7052,15 @@ class Game:
 
     def upd_menu(self):
         dx=self.menu_horizontal_press()
-        if dx: self.mcur=pad_menu_move(self.mcur,dx,0,MENU_ACTIONS); return
+        if dx:
+            self.mcur=pad_menu_move(self.mcur,dx,0,MENU_ACTIONS)
+            self.menu_cursor_restored=False
+            return
         dy=self.menu_vertical_press()
-        if dy: self.mcur=pad_menu_move(self.mcur,0,dy,MENU_ACTIONS); return
+        if dy:
+            self.mcur=pad_menu_move(self.mcur,0,dy,MENU_ACTIONS)
+            self.menu_cursor_restored=False
+            return
         if self.btn_a(): self.menu_select(); return
         if self.btn_overlay_cancel(): self.close_menu(); return
 
@@ -7158,10 +7182,14 @@ class Game:
 
     def set_info_tab_index(self, index):
         tabs = (ST_INVENTORY, ST_LOG, ST_HELP)
+        previous = self.st
         self.st = tabs[index % len(tabs)]
         if self.st == ST_LOG:
             max_scroll = max(0, len(getattr(self, "msgs", [])) - self.log_visible_rows())
-            self.log_scroll = max(0, min(getattr(self, "log_scroll", max_scroll), max_scroll))
+            if previous != ST_LOG:
+                self.log_scroll = max_scroll
+            else:
+                self.log_scroll = max(0, min(getattr(self, "log_scroll", max_scroll), max_scroll))
 
     def upd_info_common(self):
         dx = self.menu_horizontal_press()
@@ -7674,7 +7702,10 @@ class Game:
                     continue
                 x=bx+5+gx*cell_w; y=by+17+gy*cell_h
                 selected=idx==self.mcur
-                c=UI_SELECTED_COL if selected else UI_TEXT_COL
+                if selected and getattr(self, "menu_cursor_restored", False):
+                    c=UI_RESTORED_CURSOR_COL
+                else:
+                    c=UI_SELECTED_COL if selected else UI_TEXT_COL
                 pre=">" if selected else " "
                 self.txt(x,y,f"{pre}{self.menu_hint_label(nm)[:11]}",c)
 
@@ -7881,34 +7912,29 @@ class Game:
         gamepad=[
             self.ui_heading("Gamepad", UI_HEADING_SECTION),
             "D-pad       Move/Dir",
-            "Hold Start  Diag assist",
-            "A           Action",
-            "A+B         Wait",
-            "B+dir       Dash",
-            "B           Menu/Cancel",
+            "Start       Diag assist",
+            "A Action    A+B Wait",
+            "B Menu      B+dir Dash",
             "Select      Info",
             "Info+Select Assist menu",
-            "Select+A    Quick throw",
-            "Select+B    Search around",
+            "Select+A    Throw",
+            "Select+B    Search",
             "Select+dir  Inspect trap",
         ]
         keyboard=[
             self.ui_heading("Keyboard: Pad", UI_HEADING_SECTION),
             "Arrows/HJKL Move/Dir",
             "YUBN        Diagonal",
-            "Hold Space  Diag assist",
-            "Enter       Action",
-            "Enter+Esc   Wait",
-            "Shift+dir   Dash",
-            "Esc         Menu/Cancel",
+            "Space       Diag assist",
+            "Enter Action Enter+Esc Wait",
+            "Esc Menu    Shift+dir Dash",
             "Tab         Info",
             "Info+Tab    Assist menu",
-            "Tab+Enter   Quick throw",
-            "Tab+Esc     Search around",
-            "Tab+dir     Inspect trap",
+            "Tab+Enter   Throw",
+            "Tab+Esc Search  Tab+dir Trap",
         ]
-        y=by+26
-        line_h = 10
+        y=by+42
+        line_h = FONT_LINE_H
         for i in range(max(len(gamepad), len(keyboard))):
             if i < len(gamepad):
                 ln=gamepad[i]; self.txt(bx+8,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
@@ -7917,15 +7943,14 @@ class Game:
             y+=line_h
         self.txt(bx+8,y,self.ui_heading("Keyboard commands", UI_HEADING_SECTION),HELP_HEADER_COL); y+=line_h
         commands=[
-            ". Wait   </> Stairs s Search   t Throw   ^ Trap",
-            "i Inv    I Inv item ? Help     / Identify",
-            "d Drop   m Move onto f Fight   a Again",
-            "q Quaff  r Read     e Eat     z Zap",
-            "w Wear   W Wield    T Take off",
-            "P Put on R Remove   o Options Q Quit",
+            (". Wait </> Stairs s Search ^ Trap", "t Throw d Drop"),
+            ("i Inv I Inv item ? Help / Identify", "m Move f Fight a Again R Remove"),
+            ("q Quaff r Read e Eat z Zap P Put on o Options Q Quit", "w Wear W Wield T Take off"),
         ]
-        for ln in commands:
-            self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=line_h
+        for left, right in commands:
+            self.txt(bx+8,y,left,HELP_TEXT_COL)
+            self.txt(bx+250,y,right,HELP_TEXT_COL)
+            y+=line_h
         self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
 
     def draw_top_scores(self, bx=412, by=30):
