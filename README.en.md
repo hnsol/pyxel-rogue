@@ -20,7 +20,7 @@ For detailed design notes, see [DESIGN.md](DESIGN.md). For the task list and cur
 
 ![Rogue V5 on Pyxel screenshot](docs/images/pyxel-rogue-screenshot.png)
 
-Gameplay view with the Rogue 5.4.4-style 80-column ASCII map, right-side HUD, and bottom log.
+Gameplay view with the Rogue 5.4.4-style 80-column ASCII map, 512x320 corner HUD, and proximity message log.
 
 ## Play on the Web
 
@@ -139,7 +139,7 @@ Use Zap from the menu to choose a wand or staff, then choose a direction.
 
 Implemented overview:
 
-- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 564x276 Steam Deck browser-oriented layout, right-side HUD with abbreviated equipment, and proximity message logs that stay readable on handhelds
+- Rogue 5.4.4-style 80x24 logical map, 80x22 terrain view, 512x320 fictional retro-console layout, corner HUD with lower-left HP and lower-right status, and proximity message logs that stay readable on handhelds
 - 3x3-sector dungeon generation with rooms, passages, and doors
 - 26 monster types, combat, hunger, and natural HP recovery
 - Potions, scrolls, food, weapons, armor, rings, identification, inventory, and curses

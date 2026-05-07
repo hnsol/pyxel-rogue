@@ -285,15 +285,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_ui.pack_grid_move(17, 1, 0, 26), 25)
         self.assertEqual((rogue.B_TAP_FRAMES, rogue.BACK_TAP_FRAMES), (8, 8))
 
-    def test_layout_constants_are_split_without_changing_screen_geometry(self):
+    def test_layout_constants_use_512_320_hades_hud_geometry(self):
         import rogue_layout
 
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (564, 276))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
         self.assertEqual((rogue.FONT_ASCII_W, rogue.FONT_CJK_W, rogue.FONT_LINE_H), (6, 10, 12))
         self.assertTrue(rogue.FONT_PATH.endswith("umplus_j10r.bdf"))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
-        self.assertEqual(rogue.ZV_Y, (rogue.SCR_H - rogue.ZV_PX_H) // 2)
+        self.assertEqual((rogue.ZV_X, rogue.ZV_Y), (16, 24))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (rogue_layout.ZV_PX_W, rogue_layout.ZV_PX_H))
         self.assertEqual((rogue.HUD_X, rogue.HUD_W), (rogue_layout.HUD_X, rogue_layout.HUD_W))
         self.assertEqual((rogue.MSG_LINES, rogue.MSG_COLS), (7, rogue_layout.MSG_COLS))
@@ -6382,11 +6382,11 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("your armor weakens", game.msgs)
 
     def test_full_map_layout_baseline(self):
-        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (564, 276))
+        self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.ZV_COLS, rogue.ZV_ROWS), (rogue.MAP_W, rogue.PLAY_H))
         self.assertEqual((rogue.ZV_PX_W, rogue.ZV_PX_H), (480, 264))
-        self.assertEqual(rogue.ZV_Y, 6)
-        self.assertEqual(rogue.HUD_W, rogue.SCR_W - rogue.HUD_X - 4)
+        self.assertEqual((rogue.ZV_X, rogue.ZV_Y), (16, 24))
+        self.assertEqual(rogue.HUD_W, 480)
         self.assertEqual(rogue.MSG_LINES, 7)
         self.assertEqual(rogue.AUX_ACTIONS, ["Search", "Trap", "Pickup", "Language", "Palette", "Quit"])
 
@@ -6425,7 +6425,7 @@ class RogueBaselineTest(unittest.TestCase):
         for x, _y, text in drawn:
             self.assertLessEqual(x + len(text) * 6, rogue.SCR_W)
 
-    def test_compact_hud_uses_original_status_order_and_unprefixed_equipment(self):
+    def test_hades_hud_uses_corner_status_and_bonus_equipment(self):
         game = new_game(seed=51)
         game.p.depth = 6
         game.p.gold = 911
@@ -6440,15 +6440,34 @@ class RogueBaselineTest(unittest.TestCase):
         calls = []
         game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
 
+        game.draw_title()
         game.draw_stat()
 
         labels = [s for _x, _y, s, _c in calls]
-        expected = ["Depth 6", "Gold 911", "Hp 43/46", "Str 13/16", "Arm 6", "Lv 5", "Exp 135"]
-        indices = [labels.index(s) for s in expected]
-        self.assertEqual(indices, sorted(indices))
-        equip_index = labels.index("-- Equip --")
-        self.assertEqual(labels[equip_index + 1], "+1,+1 mace")
-        self.assertFalse(any(s.startswith(("W ", "A ")) for s in labels))
+        self.assertIn("NORMAL", labels)
+        self.assertIn("D:", labels)
+        self.assertIn("6", labels)
+        self.assertIn("G:", labels)
+        self.assertIn("911", labels)
+        self.assertIn("Hp", labels)
+        self.assertIn("43(46)", labels)
+        self.assertIn("W", labels)
+        self.assertIn("+1,+1 mace", labels)
+        self.assertIn("A", labels)
+        self.assertIn("+1 ring", labels)
+        self.assertIn("Str", labels)
+        self.assertIn("13(16)", labels)
+        self.assertIn("Arm", labels)
+        self.assertIn("Exp", labels)
+        self.assertIn("5/135", labels)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "D:"), rogue.UI_SUBTEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "6"), rogue.UI_TEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "G:"), rogue.UI_SUBTEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "911"), 29)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "W"), rogue.UI_SUBTEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "+1,+1 mace"), rogue.UI_TEXT_COL)
+        self.assertNotIn("Rogue V5", labels)
+        self.assertFalse(any(s.startswith(("Depth ", "Gold ", "Food ", "Ctl ")) for s in labels))
 
     def test_rogue2_official_message_reference_data_is_checked_in(self):
         ref_dir = os.path.join(ROOT, "vendor", "rogue2_official_messages")
@@ -10073,7 +10092,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.msgs[-2:], ["Hello rogue54, welcome to the Dungeons of Doom!", "17 gold pieces"])
         self.assertEqual(game.msg_turns[-2:], [0, 1])
 
-    def test_stairs_reposition_message_toast_for_new_player_block(self):
+    def test_stairs_clear_visible_message_toast_for_new_floor(self):
         game = new_game(seed=3111)
         set_open_floor(game)
         game.tm[game.p.y][game.p.x] = rogue.T_STAIR
@@ -10084,8 +10103,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.use_stairs()
 
-        home = rogue.msg_toast_home_block(game.p.x, game.p.y)
-        self.assertEqual(game.msg_toast_block, rogue.pick_msg_toast_block(home, game.last_intent_dir))
+        self.assertIsNone(game.msg_toast_block)
+        self.assertTrue(game.msg_toast_reposition_needed)
 
     def test_auto_pickup_can_be_toggled_and_manual_pickup_still_works(self):
         game = new_game(seed=32)
@@ -10306,6 +10325,18 @@ class RogueBaselineTest(unittest.TestCase):
         glyphs = [s for x, y, s in calls if (x, y) == (target_x, target_y)]
         self.assertEqual(glyphs, ["Z"])
 
+    def test_main_map_draws_without_outer_frame(self):
+        game = new_game(seed=350)
+        rectbs = []
+        old_rectb = rogue.pyxel.rectb
+        try:
+            game.txt = lambda *args: None
+            rogue.pyxel.rectb = lambda *args: rectbs.append(args)
+            game.draw_zoom()
+        finally:
+            rogue.pyxel.rectb = old_rectb
+        self.assertNotIn((rogue.ZV_X - 1, rogue.ZV_Y - 1, rogue.ZV_PX_W + 2, rogue.ZV_PX_H + 2, 3), rectbs)
+
     def test_dark_room_explored_floor_is_not_drawn_after_leaving_lamp_area(self):
         # Rogue 5.4.4 misc.c:erase_lamp()/rooms.c:leave_room() erase dark room FLOOR.
         game = new_game(seed=341)
@@ -10389,8 +10420,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_title()
 
-        self.assertIn("Rogue V5", calls)
-        self.assertIn(rogue.UI_BUILD, calls)
+        self.assertIn("NORMAL", calls)
+        self.assertNotIn("Rogue V5", calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{6}_\d{4}$")
 
     def test_rogue_py_commits_update_ui_build_stamp(self):
@@ -10450,49 +10481,78 @@ class RogueBaselineTest(unittest.TestCase):
             game.turn += 1
             rects.clear()
             game.draw_stat()
-            self.assertEqual(len(rects), 2)
+            self.assertEqual(len(rects), 3)
         finally:
             rogue.pyxel.rect = old_rect
 
-    def test_hp_damage_bar_stays_orange_when_hp_is_low(self):
+    def test_hp_damage_bar_uses_bright_orange_residue_and_red_low_hp(self):
         game = new_game(seed=343)
         game.txt = lambda *args: None
         rects = []
+        rectbs = []
         old_rect = rogue.pyxel.rect
+        old_rectb = rogue.pyxel.rectb
         try:
             rogue.pyxel.rect = lambda *args: rects.append(args)
+            rogue.pyxel.rectb = lambda *args: rectbs.append(args)
             game.p.max_hp = 20
             game.p.hp = 10
             game.draw_stat()
             game.p.hp = 4
             rects.clear()
+            rectbs.clear()
 
             game.draw_stat()
 
-            self.assertIn(21, [args[-1] for args in rects])
+            self.assertIn(19, [args[-1] for args in rects])
             self.assertIn(22, [args[-1] for args in rects])
+            self.assertIn(22, [args[-1] for args in rectbs])
         finally:
             rogue.pyxel.rect = old_rect
+            rogue.pyxel.rectb = old_rectb
 
-    def test_inventory_overlay_and_hud_show_v5_exp_and_compact_control_summary(self):
+    def test_hp_text_uses_normal_text_color_while_bar_uses_red_with_light_frame(self):
+        game = new_game(seed=3431)
+        calls = []
+        rects = []
+        old_rect = rogue.pyxel.rect
+        old_rectb = rogue.pyxel.rectb
+        try:
+            game.txt = lambda x, y, s, c: calls.append((str(s), c))
+            rogue.pyxel.rect = lambda *args: rects.append(args)
+            rogue.pyxel.rectb = lambda *args: rects.append(args)
+            game.draw_stat()
+        finally:
+            rogue.pyxel.rect = old_rect
+            rogue.pyxel.rectb = old_rectb
+        self.assertIn(("Hp", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("12(12)", rogue.UI_TEXT_COL), calls)
+        colors = [args[-1] for args in rects]
+        self.assertIn(rogue.UI_SUBTEXT_COL, colors)
+        self.assertIn(18, colors)
+        self.assertIn((rogue.ZV_X + 17, rogue.SCR_H - 12, 110, 7, rogue.UI_SUBTEXT_COL), rects)
+
+    def test_inventory_overlay_and_hades_hud_show_v5_exp_status_summary(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
         game.draw_stat()
         game.draw_inventory()
-        self.assertIn("Lv 1", calls)
-        self.assertIn("Exp 0", calls)
+        self.assertIn("Str", calls)
+        self.assertIn("16(16)", calls)
+        self.assertIn("Arm", calls)
+        self.assertIn("Exp", calls)
+        self.assertIn("1/0", calls)
         self.assertFalse(any("Lv 1 Exp 0" in c for c in calls))
-        self.assertFalse(any("Exp 0/10" in c for c in calls))
         self.assertFalse(any("Exp:   0/10" in c for c in calls))
-        self.assertTrue(any(c.startswith("Arm ") for c in calls))
+        self.assertIn("Arm", calls)
         self.assertFalse(any(c.startswith("Armor:") for c in calls))
         self.assertFalse(any("Food normal" in c for c in calls))
         self.assertFalse(any("Diag OFF" in c for c in calls))
         self.assertFalse(any("Pickup ON" in c for c in calls))
         self.assertFalse(any("Lang EN" in c for c in calls))
-        self.assertIn("Food Normal", calls)
-        self.assertIn("Ctl 8w Auto", calls)
+        self.assertFalse(any("Food Normal" in c for c in calls))
+        self.assertFalse(any("Ctl 8w Auto" in c for c in calls))
         self.assertFalse(any(c.startswith("Move ") for c in calls))
         self.assertFalse(any(c.startswith("Pick ") for c in calls))
 
@@ -10500,24 +10560,52 @@ class RogueBaselineTest(unittest.TestCase):
         game.auto_pickup = False
         calls.clear()
         game.draw_stat()
-        self.assertIn("Food Normal", calls)
-        self.assertIn("Ctl Diag Man", calls)
+        self.assertNotIn("Ctl Diag Man", calls)
         self.assertFalse(any("Diag ON" in c for c in calls))
         self.assertFalse(any("Pickup OFF" in c for c in calls))
 
         game.lang = rogue.LANG_JA
         calls.clear()
         game.draw_stat()
-        self.assertIn("食料 通常", calls)
-        self.assertIn("操作 斜め 手動", calls)
-        self.assertIn("-- 状態 --", calls)
+        self.assertIn("Str", calls)
+        self.assertIn("1/0", calls)
 
         game.p.state = "hungry"
         calls.clear()
         game.draw_stat()
-        self.assertIn("食料 空腹", calls)
+        self.assertIn("空腹", calls)
 
-    def test_hud_mode_lines_do_not_shift_equipment(self):
+    def test_hades_hud_condition_labels_localize_in_japanese(self):
+        game = new_game(seed=3501, lang=rogue.LANG_JA)
+        game.p.state = "hungry"
+        game.p.confused = 3
+        game.p.blind = 2
+        game.p.haste = 1
+        game.p.hallucinating = 1
+        game.p.levitating = 1
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_stat()
+
+        self.assertIn("空腹 混乱 盲目 加速 幻覚 浮遊", calls)
+        self.assertFalse(any("Hungry" in c or "Confuse" in c or "Blind" in c for c in calls))
+
+    def test_hades_hud_unequipped_names_localize_in_japanese(self):
+        game = new_game(seed=3502, lang=rogue.LANG_JA)
+        game.p.wpn = None
+        game.p.arm = None
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_stat()
+
+        self.assertIn("素手", calls)
+        self.assertIn("防具なし", calls)
+        self.assertNotIn("bare hands", calls)
+        self.assertNotIn("no armor", calls)
+
+    def test_hud_mode_flags_do_not_shift_corner_status(self):
         game = new_game(seed=35)
         calls = []
         game.txt = lambda x, y, s, c: calls.append((x, y, str(s)))
@@ -10525,16 +10613,16 @@ class RogueBaselineTest(unittest.TestCase):
         game.diag_assist = False
         game.auto_pickup = True
         game.draw_stat()
-        normal_equip_y = next(y for _x, y, s in calls if s == "-- Equip --")
-        normal_cond_y = next(y for _x, y, s in calls if s == "-- Cond --")
+        normal_hp = next((x, y) for x, y, s in calls if s == "Hp")
+        normal_body = next((x, y) for x, y, s in calls if s == "Str")
 
         calls.clear()
         game.diag_assist = True
         game.auto_pickup = False
         game.draw_stat()
 
-        self.assertEqual(next(y for _x, y, s in calls if s == "-- Equip --"), normal_equip_y)
-        self.assertEqual(next(y for _x, y, s in calls if s == "-- Cond --"), normal_cond_y)
+        self.assertEqual(next((x, y) for x, y, s in calls if s == "Hp"), normal_hp)
+        self.assertEqual(next((x, y) for x, y, s in calls if s == "Str"), normal_body)
 
     def test_inventory_overlay_lists_pack_without_status_or_equipment_sections(self):
         game = new_game(seed=35)
@@ -10615,7 +10703,24 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_isel()
 
-        self.assertTrue(any("abcdefghijklmnopqrstuvwxyz0123456789" in s for s in calls))
+        self.assertTrue(any("abcdefghijklmnopqrstuvwxyz0123456." in s for s in calls))
+
+    def test_pack_grid_item_labels_stay_inside_their_frame(self):
+        game = new_game(seed=37112)
+        game.p.inv = [rogue.Item(rogue.CAT_SCR, 0)]
+        game.fitems = list(game.p.inv)
+        game.cact = "Read"
+        game.item_name = lambda it: "scroll labeled " + "verylongname" * 8
+        boxes = []
+        calls = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_isel()
+
+        bx, _by, bw, _bh, _title = boxes[-1]
+        for x, _y, text, _c in calls:
+            self.assertLessEqual(x + game.ui_text_width(text), bx + bw - 6)
 
     def test_inventory_uses_wide_pack_layout_and_shows_assist_hint(self):
         game = new_game(seed=3712)
@@ -10687,9 +10792,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_stat()
 
-        equip_index = calls.index("-- Equip --")
-        equip_lines = calls[equip_index + 1:equip_index + 3]
-        self.assertEqual(len(equip_lines), 2)
+        equip_lines = [c for c in calls if c in ("W", "+1,+1 mace", "A", "+1 ring")]
+        self.assertEqual(equip_lines, ["W", "+1,+1 mace", "A", "+1 ring"])
         self.assertFalse(any("(weapon in hand)" in c for c in equip_lines))
         self.assertFalse(any("(being worn)" in c for c in equip_lines))
         self.assertFalse(any("[" in c for c in equip_lines))
@@ -10838,7 +10942,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         text_calls = [c for c in calls if c[2] not in (">", "!") and c[3] != rogue.MSG_TOAST_SHADOW_COL]
         self.assertEqual([c[2] for c in text_calls], ["You have defeated the", "bat"])
-        self.assertEqual([c[0] for c in text_calls], [346, 346])
+        self.assertEqual([c[0] for c in text_calls], [358, 358])
         for x, _y, text, _col in text_calls:
             self.assertLessEqual(x + game.ui_text_width(text), rogue.ZV_X + rogue.ZV_PX_W)
 
@@ -10989,6 +11093,24 @@ class RogueBaselineTest(unittest.TestCase):
         game.try_move(0, 1)
         game.msg_text("three")
         self.assertNotEqual(game.msg_toast_block, first)
+
+    def test_descend_expires_visible_message_toast_without_clearing_log_history(self):
+        game = new_game(seed=37531)
+        game.msgs = []
+        game.msg_turns = []
+        game.turn = 20
+        game.msg_text("old floor")
+        self.assertEqual(game.msg_turns, [20])
+
+        game.descend()
+
+        self.assertEqual(game.msgs, ["old floor"])
+        self.assertEqual(len(game.msg_turns), 1)
+        self.assertLess(game.msg_turns[0], game.turn - rogue.MSG_TOAST_DIM_TURNS)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+        game.draw_msgs()
+        self.assertNotIn("Old floor", calls)
 
     def test_message_toast_repositions_when_player_enters_one_tile_margin(self):
         game = new_game(seed=3755)
@@ -14878,9 +15000,9 @@ class RogueBaselineTest(unittest.TestCase):
         item_center = (item_box[0] + item_box[2] // 2, item_box[1] + item_box[3] // 2)
         self.assertLess(action_center[0], map_center_x)
         self.assertLess(action_center[1], map_center_y)
-        self.assertGreater(action_center[0], map_center_x - 100)
+        self.assertGreater(action_center[0], map_center_x - 120)
         self.assertGreater(action_center[1], map_center_y - 80)
-        self.assertGreater(item_box[0], action_box[0])
+        self.assertLess(item_box[0], action_box[0])
         self.assertGreater(item_box[1], action_box[1])
         self.assertGreater(item_center[0], action_center[0])
         self.assertGreater(item_center[1], action_center[1])
@@ -15207,8 +15329,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("> 探す", aux_text)
 
         game.draw_stat()
-        self.assertIn(("-- 装備 --", rogue.UI_SECTION_COL), calls)
-        self.assertIn(("-- 状態 --", rogue.UI_SECTION_COL), calls)
+        self.assertIn(("W", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("+1,+1 ほこ", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("A", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("+1 かたびら", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Str", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("16(16)", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Arm", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("Exp", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("1/0", rogue.UI_TEXT_COL), calls)
 
     def test_score_death_name_and_help_apply_heading_color_roles(self):
         game = new_game(seed=47344)

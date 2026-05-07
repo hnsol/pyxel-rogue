@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_2340"
+UI_BUILD = "260508_0116"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -1734,6 +1734,39 @@ class Game:
             width += FONT_ASCII_W if ord(ch) < 128 else FONT_CJK_W
         return width
 
+    def ui_segments_width(self, segments):
+        return sum(self.ui_text_width(text) for text, _col in segments)
+
+    def txt_segments(self, x, y, segments):
+        cur = x
+        for text, col in segments:
+            text = str(text)
+            if text.strip():
+                self.txt(cur, y, text, col)
+            cur += self.ui_text_width(text)
+        return cur
+
+    def txt_segments_right(self, right_x, y, segments):
+        return self.txt_segments(right_x - self.ui_segments_width(segments), y, segments)
+
+    def ellipsize_to_width(self, text, max_width):
+        text = str(text)
+        if self.ui_text_width(text) <= max_width:
+            return text
+        ell = "."
+        ell_w = self.ui_text_width(ell)
+        if max_width <= ell_w:
+            return ell if max_width >= ell_w else ""
+        out = ""
+        width = 0
+        for ch in text:
+            ch_w = FONT_ASCII_W if ord(ch) < 128 else FONT_CJK_W
+            if width + ch_w + ell_w > max_width:
+                break
+            out += ch
+            width += ch_w
+        return out + ell
+
     def wrap_msg_toast_text(self, text):
         limit = MSG_COLS * FONT_ASCII_W
         rows = []
@@ -1794,6 +1827,86 @@ class Game:
             nm=TextCatalog.hud_item_kind(lang, CAT_ARM, it.data["name"])
             return f"{'+' if e>=0 else ''}{e} {nm}"
         return self.equip_name(it)
+
+    def hud_weapon_bonus(self, it):
+        if not it:
+            return "+0,+0"
+        hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
+        dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
+        return f"{hp},{dp}"
+
+    def hud_armor_bonus(self, it):
+        if not it:
+            return "+0"
+        e = it.ench
+        return f"{'+' if e>=0 else ''}{e}"
+
+    def hud_equip_line(self):
+        w = self.hud_weapon_empty_name()
+        a = self.hud_armor_empty_name()
+        if self.p.wpn:
+            w = self.hud_equip_name(self.p.wpn)
+        if self.p.arm:
+            a = self.hud_equip_name(self.p.arm)
+        return f"W {w} A {a}"
+
+    def hud_weapon_empty_name(self):
+        return "素手" if self.lang == LANG_JA else "bare hands"
+
+    def hud_armor_empty_name(self):
+        return "防具なし" if self.lang == LANG_JA else "no armor"
+
+    def hud_condition_labels(self):
+        p = self.p
+        if self.lang == LANG_JA:
+            names = {
+                "hungry": "空腹",
+                "weak": "衰弱",
+                "faint": "失神",
+                "confuse": "混乱",
+                "blind": "盲目",
+                "haste": "加速",
+                "halu": "幻覚",
+                "levit": "浮遊",
+            }
+        else:
+            names = {
+                "hungry": "Hungry",
+                "weak": "Weak",
+                "faint": "Faint",
+                "confuse": "Confuse",
+                "blind": "Blind",
+                "haste": "Haste",
+                "halu": "Halu",
+                "levit": "Levit",
+            }
+        eff = []
+        if p.state == "hungry":
+            eff.append(names["hungry"])
+        elif p.state == "weak":
+            eff.append(names["weak"])
+        elif p.state == "faint":
+            eff.append(names["faint"])
+        if p.confused > 0:
+            eff.append(names["confuse"])
+        if p.blind > 0:
+            eff.append(names["blind"])
+        if p.haste > 0:
+            eff.append(names["haste"])
+        if p.hallucinating > 0:
+            eff.append(names["halu"])
+        if p.levitating > 0:
+            eff.append(names["levit"])
+        return eff
+
+    def expire_visible_msg_toast(self):
+        if len(getattr(self, "msg_turns", [])) != len(self.msgs):
+            self.msg_turns = [self.turn] * len(self.msgs)
+        expired_turn = self.turn - MSG_TOAST_DIM_TURNS - 1
+        self.msg_turns = [expired_turn] * len(self.msgs)
+        self.msg_toast_block = None
+        self.msg_toast_rows = 0
+        self.msg_toast_reposition_needed = True
 
     # ---------- Init ----------
     def new_game(self):
@@ -2090,10 +2203,7 @@ class Game:
         self._center_cam(); self.update_fov()
         if self.p.hallucinating > 0:
             self.run_visuals()
-        self.msg_toast_block = None
-        self.msg_toast_reposition_needed = True
-        if getattr(self, "msgs", None):
-            self.refresh_msg_toast_block()
+        self.expire_visible_msg_toast()
 
     def usable_rooms(self):
         return [room for room in self.rooms if room.usable] or self.rooms
@@ -7525,8 +7635,8 @@ class Game:
         self.draw_online_language_hint(138, 196)
 
     def draw_title(self):
-        self.txt(HUD_X, 3, "Rogue V5", 10)
-        self.txt(HUD_X, 13, UI_BUILD, UI_SUBTEXT_COL)
+        pyxel.rect(0, 0, SCR_W, ZV_Y - 4, 1)
+        self.txt(ZV_X, 6, "NORMAL", UI_SUBTEXT_COL)
 
     def should_draw_memory_tile(self, mx, my, tile):
         room = self.room_at(mx, my)
@@ -7542,7 +7652,6 @@ class Game:
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
         blind = self.p.blind > 0
-        pyxel.rectb(ZV_X-1, ZV_Y-1, ZV_PX_W+2, ZV_PX_H+2, 3)
         px,py = self.p.x, self.p.y
 
         for vy in range(ZV_ROWS):
@@ -7593,12 +7702,30 @@ class Game:
 
     def draw_stat(self):
         self.clamp_player_hp()
-        sx,sy=HUD_X,HUD_Y+28; p=self.p; hc=9 if p.hp>p.max_hp//3 else 22
-        self.txt(sx,sy,f"Depth {p.depth}",9)
-        sy+=11
-        self.txt(sx,sy,f"Gold {p.gold}",29); sy+=11
-        self.txt(sx,sy,f"Hp {p.hp}/{p.max_hp}",hc); sy+=11
-        bw=HUD_W-10; pyxel.rect(sx,sy,bw,4,1)
+        p=self.p
+        hp_low = p.hp <= p.max_hp // 3
+        hp_fill_col = 22 if hp_low else 21
+        pyxel.rect(0, SCR_H - 30, SCR_W, 30, 1)
+        self.txt_segments_right(
+            SCR_W - 16,
+            6,
+            (
+                ("D:", UI_SUBTEXT_COL),
+                (str(p.depth), UI_TEXT_COL),
+                ("  ", UI_SUBTEXT_COL),
+                ("G:", UI_SUBTEXT_COL),
+                (str(p.gold), 29),
+            ),
+        )
+
+        hp_y = SCR_H - 14
+        equip_y = SCR_H - 26
+        self.txt(ZV_X, hp_y, "Hp", UI_SUBTEXT_COL)
+        bw = 108
+        bx = ZV_X + 18
+        by = hp_y + 3
+        pyxel.rectb(bx - 1, by - 1, bw + 2, 7, 22 if hp_low else UI_SUBTEXT_COL)
+        pyxel.rect(bx, by, bw, 5, 1)
         if p.max_hp>0:
             if self.last_hp_seen is not None and p.hp < self.last_hp_seen:
                 self.hp_damage_from = min(self.last_hp_seen, p.max_hp)
@@ -7606,50 +7733,47 @@ class Game:
             cur_w=max(0,int(bw*p.hp/p.max_hp))
             if self.hp_damage_turn == self.turn and self.hp_damage_from is not None:
                 old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
-                pyxel.rect(sx+cur_w,sy,old_w-cur_w,4,21)
-            pyxel.rect(sx,sy,cur_w,4,22 if p.hp<=p.max_hp//3 else 9)
+                pyxel.rect(bx+cur_w,by,old_w-cur_w,5,19)
+            pyxel.rect(bx,by,cur_w,5,22 if hp_low else TILE_CH[T_STAIR][1])
             self.last_hp_seen = p.hp
-        sy+=12
-        self.txt(sx,sy,f"Str {p.st}/{p.max_st}",9)
-        sy+=11
-        self.txt(sx,sy,f"Arm {p.ac}",9); sy+=11
-        self.txt(sx,sy,f"Lv {p.level}",9); sy+=11
-        self.txt(sx,sy,f"Exp {p.exp}",9); sy+=11
-        state = p.state if p.state else "normal"
-        food_col = 22 if state != "normal" else UI_TEXT_COL
-        food_key = {
-            "normal": "ui.food_normal",
-            "hungry": "ui.food_hungry",
-            "weak": "ui.food_weak",
-            "faint": "ui.food_faint",
-        }.get(state)
-        food_state = TextCatalog.msg(self.lang, food_key) if food_key else state.title()
-        self.txt(sx,sy,f"{TextCatalog.msg(self.lang, 'ui.food')} {food_state}",food_col); sy+=11
-        move_label = TextCatalog.msg(self.lang, "ui.ctrl_diag" if self.diag_assist else "ui.ctrl_8way")
-        pick_label = TextCatalog.msg(self.lang, "ui.ctrl_auto" if self.auto_pickup else "ui.ctrl_manual")
-        ctrl_col = UI_SELECTED_COL if self.diag_assist or not self.auto_pickup else UI_TEXT_COL
-        self.txt(sx,sy,f"{TextCatalog.msg(self.lang, 'ui.ctrl')} {move_label} {pick_label}",ctrl_col); sy+=11
-        sy+=6
-        self.txt(sx,sy,self.ui_heading(TextCatalog.msg(self.lang, "ui.equip"), UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
-        wn=self.hud_equip_name(p.wpn) if p.wpn else "bare hands"
-        an=self.hud_equip_name(p.arm) if p.arm else "no armor"
-        self.txt(sx,sy,wn[:11],9); sy+=11
-        self.txt(sx,sy,an[:11],9); sy+=16
-        self.txt(sx,sy,self.ui_heading(TextCatalog.msg(self.lang, "ui.effects"), UI_HEADING_PANEL),UI_SECTION_COL); sy+=11
-        eff=[]
-        if p.state=="hungry": eff.append("Hungry")
-        elif p.state=="weak": eff.append("Weak")
-        elif p.state=="faint": eff.append("Faint")
-        if p.confused>0: eff.append("Confused")
-        if p.blind>0: eff.append("Blind")
-        if p.haste>0: eff.append("Haste")
-        if p.hallucinating>0: eff.append("Halu")
-        if p.levitating>0: eff.append("Levit")
-        if not eff:
-            eff.append("None")
-        for e in eff[:5]:
-            self.txt(sx,sy,e,22 if e!="None" else 6)
-            sy+=11
+        self.txt(bx + bw + 6, hp_y, f"{p.hp}({p.max_hp})", UI_TEXT_COL)
+        w = self.hud_equip_name(p.wpn) if p.wpn else self.hud_weapon_empty_name()
+        a = self.hud_equip_name(p.arm) if p.arm else self.hud_armor_empty_name()
+        self.txt_segments(
+            ZV_X,
+            equip_y,
+            (
+                ("W", UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
+                (w[:15], UI_TEXT_COL),
+                ("  ", UI_SUBTEXT_COL),
+                ("A", UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
+                (a[:15], UI_TEXT_COL),
+            ),
+        )
+
+        cond = " ".join(self.hud_condition_labels())
+        if cond:
+            self.txt(SCR_W - 16 - self.ui_text_width(cond), equip_y, cond[:48], 22)
+
+        self.txt_segments_right(
+            SCR_W - 16,
+            hp_y,
+            (
+                ("Str", UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
+                (f"{p.st}({p.max_st})", UI_TEXT_COL),
+                ("  ", UI_SUBTEXT_COL),
+                ("Arm", UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
+                (str(p.ac), UI_TEXT_COL),
+                ("  ", UI_SUBTEXT_COL),
+                ("Exp", UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
+                (f"{p.level}/{p.exp}", UI_TEXT_COL),
+            ),
+        )
 
     def draw_msgs(self):
         rows=[]
@@ -7968,11 +8092,14 @@ class Game:
                 c = UI_SELECTED_COL
             else:
                 c = UI_TEXT_COL
+            max_text_width = max(0, cell_w - 12)
             if current_index is None:
-                self.txt(x, y, f"{lt}) {ln[:item_chars]}", c)
+                raw = f"{lt}) {ln[:item_chars]}"
+                self.txt(x, y, self.ellipsize_to_width(raw, max_text_width), c)
             else:
                 pre = ">" if selected else " "
-                self.txt(x, y, f"{pre}{lt}) {ln[:item_chars]}", c)
+                raw = f"{pre}{lt}) {ln[:item_chars]}"
+                self.txt(x, y, self.ellipsize_to_width(raw, max_text_width), c)
 
     def draw_help(self):
         bx, by, bw, bh = self.info_window_rect()
