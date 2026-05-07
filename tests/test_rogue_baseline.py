@@ -6452,9 +6452,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Hp", labels)
         self.assertIn("43(46)", labels)
         self.assertIn("W", labels)
-        self.assertIn("+1,+1 mace", labels)
+        self.assertIn("+1,+1", labels)
         self.assertIn("A", labels)
-        self.assertIn("+1 ring", labels)
+        self.assertIn("+1", labels)
         self.assertIn("Str", labels)
         self.assertIn("13(16)", labels)
         self.assertIn("Arm", labels)
@@ -6465,7 +6465,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "G:"), rogue.UI_SUBTEXT_COL)
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "911"), 29)
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "W"), rogue.UI_SUBTEXT_COL)
-        self.assertEqual(next(c for _x, _y, s, c in calls if s == "+1,+1 mace"), rogue.UI_TEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "+1,+1"), rogue.UI_SUBTEXT_COL)
         self.assertNotIn("Rogue V5", labels)
         self.assertFalse(any(s.startswith(("Depth ", "Gold ", "Food ", "Ctl ")) for s in labels))
 
@@ -10591,7 +10591,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("空腹 混乱 盲目 加速 幻覚 浮遊", calls)
         self.assertFalse(any("Hungry" in c or "Confuse" in c or "Blind" in c for c in calls))
 
-    def test_hades_hud_unequipped_names_localize_in_japanese(self):
+    def test_hades_hud_unequipped_equipment_uses_bonus_only(self):
         game = new_game(seed=3502, lang=rogue.LANG_JA)
         game.p.wpn = None
         game.p.arm = None
@@ -10600,8 +10600,10 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_stat()
 
-        self.assertIn("素手", calls)
-        self.assertIn("防具なし", calls)
+        self.assertIn("+0,+0", calls)
+        self.assertIn("+0", calls)
+        self.assertNotIn("素手", calls)
+        self.assertNotIn("防具なし", calls)
         self.assertNotIn("bare hands", calls)
         self.assertNotIn("no armor", calls)
 
@@ -10792,8 +10794,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_stat()
 
-        equip_lines = [c for c in calls if c in ("W", "+1,+1 mace", "A", "+1 ring")]
-        self.assertEqual(equip_lines, ["W", "+1,+1 mace", "A", "+1 ring"])
+        equip_lines = [c for c in calls if c in ("W", "+1,+1", "A", "+1")]
+        self.assertEqual(equip_lines, ["W", "+1,+1", "A", "+1"])
         self.assertFalse(any("(weapon in hand)" in c for c in equip_lines))
         self.assertFalse(any("(being worn)" in c for c in equip_lines))
         self.assertFalse(any("[" in c for c in equip_lines))
@@ -13883,8 +13885,10 @@ class RogueBaselineTest(unittest.TestCase):
         used_indices = set(image.tobytes())
 
         self.assertEqual(image.mode, "P")
+        self.assertEqual(image.size, (rogue.SCR_W, rogue.SCR_H))
         self.assertEqual(tuple(rogue.TITLE_BG_PALETTE[: len(rogue.FLEXOKI_DARK_PALETTE)]), tuple(rogue.FLEXOKI_DARK_PALETTE))
         self.assertLess(max(used_indices), len(rogue.TITLE_BG_PALETTE))
+        self.assertGreaterEqual(min(used_indices), len(rogue.FLEXOKI_DARK_PALETTE))
 
     def test_palette_application_does_not_append_to_fixed_pyxel_colors(self):
         class FixedColors:
@@ -15330,14 +15334,35 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_stat()
         self.assertIn(("W", rogue.UI_SUBTEXT_COL), calls)
-        self.assertIn(("+1,+1 ほこ", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("+1,+1", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("A", rogue.UI_SUBTEXT_COL), calls)
-        self.assertIn(("+1 かたびら", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("+1", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("Str", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("16(16)", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Arm", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("Exp", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("1/0", rogue.UI_TEXT_COL), calls)
+
+    def test_corner_hud_places_conditions_left_and_equipment_right(self):
+        game = new_game(seed=47344, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.p.state = "hungry"
+        game.p.confused = 3
+
+        game.draw_stat()
+
+        sub_y = rogue.SCR_H - 26
+        self.assertIn((rogue.ZV_X, sub_y, "空腹 混乱", 22), calls)
+        w_call = next(call for call in calls if call[2] == "W" and call[3] == rogue.UI_SUBTEXT_COL)
+        self.assertEqual(w_call[1], sub_y)
+        self.assertGreater(w_call[0], rogue.SCR_W // 2)
+        w_value = next(call for call in calls if call[2] == "+1,+1")
+        str_value = next(call for call in calls if call[2] == "16(16)")
+        a_value = next(call for call in calls if call[2] == "+1")
+        exp_value = next(call for call in calls if call[2] == "1/0")
+        self.assertEqual(a_value[0] + game.ui_text_width(a_value[2]), rogue.SCR_W - 16)
+        self.assertEqual(exp_value[0] + game.ui_text_width(exp_value[2]), rogue.SCR_W - 16)
 
     def test_score_death_name_and_help_apply_heading_color_roles(self):
         game = new_game(seed=47344)

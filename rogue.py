@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260508_0116"
+UI_BUILD = "260508_0246"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -419,11 +419,16 @@ TITLE_BGM_MMLS = (
     " ".join(_title_bgm_part("K0 Q100 T92 L16 @0 V109", _TITLE_BGM_CH2_BODY) for _ in range(4)),
 )
 TITLE_BG_EXTRA_PALETTE = (
-    0xF6E19B, 0xCCAA5F, 0xCA8301, 0xBE800E, 0xBF7A03, 0x776546, 0x545B23, 0x4F5032,
-    0x59432A, 0x453E32, 0x364310, 0x34362A, 0x273718, 0x223025, 0x232C1E, 0x1A2B1C,
-    0x272219, 0x1A2319, 0x162415, 0x161D19, 0x10201C, 0x0F1B16, 0x0D1612, 0x0C100D,
-    0x04172A, 0x021221, 0x011022, 0x02101B, 0x010E1C, 0x050D0A, 0x0A0805, 0x050706,
-    0x030809, 0x030404, 0x020508, 0x010307, 0x010203, 0x00060C, 0x000604, 0x000000,
+    0xF8EAA6, 0xEFDC99, 0xD39417, 0xB9933F, 0xCB8501, 0xC98201, 0x9C7A2D, 0x775F36,
+    0x5A5A57, 0x555553, 0x4E5357, 0x465624, 0x3B5800, 0x5D4623, 0x4C4B48, 0x454A4A,
+    0x42413D, 0x364817, 0x334A00, 0x373D41, 0x343B1E, 0x283D26, 0x2A3E01, 0x243424,
+    0x2B4200, 0x233700, 0x352918, 0x242A22, 0x1F2E11, 0x1F251D, 0x192B1B, 0x192B00,
+    0x182013, 0x112526, 0x122401, 0x101D0D, 0x0E1615, 0x0D1601, 0x0C0E09, 0x031B48,
+    0x021536, 0x011434, 0x011336, 0x01132E, 0x001234, 0x01122D, 0x001132, 0x000F30,
+    0x030D1C, 0x050D01, 0x0A0704, 0x060604, 0x050604, 0x040503, 0x030404, 0x030500,
+    0x030202, 0x020405, 0x020302, 0x020300, 0x020101, 0x010307, 0x010202, 0x010300,
+    0x010103, 0x010102, 0x010101, 0x010100, 0x010002, 0x010001, 0x010000, 0x00030A,
+    0x000102, 0x000002, 0x000301, 0x000101, 0x000001, 0x000300, 0x000100, 0x000000,
 )
 TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
 TITLE_MENU_X = 248
@@ -7737,43 +7742,35 @@ class Game:
             pyxel.rect(bx,by,cur_w,5,22 if hp_low else TILE_CH[T_STAIR][1])
             self.last_hp_seen = p.hp
         self.txt(bx + bw + 6, hp_y, f"{p.hp}({p.max_hp})", UI_TEXT_COL)
-        w = self.hud_equip_name(p.wpn) if p.wpn else self.hud_weapon_empty_name()
-        a = self.hud_equip_name(p.arm) if p.arm else self.hud_armor_empty_name()
-        self.txt_segments(
-            ZV_X,
-            equip_y,
-            (
-                ("W", UI_SUBTEXT_COL),
-                (" ", UI_SUBTEXT_COL),
-                (w[:15], UI_TEXT_COL),
-                ("  ", UI_SUBTEXT_COL),
-                ("A", UI_SUBTEXT_COL),
-                (" ", UI_SUBTEXT_COL),
-                (a[:15], UI_TEXT_COL),
-            ),
+        stat_segments = (
+            ("Str", UI_SUBTEXT_COL),
+            (" ", UI_SUBTEXT_COL),
+            (f"{p.st}({p.max_st})", UI_TEXT_COL),
+            ("  ", UI_SUBTEXT_COL),
+            ("Arm", UI_SUBTEXT_COL),
+            (" ", UI_SUBTEXT_COL),
+            (str(p.ac), UI_TEXT_COL),
+            ("  ", UI_SUBTEXT_COL),
+            ("Exp", UI_SUBTEXT_COL),
+            (" ", UI_SUBTEXT_COL),
+            (f"{p.level}/{p.exp}", UI_TEXT_COL),
         )
-
+        self.txt_segments_right(SCR_W - 16, hp_y, stat_segments)
+        equip_segments = (
+            ("W", UI_SUBTEXT_COL),
+            (" ", UI_SUBTEXT_COL),
+            (self.hud_weapon_bonus(p.wpn), UI_SUBTEXT_COL),
+            ("  ", UI_SUBTEXT_COL),
+            ("A", UI_SUBTEXT_COL),
+            (" ", UI_SUBTEXT_COL),
+            (self.hud_armor_bonus(p.arm), UI_SUBTEXT_COL),
+        )
+        equip_left = SCR_W - 16 - self.ui_segments_width(equip_segments)
         cond = " ".join(self.hud_condition_labels())
         if cond:
-            self.txt(SCR_W - 16 - self.ui_text_width(cond), equip_y, cond[:48], 22)
-
-        self.txt_segments_right(
-            SCR_W - 16,
-            hp_y,
-            (
-                ("Str", UI_SUBTEXT_COL),
-                (" ", UI_SUBTEXT_COL),
-                (f"{p.st}({p.max_st})", UI_TEXT_COL),
-                ("  ", UI_SUBTEXT_COL),
-                ("Arm", UI_SUBTEXT_COL),
-                (" ", UI_SUBTEXT_COL),
-                (str(p.ac), UI_TEXT_COL),
-                ("  ", UI_SUBTEXT_COL),
-                ("Exp", UI_SUBTEXT_COL),
-                (" ", UI_SUBTEXT_COL),
-                (f"{p.level}/{p.exp}", UI_TEXT_COL),
-            ),
-        )
+            max_cond_w = max(0, equip_left - ZV_X - 8)
+            self.txt(ZV_X, equip_y, self.ellipsize_to_width(cond, max_cond_w), 22)
+        self.txt_segments_right(SCR_W - 16, equip_y, equip_segments)
 
     def draw_msgs(self):
         rows=[]
