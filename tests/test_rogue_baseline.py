@@ -261,7 +261,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.PAD_ACTION_GRID,
             (
                 ("Zap", "Throw", "Put on"),
-                ("Quaff", "Eat", "Read"),
+                ("Read", "Eat", "Quaff"),
                 ("Wield", "Wear", "Take off"),
                 ("Call", "Discoveries", "Drop"),
             ),
@@ -272,7 +272,7 @@ class RogueBaselineTest(unittest.TestCase):
         )
         self.assertEqual(
             rogue_ui.pad_menu_move(rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS), -1, 0, rogue.MENU_ACTIONS),
-            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Quaff"),
+            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Read"),
         )
         self.assertEqual(rogue_ui.pack_grid_shape(26), (3, 9))
         self.assertEqual(rogue_ui.pack_grid_pos(0, 26), (0, 0))
@@ -13029,7 +13029,12 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.load_score_entries = old_load
 
         text = "\n".join(str(item) for item in drawn)
-        self.assertIn("Weekly Rivals - 2026-W18", text)
+        self.assertIn("Weekly Rivals", text)
+        self.assertIn("2026-W18", text)
+        self.assertIn("-- ", text)
+        self.assertIn("Local", text)
+        self.assertIn("Weekly", text)
+        self.assertIn("Season", text)
         self.assertIn("UTC", text)
         self.assertIn("Score Name", text)
         self.assertIn(" 1   346 masatora: killed on level 4 by an orc.", text)
@@ -13040,12 +13045,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Syncing scores...", text)
         self.assertIn("Please wait.", text)
         self.assertIn("Ends in 03h 12m 45s  UTC 2026-05-01 00:00", text)
-        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 82), drawn)
-        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 70), drawn)
+        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 120), drawn)
+        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108), drawn)
         self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 222), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
-        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 70)), drawn.index(("box", (156, 116, 268, 82, "-- sync --"))))
+        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108)), drawn.index(("box", (156, 116, 268, 82, "-- sync --"))))
 
     def test_online_score_sync_box_shows_refreshing_when_post_is_not_allowed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13139,9 +13144,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 70), drawn)
-        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 82), drawn)
-        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 94), drawn)
+        self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
+        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 120), drawn)
+        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 132), drawn)
 
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13321,9 +13326,37 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         text = "\n".join(str(item) for item in drawn)
-        self.assertIn("My Rogue Chronicle - Local", text)
+        self.assertIn("My Rogue Chronicle", text)
+        self.assertIn("Local", text)
         self.assertIn("ace*: quit on level 3.", text)
         self.assertIn("Local only. Select opens online registration.", text)
+
+    def test_online_scoreboard_uses_info_style_period_tabs_and_keeps_titles(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": True, "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_SEASON
+        game.online_score_cache = {rogue.SCOREBOARD_PERIOD_SEASON: []}
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_SEASON}
+        game.online_syncing = False
+        game.online_register_prompt = False
+        game.scoreboard_period_label = lambda period, timestamp=None: "2026-Spring"
+        game.scoreboard_period_ends_line = lambda period: "This Season ends in 1w at UTC 2026-06-01 00:00"
+        game.load_online_period_scores = lambda *args, **kwargs: []
+        drawn = []
+        game._box = lambda *args: drawn.append(("box", args))
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        self.assertIn(("Season Legends", rogue.UI_SECTION_COL, 120, 56), drawn)
+        self.assertIn(("-- ", rogue.UI_SECTION_COL, 120, 68), drawn)
+        self.assertIn(("Local", rogue.UI_TEXT_COL, 138, 68), drawn)
+        self.assertIn(("Weekly", rogue.UI_TEXT_COL, 186, 68), drawn)
+        self.assertIn(("Season", rogue.UI_SELECTED_COL, 240, 68), drawn)
+        self.assertIn(("2026-Spring", rogue.UI_SUBTEXT_COL, 120, 80), drawn)
 
     def test_online_scoreboard_uses_current_language_after_registration_toggle(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13353,7 +13386,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         text = "\n".join(str(item) for item in drawn)
-        self.assertIn("冒険の記録 - ローカル", text)
+        self.assertIn("冒険の記録", text)
+        self.assertIn("ローカル", text)
         self.assertIn("得点 名前", text)
         self.assertIn("ace*: 3階で中断。", text)
         self.assertIn("ローカルのみ。Selectでオンライン登録。", text)
@@ -14663,7 +14697,7 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_LEFT},
         )
         game.update()
-        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Quaff")
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Read")
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_UP},
@@ -14678,7 +14712,7 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
         )
         game.update()
-        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Read")
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Quaff")
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},

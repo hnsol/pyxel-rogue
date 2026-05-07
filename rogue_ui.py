@@ -54,7 +54,7 @@ AUX_ACTIONS = ["Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
 
 PAD_ACTION_GRID = (
     ("Zap", "Throw", "Put on"),
-    ("Quaff", "Eat", "Read"),
+    ("Read", "Eat", "Quaff"),
     ("Wield", "Wear", "Take off"),
     ("Call", "Discoveries", "Drop"),
 )

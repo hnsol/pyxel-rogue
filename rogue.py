@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_1514"
+UI_BUILD = "260507_1523"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -247,10 +247,13 @@ ONLINE_UI_TEXT = {
         "confirm_local": "B/Esc local only",
         "confirm_mark": "Local-only names show a trailing *.",
         "language_hint": "Select/L Change Language（言語切替）",
+        "score_title": "Online Scoreboard",
         "score_title_local": "My Rogue Chronicle",
         "score_title_weekly": "Weekly Rivals",
         "score_title_season": "Season Legends",
         "score_period_local": "Local",
+        "score_tab_weekly": "Weekly",
+        "score_tab_season": "Season",
         "score_header": "   Score Name",
         "score_hint": "D-pad/Arrows BOARDS  Select/Tab SYNC/REGISTER  B/Esc BACK",
         "score_register_prompt": "Register a name to sync once per day.",
@@ -309,10 +312,13 @@ ONLINE_UI_TEXT = {
         "confirm_local": "B/Esc ローカルのみ",
         "confirm_mark": "ローカル名には * が付きます。",
         "language_hint": "Select/L Change Language（言語切替）",
+        "score_title": "オンラインスコア",
         "score_title_local": "冒険の記録",
         "score_title_weekly": "週間ライバル",
         "score_title_season": "シーズンレジェンド",
         "score_period_local": "ローカル",
+        "score_tab_weekly": "週間",
+        "score_tab_season": "季節",
         "score_header": "   得点 名前",
         "score_hint": "D-pad/矢印:ボード  Select/Tab:通信/登録  B/Esc:戻る",
         "score_register_prompt": "名前登録で1日1回投稿できます。",
@@ -7363,6 +7369,26 @@ class Game:
     def draw_online_language_hint(self, x, y):
         self.txt(x, y, self.online_text("language_hint"), UI_HILITE_COL)
 
+    def score_period_tab_label(self, period):
+        return {
+            SCOREBOARD_PERIOD_LOCAL: self.online_text("score_period_local"),
+            SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_tab_weekly"),
+            SCOREBOARD_PERIOD_SEASON: self.online_text("score_tab_season"),
+        }.get(period, self.scoreboard_period_label(period))
+
+    def draw_score_period_tabs(self, x, y, active_period):
+        parts = [("-- ", UI_SECTION_COL)]
+        periods = SCOREBOARD_PERIOD_ORDER
+        for i, period in enumerate(periods):
+            if i:
+                parts.append((" | ", UI_TEXT_COL))
+            col = UI_SELECTED_COL if period == active_period else UI_TEXT_COL
+            parts.append((self.score_period_tab_label(period), col))
+        parts.append((" --", UI_SECTION_COL))
+        for text, col in parts:
+            self.txt(x, y, text, col)
+            x += self.ui_text_width(text)
+
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
@@ -7371,10 +7397,13 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_title_weekly"),
             SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
         }.get(period, self.online_text("score_title_local"))
-        self._box(98, 28, 380, SCR_H - 40, self.ui_heading(f"{title} - {self.scoreboard_period_label(period)}", UI_HEADING_SCREEN))
+        self._box(98, 28, 380, SCR_H - 40, self.ui_heading(self.online_text("score_title"), UI_HEADING_SCREEN))
+        self.txt(120, 56, title, UI_SECTION_COL)
+        self.draw_score_period_tabs(120, 68, period)
+        self.txt(120, 80, self.scoreboard_period_label(period), UI_SUBTEXT_COL)
         scores = self.display_online_period_scores(period)
-        self.txt(120, 56, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
-        y = 70
+        self.txt(120, 94, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
+        y = 108
         player_name = str(self.current_score_player_name()).upper()[:16]
         display_scores = scores[:10]
         for i, entry in enumerate(display_scores, start=1):
