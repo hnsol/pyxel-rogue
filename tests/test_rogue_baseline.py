@@ -6388,7 +6388,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.ZV_Y, 6)
         self.assertEqual(rogue.HUD_W, rogue.SCR_W - rogue.HUD_X - 4)
         self.assertEqual(rogue.MSG_LINES, 7)
-        self.assertEqual(rogue.AUX_ACTIONS, ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"])
+        self.assertEqual(rogue.AUX_ACTIONS, ["Search", "Trap", "Pickup", "Language", "Palette", "Quit"])
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -14843,7 +14843,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_AUX)
 
-    def test_inventory_and_log_switch_like_tabs_without_spending_turns(self):
+    def test_info_inventory_log_help_switch_like_tabs_without_spending_turns(self):
         game = new_game(seed=4731)
         start_turn = game.turn
 
@@ -14858,20 +14858,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_LOG)
         self.assertEqual(game.turn, start_turn)
 
-        rogue.pyxel.set_input(held={rogue.pyxel.KEY_LEFT}, pressed={rogue.pyxel.KEY_LEFT})
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
         game.update()
-        self.assertEqual(game.st, rogue.ST_INVENTORY)
+        self.assertEqual(game.st, rogue.ST_HELP)
         self.assertEqual(game.turn, start_turn)
 
-    def test_log_select_opens_assist_and_cancel_keys_return_to_play(self):
-        game = new_game(seed=4732)
-        game.open_log()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_LEFT}, pressed={rogue.pyxel.KEY_LEFT})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_LOG)
+        self.assertEqual(game.turn, start_turn)
 
-        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
-        game.update()
-        rogue.pyxel.set_input()
-        game.update()
-        self.assertEqual(game.st, rogue.ST_AUX)
+    def test_info_tabs_select_opens_assist_and_cancel_keys_return_to_play(self):
+        game = new_game(seed=4732)
+
+        for opener in (lambda: setattr(game, "st", rogue.ST_INVENTORY), game.open_log, game.open_help_command):
+            with self.subTest(opener=opener):
+                opener()
+                rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
+                game.update()
+                rogue.pyxel.set_input()
+                game.update()
+                self.assertEqual(game.st, rogue.ST_AUX)
 
         for key in (rogue.pyxel.KEY_RETURN, rogue.pyxel.KEY_ESCAPE, rogue.pyxel.KEY_I):
             with self.subTest(key=key):
@@ -14908,7 +14915,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertLess(game.log_scroll, len(game.msgs))
 
-    def test_inventory_and_log_use_same_window_and_localized_tabs(self):
+    def test_inventory_log_and_help_use_same_window_and_localized_tabs(self):
         game = new_game(seed=4734)
         game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
         boxes = []
@@ -14925,11 +14932,19 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_log()
         log_box = boxes[-1]
 
+        boxes.clear()
+        calls.clear()
+        game.draw_help()
+        help_box = boxes[-1]
+
         self.assertEqual(inventory_box[:4], log_box[:4])
+        self.assertEqual(inventory_box[:4], help_box[:4])
         self.assertEqual(inventory_box[4], "")
         self.assertEqual(log_box[4], "")
+        self.assertEqual(help_box[4], "")
         self.assertEqual([s for *_xy, s, _c in inventory_calls].count("Inventory"), 1)
         self.assertEqual([s for *_xy, s, _c in calls].count("Log"), 1)
+        self.assertIn("Help", [s for *_xy, s, _c in calls])
         self.assertIn(("-- ", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertIn((" --", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in inventory_calls))
@@ -14937,8 +14952,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.lang = rogue.LANG_JA
         calls.clear()
-        game.draw_log()
+        game.draw_help()
         text = [s for *_xy, s, _c in calls]
+        self.assertIn("ヘルプ", text)
         self.assertIn("ログ", text)
         self.assertTrue(any("左右: タブ切替" in s and "補助メニュー" in s for s in text))
 
@@ -14964,13 +14980,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("Inventory", rogue.UI_SELECTED_COL), calls)
         self.assertIn((" | ", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Log", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Help", rogue.UI_TEXT_COL), calls)
         self.assertEqual(calls[-1], (" --", rogue.UI_SECTION_COL))
 
         calls.clear()
-        game.draw_info_tabs(0, 0, "Log")
+        game.draw_info_tabs(0, 0, "Help")
 
         self.assertIn(("Inventory", rogue.UI_TEXT_COL), calls)
-        self.assertIn(("Log", rogue.UI_SELECTED_COL), calls)
+        self.assertIn(("Log", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Help", rogue.UI_SELECTED_COL), calls)
 
     def test_command_and_item_pick_screens_use_panel_titles_and_selection_color(self):
         game = new_game(seed=47343)
@@ -15031,6 +15049,10 @@ class RogueBaselineTest(unittest.TestCase):
         boxes.clear()
         game.draw_aux()
         self.assertIn("-- 補助 --", boxes)
+        aux_text = [s for s, _c in calls]
+        self.assertNotIn("持ちもの", aux_text)
+        self.assertNotIn("ヘルプ", aux_text)
+        self.assertIn("> 探す", aux_text)
 
         game.draw_stat()
         self.assertIn(("-- 装備 --", rogue.UI_SECTION_COL), calls)
@@ -18471,11 +18493,19 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_help()
 
         headers = [c for s, c in calls if s.startswith("---")]
-        body = [c for s, c in calls if s and not s.startswith(("===", "---"))]
+        body = [
+            c for s, c in calls
+            if s
+            and not s.startswith(("===", "---"))
+            and s not in ("-- ", " --", " | ", "Inventory", "Log", "Help")
+            and "Left/Right" not in s
+        ]
+        guide = [c for s, c in calls if "Left/Right" in s]
         self.assertTrue(headers)
         self.assertTrue(body)
         self.assertEqual(set(headers), {rogue.HELP_HEADER_COL})
         self.assertEqual(set(body), {rogue.HELP_TEXT_COL})
+        self.assertEqual(set(guide), {rogue.UI_SUBTEXT_COL})
 
     def test_help_text_leaves_bottom_padding_inside_frame(self):
         game = new_game(seed=562)

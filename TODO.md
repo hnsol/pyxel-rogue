@@ -494,10 +494,10 @@
 - [x] Rogue 5.4.4 `stomach()` 相当の空腹緩和
 - [x] ゲームパッド XYLR / ショルダー依存の撤去（キーボード操作は正式対応として維持）
 - [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
-- [x] Select(Back) 補助メニューから Map と Status を削除し、Inventory / Help / Search に整理
+- [x] Select(Back) 補助メニューから Map / Status / Inventory / Help を削除し、Search / Trap / Pickup / Language / Palette / Quit に整理
 - [x] Select+A quick throw / Select+B search に整理
 - [x] Bメニューを移植UI層の3列×4行ラジアル風配置にし、初期カーソルを Eat にする
-- [x] Select単押しを持ちもの、持ちもの中Selectを補助メニューに整理
+- [x] Select単押しをInfo（持ちもの / Log / Help）、Info中Selectを補助メニューに整理
 - [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / Tab+方向 / 補助メニュー Trap / `^` then direction）
 - [x] Assist menu からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理

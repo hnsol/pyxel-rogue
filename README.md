@@ -92,7 +92,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - B短押し: メニュー / キャンセル
 - B長押し + D-pad: ダッシュ
 - A+B: 足踏み
-- Select: 持ちもの。持ちもの中は左右で Log 切替、もう一度Selectで補助メニュー
+- Select: Info（持ちもの / Log / Help）。Info中は左右でタブ切替、もう一度Selectで補助メニュー
 - Select+A: quick throw（方向を選んでからアイテム選択）
 - Select+B: 周囲8マスsearch
 - Select+D-pad: 発見済み罠の種類確認
@@ -106,8 +106,8 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Enter+Esc: 足踏み
 - Shift+方向: ダッシュ
 - Esc: メニュー / キャンセル
-- Tab: 持ちもの。持ちもの中は左右で Log 切替、もう一度Tabで補助メニュー
-- 補助メニュー: Inventory / Help / Search / Trap / Pickup / Language / Palette / Quit
+- Tab: Info（Inventory / Log / Help）。Info中は左右でタブ切替、もう一度Tabで補助メニュー
+- 補助メニュー: Search / Trap / Pickup / Language / Palette / Quit
 - Language / Palette / Pickup の変更は保存され、次回以降のゲームにも反映されます。
 - Tab+Enter: quick throw
 - Tab+Esc: 周囲8マスsearch

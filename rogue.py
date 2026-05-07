@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260507_1402"
+UI_BUILD = "260507_1449"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -6839,21 +6839,12 @@ class Game:
         elif self.st==ST_DISC: self.upd_disc()
         elif self.st==ST_DIR:  self.upd_dir()
         elif self.st==ST_AUX:  self.upd_aux()
-        elif self.st==ST_HELP:
-            if self.btn_overlay_cancel():
-                self.st=getattr(self, "help_return_state", ST_PLAY)
-                return
-            if self.btn_any_key():
-                self.st=getattr(self, "help_return_state", ST_PLAY)
         elif self.st==ST_INVENTORY:
-            if self.menu_horizontal_press() > 0:
-                self.open_log()
-            elif self.btn_back():
-                self.open_aux()
-            elif self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
-                self.st=ST_PLAY
+            self.upd_info()
         elif self.st==ST_LOG:
             self.upd_log()
+        elif self.st==ST_HELP:
+            self.upd_help()
 
     def upd_play(self):
         if getattr(self, "message_ack_pending", False):
@@ -7162,10 +7153,35 @@ class Game:
         max_scroll = max(0, len(getattr(self, "msgs", [])) - self.log_visible_rows())
         self.log_scroll = max_scroll
 
-    def upd_log(self):
+    def info_tab_index(self):
+        return {ST_INVENTORY: 0, ST_LOG: 1, ST_HELP: 2}.get(self.st, 0)
+
+    def set_info_tab_index(self, index):
+        tabs = (ST_INVENTORY, ST_LOG, ST_HELP)
+        self.st = tabs[index % len(tabs)]
+        if self.st == ST_LOG:
+            max_scroll = max(0, len(getattr(self, "msgs", [])) - self.log_visible_rows())
+            self.log_scroll = max(0, min(getattr(self, "log_scroll", max_scroll), max_scroll))
+
+    def upd_info_common(self):
         dx = self.menu_horizontal_press()
-        if dx < 0:
-            self.st = ST_INVENTORY
+        if dx:
+            self.set_info_tab_index(self.info_tab_index() + dx)
+            return True
+        if self.btn_back():
+            self.open_aux()
+            return True
+        if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
+            self.st = ST_PLAY
+            return True
+        return False
+
+    def upd_info(self):
+        self.upd_info_common()
+
+    def upd_log(self):
+        if self.menu_horizontal_press():
+            self.upd_info_common()
             return
         visible = self.log_visible_rows()
         max_scroll = max(0, len(getattr(self, "msgs", [])) - visible)
@@ -7174,12 +7190,10 @@ class Game:
             self.log_scroll = max(0, min(getattr(self, "log_scroll", 0) + dy, max_scroll))
             return
         self.log_scroll = max(0, min(getattr(self, "log_scroll", 0), max_scroll))
-        if self.btn_back():
-            self.open_aux()
-            return
-        if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
-            self.st = ST_PLAY
-            return
+        self.upd_info_common()
+
+    def upd_help(self):
+        self.upd_info_common()
 
     def upd_aux(self):
         dy=self.menu_vertical_press()
@@ -7187,11 +7201,7 @@ class Game:
         if self.btn_overlay_cancel(): self.st=ST_PLAY; return
         if not self.btn_a(): return
         act=AUX_ACTIONS[self.acur]
-        if act=="Inventory": self.st=ST_INVENTORY
-        elif act=="Help":
-            self.help_return_state=ST_PLAY
-            self.st=ST_HELP
-        elif act=="Search":
+        if act=="Search":
             self.st=ST_PLAY
             self.do_search()
         elif act=="Trap":
@@ -7761,14 +7771,14 @@ class Game:
             cell_w=cell_w,
             max_rows=max_rows,
         )
-        self.txt(bx + 8, by + bh - 12, self.info_guide_label(), UI_SUBTEXT_COL)
+        self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
 
     def info_window_rect(self):
         return (20, 20, SCR_W - 40, SCR_H - 40)
 
     def info_tab_label(self, name):
         if self.lang == LANG_JA:
-            return {"Inventory": "持ちもの", "Log": "ログ"}.get(name, name)
+            return {"Inventory": "持ちもの", "Log": "ログ", "Help": "ヘルプ"}.get(name, name)
         return name
 
     def info_guide_label(self):
@@ -7782,6 +7792,8 @@ class Game:
             (self.info_tab_label("Inventory"), UI_SELECTED_COL if active == "Inventory" else UI_TEXT_COL),
             (" | ", UI_TEXT_COL),
             (self.info_tab_label("Log"), UI_SELECTED_COL if active == "Log" else UI_TEXT_COL),
+            (" | ", UI_TEXT_COL),
+            (self.info_tab_label("Help"), UI_SELECTED_COL if active == "Help" else UI_TEXT_COL),
             (" --", UI_SECTION_COL),
         ]
         for text, col in parts:
@@ -7803,7 +7815,7 @@ class Game:
         for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
             self.txt(bx + 8, by + 28 + i * 11, self.message_display_text(text)[:72], UI_TEXT_COL)
         self.draw_log_scrollbar(bx, by, bw, bh, len(lines), visible, max_scroll)
-        self.txt(bx + 8, by + bh - 12, self.info_guide_label(), UI_SUBTEXT_COL)
+        self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
 
     def draw_log_scrollbar(self, bx, by, bw, bh, total, visible, max_scroll):
         if total <= visible:
@@ -7863,8 +7875,9 @@ class Game:
                 self.txt(x, y, f"{pre}{lt}) {ln[:item_chars]}", c)
 
     def draw_help(self):
-        bx,by=20,12; bw=SCR_W-40; bh=SCR_H-24
-        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.menu(self.lang, "Help"), UI_HEADING_SCREEN))
+        bx, by, bw, bh = self.info_window_rect()
+        self._box(bx, by, bw, bh)
+        self.draw_info_tabs(bx + 8, by + 8, "Help")
         gamepad=[
             self.ui_heading("Gamepad", UI_HEADING_SECTION),
             "D-pad       Move/Dir",
@@ -7873,8 +7886,8 @@ class Game:
             "A+B         Wait",
             "B+dir       Dash",
             "B           Menu/Cancel",
-            "Select      Inventory",
-            "Inv+Select  Assist menu",
+            "Select      Info",
+            "Info+Select Assist menu",
             "Select+A    Quick throw",
             "Select+B    Search around",
             "Select+dir  Inspect trap",
@@ -7888,21 +7901,21 @@ class Game:
             "Enter+Esc   Wait",
             "Shift+dir   Dash",
             "Esc         Menu/Cancel",
-            "Tab         Inventory",
-            "Inv+Tab     Assist menu",
+            "Tab         Info",
+            "Info+Tab    Assist menu",
             "Tab+Enter   Quick throw",
             "Tab+Esc     Search around",
             "Tab+dir     Inspect trap",
         ]
-        y=by+18
+        y=by+26
+        line_h = 10
         for i in range(max(len(gamepad), len(keyboard))):
             if i < len(gamepad):
                 ln=gamepad[i]; self.txt(bx+8,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
             if i < len(keyboard):
                 ln=keyboard[i]; self.txt(bx+250,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
-            y+=11
-        y+=8
-        self.txt(bx+8,y,self.ui_heading("Keyboard commands", UI_HEADING_SECTION),HELP_HEADER_COL); y+=11
+            y+=line_h
+        self.txt(bx+8,y,self.ui_heading("Keyboard commands", UI_HEADING_SECTION),HELP_HEADER_COL); y+=line_h
         commands=[
             ". Wait   </> Stairs s Search   t Throw   ^ Trap",
             "i Inv    I Inv item ? Help     / Identify",
@@ -7912,7 +7925,8 @@ class Game:
             "P Put on R Remove   o Options Q Quit",
         ]
         for ln in commands:
-            self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=11
+            self.txt(bx+8,y,ln,HELP_TEXT_COL); y+=line_h
+        self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
 
     def draw_top_scores(self, bx=412, by=30):
         bw=156; bh=144

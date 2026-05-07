@@ -50,7 +50,7 @@ MENU_ACTIONS = [
     ("Call", None),
     ("Discoveries", None),
 ]
-AUX_ACTIONS = ["Inventory", "Help", "Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
+AUX_ACTIONS = ["Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
 
 PAD_ACTION_GRID = (
     ("Zap", "Throw", "Put on"),
