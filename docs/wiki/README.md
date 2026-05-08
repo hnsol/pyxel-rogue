@@ -28,11 +28,19 @@ git push -u origin master
 ## ページ構成
 
 - `Home.md`: 入口
-- `Playable-Critical-Edition.md`: 学術調の設計本文
-- `Critical-Edition-Outline.md`: 章立てと執筆計画
-- `Proximity-Message-Log.md`: 近接メッセージログの設計説明
-- `Descend-Again.md`: 宣伝調の紹介本文
+- `_Sidebar.md`: GitHub Wiki のサイドバー
+- 接尾辞なしの各ページ: 日英の言語選択
+- `*-ja.md`: 日本語本文
+- `*-en.md`: 英語本文
+- `Playable-Critical-Edition-*.md`: 学術調の設計本文
+- `Critical-Edition-Outline-*.md`: 章立てと執筆計画
+- `Proximity-Message-Log-*.md`: 近接メッセージログの設計説明
+- `Descend-Again-*.md`: 宣伝調の紹介本文
 - `Editorial-Notes.md`: wiki 内の編集方針
+
+## 日英運用
+
+日本語を正本として先に育てる。英語版は同じ構成を保つが、逐語訳である必要はない。未完成の場合も、空白にせず短い要約と `TODO` を置く。
 
 ## 文体
 
