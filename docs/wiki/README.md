@@ -51,3 +51,9 @@ git push -u origin master
 ## Proximity Message Log
 
 仕様の正本は `DESIGN.md` と実装。wiki では、忠実性を損なわない移植UIとしての意義、視線設計、先行事例との距離を説明する。
+
+## 保存資料
+
+外部資料を repo に保存する場合は、出所、取得経路、保存日、ハッシュ、利用範囲を同じディレクトリの `README.md` に記録する。本文では長い逐語引用を避け、要約中心で使う。
+
+`docs/sources/history-of-rogue/HistoryOfRogue.txt` は `Yozvox, HistoryOfRogue.txt` の保存コピーとして扱う。Rogue 受容史、版分岐、日本語圏での整理の二次資料であり、Rogue 5.4.4 のゲームメカニクスの一次資料ではない。
