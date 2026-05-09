@@ -149,7 +149,8 @@ Implemented overview:
 - Auto-pickup toggle and throwing animation
 - Tombstone death screen
 - Victory score adds sold pack worth following Rogue 5.4.4 `total_winner()`
-- Startup logo, title screen with BGM, and lowercase alphanumeric player name entry
+- Startup logo, first-run language selection, title screen with BGM, default Guest mode, and Online / Guest Mode switching
+- Local score saving, Weekly / Season online scoreboard viewing, and optional online-ID score sync
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - JSON message catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data

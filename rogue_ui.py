@@ -25,6 +25,7 @@ ST_ONLINE_PIN = 21
 ST_ONLINE_CONFIRM = 22
 ST_ONLINE_LOCAL_CONFIRM = 23
 ST_LOG = 24
+ST_LANGUAGE = 25
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",

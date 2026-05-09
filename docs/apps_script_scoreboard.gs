@@ -750,7 +750,7 @@ function storedUserPassword(password) {
 
 function isReservedUserId(userId) {
   const id = cleanUserId(userId);
-  if (id === "rogue54") return true;
+  if (id === "guest" || id === "rogue54") return true;
   return DUMMY_NAMES.some((name) => cleanUserId(name) === id);
 }
 

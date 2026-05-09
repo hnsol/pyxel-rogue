@@ -68,6 +68,17 @@ def load_settings():
     return Settings()
 
 
+def settings_exists():
+    try:
+        if sys.platform == "emscripten":
+            from js import localStorage
+
+            return bool(localStorage.getItem(SETTINGS_STORAGE_KEY))
+        return os.path.exists(SETTINGS_FILE)
+    except Exception:
+        return False
+
+
 def save_settings(settings):
     normalized = settings_from_dict(settings_to_dict(settings))
     data = settings_to_dict(normalized)
