@@ -58,7 +58,7 @@ from rogue_items import (
     ICOL,
     ISYM,
 )
-from rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings
+from rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings, settings_exists
 from rogue_layout import (
     DEAD_ZONE_X,
     DEAD_ZONE_Y,
@@ -216,6 +216,7 @@ from rogue_ui import (
     ST_LOADING,
     ST_LOG,
     ST_LOGO,
+    ST_LANGUAGE,
     ST_MENU,
     ST_NAME,
     ST_ONLINE_SCORE,
@@ -233,7 +234,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260508_0246"
+UI_BUILD = "260509_0000"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -242,8 +243,8 @@ SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SC
 ONLINE_UI_TEXT = {
     LANG_EN: {
         "confirm_title": "Online Scoreboard",
-        "confirm_prompt": "Register a name for online scores?",
-        "confirm_register": "A/Enter register",
+        "confirm_prompt": "Set up online sync for scores?",
+        "confirm_register": "A/Enter sync",
         "confirm_local": "B/Esc local only",
         "confirm_mark": "Local-only names show a trailing *.",
         "language_hint": "Select/L Change Language（言語切替）",
@@ -255,17 +256,18 @@ ONLINE_UI_TEXT = {
         "score_tab_weekly": "Weekly",
         "score_tab_season": "Season",
         "score_header": "   Score Name",
-        "score_hint": "Left/Right: Boards   Select/Tab: Sync/Register   B/Esc: Back",
-        "score_register_prompt": "Register a name to sync once per day.",
-        "score_register_hint": "A/Enter register   B/Esc local only",
+        "score_hint": "Left/Right: Boards   Select/Tab: Sync   B/Esc: Back",
+        "score_register_prompt": "Online sync can post once per day.",
+        "score_register_hint": "A/Enter sync   B/Esc local only",
         "score_register_mark": "Local-only names show a trailing *.",
+        "score_guest_result": "Ranking refreshed. Guest mode.",
         "period_week": "This Week",
         "period_season": "This Season",
-        "local_only_hint": "Local only. Select opens online registration.",
+        "local_only_hint": "Local only. Select opens online sync.",
         "posted": "Posted",
         "post_after": "POST after",
-        "register_title": "Online Registration",
-        "register_prompt": "Register an 8-char lowercase name.",
+        "register_title": "Online Sync",
+        "register_prompt": "Enter an 8-char lowercase sync ID.",
         "register_cancel": "B/Esc cancels.",
         "register_local": "B/Esc keeps local-only mode. Local names show *.",
         "register_hint": "A/Enter OK  B/Esc LOCAL ONLY",
@@ -274,6 +276,13 @@ ONLINE_UI_TEXT = {
         "local_confirm_prompt": "Save this name for local play only?",
         "local_confirm_ok": "A/Enter save",
         "local_confirm_cancel": "B/Esc cancel",
+        "guest_confirm_title": "Guest Mode",
+        "guest_confirm_prompt": "Switch to guest mode?",
+        "guest_confirm_ok": "A/Enter switch",
+        "guest_confirm_cancel": "B/Esc cancel",
+        "language_title": "Language / 言語",
+        "language_prompt": "Choose display language. / 表示言語を選んでください。",
+        "language_select_hint": "A/Enter OK  D-pad/Arrows select",
         "pin_title": "6-Digit PIN",
         "pin_server": "This PIN is stored on the server",
         "pin_reuse": "without encryption. Do not reuse it.",
@@ -286,7 +295,7 @@ ONLINE_UI_TEXT = {
         "refresh_ranking": "Refreshing ranking...",
         "please_wait": "Please wait.",
         "checking user...": "checking user...",
-        "registering user...": "registering user...",
+        "registering user...": "setting up sync...",
         "linking user...": "linking user...",
         "posting local scores...": "posting local scores...",
         "loading scoreboard...": "loading scoreboard...",
@@ -297,18 +306,20 @@ ONLINE_UI_TEXT = {
         "Score posted. Ranking refreshed.": "Score posted. Ranking refreshed.",
         "Refresh failed. POST once per 24h.": "Refresh failed. POST once per 24h.",
         "Refresh failed. No local scores yet.": "Refresh failed. No local scores yet.",
-        "Authentication failed. Register again.": "Authentication failed. Register again.",
+        "Authentication failed. Register again.": "Authentication failed. Check sync ID.",
         "Score posted. Ranking refresh failed.": "Score posted. Ranking refresh failed.",
         "That user name is already registered.": "That user name is already registered.",
         "Could not check user. Try again.": "Could not check user. Try again.",
         "Name exists. Enter its 6-digit PIN.": "Name exists. Enter its 6-digit PIN.",
         "That name belongs to another player.": "That name belongs to another player.",
-        "Registration failed.": "Registration failed.",
+        "Registration failed.": "Sync setup failed.",
+        "Enter a name.": "Enter a name.",
+        "Ranking refreshed. Guest mode.": "Ranking refreshed. Guest mode.",
     },
     LANG_JA: {
         "confirm_title": "オンラインスコア",
-        "confirm_prompt": "オンラインスコアに名前を登録しますか?",
-        "confirm_register": "A/Enter 登録",
+        "confirm_prompt": "オンラインスコアを同期しますか?",
+        "confirm_register": "A/Enter 同期",
         "confirm_local": "B/Esc ローカルのみ",
         "confirm_mark": "ローカル名には * が付きます。",
         "language_hint": "Select/L Change Language（言語切替）",
@@ -320,17 +331,18 @@ ONLINE_UI_TEXT = {
         "score_tab_weekly": "週間",
         "score_tab_season": "シーズン",
         "score_header": "   得点 名前",
-        "score_hint": "左右: ボード切替   Select/Tab: 通信/登録   B/Esc: 戻る",
-        "score_register_prompt": "名前登録で1日1回投稿できます。",
-        "score_register_hint": "A/Enter 登録  B/Esc ローカルのみ",
+        "score_hint": "左右: ボード切替   Select/Tab: 同期   B/Esc: 戻る",
+        "score_register_prompt": "オンライン同期で1日1回投稿できます。",
+        "score_register_hint": "A/Enter 同期  B/Esc ローカルのみ",
         "score_register_mark": "ローカル名には * が付きます。",
+        "score_guest_result": "ランキング更新。ゲストモード。",
         "period_week": "今週",
         "period_season": "今シーズン",
-        "local_only_hint": "ローカルのみ。Selectでオンライン登録。",
+        "local_only_hint": "ローカルのみ。Selectでオンライン同期。",
         "posted": "投稿",
         "post_after": "POST可能",
-        "register_title": "オンライン登録",
-        "register_prompt": "8文字の小文字名を登録し、通信で確認します。",
+        "register_title": "オンライン同期",
+        "register_prompt": "8文字の小文字IDで同期します。",
         "register_cancel": "B/Esc キャンセル",
         "register_local": "B/Escでローカルのみ。ローカル名は * 付き。",
         "register_hint": "A/Enter 決定  B/Esc ローカルのみ",
@@ -339,6 +351,13 @@ ONLINE_UI_TEXT = {
         "local_confirm_prompt": "この名前をローカル専用で保存しますか?",
         "local_confirm_ok": "A/Enter 保存",
         "local_confirm_cancel": "B/Esc キャンセル",
+        "guest_confirm_title": "ゲストモード",
+        "guest_confirm_prompt": "ゲストモードに切り替えますか?",
+        "guest_confirm_ok": "A/Enter 切替",
+        "guest_confirm_cancel": "B/Esc キャンセル",
+        "language_title": "Language / 言語",
+        "language_prompt": "Choose display language. / 表示言語を選んでください。",
+        "language_select_hint": "A/Enter 決定  方向キー 選択",
         "pin_title": "6桁PIN",
         "pin_server": "PINはサーバに平文保存されます。",
         "pin_reuse": "他の場所のパスワードを使わないでください。",
@@ -351,7 +370,7 @@ ONLINE_UI_TEXT = {
         "refresh_ranking": "ランキング更新中...",
         "please_wait": "お待ちください。",
         "checking user...": "ユーザを確認中...",
-        "registering user...": "登録通信中...",
+        "registering user...": "同期ID確認中...",
         "linking user...": "リンク通信中...",
         "posting local scores...": "ローカルスコア送信中...",
         "loading scoreboard...": "スコアボード読込中...",
@@ -362,13 +381,15 @@ ONLINE_UI_TEXT = {
         "Score posted. Ranking refreshed.": "スコア投稿。ランキング更新。",
         "Refresh failed. POST once per 24h.": "更新失敗。POSTは24時間に1回。",
         "Refresh failed. No local scores yet.": "更新失敗。ローカルスコアなし。",
-        "Authentication failed. Register again.": "認証失敗。再登録してください。",
+        "Authentication failed. Register again.": "認証失敗。同期IDを確認してください。",
         "Score posted. Ranking refresh failed.": "スコア投稿。ランキング更新失敗。",
         "That user name is already registered.": "その名前は登録済みです。",
         "Could not check user. Try again.": "ユーザ確認に失敗しました。",
         "Name exists. Enter its 6-digit PIN.": "登録済み名です。6桁PINを入力。",
         "That name belongs to another player.": "その名前は別プレイヤーのものです。",
-        "Registration failed.": "登録失敗。",
+        "Registration failed.": "同期設定失敗。",
+        "Enter a name.": "名前を入力してください。",
+        "Ranking refreshed. Guest mode.": "ランキング更新。ゲストモード。",
     },
 }
 UI_TEXT_COL = 30
@@ -1499,6 +1520,7 @@ def msg_toast_block_origin(block, rows=1):
 # ===========================================================
 class Game:
     def __init__(self):
+        self.settings_missing = not settings_exists()
         self.settings = load_settings()
         pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
         self.apply_palette()
@@ -1510,12 +1532,13 @@ class Game:
         pyxel.run(self.update, self.draw)
 
     def init_frontend_state(self):
-        self.online_profile = load_online_profile()
-        self.player_name = self.online_profile.get("user_name", "rogue54")
+        self.online_profile = self.startup_online_profile()
+        self.player_name = self.online_profile.get("user_name", "guest")
         self.title_cursor = 0
         self.name_chars = list(self.player_name[:8])
         self.name_pos = min(len(self.name_chars), 7)
         self.name_pick = 0
+        self.language_cursor = 0 if self.ensure_settings().language == LANG_EN else 1
         self.logo_frames = 0
         self.online_period = SCOREBOARD_PERIOD_LOCAL
         self.online_scores = []
@@ -1552,6 +1575,19 @@ class Game:
         self.title_bgm_started = False
         self.title_bgm_stop_wait = 0
 
+    def startup_online_profile(self):
+        profile = normalize_online_profile(load_online_profile())
+        if profile.get("server_token") and not profile.get("local_only", True):
+            return profile
+        return {
+            "user_name": "guest",
+            "local_only": True,
+            "server_token": "",
+            "last_sync_at": "",
+            "next_sync_at": "",
+            "profile_exists": True,
+        }
+
     def setup_title_bgm(self):
         for i, mml in enumerate(TITLE_BGM_MMLS):
             pyxel.sounds[i].mml(mml)
@@ -1585,18 +1621,29 @@ class Game:
         if getattr(self, "st", None) != ST_TITLE:
             self.apply_palette()
 
-    def enter_title_screen(self):
+    def enter_title_screen(self, skip_fade=False, initial_fade=False):
         self.apply_title_palette()
-        self.title_fade_frames = 0 if getattr(self, "title_bgm_started", False) else TITLE_FADE_FRAMES
+        self.title_fade_frames = 0 if initial_fade and getattr(self, "title_bgm_started", False) and not skip_fade else TITLE_FADE_FRAMES
         self.st = ST_TITLE
 
     def enter_post_logo(self):
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        if not profile.get("profile_exists", False):
+        if not (profile.get("server_token") and not profile.get("local_only", True)):
+            self.online_profile = {
+                "user_name": "guest",
+                "local_only": True,
+                "server_token": "",
+                "last_sync_at": "",
+                "next_sync_at": "",
+                "profile_exists": True,
+            }
+            self.player_name = "guest"
+        if getattr(self, "settings_missing", False):
             self.apply_palette()
-            self.st = ST_ONLINE_CONFIRM
+            self.language_cursor = 0 if self.ensure_settings().language == LANG_EN else 1
+            self.st = ST_LANGUAGE
             return
-        self.enter_title_screen()
+        self.enter_title_screen(initial_fade=True)
 
     def ensure_settings(self):
         if "settings" not in self.__dict__:
@@ -1645,23 +1692,31 @@ class Game:
 
     def current_player_name(self):
         if "online_profile" not in self.__dict__:
-            return str(getattr(self, "player_name", "rogue54"))[:16] or "rogue54"
+            return str(getattr(self, "player_name", "guest"))[:16] or "guest"
         profile = normalize_online_profile(getattr(self, "online_profile", None))
+        if profile.get("local_only", True):
+            return "guest"
         if profile.get("user_name"):
             return display_score_name(profile)
-        return str(getattr(self, "player_name", "rogue54"))[:16] or "rogue54"
+        return str(getattr(self, "player_name", "guest"))[:16] or "guest"
 
     def current_user_id(self):
         if "online_profile" not in self.__dict__:
-            return sanitize_user_id(getattr(self, "player_name", "rogue54"))
+            return sanitize_user_id(getattr(self, "player_name", "guest"))
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        return sanitize_user_id(profile.get("user_name") or getattr(self, "player_name", "rogue54"))
+        return sanitize_user_id(profile.get("user_name") or getattr(self, "player_name", "guest"))
 
     def current_score_player_name(self):
         if "online_profile" not in self.__dict__:
-            return str(getattr(self, "player_name", "rogue54"))[:16]
+            return str(getattr(self, "player_name", "guest"))[:16]
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        return str(profile.get("user_name") or getattr(self, "player_name", "rogue54"))[:16]
+        if profile.get("local_only", True):
+            return "guest"
+        return str(profile.get("user_name") or getattr(self, "player_name", "guest"))[:16]
+
+    def is_online_mode(self):
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        return bool(profile.get("server_token")) and not profile.get("local_only", True)
 
     def monster_color(self, sym):
         overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
@@ -6418,7 +6473,7 @@ class Game:
         if getattr(self, "st", ST_TITLE) not in (ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_LOCAL_CONFIRM):
             self.online_register_return_state = getattr(self, "st", ST_TITLE)
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        user_name = "rogue54" if reset_to_default else profile.get("user_name", "rogue54")
+        user_name = "" if reset_to_default or profile.get("local_only", True) else profile.get("user_name", "")
         self.online_pending_user_name = user_name
         self.online_original_user_name = user_name
         self.name_chars = list(user_name[:USER_NAME_MAX])
@@ -6428,7 +6483,11 @@ class Game:
         self.st = ST_ONLINE_REGISTER
 
     def confirm_online_user_id(self):
-        user_name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
+        raw_name = "".join(getattr(self, "name_chars", [])).strip()
+        if not raw_name:
+            self.online_sync_result = "Enter a name."
+            return
+        user_name = sanitize_user_id(raw_name)
         if not can_register_user_id(user_name):
             self.online_sync_result = "That user name is already registered."
             return
@@ -6457,7 +6516,21 @@ class Game:
         if getattr(self, "online_register_return_state", ST_TITLE) == ST_ONLINE_SCORE:
             self.st = ST_ONLINE_SCORE
         else:
-            self.enter_title_screen()
+            self.enter_title_screen(skip_fade=True)
+
+    def switch_to_guest_mode(self):
+        self.online_profile = save_local_only_profile("guest")
+        self.player_name = "guest"
+        self.online_register_prompt = False
+        self.online_sync_pending = False
+        self.online_syncing = False
+        self.online_sync_result = ""
+        self.enter_title_screen(skip_fade=True)
+
+    def enter_guest_mode_confirm(self):
+        self.apply_palette()
+        self.online_local_confirm_mode = "guest_switch"
+        self.st = ST_ONLINE_LOCAL_CONFIRM
 
     def online_register_name_changed(self):
         current = sanitize_user_id("".join(getattr(self, "name_chars", [])))
@@ -6478,17 +6551,25 @@ class Game:
             self.toggle_online_language()
             return
         if self.btn_a() or self.btn_start_tap():
+            if getattr(self, "online_local_confirm_mode", "") == "guest_switch":
+                self.online_local_confirm_mode = ""
+                self.switch_to_guest_mode()
+                return
             self.save_local_only_online_profile()
             return
         if self.btn_b():
+            if getattr(self, "online_local_confirm_mode", "") == "guest_switch":
+                self.online_local_confirm_mode = ""
+                self.enter_title_screen(skip_fade=True)
+                return
             self.st = ST_ONLINE_REGISTER
             return
 
     def decline_online_registration(self):
-        self.online_profile = save_local_only_profile("rogue54")
+        self.online_profile = save_local_only_profile("guest")
         self.player_name = self.online_profile["user_name"]
         self.online_register_prompt = False
-        self.enter_title_screen()
+        self.enter_title_screen(skip_fade=True)
 
     def finish_online_password(self):
         if getattr(self, "online_password_mode", "register") == "link":
@@ -6521,8 +6602,9 @@ class Game:
             })
             self.player_name = self.online_profile["user_name"]
             self.online_register_prompt = False
-            self.st = ST_ONLINE_SCORE
-            self.request_online_period_scores(force=True)
+            self.online_sync_pending = False
+            self.online_syncing = False
+            self.enter_title_screen(skip_fade=True)
             return
         if getattr(self, "online_password_mode", "register") == "link" and result.get("status") == "auth_failed":
             self.online_sync_result = "That name belongs to another player."
@@ -6557,7 +6639,7 @@ class Game:
         self.online_return_state = ST_TITLE
         self.st = ST_ONLINE_SCORE
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        self.online_register_prompt = profile.get("local_only", True)
+        self.online_register_prompt = False
         return
 
     def load_online_period_scores(self, period=None, force=False):
@@ -6616,8 +6698,21 @@ class Game:
 
     def perform_online_scoreboard_sync(self):
         self.ensure_online_score_state()
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        if profile.get("local_only", True) or not profile.get("server_token", ""):
+            self.online_sync_result = "Ranking refreshed. Guest mode."
+            self.online_score_load_result = ""
+            self.online_sync_status = "loading scoreboard..."
+            if not self.refresh_online_scoreboard_periods():
+                self.online_sync_result = "Refresh failed. No local scores yet."
+            return {"ok": True, "status": "guest_refresh", "posted_count": 0}
         self.online_sync_status = "posting local scores..."
         entries = local_best_sync_entries(load_score_entries())
+        user_name = str(profile.get("user_name", "")).lower()
+        entries = [
+            entry for entry in entries
+            if str(entry.get("player_name", "")).lower() == user_name
+        ]
         post_allowed = bool(getattr(self, "online_sync_post_allowed", True))
         if not entries or not post_allowed:
             if entries:
@@ -6648,7 +6743,6 @@ class Game:
             self.online_register_prompt = True
         else:
             self.online_sync_result = f"POST failed. {status}."
-        profile = normalize_online_profile(getattr(self, "online_profile", None))
         if result.get("last_sync_at") or result.get("next_sync_at"):
             profile["last_sync_at"] = result.get("last_sync_at", profile.get("last_sync_at", ""))
             profile["next_sync_at"] = result.get("next_sync_at", profile.get("next_sync_at", ""))
@@ -6746,7 +6840,7 @@ class Game:
         self.online_profile = save_local_only_profile(self.player_name)
         self.name_chars = list(self.player_name)
         self.name_pos = min(len(self.name_chars), 7)
-        self.enter_title_screen()
+        self.enter_title_screen(initial_fade=True)
 
     def open_name_input(self):
         self.enter_online_register()
@@ -6760,6 +6854,21 @@ class Game:
             return
         if self.btn_b():
             self.decline_online_registration()
+            return
+
+    def confirm_language_select(self):
+        settings = self.ensure_settings()
+        settings.language = LANG_JA if getattr(self, "language_cursor", 0) == 1 else LANG_EN
+        self.settings = save_settings(settings)
+        self.settings_missing = False
+        self.enter_title_screen()
+
+    def upd_language_select(self):
+        d = self.menu_vertical_press()
+        if d:
+            self.language_cursor = (getattr(self, "language_cursor", 0) + d) % 2
+        if self.btn_a() or self.btn_start_tap():
+            self.confirm_language_select()
             return
 
     def upd_logo(self):
@@ -6791,8 +6900,10 @@ class Game:
                 self.request_title_new_game()
             elif self.title_cursor == 1:
                 self.enter_online_scoreboard()
+            elif self.is_online_mode():
+                self.enter_guest_mode_confirm()
             else:
-                self.open_name_input()
+                self.enter_online_register(reset_to_default=True)
 
     def upd_name(self):
         if self.btn_start_tap():
@@ -6890,8 +7001,7 @@ class Game:
                 self.enter_online_register()
                 return
             if self.btn_b():
-                profile = normalize_online_profile(getattr(self, "online_profile", None))
-                self.online_profile = save_local_only_profile(profile.get("user_name", "rogue54"))
+                self.online_profile = save_local_only_profile("guest")
                 self.online_register_prompt = False
                 self.online_sync_result = "Local only."
                 return
@@ -6923,16 +7033,17 @@ class Game:
         if pyxel.btnp(pyxel.KEY_R) or self.btn_back():
             profile = normalize_online_profile(getattr(self, "online_profile", None))
             if profile.get("local_only", True) or getattr(self, "online_register_prompt", False):
-                self.enter_online_register()
+                self.request_online_period_scores(force=True)
                 return
             self.request_online_period_scores(force=True)
             return
 
     # ---------- Update ----------
     def update(self):
-        if self.st in (ST_LOGO, ST_TITLE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
+        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
+            elif self.st == ST_LANGUAGE: self.upd_language_select()
             elif self.st == ST_TITLE: self.upd_title()
             elif self.st == ST_NAME: self.upd_name()
             elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
@@ -7403,6 +7514,9 @@ class Game:
         if self.st == ST_LOGO:
             self.draw_logo_screen()
             return
+        if self.st == ST_LANGUAGE:
+            self.draw_language_select_screen()
+            return
         if self.st == ST_TITLE:
             self.draw_title_screen()
             return
@@ -7474,17 +7588,44 @@ class Game:
             pyxel.dither(1.0)
         if title_alpha < 1.0:
             return
-        items = ["START", "ONLINE RANKING", f"NAME: {self.current_player_name()}"]
+        online = self.is_online_mode()
+        if getattr(self, "lang", LANG_EN) == LANG_JA:
+            items = ["運命の洞窟に入る", "スコアボード", "ゲストモード" if online else "オンラインモード"]
+            mode_line = "モード: オンライン" if online else "モード: ゲスト"
+            user_prefix = "ユーザ"
+        else:
+            items = ["ENTER DUNGEON", "SCOREBOARD", "GUEST MODE" if online else "ONLINE MODE"]
+            mode_line = "MODE: ONLINE" if online else "MODE: GUEST"
+            user_prefix = "USER"
         x = TITLE_MENU_X
-        y = min(TITLE_MENU_Y, SCR_H - TITLE_MENU_H + 10)
+        panel_h = TITLE_MENU_H + (28 if online else 16)
+        y = min(TITLE_MENU_Y, SCR_H - panel_h + 10)
         pyxel.dither(0.8)
-        pyxel.rect(x - 28, y - 10, TITLE_MENU_W, TITLE_MENU_H, 0)
+        pyxel.rect(x - 28, y - 10, TITLE_MENU_W, panel_h, 0)
         pyxel.dither(1.0)
-        pyxel.rectb(x - 28, y - 10, TITLE_MENU_W, TITLE_MENU_H, TITLE_MENU_BORDER_COL)
+        pyxel.rectb(x - 28, y - 10, TITLE_MENU_W, panel_h, TITLE_MENU_BORDER_COL)
         cur = getattr(self, "title_cursor", 0)
         for i, item in enumerate(items):
             self.txt(x - 15, y + i * 24, ">" if i == cur else " ", TITLE_MENU_SELECTED_COL)
             self.txt(x, y + i * 24, item, TITLE_MENU_SELECTED_COL if i == cur else TITLE_MENU_TEXT_COL)
+        status_y = y + 70
+        self.txt(x, status_y, mode_line, TITLE_MENU_SELECTED_COL)
+        if online:
+            self.txt(x, status_y + 12, f"{user_prefix}: {self.current_user_id()}", TITLE_MENU_SELECTED_COL)
+
+    def draw_language_select_screen(self):
+        self.apply_palette()
+        bx, by, bw, bh = (SCR_W - 328) // 2, 82, 328, 150
+        self._box(bx, by, bw, bh, self.ui_heading(self.online_text("language_title"), UI_HEADING_SCREEN))
+        self.txt(bx + 24, 112, self.online_text("language_prompt"), UI_TEXT_COL)
+        options = [("English", LANG_EN), ("日本語", LANG_JA)]
+        cur = getattr(self, "language_cursor", 0)
+        for i, (label, _lang) in enumerate(options):
+            y = 142 + i * 22
+            col = UI_SELECTED_COL if i == cur else UI_TEXT_COL
+            self.txt(bx + 44, y, ">" if i == cur else " ", UI_SELECTED_COL)
+            self.txt(bx + 64, y, label, col)
+        self.txt(bx + 24, 206, self.online_text("language_select_hint"), UI_SUBTEXT_COL)
 
     def draw_name_input(self):
         bx, by, bw, bh = 112, 58, 356, 210
@@ -7555,7 +7696,11 @@ class Game:
         display_scores = scores[:10]
         for i, entry in enumerate(display_scores, start=1):
             name = str(entry.get("player_name", "")).upper()[:16]
-            current_result = period == SCOREBOARD_PERIOD_LOCAL and self.is_current_result_score(entry)
+            current_result = (
+                period == SCOREBOARD_PERIOD_LOCAL
+                and bool(getattr(self, "result_entry", None))
+                and self.is_current_result_score(entry)
+            )
             col = SCOREBOARD_HILITE_COL if current_result or (period != SCOREBOARD_PERIOD_LOCAL and name == player_name) else SCOREBOARD_TEXT_COL
             line = self.format_score_line_for_board(i, entry, period)
             if current_result:
@@ -7631,12 +7776,20 @@ class Game:
             self.txt(150, 254, self.online_sync_result[:46], UI_HILITE_COL)
 
     def draw_online_local_confirm_screen(self):
-        self._box(112, 86, 356, 130, self.ui_heading(self.online_text("local_confirm_title"), UI_HEADING_PANEL))
+        guest_switch = getattr(self, "online_local_confirm_mode", "") == "guest_switch"
+        title_key = "guest_confirm_title" if guest_switch else "local_confirm_title"
+        self._box(112, 86, 356, 130, self.ui_heading(self.online_text(title_key), UI_HEADING_PANEL))
         name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
-        self.txt(138, 112, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
-        self.txt(138, 132, f"Name: {name}*", UI_HILITE_COL)
-        self.txt(138, 160, self.online_text("local_confirm_ok"), UI_HILITE_COL)
-        self.txt(138, 178, self.online_text("local_confirm_cancel"), UI_TEXT_COL)
+        if guest_switch:
+            self.txt(138, 112, self.online_text("guest_confirm_prompt"), UI_TEXT_COL)
+            self.txt(138, 132, "Name: guest", UI_HILITE_COL)
+            self.txt(138, 160, self.online_text("guest_confirm_ok"), UI_SUBTEXT_COL)
+            self.txt(138, 178, self.online_text("guest_confirm_cancel"), UI_SUBTEXT_COL)
+        else:
+            self.txt(138, 112, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
+            self.txt(138, 132, f"Name: {name}*", UI_HILITE_COL)
+            self.txt(138, 160, self.online_text("local_confirm_ok"), UI_SUBTEXT_COL)
+            self.txt(138, 178, self.online_text("local_confirm_cancel"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(138, 196)
 
     def draw_title(self):

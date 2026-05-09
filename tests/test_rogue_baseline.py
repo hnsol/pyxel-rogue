@@ -6536,7 +6536,7 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)
         self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertEqual(game.msgs[-1], "Hello rogue54, welcome to the Dungeons of Doom!")
+        self.assertEqual(game.msgs[-1], "Hello guest, welcome to the Dungeons of Doom!")
 
     def test_rogue_544_player_initial_stats_use_init_stats(self):
         # Rogue 5.4.4 extern.c:INIT_STATS is {16, 0, 1, 10, 12, "1x4", 12}.
@@ -10089,7 +10089,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.try_move(1, 0)
 
         self.assertEqual(game.turn, 1)
-        self.assertEqual(game.msgs[-2:], ["Hello rogue54, welcome to the Dungeons of Doom!", "17 gold pieces"])
+        self.assertEqual(game.msgs[-2:], ["Hello guest, welcome to the Dungeons of Doom!", "17 gold pieces"])
         self.assertEqual(game.msg_turns[-2:], [0, 1])
 
     def test_stairs_clear_visible_message_toast_for_new_floor(self):
@@ -11675,7 +11675,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         profile = rogue_scores.normalize_online_profile({"user_id": "ACE", "display_name": "ACE", "server_token": "tok"})
 
-        self.assertEqual(profile["user_name"], "rogue54")
+        self.assertEqual(profile["user_name"], "guest")
         self.assertTrue(profile["local_only"])
         self.assertEqual(profile["server_token"], "")
         self.assertFalse(profile["profile_exists"])
@@ -11740,6 +11740,7 @@ class RogueBaselineTest(unittest.TestCase):
                 "last_sync_at": "",
             }
             self.assertFalse(rogue_scores.can_register_user_id("rogue54"))
+            self.assertFalse(rogue_scores.can_register_user_id("guest"))
             self.assertFalse(rogue_scores.can_register_user_id("rodney"))
             result = rogue_scores.register_online_user(
                 "newuser",
@@ -12145,7 +12146,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input()
             game.update()
         self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertEqual(game.msgs[-1], "Hello ace*, welcome to the Dungeons of Doom!")
+        self.assertEqual(game.msgs[-1], "Hello guest, welcome to the Dungeons of Doom!")
         calls = []
         game.draw_title = lambda: calls.append("title")
         game.draw_zoom = lambda: calls.append("map")
@@ -12157,7 +12158,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_title_name_and_online_ranking_navigation(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.st = rogue.ST_TITLE
         game.title_cursor = 2
         game.player_name = "ace"
@@ -12178,7 +12179,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_title_online_ranking_entry_shows_local_history_without_syncing(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.st = rogue.ST_TITLE
         game.title_cursor = 1
         game.player_name = "ace"
@@ -12216,7 +12217,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.online_period, rogue.SCOREBOARD_PERIOD_LOCAL)
         self.assertFalse(game.online_sync_pending)
 
-    def test_logo_enters_online_confirm_after_logo_when_profile_missing(self):
+    def test_logo_enters_title_as_guest_when_profile_missing(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_LOGO
@@ -12226,7 +12227,8 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input()
         game.update()
 
-        self.assertEqual(game.st, rogue.ST_ONLINE_CONFIRM)
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.current_player_name(), "guest")
 
     def test_online_confirm_decline_saves_local_only_and_skips_next_prompt(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12247,7 +12249,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.save_local_only_profile = old_save
 
-        self.assertEqual(saved, ["rogue54"])
+        self.assertEqual(saved, ["guest"])
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertTrue(game.online_profile["profile_exists"])
 
@@ -12268,17 +12270,140 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.lang, rogue.LANG_JA)
         self.assertEqual(game.st, rogue.ST_ONLINE_CONFIRM)
 
-    def test_online_confirm_accept_opens_registration_with_rogue54_initial_name(self):
+    def test_title_signup_opens_registration_with_blank_initial_name(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
-        game.st = rogue.ST_ONLINE_CONFIRM
-        game.online_profile = {"user_name": "ace", "local_only": True, "profile_exists": False}
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 2
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
         self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
-        self.assertEqual("".join(game.name_chars).strip(), "rogue54")
+        self.assertEqual("".join(game.name_chars).strip(), "")
+
+    def test_title_draws_guest_mode_and_signup_menu(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "guest"
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.title_cursor = 2
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_title_screen()
+
+        self.assertIn("SCOREBOARD", calls)
+        self.assertIn("ONLINE MODE", calls)
+        self.assertIn("MODE: GUEST", calls)
+
+    def test_title_draws_online_user_and_guest_mode_menu(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.title_cursor = 2
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_title_screen()
+
+        self.assertIn("GUEST MODE", calls)
+        self.assertIn("MODE: ONLINE", calls)
+        self.assertIn("USER: ace", calls)
+
+    def test_online_register_rejects_blank_name_without_server_check(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.name_chars = []
+        game.name_pos = 8
+        old_check = rogue.check_online_user
+        try:
+            rogue.check_online_user = lambda user_name: self.fail("blank name must not hit server")
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_SPACE}, pressed={rogue.pyxel.KEY_SPACE})
+            game.update()
+        finally:
+            rogue.check_online_user = old_check
+
+        self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
+        self.assertEqual(game.online_sync_result, "Enter a name.")
+
+    def test_online_register_rejects_guest_name_without_server_check(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.name_chars = list("guest")
+        game.name_pos = 8
+        old_check = rogue.check_online_user
+        try:
+            rogue.check_online_user = lambda user_name: self.fail("guest name must not hit server")
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_SPACE}, pressed={rogue.pyxel.KEY_SPACE})
+            game.update()
+        finally:
+            rogue.check_online_user = old_check
+
+        self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
+        self.assertIn("registered", game.online_sync_result)
+
+    def test_guest_scoreboard_refresh_fetches_without_posting_local_scores(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_sync_post_allowed = True
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_WEEKLY]
+        old_local_best = rogue.local_best_sync_entries
+        old_sync = rogue.sync_online_scoreboard
+        try:
+            rogue.local_best_sync_entries = lambda entries: [
+                {"score": 99, "player_name": "guest", "period_week": "2026-W18", "period_season": "2026-Spring"}
+            ]
+            rogue.sync_online_scoreboard = lambda *args, **kwargs: self.fail("guest mode must not post scores")
+            game.load_online_period_scores = lambda *args, **kwargs: []
+
+            result = game.perform_online_scoreboard_sync()
+        finally:
+            rogue.local_best_sync_entries = old_local_best
+            rogue.sync_online_scoreboard = old_sync
+
+        self.assertEqual(result["status"], "guest_refresh")
+        self.assertEqual(game.online_sync_result, "Ranking refreshed. Guest mode.")
+
+    def test_online_sync_posts_only_scores_recorded_after_signup_name(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.online_sync_post_allowed = True
+        game.online_sync_periods = []
+        posted = []
+        old_load = rogue.load_score_entries
+        old_best = rogue.local_best_sync_entries
+        old_sync = rogue.sync_online_scoreboard
+        try:
+            rogue.load_score_entries = lambda: []
+            rogue.local_best_sync_entries = lambda entries: [
+                {"score": 400, "player_name": "guest", "period_week": "2026-W18", "period_season": "2026-Spring"},
+                {"score": 100, "player_name": "ace", "period_week": "2026-W18", "period_season": "2026-Spring"},
+            ]
+            rogue.sync_online_scoreboard = lambda profile, entries: posted.extend(entries) or {"ok": True}
+            game.refresh_online_scoreboard_periods = lambda: True
+
+            game.perform_online_scoreboard_sync()
+        finally:
+            rogue.load_score_entries = old_load
+            rogue.local_best_sync_entries = old_best
+            rogue.sync_online_scoreboard = old_sync
+
+        self.assertEqual([entry["player_name"] for entry in posted], ["ace"])
 
     def test_online_register_keyboard_l_toggles_language_without_moving_cursor(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12513,7 +12638,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
         self.assertIn("registered", game.online_sync_result)
 
-    def test_online_pin_register_success_saves_profile_and_starts_sync(self):
+    def test_online_pin_register_success_saves_profile_and_returns_title_without_sync(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.st = rogue.ST_ONLINE_PIN
@@ -12549,8 +12674,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(saved[0]["user_name"], "newuser")
         self.assertEqual(saved[0]["server_token"], "srv-token")
-        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
-        self.assertTrue(game.online_sync_pending)
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertFalse(getattr(game, "online_sync_pending", False))
 
     def test_online_pin_link_failure_rejects_name(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12577,7 +12702,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_online_name_entry_uses_eight_lowercase_chars(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
-        game.online_profile = {"user_name": "longname99", "local_only": True, "profile_exists": True}
+        game.online_profile = {"user_name": "longname99", "local_only": False, "server_token": "tok", "profile_exists": True}
 
         game.enter_online_register()
 
@@ -12625,8 +12750,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         text = "\n".join(calls)
         self.assertIn("オンラインスコア", text)
-        self.assertIn("名前を登録", text)
-        self.assertIn("通信", text)
+        self.assertIn("オンライン同期", text)
+        self.assertIn("同期", text)
 
     def test_online_registration_language_hint_is_bilingual_and_action_hints_are_short(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -12653,6 +12778,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("A NEXT/END", text)
         self.assertNotIn("UP/DOWN CHANGE", text)
         self.assertNotIn("LEFT/RIGHT MOVE", text)
+
+    def test_guest_mode_confirm_uses_dim_action_hints_and_hilite_language_hint(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.online_local_confirm_mode = "guest_switch"
+        calls = []
+        game._box = lambda *args: None
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_online_local_confirm_screen()
+
+        self.assertIn(("A/Enter switch", rogue.SCOREBOARD_DIM_COL), calls)
+        self.assertIn(("B/Esc cancel", rogue.SCOREBOARD_DIM_COL), calls)
+        self.assertIn(("Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
 
     def test_online_registration_language_hint_is_below_action_hint(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13273,6 +13412,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 118), drawn)
         self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 128), drawn)
 
+    def test_local_scoreboard_does_not_highlight_other_name_when_guest(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "guest"
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_LOCAL
+        game.result_entry = None
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_LOCAL: [
+                {"score": 740, "player_name": "rogue54a", "result_flags": "killed", "level": 8, "killer": "troll"},
+                {"score": 624, "player_name": "guest", "result_flags": "quit", "level": 5, "killer": ""},
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_LOCAL}
+        game.online_syncing = False
+        game.load_online_period_scores = lambda *args, **kwargs: game.online_score_cache[rogue.SCOREBOARD_PERIOD_LOCAL]
+        drawn = []
+        game._box = lambda *args: None
+        game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+        game.draw_online_score_screen()
+
+        self.assertIn((" 1   740 rogue54a: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
+        self.assertIn((" 2   624 guest*: quit on level 5.", rogue.SCOREBOARD_TEXT_COL, 120, 118), drawn)
+
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -13332,7 +13497,7 @@ class RogueBaselineTest(unittest.TestCase):
             "Score posted. Ranking refreshed.": ["スコア投稿。", "ランキング更新。"],
             "Refresh failed. POST once per 24h.": ["更新失敗。", "POSTは24時間に1回。"],
             "Refresh failed. No local scores yet.": ["更新失敗。", "ローカルスコアなし。"],
-            "Authentication failed. Register again.": ["認証失敗。", "再登録してください。"],
+            "Authentication failed. Register again.": ["認証失敗。", "同期IDを確認してください。"],
             "Score posted. Ranking refresh failed.": ["スコア投稿。", "ランキング更新失敗。"],
             "Name exists. Enter its 6-digit PIN.": ["登録済み名です。", "6桁PINを入力。"],
         }
@@ -13454,7 +13619,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("My Rogue Chronicle", text)
         self.assertIn("Local", text)
         self.assertIn("ace*: quit on level 3.", text)
-        self.assertIn("Local only. Select opens online registration.", text)
+        self.assertIn("Local only. Select opens online sync.", text)
 
     def test_online_scoreboard_uses_info_style_period_tabs_and_keeps_titles(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13555,9 +13720,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ローカル", text)
         self.assertIn("得点 名前", text)
         self.assertIn("ace*: 3階で中断。", text)
-        self.assertIn("ローカルのみ。Selectでオンライン登録。", text)
-        self.assertIn("左右: ボード切替   Select/Tab: 通信/登録   B/Esc: 戻る", text)
-        self.assertIn("名前登録で1日1回投稿できます。", text)
+        self.assertIn("ローカルのみ。Selectでオンライン同期。", text)
+        self.assertIn("左右: ボード切替   Select/Tab: 同期   B/Esc: 戻る", text)
+        self.assertIn("オンライン同期で1日1回投稿できます。", text)
         self.assertIn("ランキング更新。", text)
         self.assertIn("POSTは24時間に1回。", text)
 
@@ -13711,13 +13876,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.pyxel.play_calls, [])
         self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
 
-    def test_entering_title_with_startup_bgm_keeps_title_fade(self):
+    def test_initial_title_with_startup_bgm_fades_background(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.title_bgm_started = True
         game.title_fade_frames = rogue.TITLE_FADE_FRAMES
 
-        game.enter_title_screen()
+        game.enter_title_screen(initial_fade=True)
 
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertEqual(game.title_fade_frames, 0)
@@ -13743,7 +13908,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_logo_and_title_use_bright_text_without_press_any_key_hint(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.player_name = "ACE"
         game.title_cursor = 0
         game.title_bg = object()
@@ -13761,7 +13926,7 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.blt_calls[0][0], (0, 0, game.title_bg, 0, 0, rogue.SCR_W, rogue.SCR_H))
-        title_rect = next(args for args, _kw in rogue.pyxel.rect_calls if args[2:4] == (174, 84))
+        title_rect = next(args for args, _kw in rogue.pyxel.rect_calls if args[2] == rogue.TITLE_MENU_W)
         self.assertGreaterEqual(title_rect[0], 0)
         self.assertGreaterEqual(title_rect[1], 0)
         self.assertLessEqual(title_rect[0] + title_rect[2], rogue.SCR_W)
@@ -13771,7 +13936,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
         self.assertFalse(any(text == "ローグ" for text, _c, _x in calls))
         self.assertFalse(any(text == "ver 5.4" for text, _c, _x in calls))
-        self.assertTrue(any(text == "START" and c == rogue.TITLE_MENU_SELECTED_COL for text, c, _x in calls))
+        self.assertTrue(any(text == "ENTER DUNGEON" and c == rogue.TITLE_MENU_SELECTED_COL for text, c, _x in calls))
         self.assertFalse(any("A/Start" in text for text, _c, _x in calls))
 
     def test_name_input_guides_list_gamepad_before_keyboard(self):
@@ -13789,7 +13954,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_title_menu_uses_readable_flexoki_slots_on_title_palette(self):
         game = rogue.Game.__new__(rogue.Game)
-        game.settings = rogue.Settings()
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.player_name = "ACE"
         game.title_cursor = 2
         game.title_bg = object()
@@ -13800,12 +13965,90 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_title_screen()
 
-        self.assertIn(("START", rogue.TITLE_MENU_TEXT_COL, rogue.TITLE_MENU_X), calls)
-        self.assertIn(("ONLINE RANKING", rogue.TITLE_MENU_TEXT_COL, rogue.TITLE_MENU_X), calls)
-        self.assertIn((f"NAME: {game.current_player_name()}", rogue.TITLE_MENU_SELECTED_COL, rogue.TITLE_MENU_X), calls)
+        self.assertIn(("ENTER DUNGEON", rogue.TITLE_MENU_TEXT_COL, rogue.TITLE_MENU_X), calls)
+        self.assertIn(("SCOREBOARD", rogue.TITLE_MENU_TEXT_COL, rogue.TITLE_MENU_X), calls)
+        self.assertIn(("ONLINE MODE", rogue.TITLE_MENU_SELECTED_COL, rogue.TITLE_MENU_X), calls)
+        self.assertIn(("MODE: GUEST", rogue.TITLE_MENU_SELECTED_COL, rogue.TITLE_MENU_X), calls)
         self.assertEqual(rogue.pyxel.rectb_calls[-1][0][-1], rogue.TITLE_MENU_BORDER_COL)
         self.assertEqual(rogue.TITLE_MENU_SELECTED_COL, 31)
         self.assertEqual(rogue.TITLE_MENU_TEXT_COL, 5)
+
+    def test_title_menu_uses_japanese_labels_in_japanese_mode(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.lang = rogue.LANG_JA
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.title_cursor = 2
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_title_screen()
+
+        self.assertIn("運命の洞窟に入る", calls)
+        self.assertIn("スコアボード", calls)
+        self.assertIn("オンラインモード", calls)
+        self.assertIn("モード: ゲスト", calls)
+
+    def test_missing_settings_enters_language_select_before_title(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.settings_missing = True
+        game.st = rogue.ST_LOGO
+        game.logo_frames = rogue.LOGO_TOTAL_FRAMES - 1
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+
+        rogue.pyxel.set_input()
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_LANGUAGE)
+
+    def test_language_select_saves_choice_and_enters_title(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.lang = rogue.LANG_EN
+        game.st = rogue.ST_LANGUAGE
+        game.language_cursor = 0
+        saved = []
+        old_save = rogue.save_settings
+        try:
+            rogue.save_settings = lambda settings: saved.append(settings.language) or settings
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
+            game.update()
+            self.assertEqual(game.language_cursor, 1)
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+        finally:
+            rogue.save_settings = old_save
+
+        self.assertEqual(saved, [rogue.LANG_JA])
+        self.assertEqual(game.st, rogue.ST_TITLE)
+
+    def test_language_select_uses_bilingual_title_and_prompt(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.language_cursor = 0
+        calls = []
+        game._box = lambda x, y, w, h, title: calls.append(("box", title))
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_language_select_screen()
+
+        self.assertIn(("box", "=== Language / 言語 ==="), calls)
+        self.assertIn(("Choose display language. / 表示言語を選んでください。", rogue.UI_TEXT_COL), calls)
+
+    def test_language_select_window_is_centered(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        boxes = []
+        game._box = lambda x, y, w, h, title: boxes.append((x, y, w, h, title))
+        game.txt = lambda *args: None
+
+        game.draw_language_select_screen()
+
+        x, _y, w, _h, _title = boxes[0]
+        self.assertEqual(x, (rogue.SCR_W - w) // 2)
 
     def test_title_background_dither_fades_in_and_input_finishes_fade(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13836,7 +14079,7 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.rect_calls.clear()
         game.draw_title_screen()
         self.assertEqual(rogue.pyxel.dither_calls[0], 1.0)
-        title_rect = next(args for args, _kw in rogue.pyxel.rect_calls if args[2:4] == (174, 84))
+        title_rect = next(args for args, _kw in rogue.pyxel.rect_calls if args[2] == rogue.TITLE_MENU_W)
         self.assertLessEqual(title_rect[1] + title_rect[3], rogue.SCR_H)
 
     def test_title_start_during_fade_only_finishes_fade(self):
@@ -13853,6 +14096,37 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
         self.assertEqual(getattr(game, "title_bgm_stop_wait", 0), 0)
+
+    def test_cancel_signup_returns_to_title_without_background_fade(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.title_bgm_started = True
+        game.title_fade_frames = 0
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.name_chars = []
+        game.name_pos = 0
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
+
+    def test_cancel_scoreboard_returns_to_title_without_background_fade(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_SCORE
+        game.title_bgm_started = True
+        game.title_fade_frames = 0
+        game.online_sync_pending = False
+        game.online_syncing = False
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.title_fade_frames, rogue.TITLE_FADE_FRAMES)
 
     def test_title_screen_uses_dedicated_palette_and_restores_game_palette_on_exit(self):
         old_colors = getattr(rogue.pyxel, "colors", None)
@@ -19144,7 +19418,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.tm[py][px + 1], rogue.T_VWALL)
         self.assertEqual(game.tm[py][px - 1], rogue.T_FLOOR)
         self.assertNotIn("You find nothing.", game.msgs)
-        self.assertEqual(game.msgs, ["Hello rogue54, welcome to the Dungeons of Doom!"])
+        self.assertEqual(game.msgs, ["Hello guest, welcome to the Dungeons of Doom!"])
 
     def test_rogue544_search_does_not_reveal_hidden_trap_under_item(self):
         # Rogue 5.4.4 command.c:search() reveals hidden traps only when chat() is FLOOR.

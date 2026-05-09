@@ -63,7 +63,7 @@ DUMMY_PLAYER_NAMES = [
     "VOLATILE", "REGISTER", "STRUCT", "UNION", "TYPEDEF",
     "MAXINT", "MININT", "ID001", "USER99", "GUEST",
 ]
-RESERVED_USER_IDS = {"rogue54"} | {name.lower() for name in DUMMY_PLAYER_NAMES}
+RESERVED_USER_IDS = {"guest", "rogue54"} | {name.lower() for name in DUMMY_PLAYER_NAMES}
 
 
 def score_entry_id(entry: dict[str, Any]) -> str:
@@ -413,7 +413,7 @@ def deobfuscate_server_token(encoded_token: str, user_name: str) -> str:
 def normalize_online_profile(profile: dict[str, Any] | None) -> dict[str, Any]:
     profile = dict(profile or {})
     has_v3_name = "user_name" in profile
-    user_name = sanitize_user_id(profile.get("user_name", "rogue54")) if has_v3_name else "rogue54"
+    user_name = sanitize_user_id(profile.get("user_name", "guest")) if has_v3_name else "guest"
     token = str(profile.get("server_token", "")) if has_v3_name else ""
     if not token and profile.get("server_token_obf"):
         token = deobfuscate_server_token(str(profile.get("server_token_obf", "")), user_name)
