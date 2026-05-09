@@ -234,7 +234,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0020"
+UI_BUILD = "260510_0104"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -452,9 +452,10 @@ TITLE_BG_EXTRA_PALETTE = (
     0x000102, 0x000002, 0x000301, 0x000101, 0x000001, 0x000300, 0x000100, 0x000000,
 )
 TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
-TITLE_MENU_X = 248
 TITLE_MENU_Y = 158
 TITLE_MENU_W = 174
+TITLE_LOGO_RIGHT_X = 398
+TITLE_MENU_X = TITLE_LOGO_RIGHT_X - TITLE_MENU_W + 28
 TITLE_MENU_H = 84
 TITLE_MENU_SELECTED_COL = 31
 TITLE_MENU_TEXT_COL = 5
@@ -7543,16 +7544,19 @@ class Game:
         else:
             alpha = 0.0
         lines = [
-            "hann-solo laboratory",
-            "",
-            "(C) 1980-1985 U.C.BERKELEY / CSRG",
-            "      BY HSL LABORATORY, INC.",
-            "    ALL RIGHTS RESERVED 1986",
+            ("ORIGINAL ROGUE 5.4.4", 23),
+            ("(C) 1980-1983, 1985, 1999", 30),
+            ("MICHAEL TOY, KEN ARNOLD", 30),
+            ("AND GLENN WICHMAN", 30),
+            ("", 30),
+            ("PYXEL VERSION", 23),
+            ("(C) 2026 HSL LABORATORY", 30),
         ]
-        y = 118
+        y = 92
         pyxel.dither(alpha)
-        for i, line in enumerate(lines):
-            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 23 if i == 0 else 30)
+        for i, (line, col) in enumerate(lines):
+            if line:
+                self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, col)
         pyxel.dither(1.0)
 
     def draw_title_screen(self):
@@ -8124,21 +8128,16 @@ class Game:
         return (20, 20, SCR_W - 40, SCR_H - 40)
 
     def info_tab_label(self, name):
-        if self.lang == LANG_JA:
-            return {"Inventory": "持ちもの", "Log": "ログ", "Help": "ヘルプ"}.get(name, name)
-        return name
+        key = "info." + name.lower().replace(" ", "_")
+        return TextCatalog.msg(self.lang, key)
 
     def info_title_label(self):
-        return "情報" if self.lang == LANG_JA else "Info"
+        return TextCatalog.msg(self.lang, "info.title")
 
     def info_guide_label(self, active=None):
-        if self.lang == LANG_JA:
-            if active == "Log":
-                return "上下: スクロール   左右: タブ切替   Select/Tab: 補助メニュー"
-            return "左右: タブ切替   Select/Tab: 補助メニュー"
         if active == "Log":
-            return "Up/Down: Scroll   Left/Right: Switch tabs   Select/Tab: Assist menu"
-        return "Left/Right: Switch tabs   Select/Tab: Assist menu"
+            return TextCatalog.msg(self.lang, "info.guide_log")
+        return TextCatalog.msg(self.lang, "info.guide_default")
 
     def draw_info_tabs(self, x, y, active):
         parts = [

@@ -1029,6 +1029,42 @@
     "origin": "state_name[]",
     "ja_source": "mesg_J:74"
   },
+  "info.guide_default": {
+    "source": "rogue.py:info_guide_label",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "info.guide_log": {
+    "source": "rogue.py:info_guide_label",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "info.help": {
+    "source": "rogue.py:info_tab_label",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "info.inventory": {
+    "source": "rogue.py:info_tab_label",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "info.log": {
+    "source": "rogue.py:info_tab_label",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "info.title": {
+    "source": "rogue.py:info_title_label",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "list.ran_out_of_memory_after_count_items": {
     "source": "list.c:104",
     "params": [
@@ -3130,8 +3166,8 @@
     "origin": "msg()"
   },
   "__summary__": {
-    "en_key_count": 424,
-    "ja_key_count": 424,
+        "en_key_count": 430,
+        "ja_key_count": 430,
     "ja_missing_count": 0,
     "ja_missing_keys": [],
     "placeholder_vocabulary": [

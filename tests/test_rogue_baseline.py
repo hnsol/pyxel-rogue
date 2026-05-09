@@ -14042,7 +14042,15 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.logo_frames = 45
         game.draw_logo_screen()
-        self.assertIn(("hann-solo laboratory", 23, rogue.SCR_W // 2 - len("hann-solo laboratory") * 3), calls)
+        self.assertIn(
+            (
+                "ORIGINAL ROGUE 5.4.4",
+                23,
+                rogue.SCR_W // 2 - len("ORIGINAL ROGUE 5.4.4") * 3,
+            ),
+            calls,
+        )
+        self.assertIn(("(C) 2026 HSL LABORATORY", 30, rogue.SCR_W // 2 - len("(C) 2026 HSL LABORATORY") * 3), calls)
         self.assertFalse(any("PRESS ANY KEY" in text for text, _c, _x in calls))
 
         calls.clear()
@@ -14056,6 +14064,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLessEqual(title_rect[0] + title_rect[2], rogue.SCR_W)
         self.assertLessEqual(title_rect[1] + title_rect[3], rogue.SCR_H)
         self.assertEqual(title_rect[0], rogue.TITLE_MENU_X - 28)
+        self.assertEqual(title_rect[0] + title_rect[2], rogue.TITLE_LOGO_RIGHT_X)
         self.assertLess(title_rect[0], rogue.SCR_W // 2)
         self.assertFalse(any(text == "ROGUE V5" for text, _c, _x in calls))
         self.assertFalse(any(text == "ローグ" for text, _c, _x in calls))
@@ -15699,6 +15708,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("Inventory", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Log", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Help", rogue.UI_SELECTED_COL), calls)
+
+    def test_info_inventory_labels_come_from_text_catalog(self):
+        game = new_game(seed=473421)
+
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "info.inventory"), "Inventory")
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_JA, "info.inventory"), "持ちもの")
+        self.assertEqual(game.info_tab_label("Inventory"), "Inventory")
+        self.assertEqual(game.info_guide_label(), "Left/Right: Switch tabs   Select/Tab: Assist menu")
+
+        game.lang = rogue.LANG_JA
+        self.assertEqual(game.info_title_label(), "情報")
+        self.assertEqual(game.info_tab_label("Inventory"), "持ちもの")
+        self.assertEqual(game.info_tab_label("Log"), "ログ")
+        self.assertEqual(game.info_tab_label("Help"), "ヘルプ")
+        self.assertEqual(game.info_guide_label(), "左右: タブ切替   Select/Tab: 補助メニュー")
 
     def test_command_and_item_pick_screens_use_panel_titles_and_selection_color(self):
         game = new_game(seed=47343)
