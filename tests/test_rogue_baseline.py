@@ -12948,8 +12948,11 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_register_screen()
 
-        self.assertIn((138, 216, "A/Enter 決定  B/Esc ローカルのみ", rogue.UI_SUBTEXT_COL), calls)
-        self.assertIn((138, 230, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
+        action = next(call for call in calls if call[2] == "A/Enter 決定  B/Esc ローカルのみ")
+        language = next(call for call in calls if call[2] == "Select/L Change Language（言語切替）")
+        self.assertEqual(action[3], rogue.UI_SUBTEXT_COL)
+        self.assertEqual(language[3], rogue.UI_HILITE_COL)
+        self.assertGreater(language[1], action[1])
         self.assertNotIn((314, 42, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
 
     def test_online_score_skips_sync_when_next_sync_is_in_future(self):
@@ -13504,11 +13507,11 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.load_score_entries = old_load
 
         text = "\n".join(str(item) for item in drawn)
-        self.assertIn("Weekly Rivals", text)
+        self.assertIn("This Week's Challengers", text)
         self.assertIn("2026-W18", text)
         self.assertIn("-- ", text)
         self.assertIn("Local", text)
-        self.assertIn("Weekly", text)
+        self.assertIn("This Week", text)
         self.assertIn("Season", text)
         self.assertIn("UTC", text)
         self.assertIn("Score Name", text)
@@ -13520,12 +13523,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Syncing scores...", text)
         self.assertIn("Please wait.", text)
         self.assertIn("Ends in 03h 12m 45s  UTC 2026-05-01 00:00", text)
-        self.assertIn((" 2   194 ace: killed on level 3 by a bat.", 23, 120, 118), drawn)
-        self.assertIn((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108), drawn)
-        self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, 120, 208), drawn)
+        row1 = next(item for item in drawn if item[0] == " 1   346 masatora: killed on level 4 by an orc.")
+        player_row = next(item for item in drawn if item[0] == " 2   194 ace: killed on level 3 by a bat.")
+        sync_box = next(item for item in drawn if item == ("box", (122, 119, 268, 82, "-- Sync --")))
+        self.assertEqual(row1[1], rogue.SCOREBOARD_TEXT_COL)
+        self.assertEqual(player_row[1], rogue.SCOREBOARD_HILITE_COL)
+        self.assertNotIn(("123    12 ace: killed on level 2 by a bat.", 30, row1[2], 208), drawn)
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
-        self.assertLess(drawn.index((" 1   346 masatora: killed on level 4 by an orc.", 30, 120, 108)), drawn.index(("box", (156, 116, 268, 82, "-- Sync --"))))
+        self.assertLess(drawn.index(row1), drawn.index(sync_box))
 
     def test_online_score_sync_box_shows_refreshing_when_post_is_not_allowed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13545,8 +13551,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn(("Refreshing ranking...", rogue.SCOREBOARD_HILITE_COL, 184, 146), drawn)
-        self.assertIn(("Please wait.", rogue.SCOREBOARD_HILITE_COL, 184, 160), drawn)
+        self.assertTrue(any(item[0] == "Refreshing ranking..." and item[1] == rogue.SCOREBOARD_HILITE_COL for item in drawn))
+        self.assertTrue(any(item[0] == "Please wait." and item[1] == rogue.SCOREBOARD_HILITE_COL for item in drawn))
 
     def test_online_score_draw_merges_cached_weekly_with_local_best_without_fetching(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13616,10 +13622,56 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.load_score_entries = old_load
 
-        self.assertIn((" 1  1320 6502: killed on level 15 by a vampire.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
-        self.assertIn((" 2   631 algol: killed on level 5 by an orc.", rogue.SCOREBOARD_TEXT_COL, 120, 118), drawn)
-        self.assertIn(("--   624 guest: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 138), drawn)
-        self.assertNotIn((" 3   624 guest: quit on level 5.", rogue.SCOREBOARD_TEXT_COL, 120, 128), drawn)
+        row1 = next(item for item in drawn if item[0] == " 1  1320 6502: killed on level 15 by a vampire.")
+        row2 = next(item for item in drawn if item[0] == " 2   631 algol: killed on level 5 by an orc.")
+        guest = next(item for item in drawn if item[0] == "--   624 guest: quit on level 5.")
+        self.assertEqual(row1[1], rogue.SCOREBOARD_TEXT_COL)
+        self.assertEqual(row2[1], rogue.SCOREBOARD_TEXT_COL)
+        self.assertEqual(guest[1], rogue.SCOREBOARD_HILITE_COL)
+        self.assertEqual(row2[3] - row1[3], 10)
+        self.assertGreaterEqual(guest[3] - row2[3], 20)
+        self.assertFalse(any(item[0] == " 3   624 guest: quit on level 5." for item in drawn))
+
+    def test_guest_online_score_local_best_keeps_one_line_gap_before_bottom_info(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "guest"
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        key = rogue.score_period_keys()["period_week"]
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_WEEKLY: [
+                {"score": 1000 - i, "player_name": f"p{i}", "period_week": key, "result_flags": "killed", "level": i + 1, "killer": "bat"}
+                for i in range(10)
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = False
+        game.online_rank_cache = {}
+        game.scoreboard_period_ends_line = lambda period: "This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"
+        game.online_sync_hint_line = lambda: "Guest scores are not sent"
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [
+                {"score": 624, "player_name": "guest", "period_week": key, "result_flags": "quit", "level": 5, "killer": ""}
+            ]
+            game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+            drawn = []
+            game._box = lambda *args: None
+            game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+            game.draw_online_score_screen()
+        finally:
+            rogue.load_score_entries = old_load
+
+        guest = next(item for item in drawn if item[0].startswith("--") and "guest:" in item[0])
+        bottom = [
+            item for item in drawn
+            if item[0].startswith("This Week ends") or item[0].startswith("Guest scores") or item[0].startswith("Left/Right:")
+        ]
+        self.assertEqual(len(bottom), 3)
+        self.assertGreaterEqual(min(item[3] for item in bottom) - guest[3], rogue.MSG_LINE_H * 2)
 
     def test_local_scoreboard_highlights_only_current_result_row(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13655,9 +13707,14 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn((" 1   740 ace: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
-        self.assertIn((">2   624 ace: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 118), drawn)
-        self.assertIn((" 3   480 ace: killed on level 3 by a hobgoblin.", rogue.SCOREBOARD_TEXT_COL, 120, 128), drawn)
+        row1 = next(item for item in drawn if item[0] == " 1   740 ace: killed on level 8 by a troll.")
+        row2 = next(item for item in drawn if item[0] == ">2   624 ace: quit on level 5.")
+        row3 = next(item for item in drawn if item[0] == " 3   480 ace: killed on level 3 by a hobgoblin.")
+        self.assertEqual(row1[1], rogue.SCOREBOARD_TEXT_COL)
+        self.assertEqual(row2[1], rogue.SCOREBOARD_HILITE_COL)
+        self.assertEqual(row3[1], rogue.SCOREBOARD_TEXT_COL)
+        self.assertEqual(row2[3] - row1[3], 10)
+        self.assertEqual(row3[3] - row2[3], 10)
 
     def test_local_scoreboard_does_not_highlight_other_name_when_guest(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13682,8 +13739,10 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn((" 1   740 rogue54a: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
-        self.assertIn((" 2   624 guest: quit on level 5.", rogue.SCOREBOARD_TEXT_COL, 120, 118), drawn)
+        row1 = next(item for item in drawn if item[0] == " 1   740 rogue54a: killed on level 8 by a troll.")
+        row2 = next(item for item in drawn if item[0] == " 2   624 guest: quit on level 5.")
+        self.assertEqual(row1[1], rogue.SCOREBOARD_TEXT_COL)
+        self.assertEqual(row2[1], rogue.SCOREBOARD_TEXT_COL)
 
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13704,9 +13763,12 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         y_by_text = {item[0]: item[3] for item in drawn if len(item) == 4 and isinstance(item[0], str)}
-        self.assertEqual(y_by_text["Ranking refreshed."], 40)
-        self.assertEqual(y_by_text["No local scores yet."], 52)
-        self.assertEqual(y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"], 224)
+        self.assertLess(y_by_text["Ranking refreshed."], y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"])
+        self.assertLess(y_by_text["No local scores yet."], y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"])
+        self.assertGreaterEqual(
+            y_by_text["This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"],
+            y_by_text["No local scores yet."] + rogue.MSG_LINE_H * 2,
+        )
 
     def test_online_score_long_result_splits_inside_scoreboard_box(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13726,13 +13788,15 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         result_lines = [item for item in drawn if len(item) == 4 and item[1] == rogue.SCOREBOARD_HILITE_COL]
-        first_x = max(114, 468 - game.ui_text_width("Ranking refreshed."))
-        second_x = max(114, 468 - game.ui_text_width("POST once per 24h."))
-        self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 40), result_lines)
-        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, second_x, 52), result_lines)
+        bx = (rogue.SCR_W - 380) // 2
+        right = bx + 380 - 10
+        first_x = max(bx + 16, right - game.ui_text_width("Ranking refreshed."))
+        second_x = max(bx + 16, right - game.ui_text_width("POST once per 24h."))
+        self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 22), result_lines)
+        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, second_x, 34), result_lines)
         for text, _c, x, _y in result_lines:
             if text in ("Ranking refreshed.", "POST once per 24h."):
-                self.assertLessEqual(x + game.ui_text_width(text), 468)
+                self.assertLessEqual(x + game.ui_text_width(text), right)
 
     def test_online_score_japanese_result_messages_split_on_sentence_end(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13810,6 +13874,67 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertGreaterEqual(y, 0)
             self.assertLessEqual(y + rogue.MSG_LINE_H, rogue.SCR_H)
 
+    def test_online_scoreboard_screen_frame_is_centered(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        game.online_score_cache = {rogue.SCOREBOARD_PERIOD_WEEKLY: []}
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = False
+        game.online_register_prompt = False
+        game.load_online_period_scores = lambda *args, **kwargs: []
+        boxes = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda *args: None
+
+        game.draw_online_score_screen()
+
+        x, y, w, h, title = boxes[0]
+        self.assertEqual(title, "=== Scoreboard ===")
+        self.assertEqual((x, y, w, h), ((rogue.SCR_W - 380) // 2, (rogue.SCR_H - 300) // 2, 380, 300))
+
+    def test_screen_frame_windows_are_centered(self):
+        game = new_game(seed=6120)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.lang = rogue.LANG_EN
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.name_chars = list("guest")
+        game.name_pos = 0
+        game.online_pending_action = ""
+        game.online_password_mode = "register"
+        game.online_password_chars = list("000000")
+        game.online_local_confirm_mode = "guest_switch"
+        game.result_scores = []
+        game.options["tombstone"] = True
+        game.death_cause = "died"
+
+        cases = [
+            game.draw_language_select_screen,
+            game.draw_name_input,
+            game.draw_online_confirm_screen,
+            game.draw_online_register_screen,
+            game.draw_online_pin_screen,
+            game.draw_online_local_confirm_screen,
+            game.draw_score_screen,
+            game.draw_dead,
+            game.draw_win,
+            game.draw_quit_confirm,
+            game.draw_quit,
+        ]
+        for draw in cases:
+            with self.subTest(draw=draw.__name__):
+                boxes = []
+                game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+                game.txt = lambda *args: None
+
+                draw()
+
+                x, y, w, h, _title = boxes[0]
+                self.assertEqual(x, (rogue.SCR_W - w) // 2)
+                self.assertEqual(y, (rogue.SCR_H - h) // 2)
+
     def test_enter_online_scoreboard_clears_stale_no_local_scores_when_local_score_exists(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -13866,7 +13991,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("My Rogue Chronicle", text)
         self.assertIn("Local", text)
         self.assertIn("ace: quit on level 3.", text)
-        self.assertIn("Local only. Select opens online sync.", text)
+        self.assertIn("Guest scores are not sent", text)
 
     def test_online_scoreboard_uses_info_style_period_tabs_and_keeps_titles(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13880,7 +14005,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.online_syncing = False
         game.online_register_prompt = False
         game.scoreboard_period_label = lambda period, timestamp=None: "2026-Spring"
-        game.scoreboard_period_ends_line = lambda period: "This Season ends in 1w at UTC 2026-06-01 00:00"
+        game.scoreboard_period_ends_line = lambda period: "Season ends in 1w at UTC 2026-05-31 23:59"
         game.load_online_period_scores = lambda *args, **kwargs: []
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
@@ -13888,12 +14013,14 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn(("-- ", rogue.UI_SECTION_COL, 120, 56), drawn)
-        self.assertIn(("Local", rogue.UI_TEXT_COL, 138, 56), drawn)
-        self.assertIn(("Weekly", rogue.UI_TEXT_COL, 186, 56), drawn)
-        self.assertIn(("Season", rogue.UI_SELECTED_COL, 240, 56), drawn)
-        self.assertIn(("Season Legends", rogue.UI_SECTION_COL, 120, 70), drawn)
-        self.assertIn(("2026-Spring", rogue.UI_SUBTEXT_COL, 210, 70), drawn)
+        bx = (rogue.SCR_W - 380) // 2
+        x = bx + 22
+        self.assertIn(("-- ", rogue.UI_SECTION_COL, x, 38), drawn)
+        self.assertIn(("Local", rogue.UI_TEXT_COL, x + game.ui_text_width("-- "), 38), drawn)
+        self.assertIn(("This Week", rogue.UI_TEXT_COL, x + game.ui_text_width("-- Local | "), 38), drawn)
+        self.assertIn(("Season", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Local | This Week | "), 38), drawn)
+        self.assertIn(("Season Legends", rogue.UI_SECTION_COL, x, 52), drawn)
+        self.assertIn(("2026-Spring", rogue.UI_SUBTEXT_COL, x + game.ui_text_width("Season Legends "), 52), drawn)
 
     def test_online_scoreboard_japanese_tabs_title_order_and_bottom_info_are_dim(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13913,7 +14040,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.online_register_prompt = False
         game.online_score_load_result = "Scoreboard cache updated."
         game.scoreboard_period_label = lambda period, timestamp=None: "2026-Spring"
-        game.scoreboard_period_ends_line = lambda period: "This Season ends in 1w at UTC 2026-06-01 00:00"
+        game.scoreboard_period_ends_line = lambda period: "Season ends in 1w at UTC 2026-05-31 23:59"
         game.online_sync_hint_line = lambda: "Posted UTC 05-03 03:45 / POST after 05-04 03:45"
         game.load_online_period_scores = lambda *args, **kwargs: game.online_score_cache[rogue.SCOREBOARD_PERIOD_SEASON]
         drawn = []
@@ -13922,18 +14049,28 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        self.assertIn(("ローカル", rogue.UI_TEXT_COL, 138, 56), drawn)
-        self.assertIn(("週間", rogue.UI_TEXT_COL, 196, 56), drawn)
-        self.assertIn(("シーズン", rogue.UI_SELECTED_COL, 234, 56), drawn)
-        title = ("シーズンレジェンド", rogue.UI_SECTION_COL, 120, 70)
-        period = ("2026-Spring", rogue.UI_SUBTEXT_COL, 120 + game.ui_text_width("シーズンレジェンド "), 70)
+        bx = (rogue.SCR_W - 380) // 2
+        x = bx + 22
+        self.assertIn(("ローカル", rogue.UI_TEXT_COL, x + game.ui_text_width("-- "), 38), drawn)
+        self.assertIn(("今週", rogue.UI_TEXT_COL, x + game.ui_text_width("-- ローカル | "), 38), drawn)
+        self.assertIn(("今季", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- ローカル | 今週 | "), 38), drawn)
+        title = ("今季のレジェンド", rogue.UI_SECTION_COL, x, 52)
+        period = ("2026-Spring", rogue.UI_SUBTEXT_COL, x + game.ui_text_width("今季のレジェンド "), 52)
         self.assertIn(title, drawn)
         self.assertIn(period, drawn)
-        bottom = [item for item in drawn if len(item) == 4 and item[3] in (210, 224, 238, 252)]
+        bottom = [
+            item for item in drawn
+            if len(item) == 4 and (
+                item[0].startswith("Scoreboard cache updated.")
+                or item[0].startswith("Season ends")
+                or item[0].startswith("Posted UTC")
+                or item[0].startswith("左右:")
+            )
+        ]
         self.assertTrue(bottom)
         self.assertTrue(all(item[1] == rogue.SCOREBOARD_DIM_COL for item in bottom))
         score_rows = [item for item in drawn if len(item) == 4 and item[0][:2].strip().isdigit()]
-        self.assertLess(max(y for _s, _c, _x, y in score_rows), 210)
+        self.assertLess(max(y for _s, _c, _x, y in score_rows), min(item[3] for item in bottom) - rogue.MSG_LINE_H)
 
     def test_online_scoreboard_uses_current_language_after_registration_toggle(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13967,18 +14104,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ローカル", text)
         self.assertIn("得点 名前", text)
         self.assertIn("ace: 3階で中断。", text)
-        self.assertIn("ローカルのみ。Selectでオンライン同期。", text)
-        self.assertIn("左右: ボード切替   Select/Tab: 同期   B/Esc: 戻る", text)
+        self.assertIn("ゲストのスコアは送信されません", text)
+        self.assertIn("左右: 表示切替  Select/Tab: オンライン同期  B/Esc: 戻る", text)
         self.assertIn("オンライン同期で1日1回投稿できます。", text)
         self.assertIn("ランキング更新。", text)
         self.assertIn("POSTは24時間に1回。", text)
 
-    def test_online_scoreboard_japanese_period_titles_keep_rival_and_legend_tone(self):
+    def test_online_scoreboard_period_labels_use_natural_japanese_and_english(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_JA)
 
-        self.assertEqual(game.online_text("score_title_weekly"), "週間ライバル")
-        self.assertEqual(game.online_text("score_title_season"), "シーズンレジェンド")
+        self.assertEqual(game.online_text("score_tab_weekly"), "今週")
+        self.assertEqual(game.online_text("score_tab_season"), "今季")
+        self.assertEqual(game.online_text("score_title_weekly"), "今週の挑戦者")
+        self.assertEqual(game.online_text("score_title_season"), "今季のレジェンド")
+        self.assertEqual(game.online_text("period_week"), "今週")
+        self.assertEqual(game.online_text("period_season"), "今季")
+
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        self.assertEqual(game.online_text("score_tab_weekly"), "This Week")
+        self.assertEqual(game.online_text("score_title_weekly"), "This Week's Challengers")
+        self.assertEqual(game.online_text("period_season"), "Season")
 
     def test_online_score_period_end_lines_use_utc_rank_windows(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13986,11 +14132,21 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(
             game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_WEEKLY, "2026-04-30T20:47:15Z"),
-            "This Week ends in 3d 03h 12m at UTC 2026-05-04 00:00",
+            "This Week ends in 3d 03h 12m at UTC 2026-05-03 23:59",
         )
         self.assertEqual(
             game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_SEASON, "2026-04-30T20:47:15Z"),
-            "This Season ends in 4w 3d 03h 12m at UTC 2026-06-01 00:00",
+            "Season ends in 4w 3d 03h 12m at UTC 2026-05-31 23:59",
+        )
+
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        self.assertEqual(
+            game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_WEEKLY, "2026-04-30T20:47:15Z"),
+            "今週の集計終了まで 3d 03h 12m / UTC 2026-05-03 23:59",
+        )
+        self.assertEqual(
+            game.scoreboard_period_ends_line(rogue.SCOREBOARD_PERIOD_SEASON, "2026-04-30T20:47:15Z"),
+            "今季の集計終了まで 4w 3d 03h 12m / UTC 2026-05-31 23:59",
         )
 
     def test_online_sync_hint_line_uses_compact_utc_last_sync_for_all_boards(self):

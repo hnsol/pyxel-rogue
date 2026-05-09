@@ -235,7 +235,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0144"
+UI_BUILD = "260510_0158"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -251,20 +251,20 @@ ONLINE_UI_TEXT = {
         "language_hint": "Select/L Change Language（言語切替）",
         "score_title": "Scoreboard",
         "score_title_local": "My Rogue Chronicle",
-        "score_title_weekly": "Weekly Rivals",
+        "score_title_weekly": "This Week's Challengers",
         "score_title_season": "Season Legends",
         "score_period_local": "Local",
-        "score_tab_weekly": "Weekly",
+        "score_tab_weekly": "This Week",
         "score_tab_season": "Season",
         "score_header": "   Score Name",
-        "score_hint": "Left/Right: Boards   Select/Tab: Sync   B/Esc: Back",
+        "score_hint": "Left/Right: View  Select/Tab: Online Sync  B/Esc: Back",
         "score_register_prompt": "Online sync can post once per day.",
         "score_register_hint": "A/Enter sync   B/Esc local only",
         "score_register_mark": "Guest scores stay local.",
         "score_guest_result": "Ranking refreshed. Guest mode.",
         "period_week": "This Week",
-        "period_season": "This Season",
-        "local_only_hint": "Local only. Select opens online sync.",
+        "period_season": "Season",
+        "local_only_hint": "Guest scores are not sent",
         "posted": "Posted",
         "post_after": "POST after",
         "register_title": "Online Sync",
@@ -326,20 +326,20 @@ ONLINE_UI_TEXT = {
         "language_hint": "Select/L Change Language（言語切替）",
         "score_title": "スコアボード",
         "score_title_local": "冒険の記録",
-        "score_title_weekly": "週間ライバル",
-        "score_title_season": "シーズンレジェンド",
+        "score_title_weekly": "今週の挑戦者",
+        "score_title_season": "今季のレジェンド",
         "score_period_local": "ローカル",
-        "score_tab_weekly": "週間",
-        "score_tab_season": "シーズン",
+        "score_tab_weekly": "今週",
+        "score_tab_season": "今季",
         "score_header": "   得点 名前",
-        "score_hint": "左右: ボード切替   Select/Tab: 同期   B/Esc: 戻る",
+        "score_hint": "左右: 表示切替  Select/Tab: オンライン同期  B/Esc: 戻る",
         "score_register_prompt": "オンライン同期で1日1回投稿できます。",
         "score_register_hint": "A/Enter 同期  B/Esc ローカルのみ",
         "score_register_mark": "ゲストのスコアはローカルのみです。",
         "score_guest_result": "ランキング更新。ゲストモード。",
         "period_week": "今週",
-        "period_season": "今シーズン",
-        "local_only_hint": "ローカルのみ。Selectでオンライン同期。",
+        "period_season": "今季",
+        "local_only_hint": "ゲストのスコアは送信されません",
         "posted": "投稿",
         "post_after": "POST可能",
         "register_title": "オンライン同期",
@@ -6335,7 +6335,10 @@ class Game:
             weeks, days = divmod(days, 7)
             remain = f"{weeks}w {days}d {hours:02d}h {minutes:02d}m"
             label = self.online_text("period_season")
-        return f"{label} ends in {remain} at UTC {end:%Y-%m-%d %H:%M}"
+        display_end = end - timedelta(minutes=1)
+        if self.lang == LANG_JA:
+            return f"{label}の集計終了まで {remain} / UTC {display_end:%Y-%m-%d %H:%M}"
+        return f"{label} ends in {remain} at UTC {display_end:%Y-%m-%d %H:%M}"
 
     def online_sync_hint_line(self):
         profile = normalize_online_profile(getattr(self, "online_profile", None))
@@ -7619,40 +7622,41 @@ class Game:
 
     def draw_language_select_screen(self):
         self.apply_palette()
-        bx, by, bw, bh = (SCR_W - 328) // 2, 82, 328, 150
+        bx, by, bw, bh = self.center_rect(328, 150)
         self._box(bx, by, bw, bh, self.ui_heading(self.online_text("language_title"), UI_HEADING_SCREEN))
-        self.txt(bx + 24, 112, self.online_text("language_prompt"), UI_TEXT_COL)
+        self.txt(bx + 24, by + 30, self.online_text("language_prompt"), UI_TEXT_COL)
         options = [("English", LANG_EN), ("日本語", LANG_JA)]
         cur = getattr(self, "language_cursor", 0)
         for i, (label, _lang) in enumerate(options):
-            y = 142 + i * 22
+            y = by + 60 + i * 22
             col = UI_SELECTED_COL if i == cur else UI_TEXT_COL
             self.txt(bx + 44, y, ">" if i == cur else " ", UI_SELECTED_COL)
             self.txt(bx + 64, y, label, col)
-        self.txt(bx + 24, 206, self.online_text("language_select_hint"), UI_SUBTEXT_COL)
+        self.txt(bx + 24, by + 124, self.online_text("language_select_hint"), UI_SUBTEXT_COL)
 
     def draw_name_input(self):
-        bx, by, bw, bh = 112, 58, 356, 210
+        bx, by, bw, bh = self.center_rect(356, 210)
         self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.name_entry"), UI_HEADING_SCREEN))
-        self.txt(138, 84, TextCatalog.msg(self.lang, "ui.name_entry_label"), UI_SECTION_COL)
+        self.txt(bx + 26, by + 26, TextCatalog.msg(self.lang, "ui.name_entry_label"), UI_SECTION_COL)
         chars = getattr(self, "name_chars", [])
         display = "".join(chars).ljust(8)[:8]
-        base_x, y = 216, 136
+        base_x, y = bx + 104, by + 78
         for i, ch in enumerate(display):
             col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(124, 210, TextCatalog.msg(self.lang, "ui.name_entry_move_hint"), UI_SUBTEXT_COL)
-        self.txt(132, 226, TextCatalog.msg(self.lang, "ui.name_entry_ok_hint"), UI_SUBTEXT_COL)
+        self.txt(bx + 12, by + 152, TextCatalog.msg(self.lang, "ui.name_entry_move_hint"), UI_SUBTEXT_COL)
+        self.txt(bx + 20, by + 168, TextCatalog.msg(self.lang, "ui.name_entry_ok_hint"), UI_SUBTEXT_COL)
 
     def draw_online_confirm_screen(self):
-        self._box(116, 84, 348, 132, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
-        self.txt(140, 110, self.online_text("confirm_prompt"), UI_TEXT_COL)
-        self.txt(140, 132, self.online_text("confirm_register"), UI_HILITE_COL)
-        self.txt(140, 150, self.online_text("confirm_local"), UI_TEXT_COL)
-        self.txt(140, 174, self.online_text("confirm_mark"), SCOREBOARD_DIM_COL)
-        self.draw_online_language_hint(140, 192)
+        bx, by, bw, bh = self.center_rect(348, 132)
+        self._box(bx, by, bw, bh, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
+        self.txt(bx + 24, by + 26, self.online_text("confirm_prompt"), UI_TEXT_COL)
+        self.txt(bx + 24, by + 48, self.online_text("confirm_register"), UI_HILITE_COL)
+        self.txt(bx + 24, by + 66, self.online_text("confirm_local"), UI_TEXT_COL)
+        self.txt(bx + 24, by + 90, self.online_text("confirm_mark"), SCOREBOARD_DIM_COL)
+        self.draw_online_language_hint(bx + 24, by + 108)
 
     def draw_online_language_hint(self, x, y):
         self.txt(x, y, self.online_text("language_hint"), UI_HILITE_COL)
@@ -7690,12 +7694,15 @@ class Game:
             SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_title_weekly"),
             SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
         }.get(period, self.online_text("score_title_local"))
-        self._box(98, 28, 380, SCR_H - 40, self.ui_heading(self.online_text("score_title"), UI_HEADING_SCREEN))
-        self.draw_score_period_tabs(120, 56, period)
-        self.draw_score_title_line(120, 70, title, period)
+        bx, by, bw, bh = self.center_rect(380, 300)
+        x = bx + 22
+        bottom_y = by + bh - 56
+        self._box(bx, by, bw, bh, self.ui_heading(self.online_text("score_title"), UI_HEADING_SCREEN))
+        self.draw_score_period_tabs(x, by + 28, period)
+        self.draw_score_title_line(x, by + 42, title, period)
         scores = self.display_online_period_scores(period)
-        self.txt(120, 94, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
-        y = 108
+        self.txt(x, by + 66, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
+        y = by + 80
         player_name = str(self.current_score_player_name()).upper()[:16]
         display_scores = scores[:10]
         local_best = None
@@ -7710,7 +7717,7 @@ class Game:
             line = self.format_score_line_for_board(i, entry, period)
             if current_result:
                 line = self.mark_current_score_line(line)
-            self.txt(120, y, line[:56], col)
+            self.txt(x, y, line[:56], col)
             y += 10
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON) and profile.get("local_only", True):
@@ -7719,92 +7726,98 @@ class Game:
                 y += 10
                 line = self.format_score_line_for_board(0, local_best, period)
                 line = "--" + line[2:] if len(line) >= 2 else f"-- {line}"
-                self.txt(120, y, line[:56], SCOREBOARD_HILITE_COL)
+                if y + MSG_LINE_H * 2 <= bottom_y:
+                    self.txt(x, y, line[:56], SCOREBOARD_HILITE_COL)
                 y += 10
         if not scores and not local_best:
-            self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
+            self.txt(x, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
-        info_y = 210
+        info_y = bottom_y - 14
         if getattr(self, "online_score_load_result", ""):
-            self.txt(114, info_y, self.online_score_load_result[:58], SCOREBOARD_DIM_COL)
+            self.txt(bx + 16, info_y, self.online_score_load_result[:58], SCOREBOARD_DIM_COL)
         if period != SCOREBOARD_PERIOD_LOCAL:
-            self.txt(114, 224, self.scoreboard_period_ends_line(period)[:58], SCOREBOARD_DIM_COL)
-        hint = self.online_sync_hint_line()[:58]
+            self.txt(bx + 16, bottom_y, self.scoreboard_period_ends_line(period)[:72], SCOREBOARD_DIM_COL)
+        hint = self.online_sync_hint_line()[:72]
         if hint:
-            self.txt(114, 238, hint, SCOREBOARD_DIM_COL)
+            self.txt(bx + 16, bottom_y + 14, hint, SCOREBOARD_DIM_COL)
         if getattr(self, "online_sync_result", ""):
             for i, msg in enumerate(self.online_result_lines(self.online_sync_result)):
-                self.txt(max(114, 468 - self.ui_text_width(msg)), 40 + i * 12, msg, SCOREBOARD_HILITE_COL)
-        self.txt(114, 252, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
+                self.txt(max(bx + 16, bx + bw - 10 - self.ui_text_width(msg)), by + 12 + i * 12, msg, SCOREBOARD_HILITE_COL)
+        self.txt(bx + 16, bottom_y + 28, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
-            self._box(156, 116, 268, 82, self.ui_heading(self.online_text("sync_title"), UI_HEADING_PANEL))
+            ox, oy = bx + (bw - 268) // 2, by + (bh - 82) // 2
+            self._box(ox, oy, 268, 82, self.ui_heading(self.online_text("sync_title"), UI_HEADING_PANEL))
             lines = self.online_sync_box_lines()
-            self.txt(184, 146, lines[0][:34], SCOREBOARD_HILITE_COL)
-            self.txt(184, 160, lines[1][:34], SCOREBOARD_HILITE_COL)
+            self.txt(ox + 28, oy + 30, lines[0][:34], SCOREBOARD_HILITE_COL)
+            self.txt(ox + 28, oy + 44, lines[1][:34], SCOREBOARD_HILITE_COL)
         if getattr(self, "online_register_prompt", False):
-            self._box(148, 104, 282, 92, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
-            self.txt(168, 126, self.online_text("score_register_prompt"), UI_TEXT_COL)
-            self.txt(168, 144, self.online_text("score_register_hint"), UI_SUBTEXT_COL)
-            self.txt(168, 162, self.online_text("score_register_mark"), UI_TEXT_COL)
+            ox, oy = bx + (bw - 282) // 2, by + (bh - 92) // 2
+            self._box(ox, oy, 282, 92, self.ui_heading(self.online_text("confirm_title"), UI_HEADING_PANEL))
+            self.txt(ox + 20, oy + 22, self.online_text("score_register_prompt"), UI_TEXT_COL)
+            self.txt(ox + 20, oy + 40, self.online_text("score_register_hint"), UI_SUBTEXT_COL)
+            self.txt(ox + 20, oy + 58, self.online_text("score_register_mark"), UI_TEXT_COL)
 
     def draw_online_register_screen(self):
-        self._box(112, 58, 356, 210, self.ui_heading(self.online_text("register_title"), UI_HEADING_SCREEN))
-        self.txt(138, 84, self.online_text("register_prompt"), UI_TEXT_COL)
+        bx, by, bw, bh = self.center_rect(356, 210)
+        self._box(bx, by, bw, bh, self.ui_heading(self.online_text("register_title"), UI_HEADING_SCREEN))
+        self.txt(bx + 26, by + 26, self.online_text("register_prompt"), UI_TEXT_COL)
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         local_hint = profile.get("local_only", True) or self.online_register_name_changed()
-        self.txt(138, 102, self.online_text("register_local" if local_hint else "register_cancel"), UI_TEXT_COL)
+        self.txt(bx + 26, by + 44, self.online_text("register_local" if local_hint else "register_cancel"), UI_TEXT_COL)
         chars = getattr(self, "name_chars", [])
         display = "".join(chars).ljust(USER_NAME_MAX)[:USER_NAME_MAX]
-        base_x, y = 174, 138
+        base_x, y = bx + 62, by + 80
         for i, ch in enumerate(display):
             col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
         self.txt(base_x + 126, y, "END", end_col)
-        self.txt(138, 216, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
-        self.draw_online_language_hint(138, 230)
+        self.txt(bx + 26, by + 158, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
+        self.draw_online_language_hint(bx + 26, by + 172)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
-            self.txt(138, 246, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
+            self.txt(bx + 26, by + 188, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(138, 246, self.online_sync_result[:48], UI_HILITE_COL)
+            self.txt(bx + 26, by + 188, self.online_sync_result[:48], UI_HILITE_COL)
 
     def draw_online_pin_screen(self):
         is_link = getattr(self, "online_password_mode", "register") == "link"
-        self._box(126, 58, 328, 210, self.ui_heading(self.online_text("pin_link_title" if is_link else "pin_title"), UI_HEADING_SCREEN))
+        bx, by, bw, bh = self.center_rect(328, 210)
+        self._box(bx, by, bw, bh, self.ui_heading(self.online_text("pin_link_title" if is_link else "pin_title"), UI_HEADING_SCREEN))
         user_name = getattr(self, "online_pending_user_name", "rogue54")
-        self.txt(150, 84, f"User: {user_name}", UI_TEXT_COL)
-        self.txt(150, 104, self.online_text("pin_link_server" if is_link else "pin_server"), UI_TEXT_COL)
-        self.txt(150, 118, self.online_text("pin_link_reuse" if is_link else "pin_reuse"), UI_TEXT_COL)
+        self.txt(bx + 24, by + 26, f"User: {user_name}", UI_TEXT_COL)
+        self.txt(bx + 24, by + 46, self.online_text("pin_link_server" if is_link else "pin_server"), UI_TEXT_COL)
+        self.txt(bx + 24, by + 60, self.online_text("pin_link_reuse" if is_link else "pin_reuse"), UI_TEXT_COL)
         chars = getattr(self, "online_password_chars", ["0"] * 6)
-        base_x, y = 206, 152
+        base_x, y = bx + 80, by + 94
         for i, ch in enumerate(chars):
             col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 18, y, ch, col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
         self.txt(base_x + 122, y, "END", end_col)
-        self.txt(150, 226, self.online_text("pin_hint"), UI_SUBTEXT_COL)
-        self.draw_online_language_hint(150, 240)
+        self.txt(bx + 24, by + 168, self.online_text("pin_hint"), UI_SUBTEXT_COL)
+        self.draw_online_language_hint(bx + 24, by + 182)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
-            self.txt(150, 254, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
+            self.txt(bx + 24, by + 196, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(150, 254, self.online_sync_result[:46], UI_HILITE_COL)
+            self.txt(bx + 24, by + 196, self.online_sync_result[:46], UI_HILITE_COL)
 
     def draw_online_local_confirm_screen(self):
         guest_switch = getattr(self, "online_local_confirm_mode", "") == "guest_switch"
         title_key = "guest_confirm_title" if guest_switch else "local_confirm_title"
-        self._box(112, 86, 356, 130, self.ui_heading(self.online_text(title_key), UI_HEADING_PANEL))
+        bx, by, bw, bh = self.center_rect(356, 130)
+        self._box(bx, by, bw, bh, self.ui_heading(self.online_text(title_key), UI_HEADING_PANEL))
         name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
         if guest_switch:
-            self.txt(138, 112, self.online_text("guest_confirm_prompt"), UI_TEXT_COL)
-            self.txt(138, 132, "Name: guest", UI_HILITE_COL)
-            self.txt(138, 160, self.online_text("guest_confirm_ok"), UI_SUBTEXT_COL)
-            self.txt(138, 178, self.online_text("guest_confirm_cancel"), UI_SUBTEXT_COL)
+            self.txt(bx + 26, by + 26, self.online_text("guest_confirm_prompt"), UI_TEXT_COL)
+            self.txt(bx + 26, by + 46, "Name: guest", UI_HILITE_COL)
+            self.txt(bx + 26, by + 74, self.online_text("guest_confirm_ok"), UI_SUBTEXT_COL)
+            self.txt(bx + 26, by + 92, self.online_text("guest_confirm_cancel"), UI_SUBTEXT_COL)
         else:
-            self.txt(138, 112, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
-            self.txt(138, 132, f"Name: {name}*", UI_HILITE_COL)
-            self.txt(138, 160, self.online_text("local_confirm_ok"), UI_SUBTEXT_COL)
-            self.txt(138, 178, self.online_text("local_confirm_cancel"), UI_SUBTEXT_COL)
-        self.draw_online_language_hint(138, 196)
+            self.txt(bx + 26, by + 26, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
+            self.txt(bx + 26, by + 46, f"Name: {name}*", UI_HILITE_COL)
+            self.txt(bx + 26, by + 74, self.online_text("local_confirm_ok"), UI_SUBTEXT_COL)
+            self.txt(bx + 26, by + 92, self.online_text("local_confirm_cancel"), UI_SUBTEXT_COL)
+        self.draw_online_language_hint(bx + 26, by + 110)
 
     def draw_title(self):
         pyxel.rect(0, 0, SCR_W, ZV_Y - 4, 1)
@@ -7991,6 +8004,9 @@ class Game:
 
     def ui_heading_col(self, level):
         return UI_SECTION_COL
+
+    def center_rect(self, w, h):
+        return (SCR_W - w) // 2, (SCR_H - h) // 2, w, h
 
     def _box(self,x,y,w,h,title=""):
         pyxel.dither(1.0)
@@ -8353,7 +8369,7 @@ class Game:
             self.txt(bx + 6, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), UI_TEXT_COL)
 
     def draw_score_screen(self):
-        bx,by=118,34; bw=340; bh=220
+        bx,by,bw,bh = self.center_rect(340, 220)
         self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.top_10"), UI_HEADING_SCREEN))
         scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
         y = by + 14
@@ -8366,7 +8382,7 @@ class Game:
 
     def draw_dead(self):
         if not self.options.get("tombstone", True):
-            bx,by=105,42; bw=270; bh=190
+            bx,by,bw,bh = self.center_rect(270, 190)
             self._box(bx,by,bw,bh,self.ui_heading("R.I.P.", UI_HEADING_SCREEN))
             p=self.p; x=bx+18; y=by+24
             self.txt(x,y,"Here lies a brave rogue.",UI_TEXT_COL); y+=22
@@ -8379,7 +8395,8 @@ class Game:
             self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=24
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
             return
-        bx,by=88,24; bw=340; bh=min(292, SCR_H - by - 8)
+        bw, bh = 340, min(292, SCR_H - 8)
+        bx, by, bw, bh = self.center_rect(bw, bh)
         self._box(bx,by,bw,bh,self.ui_heading("R.I.P.", UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+24
         killer=self.death_killer_name()
@@ -8397,7 +8414,7 @@ class Game:
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_win(self):
-        bx,by=82,50; bw=334; bh=176
+        bx,by,bw,bh = self.center_rect(334, 176)
         self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_victory"), UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+26
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_1"),UI_HILITE_COL); y+=16
@@ -8409,13 +8426,13 @@ class Game:
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_quit_confirm(self):
-        bx,by=176,132; bw=224; bh=56
+        bx,by,bw,bh = self.center_rect(224, 56)
         self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_quit"), UI_HEADING_PANEL))
         self.txt(bx+12, by+20, TextCatalog.msg(self.lang, "main.really_quit"), UI_HILITE_COL)
         self.txt(bx+12, by+34, TextCatalog.msg(self.lang, "ui.quit_confirm_hint"), UI_SUBTEXT_COL)
 
     def draw_quit(self):
-        bx,by=96,60; bw=300; bh=148
+        bx,by,bw,bh = self.center_rect(300, 148)
         self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_quit"), UI_HEADING_PANEL))
         p=self.p; x=bx+18; y=by+24
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),UI_HILITE_COL); y+=24
