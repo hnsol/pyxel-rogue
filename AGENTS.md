@@ -1,6 +1,6 @@
 # AGENTS.md — Pyxel Rogue
 
-「過剰にオーバースペックな Pyxel 版・元祖ローグ」。ASCII ベースで Rogue 5.4.4 準拠を目指す。Pyxel 版をクリアしたら、それは本物の Rogue 5.4.4 をクリアしたと言える状態を最終目標にする。
+「過剰にオーバースペックな Pyxel 版・元祖ローグ」。ASCII ベースで Rogue 5.4.4 を検証可能な底本として扱う。Pyxel 版をクリアしたら、それは本物の Rogue をクリアしたと言える状態を最終目標にする。
 
 - フレームワーク: Pyxel 2.9.0 / Python 3.10+
 - 実行対象: Python/Pyxel 本体に加えて Pyxel Web も視野に入れる

@@ -4,7 +4,7 @@
 
 Rogue V5 on Pyxel is an ASCII-based roguelike made with Pyxel, aiming to recreate the original Rogue experience.
 
-The goal is for clearing this Pyxel version to mean that you could clear real Rogue 5.4.4. It keeps the feel of the Rogue V5 line in mind, uses the Rogue 5.4.4 C source as the primary reference for game mechanics, and adapts display, input, and portability for Pyxel and Pyxel Web.
+The goal is for clearing this Pyxel version to mean that you could clear real Rogue. It keeps the feel of the Rogue V5 line in mind, uses the Rogue 5.4.4 C source as a verifiable base text for game mechanics, and adapts display, input, and portability for Pyxel and Pyxel Web.
 
 ## Goal
 
