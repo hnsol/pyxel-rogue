@@ -234,7 +234,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260509_1922"
+UI_BUILD = "260510_0020"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -470,98 +470,9 @@ HELP_TEXT_COL = 30
 # ===========================================================
 #  Text catalog
 # ===========================================================
-POT_JA = {
-    "healing":"体力が回復する", "extra healing":"体力がとても回復する",
-    "poison":"毒の", "gain strength":"強さが増す",
-    "restore strength":"強さが元にもどる", "confusion":"頭が混乱する",
-    "blindness":"目が見えなくなる", "haste self":"素早くなる",
-    "see invisible":"見えないものが見える", "raise level":"経験が増す",
-    "monster detection":"遠くの怪物がわかる", "magic detection":"遠くのものがわかる",
-    "hallucination":"幻覚の", "levitation":"空中浮遊",
-}
-SCR_JA = {
-    "monster confusion":"怪物を混乱させる", "magic mapping":"魔法の地図の",
-    "hold monster":"怪物を封じこめる", "sleep":"眠りにおちる",
-    "enchant armor":"よろいに魔法をかける", "identify potion":"水薬がわかる",
-    "identify scroll":"巻き物がわかる", "identify weapon":"武器がわかる",
-    "identify armor":"よろいがわかる", "identify ring, wand or staff":"指輪や杖がわかる",
-    "scare monster":"怪物を近寄せない", "food detection":"食料を探す",
-    "teleportation":"テレポートする", "enchant weapon":"武器に魔法をかける",
-    "create monster":"怪物を作りだす", "remove curse":"のろいを解く",
-    "aggravate monsters":"怪物を怒らせる", "protect armor":"よろいを守る",
-}
-FOOD_JA = {"food ration":"食糧", "slime-mold":"こけもも"}
-WEAPON_JA = {
-    "mace":"ほこ", "long sword":"長い剣", "short bow":"弓", "arrow":"矢",
-    "dagger":"短剣", "two-handed sword":"大きな剣", "dart":"投げ矢",
-    "shuriken":"手裏剣", "spear":"ほこ",
-}
-ARMOR_JA = {
-    "leather armor":"革のよろい", "ring mail":"かたびら",
-    "studded leather":"鋲打ち革のよろい", "scale mail":"うろこのよろい",
-    "chain mail":"鎖かたびら", "splint mail":"延金のよろい",
-    "banded mail":"帯金のよろい", "plate mail":"鋼鉄のよろい",
-}
-HUD_WEAPON_SHORT = {
-    LANG_EN: {
-        "mace":"mace", "long sword":"long sw", "short bow":"bow", "arrow":"arrow",
-        "dagger":"dagger", "two-handed sword":"2H sw", "dart":"dart",
-        "shuriken":"shuriken", "spear":"spear",
-    },
-    LANG_JA: {
-        "mace":"ほこ", "long sword":"長剣", "short bow":"弓", "arrow":"矢",
-        "dagger":"短剣", "two-handed sword":"両手剣", "dart":"投げ矢",
-        "shuriken":"手裏剣", "spear":"ほこ",
-    },
-}
-HUD_ARMOR_SHORT = {
-    LANG_EN: {
-        "leather armor":"leather", "ring mail":"ring", "studded leather":"stud",
-        "scale mail":"scale", "chain mail":"chain", "splint mail":"splint",
-        "banded mail":"banded", "plate mail":"plate",
-    },
-    LANG_JA: {
-        "leather armor":"革", "ring mail":"かたびら", "studded leather":"鋲革",
-        "scale mail":"うろこ", "chain mail":"鎖", "splint mail":"延金",
-        "banded mail":"帯金", "plate mail":"鋼鉄",
-    },
-}
-RING_JA = {
-    "protection":"守り", "add strength":"強さが増す", "sustain strength":"強さを保つ",
-    "searching":"探索", "see invisible":"見えないものが見える", "adornment":"飾り",
-    "aggravate monster":"怪物を怒らせる", "dexterity":"器用さ",
-    "increase damage":"ダメージ増加", "regeneration":"回復", "slow digestion":"腹持ち",
-    "teleportation":"テレポート", "stealth":"忍び足", "maintain armor":"よろいを保つ",
-}
-STICK_JA = {
-    "light":"明かり", "invisibility":"見えなくする", "lightning":"稲妻",
-    "fire":"火炎", "cold":"冷気", "polymorph":"変化",
-    "magic missile":"魔法の矢", "haste monster":"怪物を速める",
-    "slow monster":"怪物を遅くする", "drain life":"生命を吸い取る",
-    "nothing":"何も起こらない", "teleport away":"遠くへ飛ばす",
-    "teleport to":"近くへ飛ばす", "cancellation":"魔法を打ち消す",
-}
-MONSTER_JA = {
-    "aquator":"水ごけの怪物", "bat":"大こうもり", "centaur":"ケンタウロス",
-    "dragon":"ドラゴン", "emu":"大うずら", "venus flytrap":"はえとりぐさ",
-    "griffin":"翼ライオン", "hobgoblin":"小鬼", "ice monster":"氷の怪物",
-    "jabberwock":"巨大トカゲ", "kestrel":"大はやぶさ",
-    "leprechaun":"金持ち妖精", "medusa":"メデューサ", "nymph":"ニンフ",
-    "orc":"欲ばり鬼", "phantom":"幽霊", "quagga":"大つのじか",
-    "rattlesnake":"がらがらへび", "snake":"へび", "troll":"巨人",
-    "black unicorn":"一角獣", "vampire":"バンパイア", "wraith":"死霊",
-    "xeroc":"物まねの怪物", "yeti":"雪男", "zombie":"ゾンビ",
-}
-POT_COLOR_JA = {
-    "blue":"青い", "red":"赤い", "green":"緑の", "grey":"灰色の",
-    "brown":"茶色の", "clear":"透明な", "pink":"ピンクの",
-    "white":"白い", "purple":"紫の", "yellow":"黄色い",
-    "plaid":"水色の", "amber":"琥珀色の", "black":"黒い",
-    "orange":"橙色の",
-}
-
 class TextCatalog:
     _catalogs = None
+    _terms = None
     _missing_warned = set()
 
     @classmethod
@@ -588,6 +499,32 @@ class TextCatalog:
             catalogs = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
         cls._catalogs = catalogs
         return cls._catalogs
+
+    @classmethod
+    def _load_terms(cls):
+        if cls._terms is not None:
+            return cls._terms
+        base = os.path.join(os.path.dirname(__file__), "assets", "terms")
+        terms = {}
+        try:
+            if sys.platform == "emscripten":
+                import pyodide.http as _ph
+
+                _base = "https://raw.githubusercontent.com/hnsol/pyxel-rogue/master"
+                for lang in (LANG_EN, LANG_JA):
+                    resp = _ph.open_url(f"{_base}/assets/terms/{lang}.json")
+                    terms[lang] = json.load(resp)
+            else:
+                for lang in (LANG_EN, LANG_JA):
+                    path = os.path.join(base, f"{lang}.json")
+                    with open(path, encoding="utf-8") as f:
+                        terms[lang] = json.load(f)
+        except Exception:
+            from rogue_terms import EN_TERMS, JA_TERMS
+
+            terms = {LANG_EN: EN_TERMS, LANG_JA: JA_TERMS}
+        cls._terms = terms
+        return cls._terms
 
     @classmethod
     def _warn_missing(cls, key):
@@ -620,36 +557,61 @@ class TextCatalog:
 
     @staticmethod
     def monster(lang, name):
-        return MONSTER_JA.get(name, name) if lang == LANG_JA else name
+        return TextCatalog.term(lang, ("monster",), name)
 
     @staticmethod
     def hud_item_kind(lang, cat, name):
         lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
         if cat == CAT_WPN:
-            return HUD_WEAPON_SHORT.get(lang, HUD_WEAPON_SHORT[LANG_EN]).get(
-                name,
-                TextCatalog.item_kind(lang, cat, name),
+            return TextCatalog.term(
+                lang, ("hud", "weapon"), name, TextCatalog.item_kind(lang, cat, name)
             )
         if cat == CAT_ARM:
-            return HUD_ARMOR_SHORT.get(lang, HUD_ARMOR_SHORT[LANG_EN]).get(
-                name,
-                TextCatalog.item_kind(lang, cat, name),
+            return TextCatalog.term(
+                lang, ("hud", "armor"), name, TextCatalog.item_kind(lang, cat, name)
             )
         return TextCatalog.item_kind(lang, cat, name)
 
     @staticmethod
     def item_kind(lang, cat, name):
-        if lang != LANG_JA:
-            return name
-        if cat == CAT_POT: return POT_JA.get(name, name)
-        if cat == CAT_SCR: return SCR_JA.get(name, name)
-        if cat == CAT_FOOD: return FOOD_JA.get(name, name)
-        if cat == CAT_WPN: return WEAPON_JA.get(name, name)
-        if cat == CAT_ARM: return ARMOR_JA.get(name, name)
-        if cat == CAT_RING: return RING_JA.get(name, name)
-        if cat == CAT_STICK: return STICK_JA.get(name, name)
-        if cat == CAT_AMULET: return "イェンダーの魔除け"
-        return name
+        cat_key = {
+            CAT_POT: "potion",
+            CAT_SCR: "scroll",
+            CAT_FOOD: "food",
+            CAT_WPN: "weapon",
+            CAT_ARM: "armor",
+            CAT_RING: "ring",
+            CAT_STICK: "stick",
+            CAT_AMULET: "amulet",
+        }.get(cat)
+        return TextCatalog.term(lang, ("item", cat_key), name) if cat_key else name
+
+    @staticmethod
+    def potion_color(lang, color):
+        return TextCatalog.term(lang, ("potion_color",), color)
+
+    @staticmethod
+    def material(lang, cat, name):
+        return TextCatalog.term(lang, ("material", cat), name)
+
+    @staticmethod
+    def stick_type(lang, name):
+        return TextCatalog.term(lang, ("stick_type",), name)
+
+    @staticmethod
+    def term(lang, path, key, default=None):
+        terms = TextCatalog._load_terms()
+        lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
+        node = terms.get(lang, {})
+        for part in path:
+            node = node.get(part, {}) if isinstance(node, dict) else {}
+        value = node.get(key) if isinstance(node, dict) else None
+        if value is None and lang != LANG_EN:
+            node = terms.get(LANG_EN, {})
+            for part in path:
+                node = node.get(part, {}) if isinstance(node, dict) else {}
+            value = node.get(key) if isinstance(node, dict) else None
+        return value if value is not None else (key if default is None else default)
 
 # ===========================================================
 #  Dice
@@ -992,9 +954,9 @@ class IdentTable:
             if s.pg[it.kind] is not None:
                 g=s.pg[it.kind]
                 col=s.pcol[it.kind]
-                return f"potion called {g}({col})" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬（{g}）"
+                return f"potion called {g}({col})" if lang==LANG_EN else f"{TextCatalog.potion_color(lang,col)}水薬（{g}）"
             col=s.pcol[it.kind]
-            return f"{col} potion" if lang==LANG_EN else f"{POT_COLOR_JA.get(col,col)}水薬"
+            return f"{col} potion" if lang==LANG_EN else f"{TextCatalog.potion_color(lang,col)}水薬"
         if it.cat==CAT_SCR:
             if s.sk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_SCR, SCROLLS[it.kind]["name"])
@@ -1035,28 +997,42 @@ class IdentTable:
             if s.rk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_RING, spec["name"])
                 num=rogue_rings.ring_num(it) if it.known else ""
-                return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}の指輪{num}"
+                return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}指輪{num}"
             if s.rg[it.kind] is not None:
                 g=s.rg[it.kind]; stone=s.rstones[it.kind]
-                return f"ring called {g}({stone})" if lang==LANG_EN else f"{stone}の指輪（{g}）"
+                made=TextCatalog.material(lang, "ring", stone)
+                return f"ring called {g}({stone})" if lang==LANG_EN else f"{made}の指輪（{g}）"
             stone=s.rstones[it.kind]
-            return f"{stone} ring" if lang==LANG_EN else f"{stone}の指輪"
+            made=TextCatalog.material(lang, "ring", stone)
+            return f"{stone} ring" if lang==LANG_EN else f"{made}の指輪"
         if it.cat==CAT_STICK:
             spec=STICKS[it.kind]
             typ=s.wtypes[it.kind]
             made=s.wmades[it.kind]
             if s.wk[it.kind]:
                 nm=TextCatalog.item_kind(lang, CAT_STICK, spec["name"])
-                charges=rogue_sticks.charge_str(it) if it.known else ""
-                return f"{typ} of {nm}{charges}({made})" if lang==LANG_EN else f"{nm}の{typ}{charges}({made})"
+                charges=s.stick_charge_str(it, lang) if it.known else ""
+                made_name=TextCatalog.material(lang, "stick", made)
+                typ_name=TextCatalog.stick_type(lang, typ)
+                return f"{typ} of {nm}{charges}({made})" if lang==LANG_EN else f"{nm}{typ_name}{charges}({made_name})"
             if s.wg[it.kind] is not None:
                 g=s.wg[it.kind]
-                return f"{typ} called {g}({made})" if lang==LANG_EN else f"{made}{typ}（{g}）"
-            return f"{made} {typ}"
+                made_name=TextCatalog.material(lang, "stick", made)
+                typ_name=TextCatalog.stick_type(lang, typ)
+                return f"{typ} called {g}({made})" if lang==LANG_EN else f"{made_name}の{typ_name}（{g}）"
+            made_name=TextCatalog.material(lang, "stick", made)
+            typ_name=TextCatalog.stick_type(lang, typ)
+            return f"{made} {typ}" if lang==LANG_EN else f"{made_name}の{typ_name}"
         if it.cat==CAT_AMULET:
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
             return f"the {nm}" if lang==LANG_EN else nm
         return "something" if lang==LANG_EN else "何者か"
+
+    @staticmethod
+    def stick_charge_str(it, lang):
+        if lang == LANG_JA:
+            return f" [{getattr(it, 'charges', 0)}回]"
+        return rogue_sticks.charge_str(it)
 
 # ===========================================================
 #  Dungeon generator

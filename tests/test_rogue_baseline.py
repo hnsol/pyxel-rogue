@@ -6532,6 +6532,106 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.__file__ = original_file
             rogue.TextCatalog._catalogs = original_catalogs
 
+    def test_text_catalog_loads_external_terms_json(self):
+        self.assertEqual(
+            rogue.TextCatalog.item_kind(rogue.LANG_JA, rogue.CAT_WPN, "two-handed sword"),
+            "大きな剣",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.monster(rogue.LANG_JA, "aquator"),
+            "水ごけの怪物",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.hud_item_kind(rogue.LANG_JA, rogue.CAT_ARM, "plate mail"),
+            "鋼鉄",
+        )
+
+    def test_japanese_identified_ring_names_follow_rogue2_official_terms(self):
+        ident = rogue.IdentTable(rogue.LANG_JA)
+        ident.rk[rogue.rogue_rings.R_ADDSTR] = True
+        ident.rk[rogue.rogue_rings.R_SEEINVIS] = True
+        ident.rstones[rogue.rogue_rings.R_ADDSTR] = "agate"
+        unknown_ident = rogue.IdentTable(rogue.LANG_JA)
+        unknown_ident.rstones[rogue.rogue_rings.R_ADDSTR] = "agate"
+
+        add_str = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_ADDSTR, ench=2)
+        see_invis = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_SEEINVIS)
+        unknown = rogue.Item(rogue.CAT_RING, rogue.rogue_rings.R_ADDSTR, known=False)
+
+        self.assertEqual(ident.name(add_str, rogue.LANG_JA), "強さが増す指輪 [+2]")
+        self.assertEqual(ident.name(see_invis, rogue.LANG_JA), "見えないものが見える指輪")
+        self.assertEqual(unknown_ident.name(unknown, rogue.LANG_JA), "めのうの指輪")
+
+    def test_japanese_stick_names_use_rogue2_official_wand_staff_policy(self):
+        ident = rogue.IdentTable(rogue.LANG_JA)
+        ident.wk[rogue.rogue_sticks.WS_LIGHT] = True
+        ident.wk[rogue.rogue_sticks.WS_MISSILE] = True
+        ident.wtypes[rogue.rogue_sticks.WS_LIGHT] = "staff"
+        ident.wmades[rogue.rogue_sticks.WS_LIGHT] = "walnut"
+        ident.wtypes[rogue.rogue_sticks.WS_MISSILE] = "wand"
+        ident.wmades[rogue.rogue_sticks.WS_MISSILE] = "copper"
+        unknown_ident = rogue.IdentTable(rogue.LANG_JA)
+        unknown_ident.wtypes[rogue.rogue_sticks.WS_LIGHT] = "staff"
+        unknown_ident.wmades[rogue.rogue_sticks.WS_LIGHT] = "walnut"
+
+        light = rogue.Item(rogue.CAT_STICK, rogue.rogue_sticks.WS_LIGHT, charges=3)
+        missile = rogue.Item(rogue.CAT_STICK, rogue.rogue_sticks.WS_MISSILE, charges=4)
+        unknown = rogue.Item(rogue.CAT_STICK, rogue.rogue_sticks.WS_LIGHT)
+
+        self.assertEqual(ident.name(light, rogue.LANG_JA), "明かりの杖 [3回](胡桃)")
+        self.assertEqual(ident.name(missile, rogue.LANG_JA), "魔法のミサイルの杖 [4回](銅)")
+        self.assertEqual(unknown_ident.name(unknown, rogue.LANG_JA), "胡桃の杖")
+
+    def test_terms_catalog_has_complete_japanese_keys(self):
+        terms = rogue.TextCatalog._load_terms()
+        def flatten(value, prefix=""):
+            out = {}
+            for key, child in value.items():
+                full_key = f"{prefix}.{key}" if prefix else key
+                if isinstance(child, dict):
+                    out.update(flatten(child, full_key))
+                else:
+                    out[full_key] = child
+            return out
+
+        en_terms = flatten(terms[rogue.LANG_EN])
+        ja_terms = flatten(terms[rogue.LANG_JA])
+
+        self.assertEqual(set(en_terms), set(ja_terms))
+        self.assertFalse(
+            [key for key, value in ja_terms.items() if value == en_terms[key]]
+        )
+        self.assertEqual(
+            set(terms[rogue.LANG_JA]["material"]["ring"]),
+            set(rogue.rogue_rings.STONES),
+        )
+        self.assertEqual(
+            set(terms[rogue.LANG_JA]["material"]["stick"]),
+            set(rogue.rogue_sticks.METALS + rogue.rogue_sticks.WOODS),
+        )
+
+    def test_terms_catalog_falls_back_when_json_assets_are_missing(self):
+        import builtins
+
+        def pyodide_open(*args, **kwargs):
+            raise Exception("[Errno 44] No such file or directory")
+
+        original_open = builtins.open
+        original_file = rogue.__file__
+        original_terms = rogue.TextCatalog._terms
+        try:
+            builtins.open = pyodide_open
+            rogue.__file__ = os.path.join("/tmp", "missing_pyxel_web", "rogue.py")
+            rogue.TextCatalog._terms = None
+            self.assertEqual(
+                rogue.TextCatalog.item_kind(rogue.LANG_JA, rogue.CAT_WPN, "two-handed sword"),
+                "大きな剣",
+            )
+        finally:
+            builtins.open = original_open
+            rogue.__file__ = original_file
+            rogue.TextCatalog._terms = original_terms
+
     def test_module_loads_and_new_game_emits_rogue_544_start_message(self):
         game = new_game(seed=7)
         self.assertEqual(game.p.depth, 1)

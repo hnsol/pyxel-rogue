@@ -153,7 +153,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 起動ロゴ、初回言語選択、BGMつきタイトル画面、Guest初期起動、Online / Guest Mode 切替
 - ローカルスコア保存、Weekly / Season オンラインスコアボード閲覧、オンラインIDでの任意スコア同期
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
-- JSONメッセージカタログによる日英切替基盤、ロジックテスト基盤
+- JSONメッセージ/用語カタログによる日英切替基盤、ロジックテスト基盤
 - Rogue2.Official の `mesg_E` / `mesg_J` を参考データとして同梱
 
 実装状況の詳細は [TODO.md](TODO.md) を参照してください。

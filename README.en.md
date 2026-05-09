@@ -152,7 +152,7 @@ Implemented overview:
 - Startup logo, first-run language selection, title screen with BGM, default Guest mode, and Online / Guest Mode switching
 - Local score saving, Weekly / Season online scoreboard viewing, and optional online-ID score sync
 - Gamepad-oriented A/B/Start/Select + D-pad controls
-- JSON message catalogs for English/Japanese text switching, plus logic test foundation
+- JSON message/term catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
 See [TODO.md](TODO.md) for the detailed implementation status.
