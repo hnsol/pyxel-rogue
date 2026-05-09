@@ -11791,12 +11791,12 @@ class RogueBaselineTest(unittest.TestCase):
             (rogue.SCOREBOARD_PERIOD_LOCAL, rogue.SCOREBOARD_PERIOD_WEEKLY, rogue.SCOREBOARD_PERIOD_SEASON),
         )
 
-    def test_user_id_is_lowercase_alnum_and_local_display_is_marked(self):
+    def test_user_id_is_lowercase_alnum_and_display_name_has_no_local_mark(self):
         import rogue_scores
 
         self.assertEqual(rogue_scores.sanitize_user_id("Rogue-54!xxxx"), "rogue54x")
         self.assertEqual(rogue_scores.sanitize_user_id("!!!"), "rogue54")
-        self.assertEqual(rogue_scores.display_score_name({"user_name": "rogue54"}), "rogue54*")
+        self.assertEqual(rogue_scores.display_score_name({"user_name": "rogue54"}), "rogue54")
 
     def test_online_profile_v3_uses_user_name_and_ignores_old_profile_keys(self):
         import rogue_scores
@@ -11810,7 +11810,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(profile["server_token"], "")
         self.assertFalse(profile["profile_exists"])
 
-    def test_online_profile_v3_marks_only_local_or_tokenless_names_unverified(self):
+    def test_online_profile_v3_display_names_do_not_use_local_mark(self):
         import rogue_scores
 
         local = rogue_scores.normalize_online_profile({"user_name": "ace", "local_only": True, "profile_exists": True})
@@ -11828,7 +11828,7 @@ class RogueBaselineTest(unittest.TestCase):
             "profile_exists": True,
         })
 
-        self.assertEqual(rogue_scores.display_score_name(local), "ace*")
+        self.assertEqual(rogue_scores.display_score_name(local), "ace")
         self.assertEqual(rogue_scores.display_score_name(registered), "ace")
         self.assertEqual(rogue_scores.display_score_name(synced), "ace")
 
@@ -12152,6 +12152,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("const firstScorePost = entries.length > 0 && !hasUserScore(userName)", sync)
         self.assertIn("if (next && new Date(next).getTime() > Date.now() && !firstScorePost)", sync)
         self.assertIn("function hasUserScore(userName)", script)
+
+    def test_apps_script_records_guest_scoreboard_sync_metrics_separately(self):
+        path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
+        with open(path, encoding="utf-8") as f:
+            script = f.read()
+
+        self.assertIn('const GUEST_METRICS_SHEET_NAME = "guest_metrics"', script)
+        self.assertIn('if (body.action === "guestScoreboardSync") return json(recordGuestScoreboardSync())', script)
+        self.assertIn("function guestMetricsSheet()", script)
+        self.assertIn("function recordGuestScoreboardSync()", script)
+        self.assertIn('"timestamp"', script)
+        self.assertIn('"event"', script)
+        self.assertIn('"scoreboard_sync"', script)
 
     def test_apps_script_user_list_supports_token_cooldown_and_pin_lockout(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
@@ -12598,7 +12611,7 @@ class RogueBaselineTest(unittest.TestCase):
         calls.clear()
         game.name_chars = list("newname")
         game.draw_online_register_screen()
-        self.assertIn("Local names show", "\n".join(calls))
+        self.assertIn("B/Esc keeps guest mode.", "\n".join(calls))
 
     def test_online_registered_name_b_after_edit_requires_local_only_confirm(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13082,6 +13095,46 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(game.online_syncing)
         self.assertEqual(game.online_sync_periods, [])
 
+    def test_guest_scoreboard_sync_records_one_guest_metric_without_blocking_refresh(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_WEEKLY, rogue.SCOREBOARD_PERIOD_SEASON]
+        recorded = []
+        loaded = []
+        old_record = rogue.record_guest_scoreboard_sync
+        try:
+            rogue.record_guest_scoreboard_sync = lambda: recorded.append("guest")
+            game.load_online_period_scores = lambda period, force=False: loaded.append((period, force)) or []
+
+            result = game.perform_online_scoreboard_sync()
+        finally:
+            rogue.record_guest_scoreboard_sync = old_record
+
+        self.assertEqual(result["status"], "guest_refresh")
+        self.assertEqual(recorded, ["guest"])
+        self.assertEqual(loaded, [
+            (rogue.SCOREBOARD_PERIOD_WEEKLY, True),
+            (rogue.SCOREBOARD_PERIOD_SEASON, True),
+        ])
+
+    def test_guest_scoreboard_sync_ignores_guest_metric_failure(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_WEEKLY]
+        old_record = rogue.record_guest_scoreboard_sync
+        try:
+            rogue.record_guest_scoreboard_sync = lambda: (_ for _ in ()).throw(RuntimeError("metric down"))
+            game.load_online_period_scores = lambda period, force=False: []
+
+            result = game.perform_online_scoreboard_sync()
+        finally:
+            rogue.record_guest_scoreboard_sync = old_record
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(game.online_sync_result, "Ranking refreshed. Guest mode.")
+
     def test_online_score_sync_posts_local_scores_inside_scoreboard(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -13275,6 +13328,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_online_score_fetch_merges_local_scores_without_resubmitting(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
         game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
         game.online_score_cache = {}
         game.online_score_loaded = set()
@@ -13299,6 +13353,33 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.sync_missing_local_best = old_sync
 
         self.assertEqual([(e["player_name"], e["score"]) for e in scores], [("ACE", 300), ("DOT", 20)])
+
+    def test_guest_online_score_fetch_keeps_remote_scores_separate_from_local_guest_scores(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        keys = rogue.score_period_keys()
+        old_fetch = rogue.fetch_online_scores
+        old_load = rogue.load_score_entries
+        try:
+            rogue.fetch_online_scores = lambda period, timestamp=None: [
+                {"player_name": "dot", "score": 20, "period_week": keys["period_week"], "period_season": keys["period_season"]}
+            ]
+            rogue.load_score_entries = lambda: [
+                {"player_name": "guest", "score": 300, "period_week": keys["period_week"], "period_season": keys["period_season"]}
+            ]
+
+            scores = game.load_online_period_scores(rogue.SCOREBOARD_PERIOD_WEEKLY)
+        finally:
+            rogue.fetch_online_scores = old_fetch
+            rogue.load_score_entries = old_load
+
+        self.assertEqual([(e["player_name"], e["score"]) for e in scores], [("dot", 20)])
+        self.assertEqual([(e["player_name"], e["score"]) for e in game.display_online_period_scores(rogue.SCOREBOARD_PERIOD_WEEKLY)], [("dot", 20)])
 
     def test_online_score_fetch_saves_remote_scores_for_later_entry_without_get(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13504,6 +13585,42 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(" 3   624 rogue54b: quit on level 5.", text)
         self.assertIn(" 4   480 fortran: killed on level 3 by a hobgoblin.", text)
 
+    def test_guest_online_score_draw_shows_local_best_below_remote_top_ten(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_EN
+        game.player_name = "guest"
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        key = rogue.score_period_keys()["period_week"]
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_WEEKLY: [
+                {"score": 1320, "player_name": "6502", "period_week": key, "result_flags": "killed", "level": 15, "killer": "vampire"},
+                {"score": 631, "player_name": "algol", "period_week": key, "result_flags": "killed", "level": 5, "killer": "orc"},
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = False
+        game.online_rank_cache = {}
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [
+                {"score": 624, "player_name": "guest", "period_week": key, "result_flags": "quit", "level": 5, "killer": ""}
+            ]
+            game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+            drawn = []
+            game._box = lambda *args: None
+            game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+            game.draw_online_score_screen()
+        finally:
+            rogue.load_score_entries = old_load
+
+        self.assertIn((" 1  1320 6502: killed on level 15 by a vampire.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
+        self.assertIn((" 2   631 algol: killed on level 5 by an orc.", rogue.SCOREBOARD_TEXT_COL, 120, 118), drawn)
+        self.assertIn(("--   624 guest: quit on level 5.", rogue.SCOREBOARD_HILITE_COL, 120, 138), drawn)
+        self.assertNotIn((" 3   624 guest: quit on level 5.", rogue.SCOREBOARD_TEXT_COL, 120, 128), drawn)
+
     def test_local_scoreboard_highlights_only_current_result_row(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -13566,7 +13683,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         self.assertIn((" 1   740 rogue54a: killed on level 8 by a troll.", rogue.SCOREBOARD_TEXT_COL, 120, 108), drawn)
-        self.assertIn((" 2   624 guest*: quit on level 5.", rogue.SCOREBOARD_TEXT_COL, 120, 118), drawn)
+        self.assertIn((" 2   624 guest: quit on level 5.", rogue.SCOREBOARD_TEXT_COL, 120, 118), drawn)
 
     def test_online_score_result_line_does_not_overlap_period_end_line(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -13748,7 +13865,7 @@ class RogueBaselineTest(unittest.TestCase):
         text = "\n".join(str(item) for item in drawn)
         self.assertIn("My Rogue Chronicle", text)
         self.assertIn("Local", text)
-        self.assertIn("ace*: quit on level 3.", text)
+        self.assertIn("ace: quit on level 3.", text)
         self.assertIn("Local only. Select opens online sync.", text)
 
     def test_online_scoreboard_uses_info_style_period_tabs_and_keeps_titles(self):
@@ -13849,7 +13966,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("冒険の記録", text)
         self.assertIn("ローカル", text)
         self.assertIn("得点 名前", text)
-        self.assertIn("ace*: 3階で中断。", text)
+        self.assertIn("ace: 3階で中断。", text)
         self.assertIn("ローカルのみ。Selectでオンライン同期。", text)
         self.assertIn("左右: ボード切替   Select/Tab: 同期   B/Esc: 戻る", text)
         self.assertIn("オンライン同期で1日1回投稿できます。", text)

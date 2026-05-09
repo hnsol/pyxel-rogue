@@ -1,5 +1,6 @@
 const SHEET_NAME = "scores";
 const USER_SHEET_NAME = "users";
+const GUEST_METRICS_SHEET_NAME = "guest_metrics";
 const DUMMY_TARGET_COUNT = 10;
 const DUMMY_PAST_WEEKS = 10;
 const DUMMY_BACKFILL_COUNT = 1;
@@ -136,6 +137,7 @@ function doPost(e) {
   if (body.action === "registerUser") return json(registerUser(body));
   if (body.action === "linkUser") return json(linkUser(body));
   if (body.action === "syncScoreboard") return json(syncScoreboard(body));
+  if (body.action === "guestScoreboardSync") return json(recordGuestScoreboardSync());
   if (body.action === "submit") {
     appendScore(body.entry || {});
     return json({ ok: true });
@@ -160,6 +162,21 @@ function userSheet() {
   }
   sh.getRange(1, 2, Math.max(1, sh.getMaxRows()), 1).setNumberFormat("@");
   return sh;
+}
+
+function guestMetricsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(GUEST_METRICS_SHEET_NAME);
+  if (!sh) sh = ss.insertSheet(GUEST_METRICS_SHEET_NAME);
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(["timestamp", "event"]);
+  }
+  return sh;
+}
+
+function recordGuestScoreboardSync() {
+  guestMetricsSheet().appendRow([new Date().toISOString(), "scoreboard_sync"]);
+  return { ok: true };
 }
 
 function userIndex(data) {
