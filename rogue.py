@@ -235,10 +235,12 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0318"
+UI_BUILD = "260510_0402"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
+HP_LOW_FRAME_COLORS = (1, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 1)
+HP_LOW_FRAME_PERIOD = 5
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -7910,7 +7912,7 @@ class Game:
         bw = 108
         bx = ZV_X + 18
         by = hp_y + 3
-        hp_frame_col = 22 if hp_low and (pyxel.frame_count // 30) % 2 == 0 else UI_SUBTEXT_COL
+        hp_frame_col = self.hp_frame_color(hp_low)
         pyxel.rectb(bx - 1, by - 1, bw + 2, 7, hp_frame_col)
         pyxel.rect(bx, by, bw, 5, 1)
         if p.max_hp>0:
@@ -7953,6 +7955,11 @@ class Game:
             max_cond_w = max(0, equip_left - ZV_X - 8)
             self.txt(ZV_X, equip_y, self.ellipsize_to_width(cond, max_cond_w), 22)
         self.txt_segments_right(SCR_W - 16, equip_y, equip_segments)
+
+    def hp_frame_color(self, hp_low):
+        if not hp_low:
+            return UI_SUBTEXT_COL
+        return HP_LOW_FRAME_COLORS[(pyxel.frame_count // HP_LOW_FRAME_PERIOD) % len(HP_LOW_FRAME_COLORS)]
 
     def draw_msgs(self):
         rows=[]
@@ -8249,10 +8256,16 @@ class Game:
             self.txt(bx + bw - 16, by + 40, "^", UI_SUBTEXT_COL)
         if self.log_scroll < max_scroll:
             self.txt(bx + bw - 16, by + bh - 34, "v", UI_SUBTEXT_COL)
-        for i, text in enumerate(lines[self.log_scroll:self.log_scroll + visible]):
-            self.txt(bx + 8, by + 40 + i * 11, self.message_display_text(text)[:72], UI_TEXT_COL)
+        visible_lines = lines[self.log_scroll:self.log_scroll + visible]
+        for i, text in enumerate(visible_lines):
+            self.txt(bx + 8, by + 40 + i * 11, self.message_display_text(text)[:72], self.log_line_color(self.log_scroll + i, len(lines)))
         self.draw_log_scrollbar(bx, by, bw, bh, len(lines), visible, max_scroll)
         self.txt(bx + 8, by + bh - 16, self.info_guide_label("Log"), UI_SUBTEXT_COL)
+
+    def log_line_color(self, index, total_count):
+        if index >= max(0, total_count - 10):
+            return UI_TEXT_COL
+        return UI_SUBTEXT_COL
 
     def draw_log_scrollbar(self, bx, by, bw, bh, total, visible, max_scroll):
         if total <= visible:

@@ -10591,7 +10591,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.pyxel.rect = old_rect
 
-    def test_hp_damage_bar_uses_bright_orange_residue_and_red_low_hp(self):
+    def test_hp_damage_bar_uses_bright_orange_residue_and_red_low_hp_fill(self):
         game = new_game(seed=343)
         game.txt = lambda *args: None
         rects = []
@@ -10612,7 +10612,7 @@ class RogueBaselineTest(unittest.TestCase):
 
             self.assertIn(19, [args[-1] for args in rects])
             self.assertIn(22, [args[-1] for args in rects])
-            self.assertIn(22, [args[-1] for args in rectbs])
+            self.assertIn(rogue.HP_LOW_FRAME_COLORS[0], [args[-1] for args in rectbs])
         finally:
             rogue.pyxel.rect = old_rect
             rogue.pyxel.rectb = old_rectb
@@ -10638,7 +10638,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(18, colors)
         self.assertIn((rogue.ZV_X + 17, rogue.SCR_H - 12, 110, 7, rogue.UI_SUBTEXT_COL), rects)
 
-    def test_low_hp_bar_frame_blinks_slowly(self):
+    def test_low_hp_bar_frame_breathes_through_neutral_ui_colors(self):
         game = new_game(seed=3432)
         game.txt = lambda *args: None
         game.p.max_hp = 12
@@ -10648,19 +10648,17 @@ class RogueBaselineTest(unittest.TestCase):
         old_rectb = rogue.pyxel.rectb
         try:
             rogue.pyxel.rectb = lambda *args: rectbs.append(args)
-            rogue.pyxel.frame_count = 0
-            game.draw_stat()
-            first_col = rectbs[-1][-1]
-            rectbs.clear()
-            rogue.pyxel.frame_count = 30
-            game.draw_stat()
-            second_col = rectbs[-1][-1]
+            cols = []
+            for frame in (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55):
+                rogue.pyxel.frame_count = frame
+                rectbs.clear()
+                game.draw_stat()
+                cols.append(rectbs[-1][-1])
         finally:
             rogue.pyxel.frame_count = old_frame_count
             rogue.pyxel.rectb = old_rectb
 
-        self.assertEqual(first_col, 22)
-        self.assertEqual(second_col, rogue.UI_SUBTEXT_COL)
+        self.assertEqual(cols, [1, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 1])
 
     def test_inventory_overlay_and_hades_hud_show_v5_exp_status_summary(self):
         game = new_game(seed=35)
@@ -15948,6 +15946,28 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
         game.update()
         self.assertLess(game.log_scroll, len(game.msgs))
+
+    def test_log_tints_visible_rows_to_make_newest_direction_clear(self):
+        game = new_game(seed=47330)
+        game.msgs = [f"message {i:02d}" for i in range(30)]
+        game.msg_turns = [0] * len(game.msgs)
+        game.open_log()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_log()
+
+        lines = [(s, c) for s, c in calls if s.startswith("Message ")]
+        self.assertGreaterEqual(len(lines), 6)
+        self.assertEqual(lines[-1], ("Message 29", rogue.UI_TEXT_COL))
+        self.assertTrue(all(c == rogue.UI_TEXT_COL for _s, c in lines[-10:]))
+        self.assertTrue(all(c == rogue.UI_SUBTEXT_COL for _s, c in lines[:-10]))
+
+        calls.clear()
+        game.log_scroll = 0
+        game.draw_log()
+        lines = [(s, c) for s, c in calls if s.startswith("Message ")]
+        self.assertTrue(all(c == rogue.UI_SUBTEXT_COL for _s, c in lines))
 
     def test_log_tab_entry_starts_at_latest_messages(self):
         game = new_game(seed=47331)
