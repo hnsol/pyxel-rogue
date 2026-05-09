@@ -381,13 +381,7 @@ def validate_user_password(user_password: str) -> str:
 
 def display_score_name(entry: dict[str, Any], local_only: bool | None = None) -> str:
     profile = normalize_online_profile(entry)
-    name = profile["user_name"]
-    unverified = (
-        profile.get("local_only", True)
-        or not profile.get("server_token", "")
-    )
-    mark = unverified if local_only is None else bool(local_only)
-    return f"{name}*" if mark and not name.endswith("*") else name
+    return profile["user_name"]
 
 
 def _token_key(user_name: str) -> bytes:
@@ -675,6 +669,17 @@ def sync_online_scoreboard(
         return data if isinstance(data, dict) else {"ok": False, "status": "failed", "scores": {}}
     except Exception:
         return {"ok": False, "status": "failed", "scores": {}}
+
+
+def record_guest_scoreboard_sync(url: str | None = None) -> bool:
+    target = url if url is not None else ONLINE_SCORE_URL
+    if not target:
+        return False
+    try:
+        data = _http_json(target, {"action": "guestScoreboardSync"})
+        return bool(isinstance(data, dict) and data.get("ok"))
+    except Exception:
+        return False
 
 
 def seed_dummy_online_scores(url: str | None = None) -> bool:

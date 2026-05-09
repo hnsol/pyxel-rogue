@@ -158,6 +158,7 @@ from rogue_scores import (
     load_score_entries,
     local_best_sync_entries,
     normalize_online_profile,
+    record_guest_scoreboard_sync,
     register_online_user,
     sanitize_player_name,
     sanitize_user_id,
@@ -234,7 +235,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0104"
+UI_BUILD = "260510_0127"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -246,7 +247,7 @@ ONLINE_UI_TEXT = {
         "confirm_prompt": "Set up online sync for scores?",
         "confirm_register": "A/Enter sync",
         "confirm_local": "B/Esc local only",
-        "confirm_mark": "Local-only names show a trailing *.",
+        "confirm_mark": "Guest scores stay local.",
         "language_hint": "Select/L Change Language（言語切替）",
         "score_title": "Scoreboard",
         "score_title_local": "My Rogue Chronicle",
@@ -259,7 +260,7 @@ ONLINE_UI_TEXT = {
         "score_hint": "Left/Right: Boards   Select/Tab: Sync   B/Esc: Back",
         "score_register_prompt": "Online sync can post once per day.",
         "score_register_hint": "A/Enter sync   B/Esc local only",
-        "score_register_mark": "Local-only names show a trailing *.",
+        "score_register_mark": "Guest scores stay local.",
         "score_guest_result": "Ranking refreshed. Guest mode.",
         "period_week": "This Week",
         "period_season": "This Season",
@@ -269,7 +270,7 @@ ONLINE_UI_TEXT = {
         "register_title": "Online Sync",
         "register_prompt": "Enter an 8-char lowercase sync ID.",
         "register_cancel": "B/Esc cancels.",
-        "register_local": "B/Esc keeps local-only mode. Local names show *.",
+        "register_local": "B/Esc keeps guest mode.",
         "register_hint": "A/Enter OK  B/Esc LOCAL ONLY",
         "register_cancel_hint": "A/Enter OK  B/Esc CANCEL",
         "local_confirm_title": "Local Only",
@@ -321,7 +322,7 @@ ONLINE_UI_TEXT = {
         "confirm_prompt": "オンラインスコアを同期しますか?",
         "confirm_register": "A/Enter 同期",
         "confirm_local": "B/Esc ローカルのみ",
-        "confirm_mark": "ローカル名には * が付きます。",
+        "confirm_mark": "ゲストのスコアはローカルのみです。",
         "language_hint": "Select/L Change Language（言語切替）",
         "score_title": "スコアボード",
         "score_title_local": "冒険の記録",
@@ -334,7 +335,7 @@ ONLINE_UI_TEXT = {
         "score_hint": "左右: ボード切替   Select/Tab: 同期   B/Esc: 戻る",
         "score_register_prompt": "オンライン同期で1日1回投稿できます。",
         "score_register_hint": "A/Enter 同期  B/Esc ローカルのみ",
-        "score_register_mark": "ローカル名には * が付きます。",
+        "score_register_mark": "ゲストのスコアはローカルのみです。",
         "score_guest_result": "ランキング更新。ゲストモード。",
         "period_week": "今週",
         "period_season": "今シーズン",
@@ -344,7 +345,7 @@ ONLINE_UI_TEXT = {
         "register_title": "オンライン同期",
         "register_prompt": "8文字の小文字IDで同期します。",
         "register_cancel": "B/Esc キャンセル",
-        "register_local": "B/Escでローカルのみ。ローカル名は * 付き。",
+        "register_local": "B/Escでゲストモードのまま。",
         "register_hint": "A/Enter 決定  B/Esc ローカルのみ",
         "register_cancel_hint": "A/Enter 決定  B/Esc キャンセル",
         "local_confirm_title": "ローカル専用",
@@ -6599,6 +6600,7 @@ class Game:
         self.online_period = SCOREBOARD_PERIOD_LOCAL
         local_entries = load_score_entries()
         self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10)
+        guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             if period in self.online_score_loaded:
                 continue
@@ -6606,7 +6608,8 @@ class Game:
             cached = load_online_score_cache(period, key)
             if not cached:
                 continue
-            self.online_score_cache[period] = get_period_scores(cached + local_entries, period, key, limit=10)
+            entries = cached if guest_mode else cached + local_entries
+            self.online_score_cache[period] = get_period_scores(entries, period, key, limit=10)
             self.online_score_loaded.add(period)
         if getattr(self, "online_sync_result", "") in (
             "No local scores yet.",
@@ -6633,21 +6636,25 @@ class Game:
         online = fetch_online_scores(period, timestamp=now)
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
+        guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         if online is None:
             self.online_score_load_result = "failed"
             online = load_online_score_cache(period, key)
-            scores = get_period_scores(local, period, key, limit=10)
+            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10)
             if online:
-                scores = get_period_scores(online + local, period, key, limit=10)
+                entries = online if guest_mode else online + local
+                scores = get_period_scores(entries, period, key, limit=10)
         elif online:
             save_online_score_cache(period, key, online)
-            scores = get_period_scores(online + local, period, key, limit=10)
+            entries = online if guest_mode else online + local
+            scores = get_period_scores(entries, period, key, limit=10)
         else:
             self.online_score_load_result = ""
             online = load_online_score_cache(period, key)
-            scores = get_period_scores(local, period, key, limit=10)
+            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10)
             if online:
-                scores = get_period_scores(online + local, period, key, limit=10)
+                entries = online if guest_mode else online + local
+                scores = get_period_scores(entries, period, key, limit=10)
         self.online_scores = scores
         self.online_score_cache[period] = scores
         self.online_score_loaded.add(period)
@@ -6658,9 +6665,22 @@ class Game:
         if period == SCOREBOARD_PERIOD_LOCAL:
             return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+            if normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True):
+                return get_period_scores(scores, period, self.scoreboard_period_key(period), limit=10)
             key = self.scoreboard_period_key(period)
             return get_period_scores(scores + load_score_entries(), period, key, limit=10)
         return scores
+
+    def guest_local_best_score_for_period(self, period):
+        if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+            return None
+        key = self.scoreboard_period_key(period)
+        guest_entries = [
+            entry for entry in load_score_entries()
+            if str(entry.get("player_name", "")).lower() == "guest"
+        ]
+        scores = get_period_scores(guest_entries, period, key, limit=1)
+        return scores[0] if scores else None
 
     def refresh_online_scoreboard_periods(self):
         ok = True
@@ -6683,6 +6703,10 @@ class Game:
             self.online_sync_result = "Ranking refreshed. Guest mode."
             self.online_score_load_result = ""
             self.online_sync_status = "loading scoreboard..."
+            try:
+                record_guest_scoreboard_sync()
+            except Exception:
+                pass
             if not self.refresh_online_scoreboard_periods():
                 self.online_sync_result = "Refresh failed. No local scores yet."
             return {"ok": True, "status": "guest_refresh", "posted_count": 0}
@@ -6736,10 +6760,6 @@ class Game:
 
     def format_score_line_for_board(self, rank, entry, period):
         row = dict(entry)
-        profile = normalize_online_profile(getattr(self, "online_profile", None))
-        if period == SCOREBOARD_PERIOD_LOCAL and profile.get("local_only", True):
-            if str(row.get("player_name", ""))[:16] == str(profile.get("user_name", ""))[:16]:
-                row["player_name"] = display_score_name(profile)
         if self.lang == LANG_JA:
             return self.format_score_line_for_board_ja(rank, row)
         return format_score_line(rank, row)
@@ -7677,6 +7697,7 @@ class Game:
         y = 108
         player_name = str(self.current_score_player_name()).upper()[:16]
         display_scores = scores[:10]
+        local_best = None
         for i, entry in enumerate(display_scores, start=1):
             name = str(entry.get("player_name", "")).upper()[:16]
             current_result = (
@@ -7690,7 +7711,16 @@ class Game:
                 line = self.mark_current_score_line(line)
             self.txt(120, y, line[:56], col)
             y += 10
-        if not scores:
+        profile = normalize_online_profile(getattr(self, "online_profile", None))
+        if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON) and profile.get("local_only", True):
+            local_best = self.guest_local_best_score_for_period(period)
+            if local_best:
+                y += 10
+                line = self.format_score_line_for_board(0, local_best, period)
+                line = "--" + line[2:] if len(line) >= 2 else f"-- {line}"
+                self.txt(120, y, line[:56], SCOREBOARD_HILITE_COL)
+                y += 10
+        if not scores and not local_best:
             self.txt(120, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)
             y += 16
         info_y = 210
