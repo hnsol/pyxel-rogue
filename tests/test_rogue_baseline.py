@@ -10532,6 +10532,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(18, colors)
         self.assertIn((rogue.ZV_X + 17, rogue.SCR_H - 12, 110, 7, rogue.UI_SUBTEXT_COL), rects)
 
+    def test_low_hp_bar_frame_blinks_slowly(self):
+        game = new_game(seed=3432)
+        game.txt = lambda *args: None
+        game.p.max_hp = 12
+        game.p.hp = 3
+        rectbs = []
+        old_frame_count = rogue.pyxel.frame_count
+        old_rectb = rogue.pyxel.rectb
+        try:
+            rogue.pyxel.rectb = lambda *args: rectbs.append(args)
+            rogue.pyxel.frame_count = 0
+            game.draw_stat()
+            first_col = rectbs[-1][-1]
+            rectbs.clear()
+            rogue.pyxel.frame_count = 30
+            game.draw_stat()
+            second_col = rectbs[-1][-1]
+        finally:
+            rogue.pyxel.frame_count = old_frame_count
+            rogue.pyxel.rectb = old_rectb
+
+        self.assertEqual(first_col, 22)
+        self.assertEqual(second_col, rogue.UI_SUBTEXT_COL)
+
     def test_inventory_overlay_and_hades_hud_show_v5_exp_status_summary(self):
         game = new_game(seed=35)
         calls = []
@@ -19187,16 +19211,46 @@ class RogueBaselineTest(unittest.TestCase):
         text = "\n".join(calls)
         self.assertIn("--- Basic Controls ---", text)
         self.assertIn("--- Keyboard Only ---", text)
-        self.assertIn("Pad      Key      Action", text)
-        self.assertIn("D-pad    Arrow    Move", text)
-        self.assertIn("A+B      Ent+Esc  Wait", text)
-        self.assertIn("Info+Sel Info+Tab Sub", text)
+        for item in ("Pad", "Key", "Action", "D-pad", "Arrow", "Move"):
+            self.assertIn(item, calls)
+        self.assertIn("Diag assist", calls)
+        self.assertIn("Enter+Esc", calls)
+        self.assertIn("Info+Select", calls)
+        self.assertIn("Assist menu", calls)
         self.assertIn("HJKL/YUBN Move/Diag", text)
-        self.assertIn(".Wait </>Stairs sSearch", text)
-        self.assertIn("a Again RRemove qQuaff", text)
-        self.assertIn("PPut oOpt QQuit", text)
+        for item in (". Wait", "</> Stairs", "s Search", "a Again", "R Remove", "q Quaff", "P Put on", "o Options", "Q Quit"):
+            self.assertIn(item, calls)
         self.assertNotIn("Keyboard commands", text)
         self.assertNotIn("Close overlays", text)
+
+    def test_help_basic_control_columns_are_aligned_in_japanese(self):
+        game = new_game(seed=5601, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_help()
+
+        by_text = {s: (x, y) for x, y, s, _c in calls}
+        self.assertEqual(by_text["操作"][0], by_text["移動"][0])
+        self.assertEqual(by_text["操作"][0], by_text["斜め補助"][0])
+        self.assertEqual(by_text["Key"][0], by_text["Arrow"][0])
+        self.assertEqual(by_text["Key"][0], by_text["Space"][0])
+        self.assertEqual(by_text["Pad"][0], by_text["D-pad"][0])
+        self.assertEqual(by_text["Pad"][0], by_text["Start"][0])
+
+    def test_help_basic_action_column_uses_calculated_gap(self):
+        game = new_game(seed=5602, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_help()
+
+        by_text = {s: (x, y) for x, y, s, _c in calls}
+        key_end = by_text["Tab+Enter"][0] + game.ui_text_width("Tab+Enter")
+        action_x = by_text["投げる"][0]
+        right_title_x = by_text["--- キーボード専用 ---"][0]
+        self.assertEqual(action_x - key_end, 12)
+        self.assertEqual(right_title_x - (action_x + game.ui_text_width("補助メニュー")), 42)
 
     def test_help_text_uses_high_contrast_colors(self):
         game = new_game(seed=561)

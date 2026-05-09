@@ -234,7 +234,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260509_1856"
+UI_BUILD = "260509_1922"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -7885,7 +7885,8 @@ class Game:
         bw = 108
         bx = ZV_X + 18
         by = hp_y + 3
-        pyxel.rectb(bx - 1, by - 1, bw + 2, 7, 22 if hp_low else UI_SUBTEXT_COL)
+        hp_frame_col = 22 if hp_low and (pyxel.frame_count // 30) % 2 == 0 else UI_SUBTEXT_COL
+        pyxel.rectb(bx - 1, by - 1, bw + 2, 7, hp_frame_col)
         pyxel.rect(bx, by, bw, 5, 1)
         if p.max_hp>0:
             if self.last_hp_seen is not None and p.hp < self.last_hp_seen:
@@ -8259,43 +8260,76 @@ class Game:
         self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
         self.draw_info_tabs(bx + 8, by + 20, "Help")
         if self.lang == LANG_JA:
-            controls=[
-                (self.ui_heading("基本操作", UI_HEADING_SECTION), self.ui_heading("キーボード専用", UI_HEADING_SECTION)),
-                ("Pad      Key      操作", "HJKL/YUBN 移動/斜め"),
-                ("D-pad    Arrow    移動", ".待機 </>階段 s探す"),
-                ("Start    Space    斜め", "^罠 t投げる d捨てる"),
-                ("A        Enter    行動", "i持物 I詳細 ?ヘルプ"),
-                ("A+B      Ent+Esc  足踏", "/識別 m移動 f攻撃"),
-                ("B        Esc      Menu", "a再実行 R外す q飲む"),
-                ("B+Dir    Sft+Dir  走る", "r読む e食べる z杖"),
-                ("Select   Tab      情報", "P指輪 o設定 Q終了"),
-                ("Info+Sel Info+Tab 補助", "w鎧 W武器 T脱ぐ"),
-                ("Sel+A    Tab+Ent  投げる", ""),
-                ("Sel+B    Tab+Esc  探す", ""),
-                ("Sel+Dir  Tab+Dir  罠", ""),
+            basic_title = self.ui_heading("基本操作", UI_HEADING_SECTION)
+            keys_title = self.ui_heading("キーボード専用", UI_HEADING_SECTION)
+            basic_rows = [
+                ("Pad", "Key", "操作"),
+                ("D-pad", "Arrow", "移動"),
+                ("Start", "Space", "斜め補助"),
+                ("A", "Enter", "行動"),
+                ("A+B", "Enter+Esc", "足踏み"),
+                ("B", "Esc", "Menu"),
+                ("B+Dir", "Shift+Dir", "走る"),
+                ("Select", "Tab", "情報"),
+                ("Info+Select", "Info+Tab", "補助メニュー"),
+                ("Select+A", "Tab+Enter", "投げる"),
+                ("Select+B", "Tab+Esc", "探す"),
+                ("Select+Dir", "Tab+Dir", "罠"),
+            ]
+            key_rows = [
+                ("HJKL/YUBN 移動/斜め", "", ""),
+                (". 待機", "</> 階段", "s 探す"),
+                ("^ 罠", "t 投げる", "d 捨てる"),
+                ("i 持ちもの", "I 詳細", "? ヘルプ"),
+                ("/ 識別", "m 移動", "f 攻撃"),
+                ("a 再実行", "R 外す", "q 飲む"),
+                ("r 読む", "e 食べる", "z 杖"),
+                ("P 指輪", "o 設定", "Q 終了"),
+                ("w 鎧", "W 武器", "T 脱ぐ"),
             ]
         else:
-            controls=[
-                (self.ui_heading("Basic Controls", UI_HEADING_SECTION), self.ui_heading("Keyboard Only", UI_HEADING_SECTION)),
-                ("Pad      Key      Action", "HJKL/YUBN Move/Diag"),
-                ("D-pad    Arrow    Move", ".Wait </>Stairs sSearch"),
-                ("Start    Space    Diag", "^Trap tThrow dDrop"),
-                ("A        Enter    Action", "iInv IItem ?Help"),
-                ("A+B      Ent+Esc  Wait", "/ Identify mMove f Fight"),
-                ("B        Esc      Menu", "a Again RRemove qQuaff"),
-                ("B+Dir    Sft+Dir  Dash", "rRead eEat zZap"),
-                ("Select   Tab      Info", "PPut oOpt QQuit"),
-                ("Info+Sel Info+Tab Sub", "wWear WWield TTake"),
-                ("Sel+A    Tab+Ent  Throw", ""),
-                ("Sel+B    Tab+Esc  Search", ""),
-                ("Sel+Dir  Tab+Dir  Trap", ""),
+            basic_title = self.ui_heading("Basic Controls", UI_HEADING_SECTION)
+            keys_title = self.ui_heading("Keyboard Only", UI_HEADING_SECTION)
+            basic_rows = [
+                ("Pad", "Key", "Action"),
+                ("D-pad", "Arrow", "Move"),
+                ("Start", "Space", "Diag assist"),
+                ("A", "Enter", "Action"),
+                ("A+B", "Enter+Esc", "Wait"),
+                ("B", "Esc", "Menu"),
+                ("B+Dir", "Shift+Dir", "Dash"),
+                ("Select", "Tab", "Info"),
+                ("Info+Select", "Info+Tab", "Assist menu"),
+                ("Select+A", "Tab+Enter", "Throw"),
+                ("Select+B", "Tab+Esc", "Search"),
+                ("Select+Dir", "Tab+Dir", "Trap"),
+            ]
+            key_rows = [
+                ("HJKL/YUBN Move/Diag", "", ""),
+                (". Wait", "</> Stairs", "s Search"),
+                ("^ Trap", "t Throw", "d Drop"),
+                ("i Inventory", "I Item", "? Help"),
+                ("/ Identify", "m Move", "f Fight"),
+                ("a Again", "R Remove", "q Quaff"),
+                ("r Read", "e Eat", "z Zap"),
+                ("P Put on", "o Options", "Q Quit"),
+                ("w Wear", "W Wield", "T Take off"),
             ]
         y=by+50
         line_h = FONT_LINE_H
-        for left, right in controls:
-            col = HELP_HEADER_COL if left.startswith("---") else HELP_TEXT_COL
-            self.txt(bx+8,y,left,col)
-            self.txt(bx+250,y,right,col)
+        left_x = (bx + 8, bx + 82, bx + 148)
+        right_x = (bx + 250, bx + 340, bx + 408)
+        self.txt(left_x[0], y, basic_title, HELP_HEADER_COL)
+        self.txt(right_x[0], y, keys_title, HELP_HEADER_COL)
+        y += line_h
+        for i in range(max(len(basic_rows), len(key_rows))):
+            if i < len(basic_rows):
+                for x, text in zip(left_x, basic_rows[i]):
+                    self.txt(x, y, text, HELP_TEXT_COL)
+            if i < len(key_rows):
+                for x, text in zip(right_x, key_rows[i]):
+                    if text:
+                        self.txt(x, y, text, HELP_TEXT_COL)
             y+=line_h
         self.txt(bx + 8, by + bh - 16, self.info_guide_label("Help"), UI_SUBTEXT_COL)
 
