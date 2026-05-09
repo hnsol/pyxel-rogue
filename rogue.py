@@ -235,8 +235,9 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0158"
+UI_BUILD = "260510_0318"
 MSG_TOAST_INTENT_HISTORY = 4
+MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
@@ -7959,18 +7960,54 @@ class Game:
         last_index = len(self.msgs) - 1
         for src_i,m in enumerate(self.msgs):
             age = 0 if not msg_turns else max(0, self.turn - msg_turns[src_i])
-            if age > MSG_TOAST_DIM_TURNS:
-                continue
             c = msg_toast_color(age)
             parts = self.wrap_msg_toast_text(self.message_display_text(m))
             for pi, part in enumerate(parts):
                 rows.append((part, c, age, pi == 0, src_i))
         rows = rows[-MSG_TOAST_LINES:]
+        row_keys = [(src_i, row_i) for row_i, (_m, _c, _age, _first_part, src_i) in enumerate(rows)]
+        previous_visible_keys = set(getattr(self, "msg_toast_visible_keys", ()))
+        retiring_keys = tuple(
+            key
+            for key, (_m, _c, age, _first_part, _src_i) in zip(row_keys, rows)
+            if age > MSG_TOAST_DIM_TURNS and key in previous_visible_keys
+        )
+        if retiring_keys:
+            now = getattr(pyxel, "frame_count", 0)
+            old_expire_keys = tuple(getattr(self, "msg_toast_expire_keys", ()))
+            old_expire_turn = getattr(self, "msg_toast_expire_turn", self.turn)
+            if set(retiring_keys).issubset(set(old_expire_keys)):
+                active_expire_keys = old_expire_keys if old_expire_turn == self.turn else ()
+            else:
+                active_expire_keys = retiring_keys
+                self.msg_toast_expire_keys = active_expire_keys
+                self.msg_toast_expire_frame = now
+                self.msg_toast_expire_turn = self.turn
+            elapsed = max(0, now - getattr(self, "msg_toast_expire_frame", now))
+            retire_count = min(len(active_expire_keys), elapsed // MSG_TOAST_ROW_RETIRE_FRAMES)
+            expired_seen = 0
+            kept = []
+            for key, row in zip(row_keys, rows):
+                if row[2] > MSG_TOAST_DIM_TURNS:
+                    if key in active_expire_keys and expired_seen >= retire_count:
+                        kept.append((key, row))
+                    if key in active_expire_keys:
+                        expired_seen += 1
+                else:
+                    kept.append((key, row))
+            keyed_rows = kept
+        else:
+            self.msg_toast_expire_keys = ()
+            self.msg_toast_expire_frame = getattr(pyxel, "frame_count", 0)
+            keyed_rows = [(key, row) for key, row in zip(row_keys, rows) if row[2] <= MSG_TOAST_DIM_TURNS]
+        rows = [row for _key, row in keyed_rows]
         if not rows:
+            self.msg_toast_visible_keys = ()
             self.msg_toast_rows = 0
             self.msg_toast_block = None
             self.msg_toast_reposition_needed = True
             return
+        self.msg_toast_visible_keys = tuple(key for key, _row in keyed_rows)
         toast_rows = min(MSG_TOAST_LINES, max(getattr(self, "msg_toast_rows", 0), len(rows)))
         self.msg_toast_rows = toast_rows
         if getattr(self, "msg_toast_block", None) is None:

@@ -11168,23 +11168,96 @@ class RogueBaselineTest(unittest.TestCase):
         game.msgs = ["gone", "visible"]
         game.msg_turns = [0, 5]
         game.turn = 5
+        old_frame = rogue.pyxel.frame_count
+        rogue.pyxel.frame_count = 100
         calls = []
-        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
-        game.draw_msgs()
-        self.assertEqual(game.msg_toast_rows, 2)
-        first_visible = next(c for c in calls if c[2] == "Visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+        try:
+            game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+            game.draw_msgs()
+            self.assertEqual(game.msg_toast_rows, 2)
+            first_visible = next(c for c in calls if c[2] == "Visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
 
-        calls.clear()
-        game.turn = 6
-        game.draw_msgs()
-        self.assertEqual(game.msg_toast_rows, 2)
-        shifted_visible = next(c for c in calls if c[2] == "Visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
-        self.assertEqual(shifted_visible[1], first_visible[1])
+            calls.clear()
+            game.turn = 6
+            game.draw_msgs()
+            self.assertEqual(game.msg_toast_rows, 2)
+            shifted_visible = next(c for c in calls if c[2] == "Visible" and c[3] != rogue.MSG_TOAST_SHADOW_COL)
+            self.assertEqual(shifted_visible[1], first_visible[1])
 
-        game.turn = 11
-        game.draw_msgs()
-        self.assertEqual(game.msg_toast_rows, 0)
-        self.assertIsNone(game.msg_toast_block)
+            game.turn = 11
+            rogue.pyxel.frame_count = 120
+            game.draw_msgs()
+            rogue.pyxel.frame_count = 160
+            game.draw_msgs()
+            self.assertEqual(game.msg_toast_rows, 0)
+            self.assertIsNone(game.msg_toast_block)
+        finally:
+            rogue.pyxel.frame_count = old_frame
+
+    def test_message_toast_retires_expired_wrapped_rows_one_by_one(self):
+        game = new_game(seed=37511)
+        game.msgs = ["abcdefghijklmnopqrstuvwxyz"]
+        game.msg_turns = [0]
+        game.turn = rogue.MSG_TOAST_DIM_TURNS + 1
+        old_frame = rogue.pyxel.frame_count
+        try:
+            rogue.pyxel.frame_count = 98
+            game.turn = rogue.MSG_TOAST_DIM_TURNS
+            game.txt = lambda *args: None
+            game.draw_msgs()
+
+            rogue.pyxel.frame_count = 100
+            game.turn = rogue.MSG_TOAST_DIM_TURNS + 1
+            calls = []
+            game.txt = lambda x, y, s, c: calls.append((str(s), c))
+            game.draw_msgs()
+            body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+            self.assertEqual(body, ["Abcdefghijklmnopqrstuvw", "xyz"])
+
+            rogue.pyxel.frame_count = 120
+            calls.clear()
+            game.draw_msgs()
+            body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+            self.assertEqual(body, ["xyz"])
+
+            rogue.pyxel.frame_count = 121
+            calls.clear()
+            game.draw_msgs()
+            body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+            self.assertEqual(body, ["xyz"])
+
+            rogue.pyxel.frame_count = 140
+            calls.clear()
+            game.draw_msgs()
+            body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+            self.assertEqual(body, [])
+        finally:
+            rogue.pyxel.frame_count = old_frame
+
+    def test_message_toast_clears_retiring_rows_when_turn_advances_again(self):
+        game = new_game(seed=37512)
+        game.msgs = ["abcdefghijklmnopqrstuvwxyz"]
+        game.msg_turns = [0]
+        old_frame = rogue.pyxel.frame_count
+        try:
+            rogue.pyxel.frame_count = 98
+            game.turn = rogue.MSG_TOAST_DIM_TURNS
+            game.txt = lambda *args: None
+            game.draw_msgs()
+
+            rogue.pyxel.frame_count = 100
+            game.turn = rogue.MSG_TOAST_DIM_TURNS + 1
+            game.draw_msgs()
+
+            rogue.pyxel.frame_count = 105
+            game.turn = rogue.MSG_TOAST_DIM_TURNS + 2
+            calls = []
+            game.txt = lambda x, y, s, c: calls.append((str(s), c))
+            game.draw_msgs()
+            body = [s for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+            self.assertEqual(body, [])
+        finally:
+            rogue.pyxel.frame_count = old_frame
 
     def test_message_toast_height_grows_with_added_rows_up_to_limit(self):
         game = new_game(seed=3752)
