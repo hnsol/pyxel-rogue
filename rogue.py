@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260509_0908"
+UI_BUILD = "260509_1807"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -3037,7 +3037,7 @@ class Game:
                     self.fuses.fuse("unconfuse", duration, rogue_daemons.AFTER)
                 self.p.confused += duration
                 mn=self.combat_monster_name(m)
-                self.msg("pyxel.monster_gaze_confused", monster=mn)
+                self.msg_important("pyxel.monster_gaze_confused", monster=mn)
         if rogue_monsters.is_greedy(m) and not m.running:
             self.runto(m,DEST_GOLD if self.room_gold_target(m) else DEST_PLAYER)
 
@@ -3463,7 +3463,7 @@ class Game:
             else:
                 self.fuses.fuse("unconfuse", duration, rogue_daemons.AFTER)
             p.confused += duration
-            self.msg("potions.what_a_tripy_feeling" if p.hallucinating > 0 else "potions.wait_what_s_going_on_here_huh_what_who")
+            self.msg_important("potions.what_a_tripy_feeling" if p.hallucinating > 0 else "potions.wait_what_s_going_on_here_huh_what_who")
         elif nm=="hallucination":
             self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], True)
             duration = RNG.spread(SEEDURATION)
@@ -3476,7 +3476,7 @@ class Game:
                 self.daemons.start("visuals", rogue_daemons.BEFORE)
                 self.fuses.fuse("come_down", duration, rogue_daemons.AFTER)
             p.hallucinating += duration
-            self.msg("potions.oh_wow_everything_seems_so_cosmic")
+            self.msg_important("potions.oh_wow_everything_seems_so_cosmic")
         elif nm=="blindness":
             self.ident.pk[it.kind] = rogue_potions.do_pot_known(self.ident.pk[it.kind], True)
             duration = RNG.spread(SEEDURATION)
@@ -3486,7 +3486,7 @@ class Game:
                 self.fuses.fuse("sight", duration, rogue_daemons.AFTER)
             p.blind += duration
             self.update_fov()
-            self.msg("potions.oh_bummer_everything_is_dark_help" if p.hallucinating > 0 else "potions.a_cloak_of_darkness_falls_around_you")
+            self.msg_important("potions.oh_bummer_everything_is_dark_help" if p.hallucinating > 0 else "potions.a_cloak_of_darkness_falls_around_you")
         elif nm=="haste self":
             self.ident.pk[it.kind]=True
             if self.add_haste(True):
@@ -3822,7 +3822,7 @@ class Game:
         elif nm=="scare monster":
             self.msg("scrolls.you_hear_maniacal_laughter_in_the_distance")
         elif nm=="sleep":
-            rogue_scrolls.sleep_scroll(p, rnd, SLEEPTIME); self.dashing=False; self.msg("scrolls.you_fall_asleep")
+            rogue_scrolls.sleep_scroll(p, rnd, SLEEPTIME); self.dashing=False; self.msg_important("scrolls.you_fall_asleep")
         elif nm=="teleportation":
             old_room = self.room_at(p.x, p.y)
             self.teleport_player()
@@ -4620,7 +4620,7 @@ class Game:
             self.msg_important("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
             self.p.no_command=rogue_move.sleep_trap_no_command(self.p.no_command, SLEEPTIME)
-            self.msg("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
+            self.msg_important("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):
                 self.p.hp-=roll("1d6")
@@ -4649,7 +4649,10 @@ class Game:
                     poison_saved,
                     rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR),
                 )
-                self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
+                if poison_saved or rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR):
+                    self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
+                else:
+                    self.msg_important("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
                 self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")
         elif name=="rust trap":

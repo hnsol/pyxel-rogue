@@ -14270,6 +14270,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(weapon.cursed)
         self.assertEqual((weapon.hit_plus, weapon.dam_plus), (1, 0))
 
+    def test_sleep_scroll_waits_for_ack(self):
+        game = new_game(seed=391)
+        scroll = rogue.Item(
+            rogue.CAT_SCR,
+            next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "sleep"),
+        )
+        game.p.inv.append(scroll)
+        game.message_ack_pending = False
+
+        game.use_scr(scroll)
+
+        self.assertGreater(game.p.no_command, 0)
+        self.assertTrue(game.message_ack_pending)
+
     def test_rogue_544_extra_healing_uses_plain_quaff_message(self):
         # Rogue 5.4.4 potions.c:P_XHEAL msg("you begin to feel much better").
         game = new_game(seed=390)
@@ -14287,6 +14301,26 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.hp, game.p.max_hp - 4)
         self.assertIn("you begin to feel much better", game.msgs)
         self.assertNotIn("You feel much better. (+1)", game.msgs)
+
+    def test_status_ailment_potions_wait_for_ack(self):
+        for name, attr in (
+            ("confusion", "confused"),
+            ("hallucination", "hallucinating"),
+            ("blindness", "blind"),
+        ):
+            with self.subTest(name=name):
+                game = new_game(seed=532)
+                potion = rogue.Item(
+                    rogue.CAT_POT,
+                    next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == name),
+                )
+                game.p.inv.append(potion)
+                game.message_ack_pending = False
+
+                game.use_pot(potion)
+
+                self.assertGreater(getattr(game.p, attr), 0)
+                self.assertTrue(game.message_ack_pending)
 
     def test_rogue_544_extra_healing_can_raise_max_hp_by_two(self):
         # Rogue 5.4.4 potions.c:P_XHEAL increments max_hp twice when the overflow exceeds level + 1.
@@ -17345,6 +17379,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Something hit you", game.msgs)
         self.assertNotIn("The rattlesnake hit you", game.msgs)
 
+    def test_medusa_gaze_confusion_waits_for_ack(self):
+        game = new_game(seed=50331)
+        set_open_floor(game)
+        medusa = monster_at(game.p.x + 1, game.p.y, "M", "medusa", 10, 20, 100, "0x0", 5, "mean")
+        game.mons = [medusa]
+        game.save_vs_magic = lambda: False
+        game.message_ack_pending = False
+
+        game.wake_monster(medusa)
+
+        self.assertGreater(game.p.confused, 0)
+        self.assertTrue(game.message_ack_pending)
+
     def test_rogue_544_hallucinating_monster_attack_uses_random_monster_name(self):
         # Rogue 5.4.4 fight.c:set_mname() uses the hallucinated A-Z screen glyph as the monster name.
         game = new_game(seed=5034)
@@ -19253,6 +19300,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.p.no_command, 7 + rogue.SLEEPTIME)
         self.assertFalse(game.dashing)
 
+    def test_sleeping_gas_trap_waits_for_ack(self):
+        game = new_game(seed=611)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "sleeping gas trap")
+        game.traps[(x, y)] = kind
+        game.message_ack_pending = False
+
+        game.trigger_trap(x, y)
+
+        self.assertGreater(game.p.no_command, 0)
+        self.assertTrue(game.message_ack_pending)
+
     def test_rogue_544_bear_trap_adds_bear_time(self):
         # Rogue 5.4.4 move.c:be_trapped() T_BEAR uses no_move += BEARTIME.
         game = new_game(seed=62)
@@ -19479,6 +19539,27 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [True])
         self.assertEqual(game.p.st, 3)
+
+    def test_dart_trap_poison_strength_loss_waits_for_ack(self):
+        game = new_game(seed=671)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "dart trap")
+        game.traps[(x, y)] = kind
+        game.trap_hits = lambda bonus=0: True
+        game.save_vs_poison = lambda: False
+        game.p.hp = 10
+        game.p.st = 10
+        game.message_ack_pending = False
+        old_roll = rogue.roll
+        rogue.roll = lambda s: 1
+        try:
+            game.trigger_trap(x, y)
+        finally:
+            rogue.roll = old_roll
+
+        self.assertEqual(game.p.st, 9)
+        self.assertTrue(game.message_ack_pending)
 
     def test_rogue_544_move_helper_dart_poison_strength_matches_source(self):
         # Rogue 5.4.4 move.c:T_DART lowers strength only without sustain strength and failed poison save.
