@@ -9992,7 +9992,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[0], 0x100F0F)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[14], 0xCECDC3)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[15], 0xFFFCF0)
-        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[2], 0x282726)
+        self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[2], 0x4F3685)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[3], 0x343331)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[4], 0x6F6E69)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[5], 0x878580)
@@ -10011,13 +10011,75 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.TILE_CH[rogue.T_FLOOR][1], 7)
         self.assertEqual(rogue.ICOL[rogue.CAT_GOLD], 11)
         self.assertEqual(rogue.MEMORY_TILE_COLOR, 3)
+        self.assertEqual(rogue.UI_SUBTEXT_COL, 4)
+        self.assertEqual(rogue.palette_monster_color("flexoki_dark", "I"), 13)
+        self.assertEqual(rogue.palette_monster_color("flexoki_dark", "P"), 2)
+        self.assertEqual(rogue.palette_monster_color("flexoki_dark", "U"), 2)
+        self.assertEqual(rogue.palette_monster_color("flexoki_dark", "X"), 2)
 
     def test_flexoki_light_uses_readable_monster_colors(self):
         game = new_game(seed=242)
         game.settings.palette = "flexoki_light"
 
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[0], 0xE6E4D9)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[1], 0xDAD8CE)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[2], 0x5E409D)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[3], 0xB7B5AC)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[4], 0x878580)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[5], 0xB7B5AC)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[6], 0xA0AF54)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[7], 0x879A39)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[8], 0xBC5215)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[12], 0x24837B)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[11], 0xD0A215)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[13], 0x4385BE)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[14], 0x403E3C)
+        self.assertEqual(rogue.FLEXOKI_LIGHT_PALETTE[15], 0x282726)
+        self.assertEqual(rogue.PALETTE_THEMES["flexoki_light"].roles[rogue.ROLE_MEMORY], 5)
+        self.assertEqual(game.monster_color("B"), 6)
         self.assertEqual(game.monster_color("K"), rogue.palette_monster_color("flexoki_light", "K"))
+        self.assertEqual(game.monster_color("I"), 13)
+        self.assertEqual(game.monster_color("P"), 13)
+        self.assertEqual(game.monster_color("U"), 13)
         self.assertEqual(game.monster_color("X"), rogue.palette_monster_color("flexoki_light", "X"))
+
+    def test_flexoki_syntax_dark_keeps_dark_structure_with_400_accents(self):
+        game = new_game(seed=243)
+        game.settings.palette = "flexoki_syntax_dark"
+
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[3], 0x343331)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[4], 0x6F6E69)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[5], 0x878580)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[2], 0x4F3685)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[7], 0x879A39)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[8], 0xDA702C)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[9], 0xD14D41)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[10], 0xCE5D97)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[11], 0xD0A215)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[12], 0x3AA99F)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_DARK_PALETTE[13], 0x4385BE)
+        self.assertEqual(game.monster_color("I"), 13)
+        self.assertEqual(game.monster_color("P"), 2)
+        self.assertEqual(game.monster_color("U"), 2)
+        self.assertEqual(game.monster_color("X"), 10)
+
+    def test_flexoki_syntax_light_keeps_light_structure_with_400_accents(self):
+        game = new_game(seed=244)
+        game.settings.palette = "flexoki_syntax_light"
+
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[0], 0xE6E4D9)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[3], 0xB7B5AC)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[6], 0xA0AF54)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[7], 0xA0AF54)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[8], 0xDA702C)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[9], 0xD14D41)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[12], 0x3AA99F)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[13], 0x4385BE)
+        self.assertEqual(rogue.FLEXOKI_SYNTAX_LIGHT_PALETTE[14], 0x403E3C)
+        self.assertEqual(rogue.PALETTE_THEMES["flexoki_syntax_light"].roles[rogue.ROLE_MEMORY], 5)
+        self.assertEqual(game.monster_color("B"), 6)
+        self.assertEqual(game.monster_color("I"), 13)
+        self.assertEqual(game.monster_color("X"), 2)
 
     def test_assist_palette_toggle_changes_display_only(self):
         game = new_game(seed=241)
@@ -10424,6 +10486,21 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn((".", rogue.MEMORY_TILE_COLOR), calls)
         self.assertNotIn((".", 1), calls)
+
+    def test_light_palette_explored_memory_uses_darker_base_color(self):
+        game = new_game(seed=344)
+        game.settings.palette = "flexoki_light"
+        set_open_floor(game)
+        sx, sy = game.p.x, game.p.y
+        game.visible = set()
+        game.explored = {(sx, sy)}
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_zoom()
+
+        self.assertIn((".", 5), calls)
+        self.assertNotIn((".", 3), calls)
 
     def test_rogue_544_blind_player_still_draws_hero(self):
         # Rogue 5.4.4 misc.c:look() skips other cells while ISBLIND, but still draws hero.
@@ -10894,6 +10971,30 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual([color for _, color in calls], [3, 3, 4, 5, 14])
         self.assertEqual(rogue.MSG_TOAST_BRIGHT_TURNS, 0)
         self.assertEqual(rogue.MSG_TOAST_DIM_TURNS, 5)
+
+    def test_light_palette_message_toast_keeps_four_fade_stages_without_black(self):
+        game = new_game(seed=36)
+        game.settings.palette = "flexoki_light"
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game.msgs = ["faint", "dim", "soft", "fresh", "latest"]
+        game.msg_turns = [1, 2, 4, 5, 6]
+        game.turn = 6
+
+        game.draw_msgs()
+
+        calls = [(s, c) for s, c in calls if c != rogue.MSG_TOAST_SHADOW_COL and s not in (">", "!")]
+        self.assertEqual([color for _, color in calls], [3, 3, 5, 4, 14])
+        self.assertNotIn(6, [color for _, color in calls])
+        self.assertEqual(
+            [
+                rogue.msg_toast_color(0, "flexoki_light"),
+                rogue.msg_toast_color(1, "flexoki_light"),
+                rogue.msg_toast_color(2, "flexoki_light"),
+                rogue.msg_toast_color(4, "flexoki_light"),
+            ],
+            [14, 4, 5, 3],
+        )
 
     def test_flexoki_dark_keeps_yellow_highlight_and_item_category_colors(self):
         self.assertEqual(rogue.UI_HILITE_COL, 11)

@@ -262,7 +262,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0125"
+UI_BUILD = "260510_0411"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -421,7 +421,7 @@ ONLINE_UI_TEXT = {
     },
 }
 UI_TEXT_COL = 14
-UI_SUBTEXT_COL = 6
+UI_SUBTEXT_COL = 4
 UI_HILITE_COL = 11
 UI_SECTION_COL = 15
 UI_SELECTED_COL = UI_HILITE_COL
@@ -1482,7 +1482,15 @@ def start_inv():
     f=Item(CAT_FOOD,0)              # ration
     return rogue_init.initial_pack_order(f,a,w,b,ar),w,a
 
-def msg_toast_color(age):
+def msg_toast_color(age, palette_id=DEFAULT_PALETTE):
+    if palette_id == PALETTE_FLEXOKI_LIGHT:
+        if age <= 0:
+            return UI_TEXT_COL
+        if age <= 1:
+            return UI_SUBTEXT_COL
+        if age <= 3:
+            return palette_role_color(palette_id, ROLE_MEMORY)
+        return 3
     for max_age, color in MSG_TOAST_FADE_COLORS:
         if age <= max_age:
             return color
@@ -7848,7 +7856,7 @@ class Game:
     def memory_tile_color(self, tile):
         if tile == T_STAIR:
             return TILE_CH[T_STAIR][1]
-        return MEMORY_TILE_COLOR
+        return palette_role_color(self.ensure_settings().palette, ROLE_MEMORY)
 
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
@@ -7977,7 +7985,7 @@ class Game:
             age = 0 if not msg_turns else max(0, self.turn - msg_turns[src_i])
             if age > MSG_TOAST_DIM_TURNS:
                 continue
-            c = msg_toast_color(age)
+            c = msg_toast_color(age, self.ensure_settings().palette)
             parts = self.wrap_msg_toast_text(self.message_display_text(m))
             for pi, part in enumerate(parts):
                 rows.append((part, c, age, pi == 0, src_i))
