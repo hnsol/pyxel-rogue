@@ -233,7 +233,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260509_1807"
+UI_BUILD = "260509_1847"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -8106,74 +8106,43 @@ class Game:
         self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
         self.draw_info_tabs(bx + 8, by + 20, "Help")
         if self.lang == LANG_JA:
-            gamepad=[
-                self.ui_heading("ゲームパッド", UI_HEADING_SECTION),
-                "D-pad       移動/方向",
-                "Start       斜め補助",
-                "A 行動      A+B 足踏み",
-                "B メニュー  B+方向 ダッシュ",
-                "Select      持ちもの",
-                "持ちもの+Select 補助メニュー",
-                "Select+A    投げる",
-                "Select+B    探す",
-                "Select+方向 罠を見る",
+            controls=[
+                (self.ui_heading("基本操作", UI_HEADING_SECTION), self.ui_heading("キーボード専用", UI_HEADING_SECTION)),
+                ("Pad      Key      操作", "HJKL/YUBN 移動/斜め"),
+                ("D-pad    Arrow    移動", ".待機 </>階段 s探す"),
+                ("Start    Space    斜め", "^罠 t投げる d捨てる"),
+                ("A        Enter    行動", "i持物 I詳細 ?ヘルプ"),
+                ("A+B      Ent+Esc  足踏", "/識別 m移動 f攻撃"),
+                ("B        Esc      Menu", "a再実行 R外す q飲む"),
+                ("B+Dir    Sft+Dir  走る", "r読む e食べる z杖"),
+                ("Select   Tab      情報", "P指輪 o設定 Q終了"),
+                ("Info+Sel Info+Tab 補助", "w鎧 W武器 T脱ぐ"),
+                ("Sel+A    Tab+Ent  投げる", ""),
+                ("Sel+B    Tab+Esc  探す", ""),
+                ("Sel+Dir  Tab+Dir  罠", ""),
             ]
-            keyboard=[
-                self.ui_heading("キーボード", UI_HEADING_SECTION),
-                "矢印/HJKL   移動/方向",
-                "YUBN        斜め",
-                "Space       斜め補助",
-                "Enter 行動  Enter+Esc 足踏み",
-                "Esc メニュー Shift+方向 ダッシュ",
-                "Tab         持ちもの",
-                "持ちもの+Tab 補助メニュー",
-                "Tab+Enter   投げる",
-                "Tab+Esc 探す  Tab+方向 罠",
-            ]
-            commands_title = self.ui_heading("キーボードコマンド", UI_HEADING_SECTION)
         else:
-            gamepad=[
-                self.ui_heading("Gamepad", UI_HEADING_SECTION),
-                "D-pad       Move/Dir",
-                "Start       Diag assist",
-                "A Action    A+B Wait",
-                "B Menu      B+dir Dash",
-                "Select      Inventory",
-                "Inventory+Select Assist menu",
-                "Select+A    Throw",
-                "Select+B    Search",
-                "Select+dir  Inspect trap",
+            controls=[
+                (self.ui_heading("Basic Controls", UI_HEADING_SECTION), self.ui_heading("Keyboard Only", UI_HEADING_SECTION)),
+                ("Pad      Key      Action", "HJKL/YUBN Move/Diag"),
+                ("D-pad    Arrow    Move", ".Wait </>Stairs sSearch"),
+                ("Start    Space    Diag", "^Trap tThrow dDrop"),
+                ("A        Enter    Action", "iInv IItem ?Help"),
+                ("A+B      Ent+Esc  Wait", "/ Identify mMove f Fight"),
+                ("B        Esc      Menu", "a Again RRemove qQuaff"),
+                ("B+Dir    Sft+Dir  Dash", "rRead eEat zZap"),
+                ("Select   Tab      Info", "PPut oOpt QQuit"),
+                ("Info+Sel Info+Tab Sub", "wWear WWield TTake"),
+                ("Sel+A    Tab+Ent  Throw", ""),
+                ("Sel+B    Tab+Esc  Search", ""),
+                ("Sel+Dir  Tab+Dir  Trap", ""),
             ]
-            keyboard=[
-                self.ui_heading("Keyboard: Pad", UI_HEADING_SECTION),
-                "Arrows/HJKL Move/Dir",
-                "YUBN        Diagonal",
-                "Space       Diag assist",
-                "Enter Action Enter+Esc Wait",
-                "Esc Menu    Shift+dir Dash",
-                "Tab         Inventory",
-                "Inventory+Tab Assist menu",
-                "Tab+Enter   Throw",
-                "Tab+Esc Search  Tab+dir Trap",
-            ]
-            commands_title = self.ui_heading("Keyboard commands", UI_HEADING_SECTION)
         y=by+50
         line_h = FONT_LINE_H
-        for i in range(max(len(gamepad), len(keyboard))):
-            if i < len(gamepad):
-                ln=gamepad[i]; self.txt(bx+8,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
-            if i < len(keyboard):
-                ln=keyboard[i]; self.txt(bx+250,y,ln,HELP_HEADER_COL if ln.startswith("---") else HELP_TEXT_COL)
-            y+=line_h
-        self.txt(bx+8,y,commands_title,HELP_HEADER_COL); y+=line_h
-        commands=[
-            (". Wait </> Stairs s Search ^ Trap", "t Throw d Drop"),
-            ("i Inv I Inv item ? Help / Identify", "m Move f Fight a Again R Remove"),
-            ("q Quaff r Read e Eat z Zap P Put on o Options Q Quit", "w Wear W Wield T Take off"),
-        ]
-        for left, right in commands:
-            self.txt(bx+8,y,left,HELP_TEXT_COL)
-            self.txt(bx+250,y,right,HELP_TEXT_COL)
+        for left, right in controls:
+            col = HELP_HEADER_COL if left.startswith("---") else HELP_TEXT_COL
+            self.txt(bx+8,y,left,col)
+            self.txt(bx+250,y,right,col)
             y+=line_h
         self.txt(bx + 8, by + bh - 16, self.info_guide_label("Help"), UI_SUBTEXT_COL)
 
