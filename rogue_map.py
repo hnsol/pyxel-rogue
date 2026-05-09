@@ -15,13 +15,13 @@ ROOM_MAZE = "maze"
 T_VOID, T_FLOOR, T_HWALL, T_VWALL, T_DOOR, T_CORR, T_STAIR, T_TRAP = range(8)
 TILE_CH = {
     T_VOID:  (" ",  0),
-    T_FLOOR: (".", 12),
+    T_FLOOR: (".",  7),
     T_HWALL: ("-",  4),
     T_VWALL: ("|",  4),
-    T_DOOR:  ("+", 18),
+    T_DOOR:  ("+",  8),
     T_CORR:  ("#",  5),
-    T_STAIR: ("%", 18),
-    T_TRAP:  ("^", 28),
+    T_STAIR: ("%",  8),
+    T_TRAP:  ("^", 11),
 }
-MEMORY_TILE_COLOR = 2
+MEMORY_TILE_COLOR = 3
 WALKABLE = {T_FLOOR, T_DOOR, T_CORR, T_STAIR, T_TRAP}

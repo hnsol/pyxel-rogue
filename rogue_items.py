@@ -20,14 +20,14 @@ ISYM = {
     CAT_AMULET: ",",
 }
 ICOL = {
-    CAT_POT: 27,
-    CAT_SCR: 9,
-    CAT_FOOD: 23,
-    CAT_WPN: 6,
-    CAT_ARM: 5,
-    CAT_RING: 14,
-    CAT_STICK: 26,
-    CAT_GOLD: 29,
-    CAT_AMULET: 29,
+    CAT_POT: 13,
+    CAT_SCR: 14,
+    CAT_FOOD: 11,
+    CAT_WPN: 5,
+    CAT_ARM: 4,
+    CAT_RING: 7,
+    CAT_STICK: 12,
+    CAT_GOLD: 11,
+    CAT_AMULET: 11,
 }
 HALLU_THINGS = ["!", "?", "=", "/", ":", ")", "]", "%", "*", ","]

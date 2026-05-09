@@ -129,13 +129,41 @@ from rogue_palettes import (
     GBC_HIGH_CONTRAST_PALETTE,
     GBC_PALETTE,
     FLEXOKI_LIGHT_PALETTE,
+    FLEXOKI_SYNTAX_DARK_PALETTE,
+    FLEXOKI_SYNTAX_LIGHT_PALETTE,
+    MONSTER_AQUATIC,
+    MONSTER_BASIC,
+    MONSTER_BEAST,
+    MONSTER_DEADLY,
+    MONSTER_MAGIC,
+    MONSTER_MIMIC,
+    MONSTER_THIEF,
+    MONSTER_UNDEAD,
+    PALETTE_COLOR_LIMIT,
     PALETTE_FLEXOKI_DARK,
     PALETTE_FLEXOKI_LIGHT,
+    PALETTE_FLEXOKI_SYNTAX_DARK,
+    PALETTE_FLEXOKI_SYNTAX_LIGHT,
     PALETTE_GBC,
     PALETTE_GBC_HIGH_CONTRAST,
     PALETTE_IDS,
     PALETTE_LABELS,
+    PALETTE_THEMES,
     PALETTES,
+    REQUIRED_MONSTER_ROLES,
+    REQUIRED_PALETTE_ROLES,
+    ROLE_DOOR,
+    ROLE_FLOOR,
+    ROLE_GOLD,
+    ROLE_HILITE,
+    ROLE_MEMORY,
+    ROLE_PLAYER,
+    ROLE_SECTION,
+    ROLE_TEXT,
+    ROLE_TRAP,
+    ROLE_WALL,
+    palette_role_color,
+    palette_theme,
 )
 from rogue_scores import (
     SCOREBOARD_PERIOD_LOCAL,
@@ -234,7 +262,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260509_1922"
+UI_BUILD = "260510_0027"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -392,12 +420,12 @@ ONLINE_UI_TEXT = {
         "Ranking refreshed. Guest mode.": "ランキング更新。ゲストモード。",
     },
 }
-UI_TEXT_COL = 30
+UI_TEXT_COL = 14
 UI_SUBTEXT_COL = 6
-UI_HILITE_COL = 23
-UI_SECTION_COL = 31
+UI_HILITE_COL = 11
+UI_SECTION_COL = 15
 UI_SELECTED_COL = UI_HILITE_COL
-UI_RESTORED_CURSOR_COL = 27
+UI_RESTORED_CURSOR_COL = 7
 SCOREBOARD_HILITE_COL = UI_HILITE_COL
 SCOREBOARD_TEXT_COL = UI_TEXT_COL
 SCOREBOARD_DIM_COL = UI_SUBTEXT_COL
@@ -451,21 +479,21 @@ TITLE_BG_EXTRA_PALETTE = (
     0x010103, 0x010102, 0x010101, 0x010100, 0x010002, 0x010001, 0x010000, 0x00030A,
     0x000102, 0x000002, 0x000301, 0x000101, 0x000001, 0x000300, 0x000100, 0x000000,
 )
-TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
+TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
 TITLE_MENU_X = 248
 TITLE_MENU_Y = 158
 TITLE_MENU_W = 174
 TITLE_MENU_H = 84
-TITLE_MENU_SELECTED_COL = 31
+TITLE_MENU_SELECTED_COL = 15
 TITLE_MENU_TEXT_COL = 5
-TITLE_MENU_BORDER_COL = 28
+TITLE_MENU_BORDER_COL = 13
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
 DEST_PLAYER = "player"
 DEST_GOLD = "gold"
 HELP_HEADER_COL = UI_SECTION_COL
-HELP_TEXT_COL = 30
+HELP_TEXT_COL = UI_TEXT_COL
 
 # ===========================================================
 #  Text catalog
@@ -799,12 +827,25 @@ BESTIARY = [
     MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,"", carry=30),
     MonsterSpec("Z","zombie",2,8,"1x8",6,7,"mean"),
 ]
-MCOL = {"A":13,"B": 9,"C":14,"D":23,"E":14,"F":13,"G":23,"H": 6,"I":27,
-        "J":23,"K": 9,"L":26,"M":22,"N":26,"O": 6,"P":26,"Q":14,"R":22,
-        "S":14,"T":14,"U":26,"V":23,"W":26,"X":27,"Y":14,"Z": 6}
-PALETTE_MONSTER_COLORS = {
-    PALETTE_FLEXOKI_LIGHT: {"K": 30},
+MROLE = {
+    "A": MONSTER_AQUATIC, "B": MONSTER_BEAST, "C": MONSTER_BASIC, "D": MONSTER_DEADLY,
+    "E": MONSTER_BEAST, "F": MONSTER_AQUATIC, "G": MONSTER_UNDEAD, "H": MONSTER_BASIC,
+    "I": MONSTER_MAGIC, "J": MONSTER_DEADLY, "K": MONSTER_BEAST, "L": MONSTER_THIEF,
+    "M": MONSTER_DEADLY, "N": MONSTER_THIEF, "O": MONSTER_BASIC, "P": MONSTER_MAGIC,
+    "Q": MONSTER_BEAST, "R": MONSTER_DEADLY, "S": MONSTER_BEAST, "T": MONSTER_BEAST,
+    "U": MONSTER_MAGIC, "V": MONSTER_UNDEAD, "W": MONSTER_UNDEAD, "X": MONSTER_MIMIC,
+    "Y": MONSTER_BEAST, "Z": MONSTER_UNDEAD,
 }
+
+
+def palette_monster_color(palette_id, sym):
+    theme = palette_theme(palette_id)
+    if sym in theme.monster_overrides:
+        return theme.monster_overrides[sym]
+    return theme.monster_roles.get(MROLE.get(sym, MONSTER_BASIC), theme.roles[ROLE_TEXT])
+
+
+MCOL = {sym: palette_monster_color(DEFAULT_PALETTE, sym) for sym in MROLE}
 
 # 8-direction vectors
 DIR8 = {
@@ -1672,7 +1713,7 @@ class Game:
         self.ensure_settings().auto_pickup = bool(value)
 
     def apply_palette(self):
-        palette = PALETTES.get(self.ensure_settings().palette, GBC_PALETTE)
+        palette = PALETTES.get(self.ensure_settings().palette, FLEXOKI_DARK_PALETTE)
         self.apply_palette_values(palette)
 
     def apply_title_palette(self):
@@ -1719,8 +1760,7 @@ class Game:
         return bool(profile.get("server_token")) and not profile.get("local_only", True)
 
     def monster_color(self, sym):
-        overrides = PALETTE_MONSTER_COLORS.get(self.ensure_settings().palette, {})
-        return overrides.get(sym, MCOL.get(sym, 9))
+        return palette_monster_color(self.ensure_settings().palette, sym)
 
     def random_thing_sym(self, depth=None):
         # Rogue 5.4.4 misc.c:rnd_thing() omits Amulet before AMULETLEVEL.
@@ -7576,7 +7616,7 @@ class Game:
         y = 118
         pyxel.dither(alpha)
         for i, line in enumerate(lines):
-            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, 23 if i == 0 else 30)
+            self.txt(SCR_W // 2 - len(line) * 3, y + i * 14, line, UI_HILITE_COL if i == 0 else UI_TEXT_COL)
         pyxel.dither(1.0)
 
     def draw_title_screen(self):
@@ -7822,7 +7862,7 @@ class Game:
                 sx = ZV_X + vx*TILE_W
                 sy = ZV_Y + vy*TILE_H
                 if blind and (mx, my) == (px, py):
-                    self.txt(sx+1, sy+1, "@", 30)
+                    self.txt(sx+1, sy+1, "@", UI_TEXT_COL)
                     continue
                 vis = (mx,my) in self.visible and not blind
                 exp = (mx,my) in self.explored and not blind
@@ -7830,7 +7870,7 @@ class Game:
                 if vis:
                     mo=self.mon_at(mx,my)
                     if mx==px and my==py:
-                        self.txt(sx+1,sy+1,"@",30)
+                        self.txt(sx+1,sy+1,"@",UI_TEXT_COL)
                     elif mo and (self.can_see_monster(mo) or self.can_detect_monsters()):
                         sym = self.visible_monster_sym(mo) if self.can_see_monster(mo) else self.detected_monster_sym(mo)
                         self.txt(sx+1,sy+1,sym,self.monster_color(mo.sym))
@@ -7865,7 +7905,7 @@ class Game:
         self.clamp_player_hp()
         p=self.p
         hp_low = p.hp <= p.max_hp // 3
-        hp_fill_col = 22 if hp_low else 21
+        hp_fill_col = 9 if hp_low else TILE_CH[T_STAIR][1]
         pyxel.rect(0, SCR_H - 30, SCR_W, 30, 1)
         self.txt_segments_right(
             SCR_W - 16,
@@ -7875,7 +7915,7 @@ class Game:
                 (str(p.depth), UI_TEXT_COL),
                 ("  ", UI_SUBTEXT_COL),
                 ("G:", UI_SUBTEXT_COL),
-                (str(p.gold), 29),
+                (str(p.gold), 11),
             ),
         )
 
@@ -7885,7 +7925,7 @@ class Game:
         bw = 108
         bx = ZV_X + 18
         by = hp_y + 3
-        hp_frame_col = 22 if hp_low and (pyxel.frame_count // 30) % 2 == 0 else UI_SUBTEXT_COL
+        hp_frame_col = 9 if hp_low and (pyxel.frame_count // 30) % 2 == 0 else UI_SUBTEXT_COL
         pyxel.rectb(bx - 1, by - 1, bw + 2, 7, hp_frame_col)
         pyxel.rect(bx, by, bw, 5, 1)
         if p.max_hp>0:
@@ -7895,8 +7935,8 @@ class Game:
             cur_w=max(0,int(bw*p.hp/p.max_hp))
             if self.hp_damage_turn == self.turn and self.hp_damage_from is not None:
                 old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
-                pyxel.rect(bx+cur_w,by,old_w-cur_w,5,19)
-            pyxel.rect(bx,by,cur_w,5,22 if hp_low else TILE_CH[T_STAIR][1])
+                pyxel.rect(bx+cur_w,by,old_w-cur_w,5,10)
+            pyxel.rect(bx,by,cur_w,5,9 if hp_low else TILE_CH[T_STAIR][1])
             self.last_hp_seen = p.hp
         self.txt(bx + bw + 6, hp_y, f"{p.hp}({p.max_hp})", UI_TEXT_COL)
         stat_segments = (
@@ -7926,7 +7966,7 @@ class Game:
         cond = " ".join(self.hud_condition_labels())
         if cond:
             max_cond_w = max(0, equip_left - ZV_X - 8)
-            self.txt(ZV_X, equip_y, self.ellipsize_to_width(cond, max_cond_w), 22)
+            self.txt(ZV_X, equip_y, self.ellipsize_to_width(cond, max_cond_w), 9)
         self.txt_segments_right(SCR_W - 16, equip_y, equip_segments)
 
     def draw_msgs(self):
