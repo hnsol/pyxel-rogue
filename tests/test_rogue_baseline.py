@@ -6713,6 +6713,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.item_name(armor), "+1 ring mail [protection 4] (being worn)")
         self.assertEqual(game.equip_name(armor), "+1 ring mail [protection 4]")
 
+        game.lang = rogue.LANG_JA
+        self.assertEqual(game.item_name(armor), "+1 かたびら [防護 4] （着ている）")
+        self.assertEqual(game.equip_name(armor), "+1 かたびら [防護 4]")
+
     def test_rogue_544_wear_rejects_new_armor_until_current_armor_is_removed(self):
         # Rogue 5.4.4 armor.c:wear() rejects cur_armor != NULL.
         game = new_game(seed=8)
@@ -9384,6 +9388,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game = new_game(seed=7)
         self.assertEqual(game.item_name(game.p.wpn), "+1,+1 mace (weapon in hand)")
+        game.lang = rogue.LANG_JA
+        self.assertEqual(game.item_name(game.p.wpn), "+1,+1 ほこ （使っている）")
 
     def test_melee_combat_messages_omit_damage_numbers_for_v5_style(self):
         game = new_game(seed=9)
@@ -14981,6 +14987,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertTrue(armor.known)
         self.assertEqual(game.item_name(armor), "-2 ring mail [protection 1] (being worn)")
+
+        game.lang = rogue.LANG_JA
+        self.assertEqual(game.item_name(armor), "-2 かたびら [防護 1] （着ている）")
 
     def test_arrow_with_bow_uses_hurl_damage_and_bow_pluses(self):
         game = new_game(seed=40)

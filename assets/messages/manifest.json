@@ -1065,6 +1065,42 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "item.being_worn": {
+    "source": "rogue.py:item_name",
+    "params": [],
+    "ja_status": "matched",
+    "origin": "things.c:inv_name()",
+    "ja_source": "mesg_E:65"
+  },
+  "item.on_left_hand": {
+    "source": "rogue.py:item_name",
+    "params": [],
+    "ja_status": "matched",
+    "origin": "things.c:inv_name()",
+    "ja_source": "mesg_E:66"
+  },
+  "item.on_right_hand": {
+    "source": "rogue.py:item_name",
+    "params": [],
+    "ja_status": "matched",
+    "origin": "things.c:inv_name()",
+    "ja_source": "mesg_E:67"
+  },
+  "item.protection": {
+    "source": "rogue.py:IdentTable.name",
+    "params": [
+      "value"
+    ],
+    "ja_status": "manual",
+    "origin": "things.c:inv_name()"
+  },
+  "item.weapon_in_hand": {
+    "source": "rogue.py:item_name",
+    "params": [],
+    "ja_status": "matched",
+    "origin": "things.c:inv_name()",
+    "ja_source": "mesg_E:64"
+  },
   "list.ran_out_of_memory_after_count_items": {
     "source": "list.c:104",
     "params": [
@@ -3166,8 +3202,8 @@
     "origin": "msg()"
   },
   "__summary__": {
-        "en_key_count": 430,
-        "ja_key_count": 430,
+        "en_key_count": 435,
+        "ja_key_count": 435,
     "ja_missing_count": 0,
     "ja_missing_keys": [],
     "placeholder_vocabulary": [

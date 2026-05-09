@@ -320,7 +320,7 @@ Rogue2.Official の `mesg_E` / `mesg_J` / `COPYING` は `vendor/rogue2_official_
 
 `PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で日本語表示を選べ、ゲーム中も Select(Back) 補助メニューの Language から日英をトグルできる。初回オンライン同期導線では操作ヒント行の下に `Select/L Change Language（言語切替）` を表示し、ゲームパッドSelectまたはキーボードLで日英を切り替えられる。言語切り替えはターンを消費せず、過去ログは再翻訳しない。切り替え後の新規ログ、メニュー項目、アイテム名、オンラインスコアボード表示などが現在言語に従う。
 
-ゲームログ、補助メニュー、罠名表示、主要 terms、Info / Inventory タブ見出しとガイド文は JSON 駆動の `TextCatalog` へ移行した。HUD の一部、Help、Death などの固定表示文言は後続タスクで用途別 API に寄せる。
+ゲームログ、補助メニュー、罠名表示、主要 terms、Info / Inventory タブ見出しとガイド文、Inventory の装備注記と防具 protection 表記は JSON 駆動の `TextCatalog` へ移行した。HUD の一部、Help、Death などの固定表示文言は後続タスクで用途別 API に寄せる。
 
 HUD の短縮名は表示制約が強いため、通常のアイテム名とは別に `TextCatalog.hud_item_kind()` を入口にする。実データは `assets/terms` の `hud` namespace に置き、呼び出し側は通常名、HUD短縮名、メッセージ、メニュー文言を混ぜず、用途別の catalog API を通す。
 

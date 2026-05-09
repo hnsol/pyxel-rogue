@@ -234,7 +234,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0104"
+UI_BUILD = "260510_0116"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_KINSOKU_LINE_START = "、。！？"
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -992,7 +992,8 @@ class IdentTable:
             if not getattr(it, "known", True):
                 return f"{nm}{label}"
             protection = 10 - (it.data["ac"] - e)
-            return f"{'+' if e>=0 else ''}{e} {nm} [protection {protection}]{label}"
+            prot = TextCatalog.msg(lang, "item.protection", value=protection)
+            return f"{'+' if e>=0 else ''}{e} {nm} [{prot}]{label}"
         if it.cat==CAT_RING:
             spec=RINGS[it.kind]
             if s.rk[it.kind]:
@@ -1841,11 +1842,11 @@ class Game:
         return rows + ([line] if line else [""])
 
     def item_name(self,it, describe=True):
-        name=self.ident.name(it)
-        if describe and it is self.p.wpn: return f"{name} (weapon in hand)"
-        if describe and it is self.p.arm: return f"{name} (being worn)"
-        if describe and it is self.p.ring_l: return f"{name} (on left hand)"
-        if describe and it is self.p.ring_r: return f"{name} (on right hand)"
+        name=self.ident.name(it, self.lang)
+        if describe and it is self.p.wpn: return f"{name} {TextCatalog.msg(self.lang, 'item.weapon_in_hand')}"
+        if describe and it is self.p.arm: return f"{name} {TextCatalog.msg(self.lang, 'item.being_worn')}"
+        if describe and it is self.p.ring_l: return f"{name} {TextCatalog.msg(self.lang, 'item.on_left_hand')}"
+        if describe and it is self.p.ring_r: return f"{name} {TextCatalog.msg(self.lang, 'item.on_right_hand')}"
         return name
 
     def equip_name(self,it):
