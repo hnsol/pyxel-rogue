@@ -18,7 +18,7 @@
 - ✅ Rogue 5.4.4 `pickup` オプション相当の自動ピックアップON/OFF
 - ✅ 探索済み視界外セルで床上アイテムを表示し、モンスターは非表示にする
 - ✅ 投げたアイテムの非ブロッキング飛翔アニメーション
-- ✅ ゲーム中の日英切り替え入口（Select補助メニューの Language）
+- ✅ ゲーム中の日英切り替え入口（Info / Settings の Language）
 - ✅ Rogue 5.4.4 / Pyxel 固有ログの JSON メッセージカタログ化（`assets/messages/*.json`）
 - ✅ Rogue 5.4.4 `chase.c` / `monsters.c` / `fight.c` 寄りのモンスターAI基礎（running、起床、扉接近、R/I特殊攻撃、飛行追加移動）
 
@@ -93,7 +93,7 @@
 - [x] **罠（Trap）8種** — 隠れていて search で発見、踏むと発動
   - trap door, arrow, sleeping gas, bear trap,
     teleport, dart, rust, mysterious
-- [x] **search コマンド** — Select+B / 補助メニュー / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
+- [x] **search コマンド** — Select+B / Action menu / `S` から周囲8マス、A空押しから正面1マスを探索し、罠・隠しドア・隠し通路を発見する hook として整備
 - [x] **隠しドア・隠し通路**
 - [x] **Amulet of Yendor** — 26階で出現、1階帰還で勝利
 - [x] 勝利画面 / 勝利状態（Amulet 所持で1階帰還した場合）
@@ -474,7 +474,7 @@
 - [x] 通常8方向移動の整理
 - [x] Start押下中だけ斜め補助モードにする
 - [x] 斜め補助モード中は左上/右上/右下/左下の同時押しだけを NW/NE/SE/SW として扱い、上下左右単体をOFFにする
-- [x] 斜め補助モード中でもメニュー / アイテム選択 / 補助メニューの上下カーソル操作は受け付ける
+- [x] 斜め補助モード中でもメニュー / アイテム選択 / Settingsの上下カーソル操作は受け付ける
 - [x] 斜め補助モード ON/OFF をステータス欄に表示
 - [x] D-pad/矢印の横→斜め入力が横移動+斜め移動に分裂する問題を1フレーム保留で抑制
 - [x] B短押しメニュー/キャンセルとB長押しダッシュの競合解消
@@ -493,13 +493,13 @@
 - [x] Rogue 5.4.4 `doctor()` 相当のHP自然回復
 - [x] Rogue 5.4.4 `stomach()` 相当の空腹緩和
 - [x] ゲームパッド XYLR / ショルダー依存の撤去（キーボード操作は正式対応として維持）
-- [x] Select(Back) の補助メニュー化（旧方針ではMap含む）
-- [x] Select(Back) 補助メニューから Map / Status / Inventory / Help を削除し、Search / Trap / Pickup / Language / Palette / Quit に整理
+- [x] Select(Back) を Info（Inventory / Log / Settings / Help）へ整理
+- [x] 旧補助メニューを廃止し、Search / Trap / Quit は Action menu、Auto pickup / Language / Palette は Settings へ整理
 - [x] Select+A quick throw / Select+B search に整理
 - [x] Bメニューを移植UI層の3列×4行ラジアル風配置にし、初期カーソルを Eat にする
-- [x] Select単押しをInfo（持ちもの / Log / Help）、Info中Selectを補助メニューに整理
-- [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / Tab+方向 / 補助メニュー Trap / `^` then direction）
-- [x] Assist menu からの日英トグル
+- [x] Select単押しをInfo（持ちもの / Log / Settings / Help）、Info中Selectを次タブに整理
+- [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / Tab+方向 / Action menu Trap / `^` then direction）
+- [x] Settings からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理
 - [x] Rogue 5.4.4 `passages.c` 準拠の通常部屋通路生成へ修正
 - [x] Rogue 5.4.4 `new_level.c:new_level()` / `passages.c:do_passages()` 準拠で、原作にない生成後の補修通路を削除
@@ -540,7 +540,7 @@
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
 - [x] Rogue2.Official `mesg_J` / `mesg_E` / `COPYING` を参考データとして `vendor/rogue2_official_messages/` に保持
 - [x] HUD短縮名を `TextCatalog.hud_item_kind()` 経由にする
-- [x] 日本語/英語切替（ゲームログ / 補助メニュー / 罠名を JSON カタログ化、umplus_j10r は CJK 対応済み）
+- [x] 日本語/英語切替（ゲームログ / Settings / 罠名を JSON カタログ化、umplus_j10r は CJK 対応済み）
 - [ ] HUD / Inventory / Help / Death の文言辞書化
 - [x] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする
 - [ ] BGM 導入方式検討

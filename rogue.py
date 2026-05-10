@@ -155,6 +155,8 @@ from rogue_palettes import (
     ROLE_CORRIDOR,
     ROLE_DOOR,
     ROLE_FLOOR,
+    ROLE_FLAG_OFF,
+    ROLE_FLAG_ON,
     ROLE_GOLD,
     ROLE_HILITE,
     ROLE_HP_LOW_FRAME_DIM,
@@ -164,6 +166,10 @@ from rogue_palettes import (
     ROLE_MEMORY,
     ROLE_PLAYER,
     ROLE_SECTION,
+    ROLE_STATUS_BAD,
+    ROLE_STATUS_BUFF,
+    ROLE_STATUS_MIND,
+    ROLE_STATUS_WARN,
     ROLE_TEXT,
     ROLE_TRAP,
     ROLE_WALL,
@@ -234,6 +240,7 @@ from rogue_ui import (
     MENU_ACTIONS,
     PAD_ACTION_GRID,
     PACK_GRID_MAX_ROWS,
+    action_index,
     pack_grid_move,
     pack_grid_pos,
     pack_grid_shape,
@@ -263,12 +270,13 @@ from rogue_ui import (
     ST_QUIT_CONFIRM,
     ST_READY,
     ST_SCORE,
+    ST_SETTINGS,
     ST_TITLE,
     ST_WIN,
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_2207"
+UI_BUILD = "260510_2314"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -1585,7 +1593,7 @@ def _dominant_msg_toast_dir(dx, dy):
         return (sx, 0)
     return (0, sy)
 
-def pick_msg_toast_block(home, last_intent_dir=(0, 0)):
+def pick_msg_toast_block(home, last_intent_dir=(0, 0), avoid=()):
     dx, dy = last_intent_dir
     sx, sy = _dominant_msg_toast_dir(dx, dy)
     if sx:
@@ -1607,9 +1615,15 @@ def pick_msg_toast_block(home, last_intent_dir=(0, 0)):
             (home[0] - 1, home[1]),
             (home[0] + 1, home[1]),
         )
+    avoid = set(avoid)
     for block in priority:
-        if _valid_msg_toast_block(block) and block != home:
+        if _valid_msg_toast_block(block) and block != home and block not in avoid:
             return block
+    for row in range(3):
+        for col in range(3):
+            block = (col, row)
+            if block != home and block not in avoid:
+                return block
     raise RuntimeError("no valid message toast block")
 
 def msg_toast_block_origin(block, rows=1):
@@ -2065,6 +2079,44 @@ class Game:
             eff.append(names["levit"])
         return eff
 
+    def hud_condition_chips(self):
+        p = self.p
+        chips = []
+        labels = self.hud_condition_labels()
+        offset = 0
+        if p.state == "hungry":
+            chips.append((labels[0], ROLE_STATUS_WARN))
+            offset = 1
+        elif p.state == "weak":
+            chips.append((labels[0], ROLE_STATUS_WARN))
+            offset = 1
+        elif p.state == "faint":
+            chips.append((labels[0], ROLE_STATUS_BAD))
+            offset = 1
+        rest = labels[offset:]
+        roles = []
+        if p.confused > 0:
+            roles.append(ROLE_STATUS_MIND)
+        if p.blind > 0:
+            roles.append(ROLE_STATUS_MIND)
+        if p.haste > 0:
+            roles.append(ROLE_STATUS_BUFF)
+        if p.hallucinating > 0:
+            roles.append(ROLE_STATUS_MIND)
+        if p.levitating > 0:
+            roles.append(ROLE_STATUS_BUFF)
+        chips.extend(zip(rest, roles))
+        return chips
+
+    def hud_mode_chips(self):
+        return (
+            ("P", ROLE_FLAG_ON if self.auto_pickup else ROLE_FLAG_OFF),
+            ("X", ROLE_FLAG_ON if self.diag_assist else ROLE_FLAG_OFF),
+        )
+
+    def ui_role_color(self, role):
+        return palette_role_color(self.ensure_settings().palette, role)
+
     def expire_visible_msg_toast(self):
         if len(getattr(self, "msg_turns", [])) != len(self.msgs):
             self.msg_turns = [self.turn] * len(self.msgs)
@@ -2085,6 +2137,7 @@ class Game:
         self.gitems = []; self.mons = []; self.turn = 0
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
+        self.settings_cursor = 0
         self.cact = None; self.dact = None; self.fitems = []
         self.last_item_by_action = {}
         self.item_cursor_restored = False
@@ -2978,7 +3031,7 @@ class Game:
             self.msg_toast_intent_history = history
             self.msg_toast_reposition_needed = True
 
-    def msg_toast_block_with_margin_contains_player(self, margin=1):
+    def msg_toast_block_with_margin_contains_player(self, margin=2):
         block = getattr(self, "msg_toast_block", None)
         if block is None or not getattr(self, "msgs", None):
             return False
@@ -2991,7 +3044,14 @@ class Game:
 
     def move_msg_toast_if_player_enters_margin(self):
         if self.msg_toast_block_with_margin_contains_player():
-            self.refresh_msg_toast_block()
+            current = self.msg_toast_block
+            home = msg_toast_home_block(self.p.x, self.p.y)
+            self.msg_toast_block = pick_msg_toast_block(
+                home,
+                getattr(self, "last_intent_dir", (0, 0)),
+                avoid=(current,),
+            )
+            self.msg_toast_reposition_needed = False
 
     def msg(self,t,**kw):
         self._append_msg(TextCatalog.msg(self.lang,t,**kw))
@@ -5057,7 +5117,7 @@ class Game:
 
     def open_options_command(self):
         self.command_look()
-        self.open_aux()
+        self.open_settings()
         self.command_look_done = False
 
     def start_move_on_command(self):
@@ -5145,6 +5205,7 @@ class Game:
     def legal_space_command_press(self):
         return (
             self.kp(getattr(pyxel, "KEY_SPACE", None))
+            and not self.start_held()
             and not self.ctrl_held()
             and not self.dir_held_any()
         )
@@ -5615,6 +5676,16 @@ class Game:
         self.last_menu_action = aname if aname in self.restorable_menu_actions() else None
         if aname=="Discoveries":
             self.open_discoveries()
+            return
+        if aname=="Search":
+            self.st = ST_PLAY
+            self.do_search()
+            return
+        if aname=="Trap":
+            self.start_trap_inspect()
+            return
+        if aname=="Quit":
+            self.quit_command()
             return
         self.start_item_action(aname)
 
@@ -7323,6 +7394,8 @@ class Game:
             self.upd_info()
         elif self.st==ST_LOG:
             self.upd_log()
+        elif self.st==ST_SETTINGS:
+            self.upd_settings()
         elif self.st==ST_HELP:
             self.upd_help()
 
@@ -7627,8 +7700,7 @@ class Game:
             return
 
     def open_aux(self):
-        self.st=ST_AUX; self.acur=0; self.dir_pending=None
-        self.b_menu_guard=self.kh(pyxel.GAMEPAD1_BUTTON_B)
+        self.open_settings()
 
     def log_visible_rows(self):
         return max(1, (SCR_H - 98) // 11)
@@ -7639,11 +7711,17 @@ class Game:
         max_scroll = max(0, len(getattr(self, "msgs", [])) - self.log_visible_rows())
         self.log_scroll = max_scroll
 
+    def open_settings(self):
+        self.st = ST_SETTINGS
+        self.dir_pending = None
+        self.settings_focus = "row"
+        self.settings_cursor = max(0, min(getattr(self, "settings_cursor", 0), len(self.settings_rows()) - 1))
+
     def info_tab_index(self):
-        return {ST_INVENTORY: 0, ST_LOG: 1, ST_HELP: 2}.get(self.st, 0)
+        return {ST_INVENTORY: 0, ST_LOG: 1, ST_SETTINGS: 2, ST_HELP: 3}.get(self.st, 0)
 
     def set_info_tab_index(self, index):
-        tabs = (ST_INVENTORY, ST_LOG, ST_HELP)
+        tabs = (ST_INVENTORY, ST_LOG, ST_SETTINGS, ST_HELP)
         previous = self.st
         self.st = tabs[index % len(tabs)]
         if self.st == ST_LOG:
@@ -7652,14 +7730,17 @@ class Game:
                 self.log_scroll = max_scroll
             else:
                 self.log_scroll = max(0, min(getattr(self, "log_scroll", max_scroll), max_scroll))
+        if self.st == ST_SETTINGS:
+            self.settings_focus = "row"
+            self.settings_cursor = max(0, min(getattr(self, "settings_cursor", 0), len(self.settings_rows()) - 1))
 
-    def upd_info_common(self):
+    def upd_info_common(self, allow_horizontal=True):
         dx = self.menu_horizontal_press()
-        if dx:
+        if dx and allow_horizontal:
             self.set_info_tab_index(self.info_tab_index() + dx)
             return True
         if self.btn_back():
-            self.open_aux()
+            self.set_info_tab_index(self.info_tab_index() + 1)
             return True
         if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
             self.st = ST_PLAY
@@ -7698,6 +7779,51 @@ class Game:
 
     def upd_help(self):
         self.upd_info_common()
+
+    def settings_rows(self):
+        return ("Auto pickup", "Language", "Palette")
+
+    def settings_row_index(self, name):
+        return self.settings_rows().index(name)
+
+    def setting_value_label(self, name):
+        if name == "Auto pickup":
+            return TextCatalog.msg(self.lang, "settings.on" if self.auto_pickup else "settings.off")
+        if name == "Language":
+            return "日本語" if self.lang == LANG_JA else "English"
+        if name == "Palette":
+            return PALETTE_LABELS[self.ensure_settings().palette]
+        return ""
+
+    def change_setting(self, delta):
+        row = self.settings_rows()[getattr(self, "settings_cursor", 0)]
+        if row == "Auto pickup":
+            self.toggle_auto_pickup()
+        elif row == "Language":
+            self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN, persist=True)
+        elif row == "Palette":
+            settings = self.ensure_settings()
+            i = PALETTE_IDS.index(settings.palette) if settings.palette in PALETTE_IDS else 0
+            settings.palette = PALETTE_IDS[(i + delta) % len(PALETTE_IDS)]
+            self.apply_palette()
+            self.persist_settings()
+
+    def upd_settings(self):
+        if getattr(self, "settings_focus", "row") == "value" and self.btn_overlay_cancel():
+            self.settings_focus = "row"
+            return
+        if self.btn_a():
+            self.settings_focus = "row" if getattr(self, "settings_focus", "row") == "value" else "value"
+            return
+        dy = self.menu_vertical_press()
+        if dy and getattr(self, "settings_focus", "row") == "row":
+            self.settings_cursor = (getattr(self, "settings_cursor", 0) + dy) % len(self.settings_rows())
+            return
+        dx = self.menu_horizontal_press()
+        if dx and getattr(self, "settings_focus", "row") == "value":
+            self.change_setting(dx)
+            return
+        self.upd_info_common(allow_horizontal=getattr(self, "settings_focus", "row") == "row")
 
     def upd_aux(self):
         dy=self.menu_vertical_press()
@@ -8153,7 +8279,8 @@ class Game:
         hp_label = TextCatalog.hud_label(self.lang, "hp")
         bw = 108
         bx = ZV_X + 18
-        self.txt(max(0, bx - 6 - self.ui_text_width(hp_label)), hp_y, hp_label, UI_SUBTEXT_COL)
+        hp_label_x = max(0, bx - 6 - self.ui_text_width(hp_label))
+        self.txt(hp_label_x, hp_y, hp_label, UI_SUBTEXT_COL)
         by = hp_y + 3
         hp_frame_col = self.hp_frame_color(hp_low)
         pyxel.rectb(bx - 1, by - 2, bw + 2, 9, hp_frame_col)
@@ -8193,10 +8320,22 @@ class Game:
             (self.hud_armor_bonus(p.arm), UI_SUBTEXT_COL),
         )
         equip_left = SCR_W - 16 - self.ui_segments_width(equip_segments)
-        cond = " ".join(self.hud_condition_labels())
-        if cond:
-            max_cond_w = max(0, equip_left - ZV_X - 8)
-            self.txt(ZV_X, equip_y, self.ellipsize_to_width(cond, max_cond_w), 9)
+        mode_segments = [(text, self.ui_role_color(role)) for text, role in self.hud_mode_chips()]
+        mode_w = self.ui_segments_width(mode_segments)
+        mode_x = max(ZV_X, hp_label_x + self.ui_text_width(hp_label) - mode_w)
+        if mode_segments:
+            self.txt_segments(mode_x, equip_y, mode_segments)
+        cond_segments = []
+        for i, (text, role) in enumerate(self.hud_condition_chips()):
+            if i:
+                cond_segments.append((" ", UI_SUBTEXT_COL))
+            cond_segments.append((text, self.ui_role_color(role)))
+        cond_x = mode_x + mode_w + 8
+        max_cond_w = max(0, equip_left - cond_x - 8)
+        while cond_segments and self.ui_segments_width(cond_segments) > max_cond_w:
+            cond_segments.pop()
+        if cond_segments:
+            self.txt_segments(cond_x, equip_y, cond_segments)
         self.txt_segments_right(SCR_W - 16, equip_y, equip_segments)
 
     def hp_frame_color(self, hp_low):
@@ -8330,6 +8469,8 @@ class Game:
             self.draw_inventory()
         elif self.st==ST_LOG:
             self.draw_log()
+        elif self.st==ST_SETTINGS:
+            self.draw_settings()
         elif self.st==ST_HELP:
             self.draw_help()
         elif self.st==ST_DEAD:
@@ -8378,6 +8519,9 @@ class Game:
             "Call": "c",
             "Discoveries": "D",
             "Put on": "P",
+            "Search": "s",
+            "Trap": "^",
+            "Quit": "Q",
         }
         label = TextCatalog.menu(self.lang, name)
         key = hints.get(name)
@@ -8472,6 +8616,8 @@ class Game:
     def info_guide_label(self, active=None):
         if active == "Log":
             return TextCatalog.msg(self.lang, "info.guide_log")
+        if active == "Settings":
+            return TextCatalog.msg(self.lang, "settings.guide")
         return TextCatalog.msg(self.lang, "info.guide_default")
 
     def draw_info_tabs(self, x, y, active):
@@ -8480,6 +8626,8 @@ class Game:
             (self.info_tab_label("Inventory"), UI_SELECTED_COL if active == "Inventory" else UI_TEXT_COL),
             (" | ", UI_TEXT_COL),
             (self.info_tab_label("Log"), UI_SELECTED_COL if active == "Log" else UI_TEXT_COL),
+            (" | ", UI_TEXT_COL),
+            (self.info_tab_label("Settings"), UI_SELECTED_COL if active == "Settings" else UI_TEXT_COL),
             (" | ", UI_TEXT_COL),
             (self.info_tab_label("Help"), UI_SELECTED_COL if active == "Help" else UI_TEXT_COL),
             (" --", UI_SECTION_COL),
@@ -8522,6 +8670,28 @@ class Game:
         travel = max(1, track_h - thumb_h)
         thumb_y = track_y + (travel * self.log_scroll // max(1, max_scroll))
         pyxel.rect(track_x - 1, thumb_y, 4, thumb_h, UI_HILITE_COL)
+
+    def draw_settings(self):
+        bx, by, bw, bh = self.info_window_rect()
+        self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
+        self.draw_info_tabs(bx + 8, by + 20, "Settings")
+        y = by + 44
+        value_x = bx + 170
+        focus_value = getattr(self, "settings_focus", "row") == "value"
+        for i, row in enumerate(self.settings_rows()):
+            selected = i == getattr(self, "settings_cursor", 0)
+            col = UI_SELECTED_COL if selected else UI_TEXT_COL
+            pre = ">" if selected else " "
+            label = TextCatalog.msg(self.lang, "settings." + row.lower().replace(" ", "_"))
+            value = self.setting_value_label(row)
+            self.txt(bx + 8, y + i * 14, pre, col)
+            self.txt(bx + 22, y + i * 14, label, col)
+            value_col = UI_HILITE_COL if selected else UI_SUBTEXT_COL
+            if selected and focus_value:
+                self.txt(value_x - 14, y + i * 14, "<", UI_SUBTEXT_COL)
+                self.txt(value_x + max(34, self.ui_text_width(value)) + 8, y + i * 14, ">", UI_SUBTEXT_COL)
+            self.txt(value_x, y + i * 14, value, value_col)
+        self.txt(bx + 8, by + bh - 16, self.info_guide_label("Settings"), UI_SUBTEXT_COL)
 
     def pack_grid_max_rows(self, items):
         return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS
@@ -8587,7 +8757,6 @@ class Game:
                 ("B", "Esc", "メニュー"),
                 ("B+Dir", "Shift+Dir", "走る"),
                 ("Select", "Tab", "情報"),
-                ("情報+Select", "情報+Tab", "補助メニュー"),
                 ("Select+A", "Tab+Enter", "投げる"),
                 ("Select+B", "Tab+Esc", "探す"),
                 ("Select+Dir", "Tab+Dir", "罠"),
@@ -8599,9 +8768,9 @@ class Game:
                 ("i 持ちもの", "I 詳細", "? ヘルプ"),
                 ("/ 識別", "m 移動", "f 攻撃"),
                 ("a 再実行", "R 外す", "q 飲む"),
-                ("r 巻き物を読む", "e 食べ物を食べる", "z つえを振りかざす"),
-                ("P 指輪をはめる", "o 設定", "Q ゲームを中止する"),
-                ("w よろいを着る", "W 武器を手に持つ", "T よろいを脱ぐ"),
+                ("r 巻物を読む", "e 食べる", "z 杖を振る"),
+                ("P 指輪", "o 設定", "Q 中止"),
+                ("w よろいを着る", "W 武器を持つ", "T よろい脱ぐ"),
             ]
         else:
             basic_title = self.ui_heading("Basic Controls", UI_HEADING_SECTION)
@@ -8615,7 +8784,6 @@ class Game:
                 ("B", "Esc", "Menu"),
                 ("B+Dir", "Shift+Dir", "Dash"),
                 ("Select", "Tab", "Info"),
-                ("Info+Select", "Info+Tab", "Assist menu"),
                 ("Select+A", "Tab+Enter", "Throw"),
                 ("Select+B", "Tab+Esc", "Search"),
                 ("Select+Dir", "Tab+Dir", "Trap"),
@@ -8633,19 +8801,22 @@ class Game:
             ]
         y=by+50
         line_h = FONT_LINE_H
-        left_x = (bx + 8, bx + 82, bx + 148)
-        right_x = (bx + 250, bx + 340, bx + 408)
+        left_x = (bx + 8, bx + 82, bx + 142)
+        right_x = (bx + 224, bx + 320, bx + 396)
         self.txt(left_x[0], y, basic_title, HELP_HEADER_COL)
         self.txt(right_x[0], y, keys_title, HELP_HEADER_COL)
         y += line_h
         for i in range(max(len(basic_rows), len(key_rows))):
             if i < len(basic_rows):
-                for x, text in zip(left_x, basic_rows[i]):
-                    self.txt(x, y, text, HELP_TEXT_COL)
+                for ci, (x, text) in enumerate(zip(left_x, basic_rows[i])):
+                    right = left_x[ci + 1] - 4 if ci + 1 < len(left_x) else right_x[0] - 10
+                    self.txt(x, y, self.ellipsize_to_width(text, max(0, right - x)), HELP_TEXT_COL)
             if i < len(key_rows):
-                for x, text in zip(right_x, key_rows[i]):
+                for ci, (x, text) in enumerate(zip(right_x, key_rows[i])):
                     if text:
-                        self.txt(x, y, text, HELP_TEXT_COL)
+                        tail = key_rows[i][ci + 1:]
+                        right = right_x[ci + 1] - 4 if any(tail) and ci + 1 < len(right_x) else bx + bw - 8
+                        self.txt(x, y, self.ellipsize_to_width(text, max(0, right - x)), HELP_TEXT_COL)
             y+=line_h
         self.txt(bx + 8, by + bh - 16, self.info_guide_label("Help"), UI_SUBTEXT_COL)
 

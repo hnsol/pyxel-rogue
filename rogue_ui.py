@@ -26,6 +26,7 @@ ST_ONLINE_CONFIRM = 22
 ST_ONLINE_LOCAL_CONFIRM = 23
 ST_LOG = 24
 ST_LANGUAGE = 25
+ST_SETTINGS = 26
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",
@@ -50,14 +51,18 @@ MENU_ACTIONS = [
     ("Drop", None),
     ("Call", None),
     ("Discoveries", None),
+    ("Search", None),
+    ("Trap", None),
+    ("Quit", None),
 ]
-AUX_ACTIONS = ["Search", "Trap", "Pickup", "Language", "Palette", "Quit"]
+AUX_ACTIONS = []
 
 PAD_ACTION_GRID = (
     ("Zap", "Throw", "Put on"),
     ("Read", "Eat", "Quaff"),
     ("Wield", "Wear", "Take off"),
     ("Call", "Discoveries", "Drop"),
+    ("Trap", "Search", "Quit"),
 )
 PAD_ACTION_INITIAL = "Eat"
 PACK_GRID_MAX_ROWS = 9

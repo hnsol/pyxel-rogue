@@ -91,9 +91,9 @@ Gamepad:
 - B tap: Menu / cancel
 - B hold + D-pad: Dash
 - A+B: Wait a turn
-- Select: Info (Inventory / Log / Help); press left/right in Info to switch tabs; press Select again for the assist menu
-- Assist menu: Search / Trap / Pickup / Language / Palette / Quit
-- Language / Palette / Pickup changes are saved for later games.
+- Select: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Select again for the next tab
+- Action menu: Search / Trap / Quit
+- Settings: Auto pickup / Language / Palette. Changes are saved.
 - Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles
 - Select+D-pad: Inspect a discovered trap
@@ -102,12 +102,12 @@ Keyboard:
 
 - Arrow keys / HJKL: Move
 - YUBN: Diagonal movement
-- Hold Space: Diagonal assist / press alone: no-op
+- Hold Space: Diagonal assist
 - Enter: Confirm / pick up / stairs / search one tile ahead
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
 - Esc: Menu / cancel
-- Tab: Info (Inventory / Log / Help); press left/right in Info to switch tabs; press Tab again for the assist menu
+- Tab: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Tab again for the next tab
 - Tab+Enter: Quick throw
 - Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap
@@ -126,7 +126,7 @@ Keyboard:
 - f/F: Fight / Fight to death
 - a: Again (repeat the last command)
 - Digits: Count prefix for search / wait / movement / Again
-- o: Assist menu
+- o: Settings
 - v: Version
 - ) / ] / = / @: Current weapon / armor / rings / status
 - q/r/e/z: Quaff / Read / Eat / Zap

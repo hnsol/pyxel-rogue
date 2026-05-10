@@ -102,11 +102,11 @@ rogue.py
 
 - 基本操作は A/B/Start/Select + D-pad を中心にする
 - D-pad: 通常は8方向移動
-- Start短押し: 「斜め補助モード」と「8方向移動モード（通常モード）」をトグル
+- Start押下中: 斜め補助モード。離すと8方向移動モード（通常モード）に戻る
 - 斜め補助モード中のD-padは、左上=NW、右上=NE、右下=SE、左下=SW の同時押しだけを受け付ける。上下左右単体は移動しない
 - 斜め補助モード ON/OFF はステータス欄に表示する
 - Start長押し依存は禁止（携帯機側の電源OFF等に割り当てられることがあるため）
-- Select(Back): 補助メニュー（Status / Help / Search / Trap / Pickup / Language）+ chord ショートカット
+- Select(Back): Info（Inventory / Log / Settings / Help）+ chord ショートカット。Info中のSelectは次タブ
 - Select+A: quick throw（方向を選んでからアイテム選択）
 - Select+B: 周囲8マス search
 - Select+D-pad: 発見済み罠の種類確認（Rogue 5.4.4 `^` + 方向相当、ターン非消費）
@@ -120,7 +120,7 @@ rogue.py
 
 - フォント標準: `pyxel.Font(os.path.join(os.path.dirname(pyxel.__file__), "examples", "assets", "umplus_j10r.bdf"))`
 - `umplus_j10r.bdf` は ASCII 6px、CJK 10px、日本語対応
-- 日本語表示は `PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で確認でき、ゲーム中は Select(Back) 補助メニューの Language から日英を切り替えられる。現状は代表文言・用語のみ対応で、全メッセージ辞書化は継続タスク
+- 日本語表示は `PYXEL_ROGUE_LANG=ja pyxel run rogue.py` で確認でき、ゲーム中は Info の Settings タブの Language から日英を切り替えられる。現状は代表文言・用語のみ対応で、全メッセージ辞書化は継続タスク
 - メッセージ分離は、全面リファクタを先行するより、触った機能周辺から段階的に進める
 - 将来的なフォント選択は許容する。ただし ASCII ローグ表示に向く可読性を必須条件にする
 - 右HUDタイトルの `Rogue V5 YYMMDD_HHMM` はテストプレイ用の改訂スタンプ。体感差の有無に関係なく、コード・テスト・設計文書などを変更したら同じ変更で `UI_BUILD` を更新する

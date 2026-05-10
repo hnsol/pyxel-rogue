@@ -265,6 +265,7 @@ class RogueBaselineTest(unittest.TestCase):
                 ("Read", "Eat", "Quaff"),
                 ("Wield", "Wear", "Take off"),
                 ("Call", "Discoveries", "Drop"),
+                ("Trap", "Search", "Quit"),
             ),
         )
         self.assertEqual(
@@ -3188,6 +3189,63 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(pending)
         self.assertNotIn(ident_scroll, game.p.inv)
         self.assertIn(pot, game.fitems)
+
+    def test_action_read_identify_scroll_consumes_scroll_before_target_selection(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() consumes before wizard.c:whatis();
+        # Pyxel Action menu must use the same path as keyboard read.
+        game = new_game(seed=3361)
+        pot = rogue.Item(rogue.CAT_POT, 0)
+        ident_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
+        ident_scroll = rogue.Item(rogue.CAT_SCR, ident_kind)
+        game.p.inv = [ident_scroll, pot]
+        game.ident.pk[pot.kind] = False
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Read")
+        game.menu_select()
+        game.icur = game.fitems.index(ident_scroll)
+
+        game.item_confirm()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.cact, "Identify")
+        self.assertNotIn(ident_scroll, game.p.inv)
+        self.assertIn(pot, game.fitems)
+
+    def test_action_read_identify_scroll_stack_consumes_one_copy(self):
+        # Rogue 5.4.4 pack.c:leave_pack() decrements stacked scrolls by one.
+        game = new_game(seed=3362)
+        pot = rogue.Item(rogue.CAT_POT, 0)
+        ident_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
+        ident_scroll = rogue.Item(rogue.CAT_SCR, ident_kind, qty=2)
+        game.p.inv = [ident_scroll, pot]
+        game.ident.pk[pot.kind] = False
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Read")
+        game.menu_select()
+        game.icur = game.fitems.index(ident_scroll)
+
+        game.item_confirm()
+
+        self.assertIn(ident_scroll, game.p.inv)
+        self.assertEqual(ident_scroll.qty, 1)
+        self.assertIn(pot, game.fitems)
+
+    def test_action_read_identify_scroll_without_target_consumes_scroll(self):
+        # Rogue 5.4.4 scrolls.c:read_scroll() consumes even if whatis() finds no target.
+        game = new_game(seed=3363)
+        ident_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
+        ident_scroll = rogue.Item(rogue.CAT_SCR, ident_kind)
+        game.p.inv = [ident_scroll]
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Read")
+        game.menu_select()
+        game.icur = game.fitems.index(ident_scroll)
+
+        game.item_confirm()
+
+        self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertNotIn(ident_scroll, game.p.inv)
+        self.assertIn("you feel vaguely uneasy", game.msgs)
 
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
@@ -6389,7 +6447,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.ZV_X, rogue.ZV_Y), (16, 24))
         self.assertEqual(rogue.HUD_W, 480)
         self.assertEqual(rogue.MSG_LINES, 7)
-        self.assertEqual(rogue.AUX_ACTIONS, ["Search", "Trap", "Pickup", "Language", "Palette", "Quit"])
+        self.assertEqual(rogue.AUX_ACTIONS, [])
+        self.assertIn(("Search", None), rogue.MENU_ACTIONS)
+        self.assertIn(("Trap", None), rogue.MENU_ACTIONS)
+        self.assertIn(("Quit", None), rogue.MENU_ACTIONS)
 
         game = new_game(seed=5)
         game.cam_x = 99
@@ -10005,7 +10066,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(run(rogue.LANG_EN), run(rogue.LANG_JA))
 
-    def test_assist_language_toggle_changes_display_layer_only(self):
+    def test_settings_language_toggle_changes_display_layer_only(self):
         game = new_game(seed=24, lang=rogue.LANG_EN)
         before = (
             game.turn,
@@ -10018,17 +10079,18 @@ class RogueBaselineTest(unittest.TestCase):
             tuple(game.ident.sk),
         )
 
-        game.st = rogue.ST_AUX
-        game.acur = rogue.AUX_ACTIONS.index("Language")
+        game.open_settings()
+        game.settings_cursor = game.settings_row_index("Language")
+        game.settings_focus = "value"
         rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_A},
-            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            held={rogue.pyxel.KEY_RIGHT},
+            pressed={rogue.pyxel.KEY_RIGHT},
         )
         game.update()
         self.assertEqual(game.lang, rogue.LANG_JA)
         self.assertEqual(game.ident.lang, rogue.LANG_JA)
-        self.assertEqual(game.st, rogue.ST_PLAY)
-        self.assertIn("言語: 日本語", game.msgs)
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
+        self.assertNotIn("言語: 日本語", game.msgs)
         self.assertEqual(
             before,
             (
@@ -10045,16 +10107,17 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.TextCatalog.menu(game.lang, "Language"), "言語")
 
         rogue.pyxel.set_input()
-        game.st = rogue.ST_AUX
-        game.acur = rogue.AUX_ACTIONS.index("Language")
+        game.open_settings()
+        game.settings_cursor = game.settings_row_index("Language")
+        game.settings_focus = "value"
         rogue.pyxel.set_input(
-            held={rogue.pyxel.GAMEPAD1_BUTTON_A},
-            pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+            held={rogue.pyxel.KEY_LEFT},
+            pressed={rogue.pyxel.KEY_LEFT},
         )
         game.update()
         self.assertEqual(game.lang, rogue.LANG_EN)
         self.assertEqual(game.ident.lang, rogue.LANG_EN)
-        self.assertIn("Language: English", game.msgs)
+        self.assertNotIn("Language: English", game.msgs)
 
     def test_settings_collect_display_and_input_options_without_changing_state(self):
         game = new_game(seed=240, lang=rogue.LANG_JA)
@@ -10064,6 +10127,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.lang, rogue.LANG_JA)
         self.assertTrue(game.settings.auto_pickup)
         self.assertTrue(game.auto_pickup)
+        self.assertFalse(game.diag_assist)
         self.assertEqual(game.settings.palette, rogue.DEFAULT_PALETTE)
         self.assertTrue(game.settings.show_run_steps)
         self.assertEqual(rogue.DASH_INTERVAL, 1)
@@ -10071,6 +10135,7 @@ class RogueBaselineTest(unittest.TestCase):
         before = (game.turn, game.p.depth, len(game.mons), len(game.gitems))
 
         game.auto_pickup = False
+        game.diag_assist = True
         game.lang = rogue.LANG_EN
         game.settings.show_run_steps = False
 
@@ -10244,7 +10309,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.item_color(rogue.CAT_FOOD), 8)
         self.assertEqual(game.item_color(rogue.CAT_GOLD), rogue.ICOL[rogue.CAT_GOLD])
 
-    def test_assist_palette_toggle_changes_display_only(self):
+    def test_settings_palette_toggle_changes_display_only(self):
         game = new_game(seed=241)
         before = (
             game.turn,
@@ -10259,11 +10324,12 @@ class RogueBaselineTest(unittest.TestCase):
         old_colors = getattr(rogue.pyxel, "colors", None)
         try:
             rogue.pyxel.colors = [0] * len(rogue.FLEXOKI_SYNTAX_DARK_PALETTE)
-            game.st = rogue.ST_AUX
-            game.acur = rogue.AUX_ACTIONS.index("Palette")
+            game.open_settings()
+            game.settings_cursor = game.settings_row_index("Palette")
+            game.settings_focus = "value"
             rogue.pyxel.set_input(
-                held={rogue.pyxel.GAMEPAD1_BUTTON_A},
-                pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
+                held={rogue.pyxel.KEY_RIGHT},
+                pressed={rogue.pyxel.KEY_RIGHT},
             )
             game.update()
 
@@ -10272,7 +10338,7 @@ class RogueBaselineTest(unittest.TestCase):
                 rogue.pyxel.colors[: len(rogue.FLEXOKI_SYNTAX_DARK_PALETTE)],
                 rogue.FLEXOKI_SYNTAX_DARK_PALETTE,
             )
-            self.assertIn("Palette: Flexoki Syntax Dark", game.msgs)
+            self.assertNotIn("Palette: Flexoki Syntax Dark", game.msgs)
             self.assertEqual(
                 before,
                 (
@@ -10994,7 +11060,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_stat()
 
-        self.assertIn("空腹 混乱 盲目 加速 幻覚 浮遊", calls)
+        for label in ("空腹", "混乱", "盲目", "加速", "幻覚", "浮遊"):
+            self.assertIn(label, calls)
         self.assertFalse(any("Hungry" in c or "Confuse" in c or "Blind" in c for c in calls))
 
     def test_hades_hud_unequipped_equipment_uses_bonus_only(self):
@@ -11031,6 +11098,21 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(next((x, y) for x, y, s in calls if s == "Hp"), normal_hp)
         self.assertEqual(next((x, y) for x, y, s in calls if s == "Str"), normal_body)
+
+    def test_hud_px_flags_are_adjacent_and_right_aligned_to_hp_label(self):
+        game = new_game(seed=3503)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_stat()
+
+        hp = next((x, y, s, c) for x, y, s, c in calls if s == "Hp")
+        p = next((x, y, s, c) for x, y, s, c in calls if s == "P")
+        xflag = next((x, y, s, c) for x, y, s, c in calls if s == "X")
+        self.assertEqual(xflag[0], p[0] + game.ui_text_width("P"))
+        self.assertEqual(xflag[0] + game.ui_text_width("X"), hp[0] + game.ui_text_width("Hp"))
+        self.assertNotIn("PICK", [s for _x, _y, s, _c in calls])
+        self.assertNotIn("DIAG", [s for _x, _y, s, _c in calls])
 
     def test_inventory_overlay_lists_pack_without_status_or_equipment_sections(self):
         game = new_game(seed=35)
@@ -11130,7 +11212,7 @@ class RogueBaselineTest(unittest.TestCase):
         for x, _y, text, _c in calls:
             self.assertLessEqual(x + game.ui_text_width(text), bx + bw - 6)
 
-    def test_inventory_uses_wide_pack_layout_and_shows_assist_hint(self):
+    def test_inventory_uses_wide_pack_layout_and_shows_tab_hint(self):
         game = new_game(seed=3712)
         game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
         calls = []
@@ -11143,7 +11225,7 @@ class RogueBaselineTest(unittest.TestCase):
         inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
         self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
         self.assertLessEqual(boxes[-1][1] + boxes[-1][3], rogue.SCR_H)
-        self.assertTrue(any("Select/Tab: Assist" in s for _x, _y, s, _c in calls))
+        self.assertTrue(any("Left/Right: Switch tabs" in s for _x, _y, s, _c in calls))
 
     def test_inventory_stays_one_column_for_ten_items(self):
         game = new_game(seed=3713)
@@ -11640,7 +11722,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_msgs()
         self.assertNotIn("Old floor", calls)
 
-    def test_message_toast_repositions_when_player_enters_one_tile_margin(self):
+    def test_message_toast_repositions_when_player_enters_two_tile_margin(self):
         game = new_game(seed=3755)
         set_open_floor(game)
         game.msgs = []
@@ -11654,9 +11736,15 @@ class RogueBaselineTest(unittest.TestCase):
         game.msg_text("visible")
         first = game.msg_toast_block
 
-        game.p.x = rogue.MSG_TOAST_GRID_COL_EDGES[first[0]] - 1
+        game.p.x = rogue.MSG_TOAST_GRID_COL_EDGES[first[0]] - 3
         game.p.y = rogue.PLAY_Y_MIN + rogue.MSG_TOAST_GRID_ROW_EDGES[first[1]] + 1
-        game.try_move(1, 0)
+        game.move_msg_toast_if_player_enters_margin()
+
+        self.assertEqual(game.msg_toast_block, first)
+
+        game.p.x = rogue.MSG_TOAST_GRID_COL_EDGES[first[0]] - 2
+        game.p.y = rogue.PLAY_Y_MIN + rogue.MSG_TOAST_GRID_ROW_EDGES[first[1]] + 1
+        game.move_msg_toast_if_player_enters_margin()
 
         self.assertNotEqual(game.msg_toast_block, first)
 
@@ -11896,8 +11984,8 @@ class RogueBaselineTest(unittest.TestCase):
         start = (game.p.x, game.p.y)
 
         rogue.pyxel.set_input(
-            held={rogue.pyxel.KEY_SPACE, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
-            pressed={rogue.pyxel.KEY_SPACE, rogue.pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT},
+            held={rogue.pyxel.KEY_SPACE},
+            pressed={rogue.pyxel.KEY_SPACE},
         )
         game.update()
 
@@ -15178,10 +15266,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertEqual(game.player_name, "ac")
 
-    def test_aux_quit_enters_quit_confirm_state(self):
+    def test_action_menu_quit_enters_quit_confirm_state(self):
         game = new_game(seed=35)
-        game.open_aux()
-        game.acur = rogue.AUX_ACTIONS.index("Quit")
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Quit")
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
@@ -16070,13 +16158,13 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.icur, 14)
 
-        game.open_aux()
+        game.open_settings()
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
         )
         game.update()
-        self.assertEqual(game.acur, 1)
+        self.assertEqual(game.settings_cursor, 1)
 
     def test_pad_action_menu_uses_radial_grid_with_eat_initial_cursor(self):
         game = new_game(seed=471)
@@ -16284,7 +16372,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_DIR)
         self.assertEqual(game.dact, "Throw")
 
-    def test_select_tap_opens_inventory_then_select_tap_switches_to_assist(self):
+    def test_select_tap_opens_inventory_then_select_tap_switches_info_tabs(self):
         game = new_game(seed=473)
 
         rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
@@ -16301,7 +16389,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         rogue.pyxel.set_input()
         game.update()
-        self.assertEqual(game.st, rogue.ST_AUX)
+        self.assertEqual(game.st, rogue.ST_LOG)
 
     def test_info_inventory_log_help_switch_like_tabs_without_spending_turns(self):
         game = new_game(seed=4731)
@@ -16323,15 +16411,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
         game.update()
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
+        self.assertEqual(game.turn, start_turn)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
+        game.update()
+        rogue.pyxel.set_input()
+        game.update()
         self.assertEqual(game.st, rogue.ST_HELP)
         self.assertEqual(game.turn, start_turn)
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_LEFT}, pressed={rogue.pyxel.KEY_LEFT})
         game.update()
-        self.assertEqual(game.st, rogue.ST_LOG)
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
         self.assertEqual(game.turn, start_turn)
 
-    def test_info_tabs_select_opens_assist_and_cancel_keys_return_to_play(self):
+    def test_info_tabs_select_switches_tabs_and_cancel_keys_return_to_play(self):
         game = new_game(seed=4732)
 
         for opener in (lambda: setattr(game, "st", rogue.ST_INVENTORY), game.open_log, game.open_help_command):
@@ -16341,7 +16436,7 @@ class RogueBaselineTest(unittest.TestCase):
                 game.update()
                 rogue.pyxel.set_input()
                 game.update()
-                self.assertEqual(game.st, rogue.ST_AUX)
+                self.assertIn(game.st, (rogue.ST_LOG, rogue.ST_SETTINGS, rogue.ST_INVENTORY))
 
         for key in (rogue.pyxel.KEY_RETURN, rogue.pyxel.KEY_ESCAPE, rogue.pyxel.KEY_I):
             with self.subTest(key=key):
@@ -16471,7 +16566,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn((" --", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in inventory_calls))
         self.assertTrue(any("Up/Down: Scroll" in s and "Left/Right: Switch tabs" in s for *_xy, s, _c in log_calls))
-        self.assertTrue(any("Left/Right: Switch tabs" in s and "Assist menu" in s for *_xy, s, _c in calls))
+        self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in calls))
 
         game.lang = rogue.LANG_JA
         boxes.clear()
@@ -16481,7 +16576,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(boxes[-1][4], "=== 情報 ===")
         self.assertIn("ヘルプ", text)
         self.assertIn("ログ", text)
-        self.assertTrue(any("左右: タブ切替" in s and "補助メニュー" in s for s in text))
+        self.assertTrue(any("左右: タブ切替" in s for s in text))
 
     def test_ui_heading_levels_and_semantic_colors_are_systematic(self):
         game = new_game(seed=47341)
@@ -16505,6 +16600,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("Inventory", rogue.UI_SELECTED_COL), calls)
         self.assertIn((" | ", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Log", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Settings", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Help", rogue.UI_TEXT_COL), calls)
         self.assertEqual(calls[-1], (" --", rogue.UI_SECTION_COL))
 
@@ -16513,6 +16609,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn(("Inventory", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Log", rogue.UI_TEXT_COL), calls)
+        self.assertIn(("Settings", rogue.UI_TEXT_COL), calls)
         self.assertIn(("Help", rogue.UI_SELECTED_COL), calls)
 
     def test_info_inventory_labels_come_from_text_catalog(self):
@@ -16520,15 +16617,64 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "info.inventory"), "Inventory")
         self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_JA, "info.inventory"), "持ちもの")
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "info.settings"), "Settings")
         self.assertEqual(game.info_tab_label("Inventory"), "Inventory")
-        self.assertEqual(game.info_guide_label(), "Left/Right: Switch tabs   Select/Tab: Assist menu")
+        self.assertEqual(game.info_guide_label(), "Left/Right: Switch tabs")
 
         game.lang = rogue.LANG_JA
         self.assertEqual(game.info_title_label(), "情報")
         self.assertEqual(game.info_tab_label("Inventory"), "持ちもの")
         self.assertEqual(game.info_tab_label("Log"), "ログ")
+        self.assertEqual(game.info_tab_label("Settings"), "設定")
         self.assertEqual(game.info_tab_label("Help"), "ヘルプ")
-        self.assertEqual(game.info_guide_label(), "左右: タブ切替   Select/Tab: 補助メニュー")
+        self.assertEqual(game.info_guide_label(), "左右: タブ切替")
+
+    def test_settings_tab_shows_fixed_value_column_and_uses_focus_mode(self):
+        game = new_game(seed=473422)
+        game.open_settings()
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_settings()
+
+        text = [s for _x, _y, s, _c in calls]
+        self.assertIn("Auto pickup", text)
+        self.assertIn("ON", text)
+        self.assertNotIn("Diagonal assist", text)
+        self.assertIn("Palette", text)
+        self.assertIn("Flexoki Dark", text)
+        on_x = next(x for x, _y, s, _c in calls if s == "ON")
+        palette_x = next(x for x, _y, s, _c in calls if s == "Flexoki Dark")
+        self.assertEqual(on_x, palette_x)
+
+        game.settings_cursor = game.settings_row_index("Auto pickup")
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_HELP)
+        self.assertTrue(game.auto_pickup)
+
+        game.open_settings()
+        game.settings_cursor = game.settings_row_index("Auto pickup")
+        before_msgs = list(game.msgs)
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.settings_focus, "value")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertFalse(game.auto_pickup)
+        self.assertEqual(game.msgs, before_msgs)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.settings_focus, "row")
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
+
+        game.settings_focus = "value"
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.settings_focus, "row")
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
 
     def test_command_and_item_pick_screens_use_panel_titles_and_selection_color(self):
         game = new_game(seed=47343)
@@ -16586,14 +16732,6 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_dirp()
         self.assertIn("どの方向?", boxes)
 
-        boxes.clear()
-        game.draw_aux()
-        self.assertIn("-- 補助 --", boxes)
-        aux_text = [s for s, _c in calls]
-        self.assertNotIn("持ちもの", aux_text)
-        self.assertNotIn("ヘルプ", aux_text)
-        self.assertIn("> 探す", aux_text)
-
         game.draw_stat()
         self.assertIn(("武", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("+1,+1", rogue.UI_SUBTEXT_COL), calls)
@@ -16615,7 +16753,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_stat()
 
         sub_y = rogue.SCR_H - 26
-        self.assertIn((rogue.ZV_X, sub_y, "空腹 混乱", 9), calls)
+        self.assertIn(("空腹", rogue.palette_role_color(game.settings.palette, rogue.ROLE_STATUS_WARN)), [(s, c) for _x, _y, s, c in calls])
+        self.assertIn(("混乱", rogue.palette_role_color(game.settings.palette, rogue.ROLE_STATUS_MIND)), [(s, c) for _x, _y, s, c in calls])
         w_call = next(call for call in calls if call[2] == "武" and call[3] == rogue.UI_SUBTEXT_COL)
         self.assertEqual(w_call[1], sub_y)
         self.assertGreater(w_call[0], rogue.SCR_W // 2)
@@ -16751,7 +16890,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.rect = old_rect
             rogue.pyxel.rectb = old_rectb
 
-        guide = next(c for c in calls if "Select/Tab" in c[2])
+        guide = next(c for c in calls if "Left/Right" in c[2])
         log_lines = [c for c in calls if c[2].startswith("Message ")]
         self.assertLess(max(y for _x, y, _s, _c in log_lines), guide[1] - rogue.MSG_LINE_H)
         self.assertTrue(any(s == "^" for _x, _y, s, _c in calls))
@@ -17391,7 +17530,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(monster.running)
         self.assertEqual((monster.x, monster.y), (5, 6))
         self.assertEqual(game.turn, 0)
-        self.assertEqual(game.st, rogue.ST_AUX)
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
 
     def test_rogue_544_quit_command_wakes_visible_monsters_without_turn(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when 'Q': quit().
@@ -17420,8 +17559,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.st, rogue.ST_QUIT_CONFIRM)
 
-    def test_rogue_544_aux_quit_uses_quit_command_wake_timing(self):
-        # Pyxel Aux Quit maps to Rogue 5.4.4 command.c:'Q' quit timing.
+    def test_rogue_544_action_quit_uses_quit_command_wake_timing(self):
+        # Pyxel Action Quit maps to Rogue 5.4.4 command.c:'Q' quit timing.
         game = new_game(seed=5050)
         game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
         for x in (5, 6, 7, 8):
@@ -17429,15 +17568,15 @@ class RogueBaselineTest(unittest.TestCase):
         game.rooms = []
         game.p.x, game.p.y = 5, 5
         monster = command_look_monster(game)
-        game.open_aux()
-        game.acur = rogue.AUX_ACTIONS.index("Quit")
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Quit")
 
         old_rnd = rogue.RNG.rnd
         try:
             rogue.RNG.rnd = lambda n: 1
             rogue.pyxel.set_input(pressed=[rogue.pyxel.KEY_RETURN])
             game.begin_input()
-            game.upd_aux()
+            game.upd_menu()
         finally:
             rogue.RNG.rnd = old_rnd
             rogue.pyxel.set_input()
@@ -18268,7 +18407,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertIsNone(game.cact)
 
-    def test_rogue_544_space_command_wakes_visible_monsters_without_turn(self):
+    def test_keyboard_space_toggles_diag_without_turn_or_command_look(self):
         # Rogue 5.4.4 command.c:command() calls misc.c:look(TRUE) before when ' ': after = FALSE.
         game = new_game(seed=5037)
         game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
@@ -18292,7 +18431,8 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.RNG.rnd = old_rnd
             rogue.pyxel.set_input()
 
-        self.assertTrue(monster.running)
+        self.assertFalse(monster.running)
+        self.assertTrue(game.diag_assist)
         self.assertEqual(game.turn, 0)
         self.assertEqual(game.msgs[-1], "keep me")
 
@@ -19763,14 +19903,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.tm[y][x], rogue.T_FLOOR)
         self.assertIn("no trap there", game.msgs)
 
-    def test_aux_trap_enters_direction_prompt_and_inspects_trap(self):
+    def test_action_trap_enters_direction_prompt_and_inspects_trap(self):
         game = new_game(seed=53)
         set_open_floor(game)
         x, y = game.p.x + 1, game.p.y
         game.tm[y][x] = rogue.T_TRAP
         game.traps[(x, y)] = 3
-        game.open_aux()
-        game.acur = rogue.AUX_ACTIONS.index("Trap")
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Trap")
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_A},
@@ -20175,11 +20315,13 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertIn(item, calls)
         self.assertIn("Diag assist", calls)
         self.assertIn("Enter+Esc", calls)
-        self.assertIn("Info+Select", calls)
-        self.assertIn("Assist menu", calls)
+        self.assertNotIn("Info+Select", calls)
+        self.assertNotIn("Next tab", calls)
         self.assertIn("HJKL/YUBN Move/Diag", text)
+        self.assertIn("T Take off", calls)
         for item in (". Wait", "</> Stairs", "s Search", "a Again", "R Remove", "q Quaff", "P Put on", "o Options", "Q Quit"):
             self.assertIn(item, calls)
+        self.assertFalse(any(s.endswith(".") and not s.startswith(".") for s in calls))
         self.assertNotIn("Keyboard commands", text)
         self.assertNotIn("Close overlays", text)
 
@@ -20214,11 +20356,12 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_help()
 
         by_text = {s: (x, y) for x, y, s, _c in calls}
-        key_end = by_text["Tab+Enter"][0] + game.ui_text_width("Tab+Enter")
+        key_end = by_text["Tab"][0] + game.ui_text_width("Tab")
         action_x = by_text["投げる"][0]
         right_title_x = by_text["--- キーボード専用 ---"][0]
-        self.assertEqual(action_x - key_end, 12)
-        self.assertEqual(right_title_x - (action_x + game.ui_text_width("補助メニュー")), 42)
+        self.assertLess(action_x - key_end, 80)
+        self.assertIn("T よろい脱ぐ", by_text)
+        self.assertLess(right_title_x - action_x, 120)
 
     def test_help_text_uses_high_contrast_colors(self):
         game = new_game(seed=561)
