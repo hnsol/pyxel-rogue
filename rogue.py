@@ -268,7 +268,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_1835"
+UI_BUILD = "260510_2017"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -371,7 +371,7 @@ ONLINE_UI_TEXT = {
         "confirm_register": "A/Enter 同期",
         "confirm_local": "B/Esc ローカルのみ",
         "confirm_mark": "ゲストのスコアはローカルのみです。",
-        "language_hint": "Select/L Change Language（言語切替）",
+        "language_hint": "Select/L 言語切替",
         "score_title": "スコアボード",
         "score_title_local": "冒険の記録",
         "score_title_weekly": "今週の挑戦者",
@@ -404,8 +404,8 @@ ONLINE_UI_TEXT = {
         "guest_confirm_prompt": "ゲストモードに切り替えますか?",
         "guest_confirm_ok": "A/Enter 切替",
         "guest_confirm_cancel": "B/Esc キャンセル",
-        "language_title": "Language / 言語",
-        "language_prompt": "Choose display language. / 表示言語を選んでください。",
+        "language_title": "言語",
+        "language_prompt": "表示言語を選んでください。",
         "language_select_hint": "A/Enter 決定  方向キー 選択",
         "pin_title": "6桁PIN",
         "pin_server": "PINはサーバに平文保存されます。",
@@ -625,6 +625,10 @@ class TextCatalog:
         return TextCatalog.item_kind(lang, cat, name)
 
     @staticmethod
+    def hud_label(lang, name):
+        return TextCatalog.term(lang, ("hud", "label"), name)
+
+    @staticmethod
     def item_kind(lang, cat, name):
         cat_key = {
             CAT_POT: "potion",
@@ -641,6 +645,18 @@ class TextCatalog:
     @staticmethod
     def potion_color(lang, color):
         return TextCatalog.term(lang, ("potion_color",), color)
+
+    @staticmethod
+    def color(lang, name, form="noun"):
+        return TextCatalog.term(lang, ("color", form), name)
+
+    @staticmethod
+    def action(lang, name):
+        return TextCatalog.term(lang, ("action",), name)
+
+    @staticmethod
+    def bolt(lang, name):
+        return TextCatalog.term(lang, ("bolt",), name)
 
     @staticmethod
     def material(lang, cat, name):
@@ -716,9 +732,48 @@ SCROLLS = [
     {"name":"create monster","prob":4,"worth":75},{"name":"remove curse","prob":7,"worth":105},
     {"name":"aggravate monsters","prob":3,"worth":20},{"name":"protect armor","prob":2,"worth":250},
 ]
-SCR_SYLS = ["blech","foo","bstr","bar","xyzzy","fnord","snafu","fro",
-            "aimfiz","aefg","zorch","elam","isko","temov","gnik","snef",
-            "forz","juyed","cohah","tstr","priky","motke","ando","wacl"]
+SCR_SYLS = [
+    "a", "ab", "ag", "aks", "ala", "an", "app", "arg",
+    "arze", "ash", "bek", "bie", "bit", "bjor", "blu", "bot",
+    "bu", "byt", "comp", "con", "cos", "cre", "dalf", "dan",
+    "den", "do", "e", "eep", "el", "eng", "er", "ere",
+    "erk", "esh", "evs", "fa", "fid", "fri", "fu", "gan",
+    "gar", "glen", "gop", "gre", "ha", "hyd", "i", "ing",
+    "ip", "ish", "it", "ite", "iv", "jo", "kho", "kli",
+    "klis", "la", "lech", "mar", "me", "mi", "mic", "mik",
+    "mon", "mung", "mur", "nej", "nelg", "nep", "ner", "nes",
+    "nes", "nih", "nin", "o", "od", "ood", "org", "orn",
+    "ox", "oxy", "pay", "ple", "plu", "po", "pot", "prok",
+    "re", "rea", "rhov", "ri", "ro", "rog", "rok", "rol",
+    "sa", "san", "sat", "sef", "seh", "shu", "ski", "sna",
+    "sne", "snik", "sno", "so", "sol", "sri", "sta", "sun",
+    "ta", "tab", "tem", "ther", "ti", "tox", "trol", "tue",
+    "turs", "u", "ulk", "um", "un", "uni", "ur", "val",
+    "viv", "vly", "vom", "wah", "wed", "werg", "wex", "whon",
+    "wun", "xo", "y", "yot", "yu", "zant", "zeb", "zim",
+    "zok", "zon", "zum",
+]
+SCR_SYLS_JA = [
+    "あ", "あぶ", "あぐ", "あくす", "あら", "あん", "あぷ", "あるぐ",
+    "あるぜ", "あしゅ", "べく", "びえ", "びと", "びょる", "ぶる", "ぼと",
+    "ぶ", "びと", "こんぷ", "こん", "こす", "くれ", "だるふ", "だん",
+    "でん", "ど", "え", "えぷ", "える", "えんぐ", "える", "えれ",
+    "えるく", "えしゅ", "えぶす", "ふぁ", "ふぃど", "ふり", "ふ", "がん",
+    "がる", "ぐれん", "ごぷ", "ぐれ", "は", "ひど", "い", "いんぐ",
+    "いぷ", "いす", "いと", "いて", "いぶ", "じょ", "こ", "くり",
+    "くりす", "ら", "れち", "まる", "め", "み", "みく", "みく",
+    "もん", "むんぐ", "むる", "ねじ", "ねるぐ", "ねぷ", "ねる", "ねす",
+    "ねす", "にひ", "にん", "お", "おど", "おど", "おるぐ", "おるん",
+    "おくす", "おくし", "ぺい", "ぷれ", "ぷる", "ぽ", "ぽと", "ぷろく",
+    "れ", "れあ", "ろぶ", "り", "ろ", "ろぐ", "ろく", "ろる",
+    "さ", "さん", "さと", "せふ", "せ", "しゅ", "すき", "すな",
+    "すね", "すにく", "すの", "そ", "そる", "すり", "すた", "すん",
+    "た", "たぶ", "てむ", "てる", "てぃ", "とくす", "とろる", "とぅえ",
+    "とぅるす", "う", "うるく", "うむ", "うん", "うに", "うる", "ばる",
+    "びぶ", "ぶり", "ぼむ", "わ", "うぇど", "うぇるぐ", "うぇくす", "ほん",
+    "うん", "ぞ", "い", "よと", "ゆ", "ざんと", "ぜぶ", "じむ",
+    "ぞく", "ぞん", "ずむ",
+]
 
 FOODS = [{"name":"food ration","nut":900},{"name":"slime-mold","nut":700}]
 
@@ -999,7 +1054,7 @@ class IdentTable:
     def __init__(s, lang=LANG_EN):
         s.lang = lang
         s.pcol=RNG.sample(POT_COLORS,len(POTIONS))
-        s.snam=[rogue_init.scroll_title(SCR_SYLS, RNG.rnd) for _ in range(len(SCROLLS))]
+        s.snam=[rogue_init.scroll_title_recipe(len(SCR_SYLS), RNG.rnd, syllables=SCR_SYLS) for _ in range(len(SCROLLS))]
         s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
         s.pg=[None]*len(POTIONS); s.sg=[None]*len(SCROLLS)
         s.rstones,s.rworth=rogue_rings.init_stones_and_worths(RNG)
@@ -1029,7 +1084,9 @@ class IdentTable:
             if s.sg[it.kind] is not None:
                 g=s.sg[it.kind]
                 return f"scroll called {g}" if lang==LANG_EN else f"巻き物（{g}）"
-            return f"scroll [{s.snam[it.kind]}]" if lang==LANG_EN else f"巻き物 [{s.snam[it.kind]}]"
+            syllables = SCR_SYLS_JA if lang == LANG_JA else SCR_SYLS
+            title = rogue_init.render_scroll_title(s.snam[it.kind], syllables)
+            return f"scroll [{title}]" if lang==LANG_EN else f"巻き物 [{title}]"
         if it.cat==CAT_FOOD:
             nm=TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
             if it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
@@ -3060,7 +3117,7 @@ class Game:
             self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
             if confused_by_hit:
                 m.confused=1
-                self.msg("fight.your_hands_stop_glowing_color", color="red")
+                self.msg("fight.your_hands_stop_glowing_color", color=TextCatalog.color(self.lang, "red", "stem"))
             if not m.alive:
                 self.msg_text(self.defeated_message(mn))
                 self.award_monster_kill(m,mn)
@@ -3610,7 +3667,10 @@ class Game:
             p.see_invisible = rogue_potions.see_invisible_duration(
                 p.see_invisible, duration, wearing_see_invis
             )
-            self.msg("potions.this_potion_tastes_like_item_juice", item="slime-mold")
+            self.msg(
+                "potions.this_potion_tastes_like_item_juice",
+                item=TextCatalog.item_kind(self.lang, CAT_FOOD, "slime-mold"),
+            )
             self.sight()
         elif nm=="raise level":
             self.ident.pk[it.kind]=True
@@ -3893,7 +3953,7 @@ class Game:
         nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             rogue_scrolls.monster_confusion(p)
-            self.msg("scrolls.your_hands_begin_to_glow_color", color="red")
+            self.msg("scrolls.your_hands_begin_to_glow_color", color=TextCatalog.color(self.lang, "red", "stem"))
         elif nm.startswith("identify "):
             cats = self.identify_scroll_target_cats(nm)
             self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
@@ -3913,11 +3973,19 @@ class Game:
                 return False
         elif nm=="enchant weapon":
             if rogue_scrolls.enchant_weapon(p.wpn, RNG.rnd):
-                self.msg("scrolls.your_color_glows_color2_for_a_moment", color=p.wpn.data["name"], color2="blue")
+                self.msg(
+                    "scrolls.your_color_glows_color2_for_a_moment",
+                    color=TextCatalog.item_kind(self.lang, CAT_WPN, p.wpn.data["name"]),
+                    color2=TextCatalog.color(self.lang, "blue", "stem"),
+                )
             else: self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="enchant armor":
             if rogue_scrolls.enchant_armor(p.arm):
-                p.recalc_ac(); self.msg("scrolls.your_armor_glows_color_for_a_moment", color="silver")
+                p.recalc_ac()
+                self.msg(
+                    "scrolls.your_armor_glows_color_for_a_moment",
+                    color=TextCatalog.color(self.lang, "silver", "noun"),
+                )
         elif nm=="remove curse":
             rogue_scrolls.remove_curse_equipment((p.arm, p.wpn, p.ring_l, p.ring_r))
             self.msg("scrolls.you_feel_in_touch_with_the_universal_onenes" if p.hallucinating > 0 else "scrolls.you_feel_as_if_somebody_is_watching_over_you")
@@ -3983,7 +4051,10 @@ class Game:
                 self.msg("scrolls.your_nose_tingles")
         elif nm=="protect armor":
             if rogue_scrolls.protect_armor(p.arm):
-                self.msg("scrolls.your_armor_is_covered_by_a_shimmering_color_shield", color="gold")
+                self.msg(
+                    "scrolls.your_armor_is_covered_by_a_shimmering_color_shield",
+                    color=TextCatalog.color(self.lang, "gold", "noun"),
+                )
             else:
                 self.msg("scrolls.you_feel_a_strange_sense_of_loss")
         elif nm=="blank paper": self.msg("pyxel.scroll_is_blank")
@@ -4138,11 +4209,15 @@ class Game:
         dmg=rogue_sticks.magic_missile_damage(RNG.roll(1,4), weapon_dam, self.p.str_dam_plus())
         m.hp-=dmg
         mn = self.combat_monster_name(m)
-        self.msg_text(self.thrown_hit_message(Item(CAT_STICK, rogue_sticks.WS_MISSILE), "magic missile", mn))
+        self.msg_text(self.thrown_hit_message(
+            Item(CAT_STICK, rogue_sticks.WS_MISSILE),
+            TextCatalog.bolt(self.lang, "magic missile"),
+            mn,
+        ))
         self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
         if confused_by_hit:
             m.confused = 1
-            self.msg("fight.your_hands_stop_glowing_color", color="red")
+            self.msg("fight.your_hands_stop_glowing_color", color=TextCatalog.color(self.lang, "red", "stem"))
         if not m.alive:
             self.msg_text(self.defeated_message(mn))
             self.award_monster_kill(m)
@@ -4166,11 +4241,11 @@ class Game:
         dmg=RNG.roll(6,6)
         m.hp-=dmg
         mn = self.combat_monster_name(m)
-        self.msg_text(self.thrown_hit_message(Item(CAT_WPN, 0), name, mn))
+        self.msg_text(self.thrown_hit_message(Item(CAT_WPN, 0), TextCatalog.bolt(self.lang, name), mn))
         self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
         if confused_by_hit:
             m.confused = 1
-            self.msg("fight.your_hands_stop_glowing_color", color="red")
+            self.msg("fight.your_hands_stop_glowing_color", color=TextCatalog.color(self.lang, "red", "stem"))
         if not m.alive:
             self.msg_text(self.defeated_message(mn))
             self.award_monster_kill(m)
@@ -4203,9 +4278,9 @@ class Game:
                         self.death_cause=f"killed by a {killer}"
                     used=True
                     self.clamp_player_hp()
-                    self.msg("sticks.you_are_hit_by_the_value", value=name)
+                    self.msg("sticks.you_are_hit_by_the_value", value=TextCatalog.bolt(self.lang, name))
                     return True
-                self.msg("sticks.the_value_whizzes_by_you", value=name)
+                self.msg("sticks.the_value_whizzes_by_you", value=TextCatalog.bolt(self.lang, name))
             target=self.mon_at(x,y)
             if target:
                 steps+=1
@@ -4228,7 +4303,11 @@ class Game:
                     if wake_miss:
                         self.runto(target)
                     if show_miss:
-                        self.msg("sticks.the_value_whizzes_past_value2", value=name, value2=self.combat_monster_name(target))
+                        self.msg(
+                            "sticks.the_value_whizzes_past_value2",
+                            value=TextCatalog.bolt(self.lang, name),
+                            value2=self.combat_monster_name(target),
+                        )
                 continue
             if rogue_sticks.bolt_should_bounce(self.bolt_bounces_at(x,y), (x,y)==(self.p.x,self.p.y)):
                 if not changed:
@@ -4236,7 +4315,7 @@ class Game:
                 changed=False
                 dx=-dx; dy=-dy
                 bounces+=1
-                self.msg("sticks.the_value_bounces", value=name)
+                self.msg("sticks.the_value_bounces", value=TextCatalog.bolt(self.lang, name))
                 continue
             steps+=1
         return used
@@ -4318,7 +4397,7 @@ class Game:
         if it is self.p.wpn:
             self.p.wpn = None
         if outcome == "slime-mold":
-            self.msg("misc.my_that_was_a_yummy_value", value="slime-mold")
+            self.msg("misc.my_that_was_a_yummy_value", value=TextCatalog.item_kind(self.lang, CAT_FOOD, "slime-mold"))
         elif outcome == "awful":
             self.p.exp += exp_gain
             self.msg("misc.value_this_food_tastes_awful", value="yuk")
@@ -4519,7 +4598,7 @@ class Game:
             self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
             if confused_by_hit:
                 m.confused = 1
-                self.msg("fight.your_hands_stop_glowing_color", color="red")
+                self.msg("fight.your_hands_stop_glowing_color", color=TextCatalog.color(self.lang, "red", "stem"))
             if not m.alive:
                 self.msg_text(self.defeated_message(mn))
                 self.award_monster_kill(m, mn)
@@ -4797,7 +4876,11 @@ class Game:
 
     def mysterious_trap_msg(self):
         key,arg=rogue_move.mysterious_trap_message(rnd(11))
-        kw={arg:RAINBOW[rnd(len(RAINBOW))]} if arg in ("color","value") else {}
+        kw = {}
+        if arg in ("color", "value"):
+            color = RAINBOW[rnd(len(RAINBOW))]
+            form = "adjective" if key == "move.a_color_light_flashes_in_your_eyes" else "noun"
+            kw[arg] = TextCatalog.color(self.lang, color, form)
         self.msg(key,**kw)
 
     def inspect_trap(self,dx,dy):
@@ -5508,7 +5591,7 @@ class Game:
             self.st=ST_DIR
             return
         if not self.fitems:
-            self.msg(self.nothing_to_action_msg_key(aname), action=aname.lower()); self.close_menu(); return
+            self.msg(self.nothing_to_action_msg_key(aname), action=TextCatalog.action(self.lang, aname)); self.close_menu(); return
         self.icur, self.item_cursor_restored = self.initial_item_cursor(aname)
         if aname=="Call":
             self.call_item=None; self.call_input=CALL_PRESETS[0]; self.call_preset_idx=0
@@ -7994,19 +8077,22 @@ class Game:
             SCR_W - 16,
             6,
             (
-                ("D:", UI_SUBTEXT_COL),
+                (TextCatalog.hud_label(self.lang, "depth"), UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
                 (str(p.depth), UI_TEXT_COL),
                 ("  ", UI_SUBTEXT_COL),
-                ("G:", UI_SUBTEXT_COL),
+                (TextCatalog.hud_label(self.lang, "gold"), UI_SUBTEXT_COL),
+                (" ", UI_SUBTEXT_COL),
                 (str(p.gold), 11),
             ),
         )
 
         hp_y = SCR_H - 14
         equip_y = SCR_H - 26
-        self.txt(ZV_X, hp_y, "Hp", UI_SUBTEXT_COL)
+        hp_label = TextCatalog.hud_label(self.lang, "hp")
         bw = 108
         bx = ZV_X + 18
+        self.txt(max(0, bx - 6 - self.ui_text_width(hp_label)), hp_y, hp_label, UI_SUBTEXT_COL)
         by = hp_y + 3
         hp_frame_col = self.hp_frame_color(hp_low)
         pyxel.rectb(bx - 1, by - 2, bw + 2, 9, hp_frame_col)
@@ -8023,25 +8109,25 @@ class Game:
             self.last_hp_seen = p.hp
         self.txt(bx + bw + 6, hp_y, f"{p.hp}({p.max_hp})", UI_TEXT_COL)
         stat_segments = (
-            ("Str", UI_SUBTEXT_COL),
+            (TextCatalog.hud_label(self.lang, "strength"), UI_SUBTEXT_COL),
             (" ", UI_SUBTEXT_COL),
             (f"{p.st}({p.max_st})", UI_TEXT_COL),
             ("  ", UI_SUBTEXT_COL),
-            ("Arm", UI_SUBTEXT_COL),
+            (TextCatalog.hud_label(self.lang, "armor"), UI_SUBTEXT_COL),
             (" ", UI_SUBTEXT_COL),
             (str(p.ac), UI_TEXT_COL),
             ("  ", UI_SUBTEXT_COL),
-            ("Exp", UI_SUBTEXT_COL),
+            (TextCatalog.hud_label(self.lang, "experience"), UI_SUBTEXT_COL),
             (" ", UI_SUBTEXT_COL),
             (f"{p.level}/{p.exp}", UI_TEXT_COL),
         )
         self.txt_segments_right(SCR_W - 16, hp_y, stat_segments)
         equip_segments = (
-            ("W", UI_SUBTEXT_COL),
+            (TextCatalog.hud_label(self.lang, "weapon"), UI_SUBTEXT_COL),
             (" ", UI_SUBTEXT_COL),
             (self.hud_weapon_bonus(p.wpn), UI_SUBTEXT_COL),
             ("  ", UI_SUBTEXT_COL),
-            ("A", UI_SUBTEXT_COL),
+            (TextCatalog.hud_label(self.lang, "armor_slot"), UI_SUBTEXT_COL),
             (" ", UI_SUBTEXT_COL),
             (self.hud_armor_bonus(p.arm), UI_SUBTEXT_COL),
         )
@@ -8437,10 +8523,10 @@ class Game:
                 ("Start", "Space", "斜め補助"),
                 ("A", "Enter", "行動"),
                 ("A+B", "Enter+Esc", "足踏み"),
-                ("B", "Esc", "Menu"),
+                ("B", "Esc", "メニュー"),
                 ("B+Dir", "Shift+Dir", "走る"),
                 ("Select", "Tab", "情報"),
-                ("Info+Select", "Info+Tab", "補助メニュー"),
+                ("情報+Select", "情報+Tab", "補助メニュー"),
                 ("Select+A", "Tab+Enter", "投げる"),
                 ("Select+B", "Tab+Esc", "探す"),
                 ("Select+Dir", "Tab+Dir", "罠"),
@@ -8452,9 +8538,9 @@ class Game:
                 ("i 持ちもの", "I 詳細", "? ヘルプ"),
                 ("/ 識別", "m 移動", "f 攻撃"),
                 ("a 再実行", "R 外す", "q 飲む"),
-                ("r 読む", "e 食べる", "z 杖"),
-                ("P 指輪", "o 設定", "Q 終了"),
-                ("w 鎧", "W 武器", "T 脱ぐ"),
+                ("r 巻き物を読む", "e 食べ物を食べる", "z つえを振りかざす"),
+                ("P 指輪をはめる", "o 設定", "Q ゲームを中止する"),
+                ("w よろいを着る", "W 武器を手に持つ", "T よろいを脱ぐ"),
             ]
         else:
             basic_title = self.ui_heading("Basic Controls", UI_HEADING_SECTION)
@@ -8520,7 +8606,10 @@ class Game:
         self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.top_10"), UI_HEADING_SCREEN))
         scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
         y = by + 14
-        for i, line in enumerate(format_top_score_lines(scores)):
+        lines = format_top_score_lines(scores)
+        if lines:
+            lines[0] = TextCatalog.msg(self.lang, "ui.score_header")
+        for i, line in enumerate(lines):
             self.txt(bx + 12, y, line, SCOREBOARD_HILITE_COL if i == 0 else SCOREBOARD_TEXT_COL)
             y += 14
         if not scores:
@@ -8534,12 +8623,12 @@ class Game:
             p=self.p; x=bx+18; y=by+24
             self.txt(x,y,"Here lies a brave rogue.",UI_TEXT_COL); y+=22
             self.txt(x,y,f"Cause: {self.death_cause or 'died'}",UI_TEXT_COL); y+=18
-            self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
-            self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
-            self.txt(x,y,f"Gold:  {self.death_display_gold()}",UI_HILITE_COL); y+=14
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth),UI_TEXT_COL); y+=14
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_gold", gold=self.death_display_gold()),UI_HILITE_COL); y+=14
             next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-            self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
-            self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=24
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_exp", exp=f"{p.exp}/{next_exp}"),UI_TEXT_COL); y+=14
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn),UI_TEXT_COL); y+=24
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
             return
         bw, bh = 340, min(292, SCR_H - 8)
@@ -8553,11 +8642,11 @@ class Game:
         for ln in rip:
             self.txt(x,y,ln,UI_TEXT_COL); y+=10
         y+=4
-        self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
-        self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth),UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
         next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-        self.txt(x,y,f"Exp:   {p.exp}/{next_exp}",UI_TEXT_COL); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=18
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_exp", exp=f"{p.exp}/{next_exp}"),UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn),UI_TEXT_COL); y+=18
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_win(self):
@@ -8566,10 +8655,10 @@ class Game:
         p=self.p; x=bx+18; y=by+26
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_1"),UI_HILITE_COL); y+=16
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_2"),UI_HILITE_COL); y+=24
-        self.txt(x,y,f"Gold:  {p.gold}",UI_HILITE_COL); y+=14
-        self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
-        self.txt(x,y,f"Exp:   {p.exp}",UI_TEXT_COL); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=28
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_gold", gold=p.gold),UI_HILITE_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_exp", exp=p.exp),UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn),UI_TEXT_COL); y+=28
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_quit_confirm(self):
@@ -8583,9 +8672,9 @@ class Game:
         self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_quit"), UI_HEADING_PANEL))
         p=self.p; x=bx+18; y=by+24
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.you_quit_with_gold", gold=p.gold),UI_HILITE_COL); y+=24
-        self.txt(x,y,f"Depth: {p.depth}",UI_TEXT_COL); y+=14
-        self.txt(x,y,f"Level: {p.level}",UI_TEXT_COL); y+=14
-        self.txt(x,y,f"Turn:  {self.turn}",UI_TEXT_COL); y+=26
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth),UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
+        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn),UI_TEXT_COL); y+=26
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_SUBTEXT_COL)
 
 # ===========================================================

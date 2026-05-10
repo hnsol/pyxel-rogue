@@ -6446,9 +6446,9 @@ class RogueBaselineTest(unittest.TestCase):
 
         labels = [s for _x, _y, s, _c in calls]
         self.assertIn("NORMAL", labels)
-        self.assertIn("D:", labels)
+        self.assertIn("D", labels)
         self.assertIn("6", labels)
-        self.assertIn("G:", labels)
+        self.assertIn("G", labels)
         self.assertIn("911", labels)
         self.assertIn("Hp", labels)
         self.assertIn("43(46)", labels)
@@ -6461,14 +6461,32 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Arm", labels)
         self.assertIn("Exp", labels)
         self.assertIn("5/135", labels)
-        self.assertEqual(next(c for _x, _y, s, c in calls if s == "D:"), rogue.UI_SUBTEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "D"), rogue.UI_SUBTEXT_COL)
+        d_x = next(x for x, _y, s, _c in calls if s == "D")
+        d_value_x = next(x for x, _y, s, _c in calls if s == "6")
+        self.assertEqual(d_value_x - (d_x + game.ui_text_width("D")), game.ui_text_width(" "))
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "6"), rogue.UI_TEXT_COL)
-        self.assertEqual(next(c for _x, _y, s, c in calls if s == "G:"), rogue.UI_SUBTEXT_COL)
+        self.assertEqual(next(c for _x, _y, s, c in calls if s == "G"), rogue.UI_SUBTEXT_COL)
+        g_x = next(x for x, _y, s, _c in calls if s == "G")
+        g_value_x = next(x for x, _y, s, _c in calls if s == "911")
+        self.assertEqual(g_value_x - (g_x + game.ui_text_width("G")), game.ui_text_width(" "))
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "911"), 11)
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "W"), rogue.UI_SUBTEXT_COL)
         self.assertEqual(next(c for _x, _y, s, c in calls if s == "+1,+1"), rogue.UI_SUBTEXT_COL)
         self.assertNotIn("Rogue V5", labels)
         self.assertFalse(any(s.startswith(("Depth ", "Gold ", "Food ", "Ctl ")) for s in labels))
+
+    def test_hades_hud_core_labels_localize_in_japanese(self):
+        game = new_game(seed=52, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_stat()
+
+        for label in ("階", "金", "体力", "強さ", "守備", "経験", "武", "鎧"):
+            self.assertIn(label, calls)
+        for label in ("D", "G", "Hp", "Str", "Arm", "Exp", "W", "A"):
+            self.assertNotIn(label, calls)
 
     def test_rogue2_official_message_reference_data_is_checked_in(self):
         ref_dir = os.path.join(ROOT, "vendor", "rogue2_official_messages")
@@ -6701,6 +6719,34 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [3, 3, 2, 3, 2])
         self.assertEqual(title, "aaaa ")
+
+    def test_rogue_544_scroll_syllable_table_matches_source(self):
+        # Rogue 5.4.4 init.c:sylls[] is the English scroll-title source of truth.
+        self.assertEqual(len(rogue.SCR_SYLS), 147)
+        self.assertEqual(len(rogue.SCR_SYLS_JA), len(rogue.SCR_SYLS))
+        self.assertEqual(rogue.SCR_SYLS[:8], ["a", "ab", "ag", "aks", "ala", "an", "app", "arg"])
+        self.assertEqual(rogue.SCR_SYLS[-8:], ["yot", "yu", "zant", "zeb", "zim", "zok", "zon", "zum"])
+
+    def test_scroll_title_recipe_renders_by_language_syllable_table(self):
+        # The recipe stores syllable indexes so language switching changes only rendering.
+        import rogue_init
+
+        rolls = iter([1, 0, 0, 1, 2, 0, 1, 3, 2])
+        calls = []
+        recipe = rogue_init.scroll_title_recipe(4, lambda n: calls.append(n) or next(rolls))
+
+        self.assertEqual(calls, [3, 3, 4, 3, 4, 4, 3, 4, 4])
+        self.assertEqual(recipe, ((0,), (2, 0), (3, 2)))
+        self.assertEqual(rogue_init.render_scroll_title(recipe, ["aa", "bb", "cc", "dd"]), "aa ccaa ddcc")
+        self.assertEqual(rogue_init.render_scroll_title(recipe, ["あ", "び", "く", "ど"]), "あ くあ どく")
+
+    def test_japanese_unknown_scroll_name_tracks_same_recipe(self):
+        ident = rogue.IdentTable(rogue.LANG_EN)
+        ident.snam[0] = ((0,), (1, 2), (3,))
+        scroll = rogue.Item(rogue.CAT_SCR, 0)
+
+        self.assertEqual(ident.name(scroll, rogue.LANG_EN), "scroll [a abag aks]")
+        self.assertEqual(ident.name(scroll, rogue.LANG_JA), "巻き物 [あ あぶあぐ あくす]")
 
     def test_v5_item_names_plural_food_and_armor_protection(self):
         game = new_game(seed=8)
@@ -10807,6 +10853,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(rogue.TILE_CH[rogue.T_STAIR][1], colors)
         self.assertIn((rogue.ZV_X + 17, rogue.SCR_H - 13, 110, 9, rogue.UI_SUBTEXT_COL), rects)
 
+    def test_japanese_hp_hud_label_stays_clear_of_bar(self):
+        game = new_game(seed=3431, lang=rogue.LANG_JA)
+        calls = []
+        rectbs = []
+        old_rectb = rogue.pyxel.rectb
+        try:
+            game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+            rogue.pyxel.rectb = lambda *args: rectbs.append(args)
+            game.draw_stat()
+        finally:
+            rogue.pyxel.rectb = old_rectb
+
+        hp = next((x, y, s, c) for x, y, s, c in calls if s == "体力")
+        bar = rectbs[0]
+        self.assertLessEqual(hp[0] + game.ui_text_width(hp[2]), bar[0] - 2)
+
     def test_low_hp_bar_frame_breathes_through_neutral_ui_colors(self):
         game = new_game(seed=3432)
         game.txt = lambda *args: None
@@ -10896,7 +10958,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.lang = rogue.LANG_JA
         calls.clear()
         game.draw_stat()
-        self.assertIn("Str", calls)
+        self.assertIn("強さ", calls)
+        self.assertIn("守備", calls)
+        self.assertIn("経験", calls)
         self.assertIn("1/0", calls)
 
         game.p.state = "hungry"
@@ -13268,11 +13332,11 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_register_screen()
 
         action = next(call for call in calls if call[2] == "A/Enter 決定  B/Esc ローカルのみ")
-        language = next(call for call in calls if call[2] == "Select/L Change Language（言語切替）")
+        language = next(call for call in calls if call[2] == "Select/L 言語切替")
         self.assertEqual(action[3], rogue.UI_SUBTEXT_COL)
         self.assertEqual(language[3], rogue.UI_HILITE_COL)
         self.assertGreater(language[1], action[1])
-        self.assertNotIn((314, 42, "Select/L Change Language（言語切替）", rogue.UI_HILITE_COL), calls)
+        self.assertNotIn((314, 42, "Select/L 言語切替", rogue.UI_HILITE_COL), calls)
 
     def test_online_score_skips_sync_when_next_sync_is_in_future(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -16431,14 +16495,14 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("> 探す", aux_text)
 
         game.draw_stat()
-        self.assertIn(("W", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("武", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("+1,+1", rogue.UI_SUBTEXT_COL), calls)
-        self.assertIn(("A", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("鎧", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("+1", rogue.UI_SUBTEXT_COL), calls)
-        self.assertIn(("Str", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("強さ", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("16(16)", rogue.UI_TEXT_COL), calls)
-        self.assertIn(("Arm", rogue.UI_SUBTEXT_COL), calls)
-        self.assertIn(("Exp", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("守備", rogue.UI_SUBTEXT_COL), calls)
+        self.assertIn(("経験", rogue.UI_SUBTEXT_COL), calls)
         self.assertIn(("1/0", rogue.UI_TEXT_COL), calls)
 
     def test_corner_hud_places_conditions_left_and_equipment_right(self):
@@ -16452,7 +16516,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         sub_y = rogue.SCR_H - 26
         self.assertIn((rogue.ZV_X, sub_y, "空腹 混乱", 9), calls)
-        w_call = next(call for call in calls if call[2] == "W" and call[3] == rogue.UI_SUBTEXT_COL)
+        w_call = next(call for call in calls if call[2] == "武" and call[3] == rogue.UI_SUBTEXT_COL)
         self.assertEqual(w_call[1], sub_y)
         self.assertGreater(w_call[0], rogue.SCR_W // 2)
         w_value = next(call for call in calls if call[2] == "+1,+1")
@@ -16498,16 +16562,16 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_win()
         game.draw_quit()
 
-        self.assertIn("=== Top 10 ===", boxes)
+        self.assertIn("=== 最 高 得 点 ===", boxes)
         self.assertIn("=== 勝利 ===", boxes)
         self.assertIn("-- 終了 --", boxes)
-        self.assertIn(("Top Ten Scores:", rogue.SCOREBOARD_HILITE_COL), calls)
+        self.assertIn(("順位   得点    名前", rogue.SCOREBOARD_HILITE_COL), calls)
         self.assertTrue(any("740 ace" in s and c == rogue.SCOREBOARD_TEXT_COL for s, c in calls))
         self.assertTrue(any("624 bob" in s and c == rogue.SCOREBOARD_TEXT_COL for s, c in calls))
         self.assertIn(("A / Start  新しいゲーム", rogue.UI_HILITE_COL), calls)
         self.assertIn(("ダンジョンから脱出した", rogue.UI_HILITE_COL), calls)
-        self.assertTrue(any(s.startswith("Gold:") and c == rogue.UI_HILITE_COL for s, c in calls))
-        self.assertTrue(any(s.startswith("Level:") and c == rogue.UI_TEXT_COL for s, c in calls))
+        self.assertTrue(any(s.endswith("個の金塊") and c == rogue.UI_HILITE_COL for s, c in calls))
+        self.assertTrue(any(s.startswith("レベル:") and c == rogue.UI_TEXT_COL for s, c in calls))
 
     def test_name_input_screen_uses_localized_screen_frame_and_subtext(self):
         game = new_game(seed=47345)
@@ -20701,8 +20765,8 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.RNG.rnd = old_rnd
 
-        self.assertIn("red火花がよろいの上で踊った", game.msgs)
-        self.assertNotIn("redの火花がよろいの上で踊った。", game.msgs)
+        self.assertIn("赤の火花がよろいの上で踊った", game.msgs)
+        self.assertNotIn("red火花がよろいの上で踊った", game.msgs)
 
     def test_poison_save_uses_rogue54_level_scaled_threshold(self):
         game = new_game(seed=60)

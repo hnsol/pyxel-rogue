@@ -1,5 +1,15 @@
 {
   "hud": {
+    "label": {
+      "armor": "守備",
+      "armor_slot": "鎧",
+      "depth": "階",
+      "experience": "経験",
+      "gold": "金",
+      "hp": "体力",
+      "strength": "強さ",
+      "weapon": "武"
+    },
     "armor": {
       "banded mail": "帯金",
       "chain mail": "鎖",
@@ -250,6 +260,58 @@
     "red": "赤い",
     "white": "白い",
     "yellow": "黄色い"
+  },
+  "color": {
+    "adjective": {
+      "blue": "青い",
+      "gold": "金色の",
+      "green": "緑の",
+      "orange": "橙色の",
+      "red": "赤い",
+      "silver": "銀色の",
+      "violet": "紫の",
+      "yellow": "黄色い"
+    },
+    "noun": {
+      "blue": "青",
+      "gold": "金色",
+      "green": "緑",
+      "orange": "橙色",
+      "red": "赤",
+      "silver": "銀色",
+      "violet": "紫",
+      "yellow": "黄色"
+    },
+    "stem": {
+      "blue": "青",
+      "gold": "金色",
+      "green": "緑",
+      "orange": "橙色",
+      "red": "赤",
+      "silver": "銀色",
+      "violet": "紫",
+      "yellow": "黄"
+    }
+  },
+  "bolt": {
+    "bolt": "稲妻",
+    "flame": "炎",
+    "ice": "氷",
+    "magic missile": "魔法のミサイル"
+  },
+  "action": {
+    "Call": "呼び名をつける",
+    "Drop": "落とす",
+    "Eat": "食べる",
+    "Put on": "身につける",
+    "Quaff": "飲む",
+    "Read": "読む",
+    "Remove ring": "はずす",
+    "Take off armor": "脱ぐ",
+    "Throw": "投げる",
+    "Wear": "着る",
+    "Wield": "持つ",
+    "Zap": "振る"
   },
   "stick_type": {
     "staff": "杖",

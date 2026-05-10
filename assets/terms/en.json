@@ -1,5 +1,15 @@
 {
   "hud": {
+    "label": {
+      "armor": "Arm",
+      "armor_slot": "A",
+      "depth": "D",
+      "experience": "Exp",
+      "gold": "G",
+      "hp": "Hp",
+      "strength": "Str",
+      "weapon": "W"
+    },
     "armor": {
       "banded mail": "banded",
       "chain mail": "chain",
@@ -250,6 +260,58 @@
     "red": "red",
     "white": "white",
     "yellow": "yellow"
+  },
+  "color": {
+    "adjective": {
+      "blue": "blue",
+      "gold": "gold",
+      "green": "green",
+      "orange": "orange",
+      "red": "red",
+      "silver": "silver",
+      "violet": "violet",
+      "yellow": "yellow"
+    },
+    "noun": {
+      "blue": "blue",
+      "gold": "gold",
+      "green": "green",
+      "orange": "orange",
+      "red": "red",
+      "silver": "silver",
+      "violet": "violet",
+      "yellow": "yellow"
+    },
+    "stem": {
+      "blue": "blue",
+      "gold": "gold",
+      "green": "green",
+      "orange": "orange",
+      "red": "red",
+      "silver": "silver",
+      "violet": "violet",
+      "yellow": "yellow"
+    }
+  },
+  "bolt": {
+    "bolt": "bolt",
+    "flame": "flame",
+    "ice": "ice",
+    "magic missile": "magic missile"
+  },
+  "action": {
+    "Call": "call",
+    "Drop": "drop",
+    "Eat": "eat",
+    "Put on": "put on",
+    "Quaff": "quaff",
+    "Read": "read",
+    "Remove ring": "remove",
+    "Take off armor": "take off",
+    "Throw": "throw",
+    "Wear": "wear",
+    "Wield": "wield",
+    "Zap": "zap"
   },
   "stick_type": {
     "staff": "staff",

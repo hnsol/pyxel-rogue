@@ -1,6 +1,11 @@
 # Fallback copy of assets/terms/*.json for Pyxel Web launcher builds.
 EN_TERMS = {
     "hud": {
+        "label": {
+            "armor": "Arm", "armor_slot": "A", "depth": "D",
+            "experience": "Exp", "gold": "G", "hp": "Hp",
+            "strength": "Str", "weapon": "W",
+        },
         "armor": {
             "banded mail": "banded", "chain mail": "chain", "leather armor": "leather",
             "plate mail": "plate", "ring mail": "ring", "scale mail": "scale",
@@ -88,6 +93,11 @@ EN_TERMS = {
 
 JA_TERMS = {
     "hud": {
+        "label": {
+            "armor": "守備", "armor_slot": "鎧", "depth": "階",
+            "experience": "経験", "gold": "金", "hp": "体力",
+            "strength": "強さ", "weapon": "武",
+        },
         "armor": {
             "banded mail": "帯金", "chain mail": "鎖", "leather armor": "革",
             "plate mail": "鋼鉄", "ring mail": "かたびら", "scale mail": "うろこ",
@@ -197,6 +207,30 @@ EN_TERMS["material"] = {
     )},
 }
 EN_TERMS["stick_type"] = {"staff": "staff", "wand": "wand"}
+EN_TERMS["color"] = {
+    "adjective": {
+        "blue": "blue", "gold": "gold", "green": "green", "orange": "orange",
+        "red": "red", "silver": "silver", "violet": "violet", "yellow": "yellow",
+    },
+    "noun": {
+        "blue": "blue", "gold": "gold", "green": "green", "orange": "orange",
+        "red": "red", "silver": "silver", "violet": "violet", "yellow": "yellow",
+    },
+    "stem": {
+        "blue": "blue", "gold": "gold", "green": "green", "orange": "orange",
+        "red": "red", "silver": "silver", "violet": "violet", "yellow": "yellow",
+    },
+}
+EN_TERMS["bolt"] = {
+    "bolt": "bolt", "flame": "flame", "ice": "ice",
+    "magic missile": "magic missile",
+}
+EN_TERMS["action"] = {
+    "Call": "call", "Drop": "drop", "Eat": "eat", "Put on": "put on",
+    "Quaff": "quaff", "Read": "read", "Remove ring": "remove",
+    "Take off armor": "take off", "Throw": "throw", "Wear": "wear",
+    "Wield": "wield", "Zap": "zap",
+}
 
 JA_TERMS["item"]["potion"].update({
     "hallucination": "幻覚をおこす",
@@ -264,3 +298,28 @@ JA_TERMS["material"] = {
     },
 }
 JA_TERMS["stick_type"] = {"staff": "杖", "wand": "杖"}
+JA_TERMS["color"] = {
+    "adjective": {
+        "blue": "青い", "gold": "金色の", "green": "緑の",
+        "orange": "橙色の", "red": "赤い", "silver": "銀色の",
+        "violet": "紫の", "yellow": "黄色い",
+    },
+    "noun": {
+        "blue": "青", "gold": "金色", "green": "緑", "orange": "橙色",
+        "red": "赤", "silver": "銀色", "violet": "紫", "yellow": "黄色",
+    },
+    "stem": {
+        "blue": "青", "gold": "金色", "green": "緑", "orange": "橙色",
+        "red": "赤", "silver": "銀色", "violet": "紫", "yellow": "黄",
+    },
+}
+JA_TERMS["bolt"] = {
+    "bolt": "稲妻", "flame": "炎", "ice": "氷",
+    "magic missile": "魔法のミサイル",
+}
+JA_TERMS["action"] = {
+    "Call": "呼び名をつける", "Drop": "落とす", "Eat": "食べる",
+    "Put on": "身につける", "Quaff": "飲む", "Read": "読む",
+    "Remove ring": "はずす", "Take off armor": "脱ぐ", "Throw": "投げる",
+    "Wear": "着る", "Wield": "持つ", "Zap": "振る",
+}
