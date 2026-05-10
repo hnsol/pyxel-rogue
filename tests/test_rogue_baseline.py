@@ -11800,7 +11800,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_keyboard_upper_p_opens_put_on_ring(self):
         # Rogue 5.4.4 command.c:command() maps 'P' to rings.c:ring_on().
         game = new_game(seed=35)
-        game.start_item_action = lambda aname, cat=None: setattr(game, "shortcut", (aname, cat))
+        game.start_item_action = lambda aname: setattr(game, "shortcut", aname)
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.KEY_P, rogue.pyxel.KEY_SHIFT},
@@ -11808,7 +11808,18 @@ class RogueBaselineTest(unittest.TestCase):
         )
         game.update()
 
-        self.assertEqual(game.shortcut, ("Put on", None))
+        self.assertEqual(game.shortcut, "Put on")
+
+    def test_action_menu_select_does_not_pass_category_filter(self):
+        game = new_game(seed=351)
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Quaff")
+        calls = []
+        game.start_item_action = lambda aname: calls.append(aname)
+
+        game.menu_select()
+
+        self.assertEqual(calls, ["Quaff"])
 
     def test_keyboard_overlays_use_enter_escape_not_z_c(self):
         game = new_game(seed=35)
@@ -16676,26 +16687,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("名前", rogue.UI_SECTION_COL), calls)
         self.assertTrue(any("D-pad/矢印" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
 
-    def test_empty_read_and_put_on_messages_use_object_names_in_japanese(self):
+    def test_rogue_544_menu_item_commands_prompt_with_other_item_types_in_japanese(self):
         game = new_game(seed=47346, lang=rogue.LANG_JA)
-        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0)]
+        food = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv = [food]
 
         game.st = rogue.ST_MENU
         game.start_item_action("Read")
-        self.assertIn("読むものがない", game.msgs)
-        self.assertNotIn("readものがない", "\n".join(game.msgs).lower())
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [food])
 
         game.msgs.clear()
         game.st = rogue.ST_MENU
         game.start_item_action("Put on")
-        self.assertIn("指輪はない", game.msgs)
-        self.assertNotIn("put onものがない", "\n".join(game.msgs).lower())
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [food])
 
         game.msgs.clear()
         game.st = rogue.ST_MENU
         game.start_item_action("Quaff")
-        self.assertIn("飲むものがない", game.msgs)
-        self.assertNotIn("quaffものがない", "\n".join(game.msgs).lower())
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [food])
 
     def test_online_sync_overlay_uses_panel_frame_and_localized_status_roles(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -19852,6 +19864,35 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(potion, game.p.inv)
         self.assertIn("yuk! Why would you want to drink that?", game.msgs)
 
+    def test_rogue_544_action_menu_get_item_commands_offer_full_pack(self):
+        # Rogue 5.4.4 pack.c:get_item() returns any typed pack letter; the
+        # command-specific type gate runs after selection.
+        game = new_game(seed=5512)
+        items = [
+            rogue.Item(rogue.CAT_SCR, 0),
+            rogue.Item(rogue.CAT_POT, 0),
+            rogue.Item(rogue.CAT_FOOD, 0),
+            rogue.Item(rogue.CAT_WPN, 0),
+            rogue.Item(rogue.CAT_ARM, 0),
+            rogue.Item(rogue.CAT_RING, 0),
+            rogue.Item(rogue.CAT_STICK, 0, charges=1),
+            rogue.Item(rogue.CAT_AMULET, 0),
+        ]
+        game.p.inv = items
+
+        for action in ("Quaff", "Read", "Eat", "Wear", "Put on", "Call"):
+            with self.subTest(action=action):
+                game.st = rogue.ST_MENU
+                game.start_item_action(action)
+
+                self.assertEqual(game.fitems, items)
+
+        game.st = rogue.ST_MENU
+        game.start_item_action("Zap")
+
+        self.assertEqual(game.st, rogue.ST_DIR)
+        self.assertEqual(game.fitems, items)
+
     def test_rogue_544_keyboard_quaff_still_prompts_when_no_potions_but_pack_has_items(self):
         # Rogue 5.4.4 potions.c:quaff() calls pack.c:get_item() before the type gate,
         # so a non-empty pack still reaches the item prompt even without POTION objects.
@@ -20923,8 +20964,9 @@ class TestCallIt(unittest.TestCase):
         self.assertEqual(self.g.item_name(weapon), "mace called sting")
         self.assertEqual(self.g.item_name(armor), "ring mail called lucky")
 
-    def test_rogue_544_call_action_includes_weapon_armor_and_excludes_food_amulet(self):
-        # Rogue 5.4.4 pack.c:inventory(... CALLABLE) includes non-FOOD/non-AMULET items.
+    def test_rogue_544_call_action_picker_includes_full_pack(self):
+        # Rogue 5.4.4 command.c:call() receives items through pack.c:get_item();
+        # even FOOD/AMULET are rejected only after selection.
         weapon = rogue.Item(rogue.CAT_WPN, 0)
         armor = rogue.Item(rogue.CAT_ARM, 1)
         food = rogue.Item(rogue.CAT_FOOD, 0)
@@ -20937,8 +20979,8 @@ class TestCallIt(unittest.TestCase):
         self.assertIn(weapon, self.g.fitems)
         self.assertIn(armor, self.g.fitems)
         self.assertIn(potion, self.g.fitems)
-        self.assertNotIn(food, self.g.fitems)
-        self.assertNotIn(amulet, self.g.fitems)
+        self.assertIn(food, self.g.fitems)
+        self.assertIn(amulet, self.g.fitems)
 
     def test_rogue_544_call_known_type_rejects_without_clearing_guess(self):
         # Rogue 5.4.4 command.c:call() returns "already identified" before editing oi_guess.

@@ -268,7 +268,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_2116"
+UI_BUILD = "260510_2207"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -3946,13 +3946,6 @@ class Game:
             (CAT_FOOD, CAT_AMULET),
         )
 
-    def callable_items(self):
-        # Rogue 5.4.4 pack.c:inventory(... CALLABLE) excludes only FOOD and AMULET.
-        return [
-            it for it in self.p.inv
-            if self.call_result(it) != rogue_things.CALL_RESULT_UNCALLABLE
-        ]
-
     def apply_call_name(self, it, name: str):
         # Rogue 5.4.4 command.c:call() rejects known type-level items before call_it().
         result = self.call_result(it)
@@ -5593,6 +5586,9 @@ class Game:
     def restorable_menu_actions(self):
         return ("Quaff", "Read", "Eat", "Zap", "Throw")
 
+    def get_item_actions(self):
+        return ("Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Zap", "Throw", "Drop", "Call")
+
     def action_index_by_name(self, name):
         for i, (action_name, _cat) in enumerate(MENU_ACTIONS):
             if action_name == name:
@@ -5615,18 +5611,16 @@ class Game:
         self.menu_cursor_restored=False
 
     def menu_select(self):
-        aname,cat = MENU_ACTIONS[self.mcur]
+        aname, _cat = MENU_ACTIONS[self.mcur]
         self.last_menu_action = aname if aname in self.restorable_menu_actions() else None
         if aname=="Discoveries":
             self.open_discoveries()
             return
-        self.start_item_action(aname, cat)
+        self.start_item_action(aname)
 
-    def start_item_action(self, aname, cat=None):
+    def start_item_action(self, aname):
         if self.st in (ST_PLAY, ST_MENU):
             self.command_look()
-        if cat is None:
-            cat = next((c for n,c in MENU_ACTIONS if n == aname), None)
         self.action_origin = self.st
         self.cact = aname; p = self.p
         if aname=="Take off":
@@ -5635,27 +5629,14 @@ class Game:
             self.fitems=[p.arm] if p.arm is not None else []
         elif aname=="Remove ring":
             self.fitems=[i for i in (p.ring_l, p.ring_r) if i is not None]
-        elif aname in("Throw","Drop","Wield"):
+        elif aname in self.get_item_actions():
             self.fitems=list(p.inv)
-        elif aname=="Call":
-            self.fitems=self.callable_items()
-        elif cat:
-            self.fitems=[i for i in p.inv if i.cat==cat]
         else:
             self.fitems=list(p.inv)
         if (
             not self.fitems
-            and self.action_origin == ST_PLAY
-            and p.inv
-            and aname in ("Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Zap", "Call")
-        ):
-            # Rogue 5.4.4 pack.c:get_item() prompts before command-specific type gates.
-            self.fitems=list(p.inv)
-        if (
-            not self.fitems
-            and self.action_origin == ST_PLAY
             and not p.inv
-            and aname in ("Drop", "Quaff", "Read", "Eat", "Wield", "Wear", "Put on", "Call")
+            and aname in self.get_item_actions()
         ):
             self.msg("pack.you_arent_carrying_anything"); self.close_menu(); return
         if aname=="Take off armor" and not self.fitems:
