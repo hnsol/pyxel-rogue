@@ -156,6 +156,10 @@ from rogue_palettes import (
     ROLE_FLOOR,
     ROLE_GOLD,
     ROLE_HILITE,
+    ROLE_HP_LOW_FRAME_DIM,
+    ROLE_HP_LOW_FRAME_GLOW,
+    ROLE_HP_LOW_FRAME_MID,
+    ROLE_HP_LOW_FRAME_SHADOW,
     ROLE_MEMORY,
     ROLE_PLAYER,
     ROLE_SECTION,
@@ -263,12 +267,24 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_0411"
+UI_BUILD = "260510_1655"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
-HP_LOW_FRAME_COLORS = (1, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 1)
+HP_LOW_FRAME_ROLES = (
+    ROLE_HP_LOW_FRAME_DIM,
+    ROLE_HP_LOW_FRAME_DIM,
+    ROLE_HP_LOW_FRAME_SHADOW,
+    ROLE_HP_LOW_FRAME_MID,
+    ROLE_HP_LOW_FRAME_GLOW,
+    ROLE_HP_LOW_FRAME_GLOW,
+    ROLE_HP_LOW_FRAME_GLOW,
+    ROLE_HP_LOW_FRAME_MID,
+    ROLE_HP_LOW_FRAME_SHADOW,
+    ROLE_HP_LOW_FRAME_DIM,
+)
 HP_LOW_FRAME_PERIOD = 5
+HP_LOW_FRAME_PROBE_FRAMES = tuple(range(0, len(HP_LOW_FRAME_ROLES) * HP_LOW_FRAME_PERIOD, HP_LOW_FRAME_PERIOD))
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
@@ -8007,7 +8023,8 @@ class Game:
     def hp_frame_color(self, hp_low):
         if not hp_low:
             return UI_SUBTEXT_COL
-        return HP_LOW_FRAME_COLORS[(pyxel.frame_count // HP_LOW_FRAME_PERIOD) % len(HP_LOW_FRAME_COLORS)]
+        role = HP_LOW_FRAME_ROLES[(pyxel.frame_count // HP_LOW_FRAME_PERIOD) % len(HP_LOW_FRAME_ROLES)]
+        return palette_role_color(self.ensure_settings().palette, role)
 
     def draw_msgs(self):
         rows=[]

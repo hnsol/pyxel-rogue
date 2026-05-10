@@ -10732,7 +10732,7 @@ class RogueBaselineTest(unittest.TestCase):
 
             self.assertIn(10, [args[-1] for args in rects])
             self.assertIn(9, [args[-1] for args in rects])
-            self.assertIn(rogue.HP_LOW_FRAME_COLORS[0], [args[-1] for args in rectbs])
+            self.assertIn(rogue.palette_role_color("flexoki_dark", rogue.ROLE_HP_LOW_FRAME_DIM), [args[-1] for args in rectbs])
         finally:
             rogue.pyxel.rect = old_rect
             rogue.pyxel.rectb = old_rectb
@@ -10769,7 +10769,7 @@ class RogueBaselineTest(unittest.TestCase):
         try:
             rogue.pyxel.rectb = lambda *args: rectbs.append(args)
             cols = []
-            for frame in (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55):
+            for frame in rogue.HP_LOW_FRAME_PROBE_FRAMES:
                 rogue.pyxel.frame_count = frame
                 rectbs.clear()
                 game.draw_stat()
@@ -10778,7 +10778,39 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.frame_count = old_frame_count
             rogue.pyxel.rectb = old_rectb
 
-        self.assertEqual(cols, [1, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 1])
+        self.assertEqual(cols, [1, 1, 3, 4, 5, 5, 5, 4, 3, 1])
+
+    def test_low_hp_bar_frame_uses_theme_roles_without_special_monster_colors(self):
+        game = new_game(seed=3433)
+        game.txt = lambda *args: None
+        game.p.max_hp = 12
+        game.p.hp = 3
+        rectbs = []
+        old_frame_count = rogue.pyxel.frame_count
+        old_rectb = rogue.pyxel.rectb
+        try:
+            rogue.pyxel.rectb = lambda *args: rectbs.append(args)
+            for palette_id in ("flexoki_syntax_dark", "flexoki_light", "flexoki_syntax_light"):
+                game.settings.palette = palette_id
+                cols = []
+                for frame in rogue.HP_LOW_FRAME_PROBE_FRAMES:
+                    rogue.pyxel.frame_count = frame
+                    rectbs.clear()
+                    game.draw_stat()
+                    cols.append(rectbs[-1][-1])
+                self.assertEqual(
+                    cols,
+                    [
+                        rogue.palette_role_color(palette_id, role)
+                        for role in rogue.HP_LOW_FRAME_ROLES
+                    ],
+                )
+                self.assertNotIn(2, cols)
+                if palette_id in ("flexoki_light", "flexoki_syntax_light"):
+                    self.assertNotIn(6, cols)
+        finally:
+            rogue.pyxel.frame_count = old_frame_count
+            rogue.pyxel.rectb = old_rectb
 
     def test_inventory_overlay_and_hades_hud_show_v5_exp_status_summary(self):
         game = new_game(seed=35)
