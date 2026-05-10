@@ -10724,6 +10724,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("Rogue V5", calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{6}_\d{4}$")
 
+    def test_japanese_title_and_name_entry_localize_remaining_labels(self):
+        game = new_game(seed=344, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_title()
+        game.draw_name_input()
+
+        self.assertIn("通常", calls)
+        self.assertIn("完了", calls)
+        self.assertNotIn("NORMAL", calls)
+        self.assertNotIn("END", calls)
+
     def test_rogue_py_commits_update_ui_build_stamp(self):
         # AGENTS.md / DESIGN.md: player-visible rogue.py changes must carry UI_BUILD.
         try:
@@ -11902,6 +11915,59 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("________)/\\\\_//(\\/(/\\)/\\//\\/|_)_______", calls)
         self.assertTrue(any("hobgoblin" in c for c in calls))
         self.assertTrue(any("123 Au" in c for c in calls))
+
+    def test_japanese_death_tombstone_uses_rogue2_style_phrasing(self):
+        game = new_game(seed=35, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+        game.p.gold = 123
+        game.death_cause = "killed by a hobgoblin"
+
+        game.draw_dead()
+
+        text = "\n".join(calls)
+        self.assertIn("安らかに", text)
+        self.assertIn("眠れ", text)
+        self.assertIn("小鬼と戦いて死す", text)
+        self.assertIn("123個の金塊", text)
+        self.assertNotIn("REST", text)
+        self.assertNotIn("PEACE", text)
+        self.assertNotIn("killed by", text)
+        self.assertNotIn("Au", text)
+
+    def test_japanese_death_tombstone_centers_shell_and_splits_long_killer(self):
+        game = new_game(seed=35, lang=rogue.LANG_JA)
+        boxes = []
+        calls = []
+        game._box = lambda bx, by, bw, bh, title=None: boxes.append((bx, by, bw, bh, title))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game.p.gold = 34
+        game.death_cause = "killed by a kestrel"
+
+        game.draw_dead()
+
+        self.assertEqual(boxes[0][4], "=== 安らかに眠れ ===")
+        bx, _by, bw, _bh, _title = boxes[0]
+        center_x = bx + bw // 2
+        shell_chars = set(" _/\\|*()")
+        shell = [call for call in calls if call[2] and set(call[2]) <= shell_chars]
+        self.assertTrue(shell)
+        shell_x = {x for x, _y, _s, _c in shell}
+        self.assertEqual(len(shell_x), 1)
+        top = next((call for call in shell if "__________" in call[2]), None)
+        self.assertIsNotNone(top)
+        top_x, _top_y, top_s, _top_c = top
+        top_left_cols = len(top_s) - len(top_s.lstrip(" "))
+        top_center = top_x + (top_left_cols + 5) * rogue.FONT_ASCII_W
+        self.assertLessEqual(abs(top_center - center_x), 3)
+        text = [s for _x, _y, s, _c in calls]
+        self.assertIn("大はやぶさと", text)
+        self.assertIn("戦いて死す", text)
+        self.assertNotIn("大はやぶさと戦いて死す", text)
+        self.assertFalse(any(s.startswith("地下") for s in text))
+        self.assertFalse(any(s.startswith("レベル") for s in text))
+        self.assertFalse(any(s.startswith("経験") for s in text))
+        self.assertFalse(any(s.startswith("ターン") for s in text))
 
     def test_death_screen_tombstone_contents_fit_inside_box(self):
         game = new_game(seed=35)
@@ -13915,6 +13981,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn(("SYNCING...", 23, 410, 55), drawn)
         self.assertNotIn(("SYNCING...", 23, 120, 116), drawn)
         self.assertLess(drawn.index(row1), drawn.index(sync_box))
+
+    def test_japanese_online_entry_screens_localize_name_user_and_done_labels(self):
+        game = new_game(seed=47346, lang=rogue.LANG_JA)
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+        game._box = lambda *args: None
+
+        game.name_chars = list("ace")
+        game.name_pos = 8
+        game.draw_online_register_screen()
+        game.online_pending_user_name = "ace"
+        game.online_password_chars = list("123456")
+        game.draw_online_pin_screen()
+        game.online_local_confirm_mode = "guest_switch"
+        game.draw_online_local_confirm_screen()
+
+        text = "\n".join(calls)
+        self.assertIn("完了", calls)
+        self.assertIn("ユーザ: ace", calls)
+        self.assertIn("名前: guest", calls)
+        self.assertNotIn("END", calls)
+        self.assertNotIn("User: ace", text)
+        self.assertNotIn("Name: guest", text)
 
     def test_online_score_sync_box_shows_refreshing_when_post_is_not_allowed(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -16539,7 +16628,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_help()
 
         titles = [title for *_box, title in boxes]
-        self.assertIn("=== Top 10 ===", titles)
+        self.assertIn("=== Scoreboard ===", titles)
         self.assertIn("=== R.I.P. ===", titles)
         self.assertIn("=== Name Entry ===", titles)
         self.assertIn(("Name", rogue.UI_SECTION_COL), calls)
@@ -16562,7 +16651,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_win()
         game.draw_quit()
 
-        self.assertIn("=== 最 高 得 点 ===", boxes)
+        self.assertIn("=== スコアボード ===", boxes)
         self.assertIn("=== 勝利 ===", boxes)
         self.assertIn("-- 終了 --", boxes)
         self.assertIn(("順位   得点    名前", rogue.SCOREBOARD_HILITE_COL), calls)
@@ -20061,12 +20150,20 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_help()
 
         by_text = {s: (x, y) for x, y, s, _c in calls}
-        self.assertEqual(by_text["操作"][0], by_text["移動"][0])
-        self.assertEqual(by_text["操作"][0], by_text["斜め補助"][0])
-        self.assertEqual(by_text["Key"][0], by_text["Arrow"][0])
-        self.assertEqual(by_text["Key"][0], by_text["Space"][0])
-        self.assertEqual(by_text["Pad"][0], by_text["D-pad"][0])
-        self.assertEqual(by_text["Pad"][0], by_text["Start"][0])
+        text = "\n".join(by_text)
+        self.assertIn("--- 基本操作 ---", text)
+        self.assertIn("--- キーボード専用 ---", text)
+        self.assertIn("パッド", by_text)
+        self.assertIn("キー", by_text)
+        self.assertIn("動作", by_text)
+        self.assertNotIn("Pad", by_text)
+        self.assertNotIn("Key", by_text)
+        self.assertEqual(by_text["動作"][0], by_text["移動"][0])
+        self.assertEqual(by_text["動作"][0], by_text["斜め補助"][0])
+        self.assertEqual(by_text["キー"][0], by_text["Arrow"][0])
+        self.assertEqual(by_text["キー"][0], by_text["Space"][0])
+        self.assertEqual(by_text["パッド"][0], by_text["D-pad"][0])
+        self.assertEqual(by_text["パッド"][0], by_text["Start"][0])
 
     def test_help_basic_action_column_uses_calculated_gap(self):
         game = new_game(seed=5602, lang=rogue.LANG_JA)

@@ -268,7 +268,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_2017"
+UI_BUILD = "260510_2116"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -2241,6 +2241,86 @@ class Game:
         put(9, center_col(killer), killer)
         put(10, 26 - base_col, f"{year:4d}")
         return lines
+
+    def rogue2_tombstone_killer_line(self, killer):
+        special = {
+            "hypothermia": "寒さにより死す",
+            "starvation": "飢えにより死す",
+            "arrow": "矢により死す",
+            "dart": "毒矢により死す",
+        }
+        if killer in special:
+            return special[killer]
+        subject = TextCatalog.monster(LANG_JA, killer)
+        if subject == killer:
+            subject = TextCatalog.bolt(LANG_JA, killer)
+        return f"{subject}と戦いて死す"
+
+    def tombstone_lines(self, name, gold, killer, year):
+        if self.lang != LANG_JA:
+            return self.rogue_544_tombstone_lines(name, gold, killer, year)
+        return [
+            "              __________",
+            "             /          \\",
+            "            /  安らかに  \\",
+            "           /            \\",
+            "          /              \\",
+            "         /                  \\",
+            f"         |      {name[:8]:<8}    |",
+            f"         |   {gold}個の金塊   |",
+            f"         | {self.rogue2_tombstone_killer_line(killer)} |",
+            "         |                  |",
+            f"         |       {year:4d}       |",
+            "        *|     *  *  *      | *",
+            "________)/\\\\_//(\\/(/\\)/\\//\\/|_)_______",
+        ]
+
+    def rogue2_tombstone_killer_lines(self, killer):
+        line = self.rogue2_tombstone_killer_line(killer)
+        suffix = "戦いて死す"
+        if line.endswith(suffix) and self.ui_text_width(line) > FONT_ASCII_W * 18:
+            return [line[: -len(suffix)], suffix]
+        return [line]
+
+    def japanese_tombstone_shell_lines(self):
+        return [
+            "        __________",
+            "       /          \\",
+            "      /            \\",
+            "     /              \\",
+            "    /                \\",
+            "   /                  \\",
+            "   |                  |",
+            "   |                  |",
+            "   |                  |",
+            "   |                  |",
+            "   |                  |",
+            "  *|     *  *  *      | *",
+            "__)/\\\\_//(\\/(/\\)/\\//\\/|_)_______",
+        ]
+
+    def txt_centered(self, cx, y, s, col):
+        self.txt(cx - self.ui_text_width(s) // 2, y, s, col)
+
+    def draw_japanese_tombstone(self, bx, by, bw, name, gold, killer, year):
+        # Keep the Rogue 5.4.4 rip.c shell ASCII-only, then overlay CJK text.
+        cx = bx + bw // 2
+        y0 = by + 28
+        line_h = 10
+        shell = self.japanese_tombstone_shell_lines()
+        top_left_cols = len(shell[0]) - len(shell[0].lstrip(" "))
+        shell_x = cx - (top_left_cols + 5) * FONT_ASCII_W
+        for i, line in enumerate(shell):
+            self.txt(shell_x, y0 + i * line_h, line, UI_TEXT_COL)
+        self.txt_centered(cx, y0 + 2 * line_h, "安らかに", UI_TEXT_COL)
+        self.txt_centered(cx, y0 + 3 * line_h, "眠れ", UI_TEXT_COL)
+        self.txt_centered(cx, y0 + 6 * line_h, name[:8], UI_TEXT_COL)
+        self.txt_centered(cx, y0 + 7 * line_h, f"{gold}個の金塊", UI_TEXT_COL)
+        killer_lines = self.rogue2_tombstone_killer_lines(killer)
+        for i, line in enumerate(killer_lines[:2]):
+            self.txt_centered(cx, y0 + (8 + i) * line_h, line, UI_TEXT_COL)
+        self.txt_centered(cx, y0 + 10 * line_h, f"{year:4d}", UI_TEXT_COL)
+        return y0 + len(shell) * line_h + 10
 
     def result_killer(self, outcome):
         if outcome in ("quit", "winner"):
@@ -7696,7 +7776,7 @@ class Game:
             self.draw_online_confirm_screen()
             return
         if self.st == ST_LOADING:
-            msg = "Loading..." if self.lang == LANG_EN else "ロード中..."
+            msg = TextCatalog.msg(self.lang, "ui.loading")
             self.txt(SCR_W // 2 - 30, SCR_H // 2, msg, 10)
             return
         self.draw_title()
@@ -7799,7 +7879,7 @@ class Game:
             col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 8 else UI_TEXT_COL
-        self.txt(base_x + 126, y, "END", end_col)
+        self.txt(base_x + 126, y, TextCatalog.msg(self.lang, "ui.done"), end_col)
         self.txt(bx + 12, by + 152, TextCatalog.msg(self.lang, "ui.name_entry_move_hint"), UI_SUBTEXT_COL)
         self.txt(bx + 20, by + 168, TextCatalog.msg(self.lang, "ui.name_entry_ok_hint"), UI_SUBTEXT_COL)
 
@@ -7925,7 +8005,7 @@ class Game:
             col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
-        self.txt(base_x + 126, y, "END", end_col)
+        self.txt(base_x + 126, y, TextCatalog.msg(self.lang, "ui.done"), end_col)
         self.txt(bx + 26, by + 158, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(bx + 26, by + 172)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
@@ -7938,7 +8018,7 @@ class Game:
         bx, by, bw, bh = self.center_rect(328, 210)
         self._box(bx, by, bw, bh, self.ui_heading(self.online_text("pin_link_title" if is_link else "pin_title"), UI_HEADING_SCREEN))
         user_name = getattr(self, "online_pending_user_name", "rogue54")
-        self.txt(bx + 24, by + 26, f"User: {user_name}", UI_TEXT_COL)
+        self.txt(bx + 24, by + 26, TextCatalog.msg(self.lang, "ui.user_value", user=user_name), UI_TEXT_COL)
         self.txt(bx + 24, by + 46, self.online_text("pin_link_server" if is_link else "pin_server"), UI_TEXT_COL)
         self.txt(bx + 24, by + 60, self.online_text("pin_link_reuse" if is_link else "pin_reuse"), UI_TEXT_COL)
         chars = getattr(self, "online_password_chars", ["0"] * 6)
@@ -7947,7 +8027,7 @@ class Game:
             col = UI_SELECTED_COL if i == getattr(self, "name_pos", 0) else UI_TEXT_COL
             self.txt(base_x + i * 18, y, ch, col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= 6 else UI_TEXT_COL
-        self.txt(base_x + 122, y, "END", end_col)
+        self.txt(base_x + 122, y, TextCatalog.msg(self.lang, "ui.done"), end_col)
         self.txt(bx + 24, by + 168, self.online_text("pin_hint"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(bx + 24, by + 182)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
@@ -7963,19 +8043,19 @@ class Game:
         name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
         if guest_switch:
             self.txt(bx + 26, by + 26, self.online_text("guest_confirm_prompt"), UI_TEXT_COL)
-            self.txt(bx + 26, by + 46, "Name: guest", UI_HILITE_COL)
+            self.txt(bx + 26, by + 46, TextCatalog.msg(self.lang, "ui.name_value", name="guest"), UI_HILITE_COL)
             self.txt(bx + 26, by + 74, self.online_text("guest_confirm_ok"), UI_SUBTEXT_COL)
             self.txt(bx + 26, by + 92, self.online_text("guest_confirm_cancel"), UI_SUBTEXT_COL)
         else:
             self.txt(bx + 26, by + 26, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
-            self.txt(bx + 26, by + 46, f"Name: {name}*", UI_HILITE_COL)
+            self.txt(bx + 26, by + 46, TextCatalog.msg(self.lang, "ui.name_value", name=f"{name}*"), UI_HILITE_COL)
             self.txt(bx + 26, by + 74, self.online_text("local_confirm_ok"), UI_SUBTEXT_COL)
             self.txt(bx + 26, by + 92, self.online_text("local_confirm_cancel"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(bx + 26, by + 110)
 
     def draw_title(self):
         pyxel.rect(0, 0, SCR_W, ZV_Y - 4, 1)
-        self.txt(ZV_X, 6, "NORMAL", UI_SUBTEXT_COL)
+        self.txt(ZV_X, 6, TextCatalog.msg(self.lang, "ui.status_normal"), UI_SUBTEXT_COL)
 
     def should_draw_memory_tile(self, mx, my, tile):
         room = self.room_at(mx, my)
@@ -8518,7 +8598,7 @@ class Game:
             basic_title = self.ui_heading("基本操作", UI_HEADING_SECTION)
             keys_title = self.ui_heading("キーボード専用", UI_HEADING_SECTION)
             basic_rows = [
-                ("Pad", "Key", "操作"),
+                ("パッド", "キー", "動作"),
                 ("D-pad", "Arrow", "移動"),
                 ("Start", "Space", "斜め補助"),
                 ("A", "Enter", "行動"),
@@ -8619,10 +8699,10 @@ class Game:
     def draw_dead(self):
         if not self.options.get("tombstone", True):
             bx,by,bw,bh = self.center_rect(270, 190)
-            self._box(bx,by,bw,bh,self.ui_heading("R.I.P.", UI_HEADING_SCREEN))
+            self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.death_title"), UI_HEADING_SCREEN))
             p=self.p; x=bx+18; y=by+24
-            self.txt(x,y,"Here lies a brave rogue.",UI_TEXT_COL); y+=22
-            self.txt(x,y,f"Cause: {self.death_cause or 'died'}",UI_TEXT_COL); y+=18
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.death_epitaph"),UI_TEXT_COL); y+=22
+            self.txt(x,y,TextCatalog.msg(self.lang, "ui.death_cause", cause=self.death_cause or 'died'),UI_TEXT_COL); y+=18
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth),UI_TEXT_COL); y+=14
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
             self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_gold", gold=self.death_display_gold()),UI_HILITE_COL); y+=14
@@ -8633,20 +8713,19 @@ class Game:
             return
         bw, bh = 340, min(292, SCR_H - 8)
         bx, by, bw, bh = self.center_rect(bw, bh)
-        self._box(bx,by,bw,bh,self.ui_heading("R.I.P.", UI_HEADING_SCREEN))
-        p=self.p; x=bx+18; y=by+24
+        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.death_title"), UI_HEADING_SCREEN))
+        x=bx+18
         killer=self.death_killer_name()
         name=self.options.get("name","rogue")
         year=time.localtime().tm_year
-        rip=self.rogue_544_tombstone_lines(name, self.death_display_gold(), killer, year)
-        for ln in rip:
-            self.txt(x,y,ln,UI_TEXT_COL); y+=10
-        y+=4
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth),UI_TEXT_COL); y+=14
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
-        next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_exp", exp=f"{p.exp}/{next_exp}"),UI_TEXT_COL); y+=14
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn),UI_TEXT_COL); y+=18
+        if self.lang == LANG_JA:
+            y = self.draw_japanese_tombstone(bx, by, bw, name, self.death_display_gold(), killer, year)
+        else:
+            y=by+24
+            rip=self.tombstone_lines(name, self.death_display_gold(), killer, year)
+            for ln in rip:
+                self.txt(x,y,ln,UI_TEXT_COL); y+=10
+            y+=10
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
 
     def draw_win(self):
