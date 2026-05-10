@@ -152,6 +152,7 @@ from rogue_palettes import (
     PALETTES,
     REQUIRED_MONSTER_ROLES,
     REQUIRED_PALETTE_ROLES,
+    ROLE_CORRIDOR,
     ROLE_DOOR,
     ROLE_FLOOR,
     ROLE_GOLD,
@@ -267,7 +268,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_1655"
+UI_BUILD = "260510_1835"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -500,6 +501,8 @@ TITLE_BG_EXTRA_PALETTE = (
     0x000102, 0x000002, 0x000301, 0x000101, 0x000001, 0x000300, 0x000100, 0x000000,
 )
 TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
+LOGO_ACCENT_COL = 11
+LOGO_TEXT_COL = 14
 TITLE_MENU_Y = 158
 TITLE_MENU_W = 174
 TITLE_LOGO_RIGHT_X = 383
@@ -1481,7 +1484,7 @@ def start_inv():
     return rogue_init.initial_pack_order(f,a,w,b,ar),w,a
 
 def msg_toast_color(age, palette_id=DEFAULT_PALETTE):
-    if palette_id == PALETTE_FLEXOKI_LIGHT:
+    if palette_id in (PALETTE_FLEXOKI_LIGHT, PALETTE_FLEXOKI_SYNTAX_LIGHT):
         if age <= 0:
             return UI_TEXT_COL
         if age <= 1:
@@ -7621,6 +7624,7 @@ class Game:
         self.draw_overlays()
 
     def draw_logo_screen(self):
+        self.apply_title_palette()
         frame = getattr(self, "logo_frames", 0)
         logo_frame = frame - LOGO_BGM_DELAY_FRAMES
         if logo_frame < 0:
@@ -7635,13 +7639,13 @@ class Game:
         else:
             alpha = 0.0
         lines = [
-            ("ORIGINAL ROGUE 5.4.4", 23),
-            ("(C) 1980-1983, 1985, 1999", 30),
-            ("MICHAEL TOY, KEN ARNOLD", 30),
-            ("AND GLENN WICHMAN", 30),
-            ("", 30),
-            ("PYXEL VERSION", 23),
-            ("(C) 2026 HSL LABORATORY", 30),
+            ("ORIGINAL ROGUE 5.4.4", LOGO_ACCENT_COL),
+            ("(C) 1980-1983, 1985, 1999", LOGO_TEXT_COL),
+            ("MICHAEL TOY, KEN ARNOLD", LOGO_TEXT_COL),
+            ("AND GLENN WICHMAN", LOGO_TEXT_COL),
+            ("", LOGO_TEXT_COL),
+            ("PYXEL VERSION", LOGO_ACCENT_COL),
+            ("(C) 2026 HSL LABORATORY", LOGO_TEXT_COL),
         ]
         y = 92
         pyxel.dither(alpha)
@@ -7901,6 +7905,35 @@ class Game:
             return TILE_CH[T_STAIR][1]
         return palette_role_color(self.ensure_settings().palette, ROLE_MEMORY)
 
+    def visible_tile_color(self, tile):
+        role_by_tile = {
+            T_FLOOR: ROLE_FLOOR,
+            T_HWALL: ROLE_WALL,
+            T_VWALL: ROLE_WALL,
+            T_DOOR: ROLE_DOOR,
+            T_CORR: ROLE_CORRIDOR,
+            T_TRAP: ROLE_TRAP,
+        }
+        role = role_by_tile.get(tile)
+        if role is None:
+            return TILE_CH.get(tile, (" ", 0))[1]
+        return palette_role_color(self.ensure_settings().palette, role)
+
+    def item_color(self, cat):
+        if self.ensure_settings().palette == PALETTE_FLEXOKI_SYNTAX_LIGHT and cat == CAT_FOOD:
+            return 8
+        return ICOL.get(cat, 9)
+
+    def hp_fill_color(self, hp_low):
+        if hp_low:
+            return 9
+        return TILE_CH[T_STAIR][1]
+
+    def hp_damage_color(self):
+        if self.ensure_settings().palette == PALETTE_FLEXOKI_SYNTAX_LIGHT:
+            return 11
+        return 10
+
     def draw_zoom(self):
         cx,cy = self.cam_x, self.cam_y
         blind = self.p.blind > 0
@@ -7928,16 +7961,16 @@ class Game:
                     else:
                         gi=self.gi_at(mx,my)
                         if gi:
-                            self.txt(sx+1,sy+1,self.visible_item_sym(gi),ICOL.get(gi.cat,9))
+                            self.txt(sx+1,sy+1,self.visible_item_sym(gi),self.item_color(gi.cat))
                         else:
-                            tile=self.tm[my][mx]; _,col=TILE_CH.get(tile,(" ",0)); ch=self.visible_tile_sym(mx,my,tile)
+                            tile=self.tm[my][mx]; ch=self.visible_tile_sym(mx,my,tile); col=self.visible_tile_color(tile)
                             if ch!=" ": self.txt(sx+1,sy+1,ch,col)
                 elif exp:
                     tile=self.tm[my][mx]; ch,_=TILE_CH.get(tile,(" ",0))
                     if ch!=" " and self.should_draw_memory_tile(mx,my,tile):
                         self.txt(sx+1,sy+1,ch,self.memory_tile_color(tile))
                     gi=self.gi_at(mx,my)
-                    if gi: self.txt(sx+1,sy+1,gi.sym,ICOL.get(gi.cat,9))
+                    if gi: self.txt(sx+1,sy+1,gi.sym,self.item_color(gi.cat))
                 else:
                     mo=self.mon_at(mx,my)
                     if mo and self.can_detect_monsters():
@@ -7956,7 +7989,6 @@ class Game:
         self.clamp_player_hp()
         p=self.p
         hp_low = p.hp <= p.max_hp // 3
-        hp_fill_col = 9 if hp_low else TILE_CH[T_STAIR][1]
         pyxel.rect(0, SCR_H - 30, SCR_W, 30, 1)
         self.txt_segments_right(
             SCR_W - 16,
@@ -7977,8 +8009,8 @@ class Game:
         bx = ZV_X + 18
         by = hp_y + 3
         hp_frame_col = self.hp_frame_color(hp_low)
-        pyxel.rectb(bx - 1, by - 1, bw + 2, 7, hp_frame_col)
-        pyxel.rect(bx, by, bw, 5, 1)
+        pyxel.rectb(bx - 1, by - 2, bw + 2, 9, hp_frame_col)
+        pyxel.rect(bx, by - 1, bw, 7, 1)
         if p.max_hp>0:
             if self.last_hp_seen is not None and p.hp < self.last_hp_seen:
                 self.hp_damage_from = min(self.last_hp_seen, p.max_hp)
@@ -7986,8 +8018,8 @@ class Game:
             cur_w=max(0,int(bw*p.hp/p.max_hp))
             if self.hp_damage_turn == self.turn and self.hp_damage_from is not None:
                 old_w=max(cur_w,int(bw*self.hp_damage_from/p.max_hp))
-                pyxel.rect(bx+cur_w,by,old_w-cur_w,5,10)
-            pyxel.rect(bx,by,cur_w,5,9 if hp_low else TILE_CH[T_STAIR][1])
+                pyxel.rect(bx+cur_w,by - 1,old_w-cur_w,7,self.hp_damage_color())
+            pyxel.rect(bx,by - 1,cur_w,7,self.hp_fill_color(hp_low))
             self.last_hp_seen = p.hp
         self.txt(bx + bw + 6, hp_y, f"{p.hp}({p.max_hp})", UI_TEXT_COL)
         stat_segments = (
