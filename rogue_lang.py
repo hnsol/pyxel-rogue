@@ -4,6 +4,7 @@ import sys
 from dataclasses import dataclass
 
 from rogue_palettes import DEFAULT_PALETTE, PALETTE_IDS
+from rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
 
 LANG_EN = "en"
 LANG_JA = "ja"
@@ -23,6 +24,7 @@ class Settings:
     auto_pickup: bool = True
     palette: str = DEFAULT_PALETTE
     show_run_steps: bool = True
+    difficulty: str = DEFAULT_DIFFICULTY
 
     def __post_init__(self):
         if self.language not in (LANG_EN, LANG_JA):
@@ -31,6 +33,7 @@ class Settings:
             self.palette = DEFAULT_PALETTE
         self.auto_pickup = bool(self.auto_pickup)
         self.show_run_steps = bool(self.show_run_steps)
+        self.difficulty = normalize_difficulty(self.difficulty)
 
 
 def settings_to_dict(settings):
@@ -40,6 +43,7 @@ def settings_to_dict(settings):
         "auto_pickup": bool(settings.auto_pickup),
         "palette": settings.palette,
         "show_run_steps": bool(settings.show_run_steps),
+        "difficulty": settings.difficulty,
     }
 
 
@@ -50,6 +54,7 @@ def settings_from_dict(data):
         auto_pickup=bool(data.get("auto_pickup", True)),
         palette=str(data.get("palette", DEFAULT_PALETTE)),
         show_run_steps=bool(data.get("show_run_steps", True)),
+        difficulty=str(data.get("difficulty", DEFAULT_DIFFICULTY)),
     )
 
 

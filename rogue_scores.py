@@ -12,6 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any
 
+from rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
 
 SCORE_STORAGE_KEY = "pyxel-rogue-scores-v2"
 PLAYER_NAME_STORAGE_KEY = "pyxel-rogue-player-name-v2"
@@ -74,6 +75,7 @@ def score_entry_id(entry: dict[str, Any]) -> str:
         str(int(entry.get("level", entry.get("depth", 0)) or 0)),
         str(entry.get("result_flags", "")),
         str(entry.get("killer", "")),
+        normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY))),
     )
     return hashlib.sha1("|".join(fields).encode("utf-8")).hexdigest()[:16]
 
@@ -135,6 +137,7 @@ def build_score_entry(
     player_name: str,
     timestamp: str,
     gold: int,
+    difficulty: str = DEFAULT_DIFFICULTY,
 ) -> dict[str, Any]:
     entry = {
         "score": int(score) if score else score_value(gold, result_flags),
@@ -143,6 +146,7 @@ def build_score_entry(
         "killer": str(killer),
         "player_name": str(player_name),
         "timestamp": str(timestamp),
+        "difficulty": normalize_difficulty(difficulty),
     }
     entry["score_id"] = score_entry_id(entry)
     return entry
@@ -186,11 +190,15 @@ def with_score_periods(entry: dict[str, Any]) -> dict[str, Any]:
     out.setdefault("period_day", keys["period_day"])
     out.setdefault("period_week", keys["period_week"])
     out.setdefault("period_season", keys["period_season"])
+    out["difficulty"] = normalize_difficulty(str(out.get("difficulty", DEFAULT_DIFFICULTY)))
     out.setdefault("score_id", score_entry_id(out))
     return out
 
 
-def get_top_scores(entries: list[dict[str, Any]], limit: int = 10) -> list[dict[str, Any]]:
+def get_top_scores(entries: list[dict[str, Any]], limit: int = 10, difficulty: str | None = None) -> list[dict[str, Any]]:
+    if difficulty is not None:
+        diff = normalize_difficulty(difficulty)
+        entries = [entry for entry in entries if normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY))) == diff]
     return sorted(entries, key=lambda entry: int(entry.get("score", 0)), reverse=True)[:limit]
 
 
@@ -198,13 +206,15 @@ def _period_field(period: str) -> str:
     return "period_season" if period == SCOREBOARD_PERIOD_SEASON else "period_week"
 
 
-def get_period_scores(entries: list[dict[str, Any]], period: str, key: str, limit: int = 10) -> list[dict[str, Any]]:
+def get_period_scores(entries: list[dict[str, Any]], period: str, key: str, limit: int = 10, difficulty: str | None = None) -> list[dict[str, Any]]:
     if period == SCOREBOARD_PERIOD_LOCAL or period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
         return []
     field = _period_field(period)
     best: dict[str, dict[str, Any]] = {}
     for raw in entries:
         entry = with_score_periods(raw)
+        if difficulty is not None and entry["difficulty"] != normalize_difficulty(difficulty):
+            continue
         if str(entry.get(field, "")) != str(key):
             continue
         name = str(entry.get("player_name", "rogue54")).strip()[:16] or "rogue54"

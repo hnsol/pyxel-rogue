@@ -27,6 +27,7 @@ ST_ONLINE_LOCAL_CONFIRM = 23
 ST_LOG = 24
 ST_LANGUAGE = 25
 ST_SETTINGS = 26
+ST_DIFFICULTY = 27
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",

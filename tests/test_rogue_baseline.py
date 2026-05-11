@@ -119,10 +119,12 @@ if ROOT not in sys.path:
 rogue = importlib.import_module("rogue")
 
 
-def new_game(seed=1, lang=rogue.LANG_EN):
+def new_game(seed=1, lang=rogue.LANG_EN, difficulty=None):
     rogue.pyxel.set_input()
     random.seed(seed)
     game = rogue.Game.__new__(rogue.Game)
+    if difficulty is not None:
+        game.settings = rogue.Settings(language=lang, difficulty=difficulty)
     game.lang = lang
     game.new_game()
     return game
@@ -155,6 +157,114 @@ def set_two_room_floor(game):
     game.p.x, game.p.y = 3, 4
     game.visible = set()
     return room_a, room_b
+
+
+class TestDifficultyProfiles(unittest.TestCase):
+    def test_difficulty_profiles_define_modes_and_normal_default(self):
+        import rogue_difficulty
+
+        self.assertEqual(rogue_difficulty.DIFF_EASY, "easy")
+        self.assertEqual(rogue_difficulty.DIFF_NORMAL, "normal")
+        self.assertEqual(rogue_difficulty.DIFF_CLASSIC, "classic")
+        self.assertEqual(rogue_difficulty.DIFF_STRICT, "strict")
+        self.assertEqual(rogue_difficulty.DEFAULT_DIFFICULTY, rogue_difficulty.DIFF_NORMAL)
+        self.assertEqual(
+            rogue_difficulty.DIFFICULTY_ORDER,
+            (
+                rogue_difficulty.DIFF_EASY,
+                rogue_difficulty.DIFF_NORMAL,
+                rogue_difficulty.DIFF_CLASSIC,
+                rogue_difficulty.DIFF_STRICT,
+            ),
+        )
+
+    def test_difficulty_profiles_capture_identify_and_hud_rules(self):
+        import rogue_difficulty
+
+        easy = rogue_difficulty.profile(rogue_difficulty.DIFF_EASY)
+        normal = rogue_difficulty.profile(rogue_difficulty.DIFF_NORMAL)
+        classic = rogue_difficulty.profile(rogue_difficulty.DIFF_CLASSIC)
+        strict = rogue_difficulty.profile(rogue_difficulty.DIFF_STRICT)
+
+        self.assertTrue(easy.easy_type_known)
+        self.assertTrue(easy.idscrl)
+        self.assertTrue(normal.idscrl)
+        self.assertFalse(classic.idscrl)
+        self.assertFalse(strict.idscrl)
+        self.assertTrue(classic.show_status_hud)
+        self.assertFalse(strict.show_status_hud)
+        self.assertEqual({p.score_multiplier for p in (easy, normal, classic, strict)}, {1.0})
+        self.assertEqual(rogue_difficulty.profile("bad").id, rogue_difficulty.DIFF_NORMAL)
+
+    def test_idscrl_scroll_table_matches_rogue_545p_scr_info2(self):
+        import rogue_difficulty
+        import rogue_scrolls
+
+        normal = rogue_scrolls.active_scrolls(rogue.SCROLLS, rogue_difficulty.DIFF_NORMAL)
+        classic = rogue_scrolls.active_scrolls(rogue.SCROLLS, rogue_difficulty.DIFF_CLASSIC)
+
+        self.assertEqual(classic, rogue.SCROLLS)
+        self.assertEqual(normal[5], {"name": "identify", "prob": 27, "worth": 100})
+        self.assertEqual([normal[i]["prob"] for i in range(6, 10)], [0, 0, 0, 0])
+        self.assertEqual([normal[i]["worth"] for i in range(6, 10)], [0, 0, 0, 0])
+        self.assertEqual(
+            [s["prob"] for s in normal],
+            [8, 5, 3, 5, 8, 27, 0, 0, 0, 0, 4, 4, 7, 10, 5, 8, 4, 2],
+        )
+
+    def test_game_uses_difficulty_scroll_table_for_names(self):
+        import rogue_difficulty
+
+        normal = new_game(seed=4110, difficulty=rogue_difficulty.DIFF_NORMAL)
+        classic = new_game(seed=4111, difficulty=rogue_difficulty.DIFF_CLASSIC)
+        normal.ident.sk[5] = True
+        classic.ident.sk[5] = True
+
+        self.assertEqual(normal.item_name(rogue.Item(rogue.CAT_SCR, 5)), "scroll of identify")
+        self.assertEqual(classic.item_name(rogue.Item(rogue.CAT_SCR, 5)), "scroll of identify potion")
+        normal.lang = rogue.LANG_JA
+        self.assertEqual(normal.item_name(rogue.Item(rogue.CAT_SCR, 5)), "鑑定の巻き物")
+
+    def test_score_entries_are_separated_by_difficulty_without_score_multiplier(self):
+        import rogue_scores
+
+        normal = rogue_scores.build_score_entry(
+            score=0,
+            result_flags="quit",
+            level=3,
+            killer="",
+            player_name="ACE",
+            timestamp="2026-05-11T00:00:00Z",
+            gold=100,
+            difficulty="normal",
+        )
+        classic = rogue_scores.build_score_entry(
+            score=0,
+            result_flags="quit",
+            level=3,
+            killer="",
+            player_name="ACE",
+            timestamp="2026-05-11T00:00:00Z",
+            gold=100,
+            difficulty="classic",
+        )
+
+        self.assertEqual(normal["score"], 100)
+        self.assertEqual(classic["score"], 100)
+        self.assertEqual(normal["difficulty"], "normal")
+        self.assertEqual(classic["difficulty"], "classic")
+        self.assertNotEqual(normal["score_id"], classic["score_id"])
+        self.assertEqual(rogue_scores.get_top_scores([normal, classic], difficulty="normal"), [normal])
+        self.assertEqual(rogue_scores.get_top_scores([normal, classic], difficulty="classic"), [classic])
+
+    def test_game_result_entry_uses_current_difficulty(self):
+        import rogue_difficulty
+
+        game = new_game(seed=4120, difficulty=rogue_difficulty.DIFF_CLASSIC)
+
+        game.enter_result_state("quit")
+
+        self.assertEqual(game.result_entry["difficulty"], rogue_difficulty.DIFF_CLASSIC)
 
 
 def monster_at(x, y, sym="H", name="hobgoblin", hp=10, level=1, armor=5,
@@ -323,12 +433,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_language_settings_are_split_without_changing_defaults(self):
         import rogue_lang
+        import rogue_difficulty
 
         self.assertEqual((rogue.LANG_EN, rogue.LANG_JA), (rogue_lang.LANG_EN, rogue_lang.LANG_JA))
         self.assertEqual(rogue.DEFAULT_LANG, rogue_lang.DEFAULT_LANG)
         self.assertEqual(rogue.Settings, rogue_lang.Settings)
         self.assertEqual(rogue.Settings(language="xx").language, rogue.LANG_EN)
         self.assertEqual(rogue.Settings(palette="unknown").palette, rogue.DEFAULT_PALETTE)
+        self.assertEqual(rogue.Settings(difficulty="bad").difficulty, rogue_difficulty.DIFF_NORMAL)
 
     def test_settings_save_load_round_trips_language_palette_and_pickup(self):
         import rogue_lang
@@ -342,6 +454,7 @@ class RogueBaselineTest(unittest.TestCase):
                         language=rogue.LANG_JA,
                         auto_pickup=False,
                         palette=rogue.PALETTE_IDS[-1],
+                        difficulty="classic",
                     )
                 )
 
@@ -350,6 +463,7 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(loaded.language, rogue.LANG_JA)
             self.assertFalse(loaded.auto_pickup)
             self.assertEqual(loaded.palette, rogue.PALETTE_IDS[-1])
+            self.assertEqual(loaded.difficulty, "classic")
         finally:
             rogue_lang.SETTINGS_FILE = old_file
 
@@ -3151,7 +3265,9 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_identify_potion_scroll_only_identifies_matching_type(self):
         # Rogue 5.4.4 scrolls.c:S_ID_POTION calls whatis(TRUE, POTION).
         # Now interactive: use_scr() sets up picker, item_confirm() completes it.
-        game = new_game(seed=317)
+        import rogue_difficulty
+
+        game = new_game(seed=317, difficulty=rogue_difficulty.DIFF_CLASSIC)
         pot = rogue.Item(rogue.CAT_POT, 0)
         other_scroll = rogue.Item(rogue.CAT_SCR, 0)
         ident_kind = next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "identify potion")
@@ -3174,6 +3290,25 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.ident.pk[pot.kind])
         self.assertFalse(game.ident.sk[other_scroll.kind])
         self.assertIn("this scroll is an identify potion scroll", game.msgs)
+
+    def test_normal_identify_scroll_can_identify_any_needed_item(self):
+        # Rogue 5.4.5p scrolls.c idscrl calls whatis(FALSE, 0).
+        import rogue_difficulty
+
+        game = new_game(seed=3171, difficulty=rogue_difficulty.DIFF_NORMAL)
+        pot = rogue.Item(rogue.CAT_POT, 0)
+        weapon = rogue.Item(rogue.CAT_WPN, 0, known=False)
+        ident_scroll = rogue.Item(rogue.CAT_SCR, 5)
+        game.p.inv = [ident_scroll, pot, weapon]
+        game.ident.pk[pot.kind] = False
+
+        pending = game.use_scr(ident_scroll)
+
+        self.assertTrue(pending)
+        self.assertEqual(game.cact, "Identify")
+        self.assertIn(pot, game.fitems)
+        self.assertIn(weapon, game.fitems)
+        self.assertIn("this scroll is an identify scroll", game.msgs)
 
     def test_rogue_544_identify_scroll_is_consumed_before_target_selection(self):
         # Rogue 5.4.4 scrolls.c:read_scroll() calls leave_pack() before whatis().
@@ -6506,7 +6641,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_stat()
 
         labels = [s for _x, _y, s, _c in calls]
-        self.assertIn("NORMAL", labels)
+        self.assertIn("Normal", labels)
         self.assertIn("D", labels)
         self.assertIn("6", labels)
         self.assertIn("G", labels)
@@ -7217,6 +7352,24 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(seen, [None])
         self.assertIsNone(game.p.wpn)
+
+    def test_japanese_eat_food_message_localizes_yum_and_yuk_values(self):
+        game = new_game(seed=5067, lang=rogue.LANG_JA)
+        good = rogue.Item(rogue.CAT_FOOD, 0)
+        awful = rogue.Item(rogue.CAT_FOOD, 0)
+        game.p.inv.extend([good, awful])
+        old_rnd = rogue.RNG.rnd
+        rolls = iter([0, 0, 0, 71])
+        try:
+            rogue.RNG.rnd = lambda n: next(rolls)
+            game.eat(good)
+            game.eat(awful)
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertIn("うん、おいしかった", game.msgs)
+        self.assertIn("げげっ、まずい！", game.msgs)
+        self.assertFalse(any("yum" in msg.lower() or "yuk" in msg.lower() for msg in game.msgs))
 
     def test_rogue_544_eat_non_food_does_not_consume_pack_item(self):
         # Rogue 5.4.4 misc.c:eat() rejects obj->o_type != FOOD before leave_pack().
@@ -10220,6 +10373,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[10], 0xDA702C)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[11], 0xD0A215)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[12], 0x3AA99F)
+        self.assertEqual(rogue.UI_RESTORED_CURSOR_COL, 12)
         self.assertEqual(rogue.FLEXOKI_DARK_PALETTE[13], 0x4385BE)
         self.assertEqual(rogue.TILE_CH[rogue.T_HWALL][1], 4)
         self.assertEqual(rogue.TILE_CH[rogue.T_VWALL][1], 4)
@@ -10786,7 +10940,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_title()
 
-        self.assertIn("NORMAL", calls)
+        self.assertIn("Normal", calls)
         self.assertNotIn("Rogue V5", calls)
         self.assertRegex(rogue.UI_BUILD, r"^\d{6}_\d{4}$")
 
@@ -10798,10 +10952,23 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_title()
         game.draw_name_input()
 
-        self.assertIn("通常", calls)
+        self.assertIn("Normal", calls)
         self.assertIn("完了", calls)
+        self.assertNotIn("通常", calls)
         self.assertNotIn("NORMAL", calls)
         self.assertNotIn("END", calls)
+
+    def test_hud_difficulty_label_uses_current_mode_in_all_languages(self):
+        game = new_game(seed=3441, lang=rogue.LANG_JA, difficulty="classic")
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_title()
+
+        self.assertIn("Classic", calls)
+        self.assertNotIn("Normal", calls)
+        self.assertNotIn("CLASSIC", calls)
+        self.assertNotIn("通常", calls)
 
     def test_rogue_py_commits_update_ui_build_stamp(self):
         # AGENTS.md / DESIGN.md: player-visible rogue.py changes must carry UI_BUILD.
@@ -11047,6 +11214,22 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_stat()
         self.assertIn("空腹", calls)
 
+    def test_strict_difficulty_hides_helpful_status_condition_hud(self):
+        import rogue_difficulty
+
+        game = new_game(seed=35001, difficulty=rogue_difficulty.DIFF_STRICT)
+        game.p.state = "hungry"
+        game.p.confused = 3
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_stat()
+
+        self.assertNotIn("Hungry", calls)
+        self.assertNotIn("Confuse", calls)
+        self.assertEqual(game.p.state, "hungry")
+        self.assertEqual(game.p.confused, 3)
+
     def test_hades_hud_condition_labels_localize_in_japanese(self):
         game = new_game(seed=3501, lang=rogue.LANG_JA)
         game.p.state = "hungry"
@@ -11225,7 +11408,7 @@ class RogueBaselineTest(unittest.TestCase):
         inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
         self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
         self.assertLessEqual(boxes[-1][1] + boxes[-1][3], rogue.SCR_H)
-        self.assertTrue(any("Left/Right: Switch tabs" in s for _x, _y, s, _c in calls))
+        self.assertTrue(any("Left/Right: Tabs" in s and "Select/B: Close" in s for _x, _y, s, _c in calls))
 
     def test_inventory_stays_one_column_for_ten_items(self):
         game = new_game(seed=3713)
@@ -11238,7 +11421,7 @@ class RogueBaselineTest(unittest.TestCase):
         inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
         self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 1)
 
-    def test_item_picker_restores_previous_object_and_marks_cursor_gold_until_moved(self):
+    def test_item_picker_restores_previous_object_and_marks_cursor_cyan_until_moved(self):
         game = new_game(seed=372)
         game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(rogue.INV_MAX)]
         target = game.p.inv[9]
@@ -11253,7 +11436,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.txt = lambda x, y, s, c: calls.append((str(s), c))
         game.draw_isel()
         self.assertTrue(any(s.startswith(">j) food") and c == rogue.UI_RESTORED_CURSOR_COL for s, c in calls))
-        self.assertEqual(rogue.UI_RESTORED_CURSOR_COL, 7)
+        self.assertEqual(rogue.UI_RESTORED_CURSOR_COL, 12)
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
@@ -11807,6 +11990,24 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertFalse(any(c[2] == "!" for c in calls))
         finally:
             rogue.pyxel.frame_count = old_frame
+
+    def test_important_message_continuation_lines_stay_highlighted(self):
+        game = new_game(seed=3764)
+        game.msgs = []
+        game.msg_turns = []
+        game.turn = 4
+        game.msg_important("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_msgs()
+
+        body = [call for call in calls if call[0] not in ("!", ">") and call[1] != rogue.MSG_TOAST_SHADOW_COL]
+        self.assertEqual(body, [
+            ("A strange white mist", rogue.UI_HILITE_COL),
+            ("envelops you and you", rogue.UI_HILITE_COL),
+            ("fall asleep", rogue.UI_HILITE_COL),
+        ])
 
     def test_important_message_marker_returns_to_new_message_marker_after_ack(self):
         game = new_game(seed=3763)
@@ -12832,7 +13033,10 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
-        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.st, rogue.ST_DIFFICULTY)
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_DIFFICULTY)
         for _ in range(rogue.TITLE_BGM_STOP_WAIT_FRAMES):
             rogue.pyxel.set_input()
             game.update()
@@ -14819,14 +15023,19 @@ class RogueBaselineTest(unittest.TestCase):
         game.current_player_name = lambda: "ACE"
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
+        self.assertEqual(game.st, rogue.ST_DIFFICULTY)
+        self.assertEqual(rogue.pyxel.stop_calls, [])
 
-        self.assertEqual(game.st, rogue.ST_TITLE)
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(game.st, rogue.ST_DIFFICULTY)
         self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
         self.assertEqual(len(rogue.pyxel.play_calls), 3)
         for _ in range(rogue.TITLE_BGM_STOP_WAIT_FRAMES - 1):
             rogue.pyxel.set_input()
             game.update()
-            self.assertEqual(game.st, rogue.ST_TITLE)
+            self.assertEqual(game.st, rogue.ST_DIFFICULTY)
         rogue.pyxel.set_input()
         game.update()
 
@@ -14955,10 +15164,69 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.pyxel.rectb_calls[-1][0][-1], rogue.TITLE_MENU_BORDER_COL)
         self.assertEqual(rogue.TITLE_MENU_SELECTED_COL, 15)
         self.assertEqual(rogue.TITLE_MENU_TEXT_COL, 5)
+        self.assertEqual(rogue.TITLE_RESTORED_CURSOR_COL, 12)
+        self.assertEqual(rogue.TITLE_BG_PALETTE[rogue.TITLE_RESTORED_CURSOR_COL], rogue.FLEXOKI_DARK_PALETTE[12])
+
+    def test_title_enter_opens_difficulty_select_before_new_game(self):
+        import rogue_difficulty
+
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN, difficulty=rogue_difficulty.DIFF_NORMAL)
+        game.st = rogue.ST_TITLE
+        game.title_cursor = 0
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        saved = []
+        old_save = rogue.save_settings
+        try:
+            rogue.save_settings = lambda settings: saved.append(settings.difficulty) or settings
+            calls = []
+            game.txt = lambda x, y, s, c: calls.append(str(s))
+            game.draw_title_screen()
+            self.assertNotIn("DIFFICULTY: Normal", calls)
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+            game.update()
+            self.assertEqual(game.st, rogue.ST_TITLE)
+            self.assertEqual(game.difficulty, rogue_difficulty.DIFF_NORMAL)
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+            self.assertEqual(game.st, rogue.ST_DIFFICULTY)
+
+            calls.clear()
+            boxes = []
+            game.txt = lambda x, y, s, c: calls.append((str(s), c))
+            game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+            game.draw_difficulty_select_screen()
+            self.assertEqual(boxes[-1][4], "-- Choose Your Rogue --")
+            self.assertIn(("Normal", rogue.TITLE_RESTORED_CURSOR_COL), calls)
+            self.assertIn(("A/Enter OK  B/Esc Back", rogue.UI_SUBTEXT_COL), calls)
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+            game.update()
+            self.assertEqual(game.difficulty, rogue_difficulty.DIFF_NORMAL)
+            calls.clear()
+            game.draw_difficulty_select_screen()
+            self.assertIn(("Normal", rogue.UI_TEXT_COL), calls)
+            self.assertIn(("Classic", rogue.UI_SELECTED_COL), calls)
+            self.assertIn(("Closer to original Rogue 5.4.4.", rogue.UI_SUBTEXT_COL), calls)
+
+            game.request_title_new_game = lambda: setattr(game, "started", True)
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+        finally:
+            rogue.save_settings = old_save
+
+        self.assertEqual(game.difficulty, rogue_difficulty.DIFF_CLASSIC)
+        self.assertEqual(saved, [rogue_difficulty.DIFF_CLASSIC])
+        self.assertTrue(game.started)
 
     def test_title_menu_uses_japanese_labels_in_japanese_mode(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.settings.difficulty = "easy"
         game.lang = rogue.LANG_JA
         game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
         game.title_cursor = 2
@@ -14973,6 +15241,21 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("スコアボード", calls)
         self.assertIn("オンラインモード", calls)
         self.assertIn("モード: ゲスト", calls)
+
+    def test_difficulty_select_uses_japanese_friendly_descriptions(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA, difficulty="easy")
+        game.lang = rogue.LANG_JA
+        calls = []
+        boxes = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+
+        game.draw_difficulty_select_screen()
+
+        self.assertEqual(boxes[-1][4], "-- 難易度を選ぶ --")
+        self.assertIn(("Easy", rogue.TITLE_RESTORED_CURSOR_COL), calls)
+        self.assertIn(("初めてでも探索を楽しみやすい", rogue.UI_SUBTEXT_COL), calls)
 
     def test_missing_settings_enters_language_select_before_title(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -16372,7 +16655,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_DIR)
         self.assertEqual(game.dact, "Throw")
 
-    def test_select_tap_opens_inventory_then_select_tap_switches_info_tabs(self):
+    def test_select_tap_opens_inventory_then_select_tap_closes_info(self):
         game = new_game(seed=473)
 
         rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
@@ -16389,7 +16672,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         rogue.pyxel.set_input()
         game.update()
-        self.assertEqual(game.st, rogue.ST_LOG)
+        self.assertEqual(game.st, rogue.ST_PLAY)
 
     def test_info_inventory_log_help_switch_like_tabs_without_spending_turns(self):
         game = new_game(seed=4731)
@@ -16414,9 +16697,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_SETTINGS)
         self.assertEqual(game.turn, start_turn)
 
-        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_BACK}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_BACK})
-        game.update()
-        rogue.pyxel.set_input()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
         game.update()
         self.assertEqual(game.st, rogue.ST_HELP)
         self.assertEqual(game.turn, start_turn)
@@ -16426,7 +16707,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_SETTINGS)
         self.assertEqual(game.turn, start_turn)
 
-    def test_info_tabs_select_switches_tabs_and_cancel_keys_return_to_play(self):
+    def test_info_tabs_select_and_cancel_keys_return_to_play(self):
         game = new_game(seed=4732)
 
         for opener in (lambda: setattr(game, "st", rogue.ST_INVENTORY), game.open_log, game.open_help_command):
@@ -16436,7 +16717,7 @@ class RogueBaselineTest(unittest.TestCase):
                 game.update()
                 rogue.pyxel.set_input()
                 game.update()
-                self.assertIn(game.st, (rogue.ST_LOG, rogue.ST_SETTINGS, rogue.ST_INVENTORY))
+                self.assertEqual(game.st, rogue.ST_PLAY)
 
         for key in (rogue.pyxel.KEY_RETURN, rogue.pyxel.KEY_ESCAPE, rogue.pyxel.KEY_I):
             with self.subTest(key=key):
@@ -16564,9 +16845,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Help", [s for *_xy, s, _c in calls])
         self.assertIn(("-- ", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
         self.assertIn((" --", rogue.UI_SECTION_COL), [(s, c) for *_xy, s, c in inventory_calls])
-        self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in inventory_calls))
-        self.assertTrue(any("Up/Down: Scroll" in s and "Left/Right: Switch tabs" in s for *_xy, s, _c in log_calls))
-        self.assertTrue(any("Left/Right: Switch tabs" in s for *_xy, s, _c in calls))
+        self.assertTrue(any("Left/Right: Tabs" in s and "Select/B: Close" in s for *_xy, s, _c in inventory_calls))
+        self.assertTrue(any("Up/Down: Scroll" in s and "Select/B: Close" in s for *_xy, s, _c in log_calls))
+        self.assertTrue(any("Left/Right: Tabs" in s and "Select/B: Close" in s for *_xy, s, _c in calls))
 
         game.lang = rogue.LANG_JA
         boxes.clear()
@@ -16576,7 +16857,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(boxes[-1][4], "=== 情報 ===")
         self.assertIn("ヘルプ", text)
         self.assertIn("ログ", text)
-        self.assertTrue(any("左右: タブ切替" in s for s in text))
+        self.assertTrue(any("左右: タブ" in s and "閉じる" in s for s in text))
 
     def test_ui_heading_levels_and_semantic_colors_are_systematic(self):
         game = new_game(seed=47341)
@@ -16619,7 +16900,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_JA, "info.inventory"), "持ちもの")
         self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "info.settings"), "Settings")
         self.assertEqual(game.info_tab_label("Inventory"), "Inventory")
-        self.assertEqual(game.info_guide_label(), "Left/Right: Switch tabs")
+        self.assertEqual(game.info_guide_label(), "Left/Right: Tabs   Select/B: Close")
 
         game.lang = rogue.LANG_JA
         self.assertEqual(game.info_title_label(), "情報")
@@ -16627,7 +16908,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.info_tab_label("Log"), "ログ")
         self.assertEqual(game.info_tab_label("Settings"), "設定")
         self.assertEqual(game.info_tab_label("Help"), "ヘルプ")
-        self.assertEqual(game.info_guide_label(), "左右: タブ切替")
+        self.assertEqual(game.info_guide_label(), "左右: タブ   Select/B: 閉じる")
 
     def test_settings_tab_shows_fixed_value_column_and_uses_focus_mode(self):
         game = new_game(seed=473422)
@@ -16641,6 +16922,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Auto pickup", text)
         self.assertIn("ON", text)
         self.assertNotIn("Diagonal assist", text)
+        self.assertNotIn("Difficulty", text)
+        self.assertNotIn("Normal", text)
         self.assertIn("Palette", text)
         self.assertIn("Flexoki Dark", text)
         on_x = next(x for x, _y, s, _c in calls if s == "ON")
@@ -16784,6 +17067,17 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("Name", rogue.UI_SECTION_COL), calls)
         self.assertTrue(any(s.startswith("---") and c == rogue.UI_SECTION_COL for s, c in calls))
         self.assertTrue(any("D-pad/Arrows" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
+
+    def test_scoreboard_surfaces_current_difficulty_label(self):
+        game = new_game(seed=473443, difficulty="classic")
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((str(s), c))
+
+        game.draw_score_screen()
+        game.draw_score_title_line(0, 0, "My Rogue Chronicle", rogue.SCOREBOARD_PERIOD_LOCAL)
+
+        self.assertIn(("Classic", rogue.UI_SUBTEXT_COL), calls)
+        self.assertNotIn(("Normal", rogue.UI_SUBTEXT_COL), calls)
 
     def test_result_screens_use_semantic_colors_and_localized_titles(self):
         game = new_game(seed=473441)
@@ -21146,6 +21440,69 @@ class TestCallIt(unittest.TestCase):
 
         self.assertIn("you can't call that anything", self.g.msgs)
 
+    def test_identification_helpers_split_type_instance_and_guess(self):
+        # Rogue 5.4.4 separates obj_info.oi_know, obj_info.oi_guess, and ISKNOW.
+        import rogue_rings
+
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2, known=False)
+        self.g.ident.rg[ring.kind] = "guard"
+
+        self.g.set_type_known(ring)
+
+        self.assertTrue(self.g.type_known(ring))
+        self.assertFalse(ring.known)
+        self.assertIsNone(self.g.ident.rg[ring.kind])
+        self.assertEqual(self.g.item_name(ring), "ring of protection")
+
+        self.g.set_instance_known(ring)
+
+        self.assertTrue(ring.known)
+        self.assertEqual(self.g.item_name(ring), "ring of protection [+2]")
+
+    def test_clear_type_guess_does_not_identify_item_or_instance(self):
+        potion = rogue.Item(rogue.CAT_POT, 0, known=False)
+        self.g.ident.pg[potion.kind] = "heal"
+
+        self.g.clear_type_guess(potion)
+
+        self.assertIsNone(self.g.ident.pg[potion.kind])
+        self.assertFalse(self.g.type_known(potion))
+        self.assertFalse(potion.known)
+
+    def test_easy_starts_type_names_known_but_discoveries_empty_until_found(self):
+        import rogue_difficulty
+
+        game = new_game(seed=4101, difficulty=rogue_difficulty.DIFF_EASY)
+        potion = rogue.Item(rogue.CAT_POT, 0, known=False)
+
+        self.assertEqual(game.item_name(potion), "potion of confusion")
+        texts = [text for _col, text in game._disc_lines()]
+        self.assertNotIn("potion of confusion", texts)
+
+        game.mark_type_discovered(potion)
+        texts = [text for _col, text in game._disc_lines()]
+        self.assertIn("potion of confusion", texts)
+
+    def test_easy_type_known_still_hides_ring_bonus_and_stick_charges(self):
+        import rogue_difficulty
+        import rogue_rings
+        import rogue_sticks
+
+        game = new_game(seed=4102, difficulty=rogue_difficulty.DIFF_EASY)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2, known=False)
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=7, known=False)
+
+        self.assertEqual(game.item_name(ring), "ring of protection")
+        self.assertEqual(game.item_name(stick), f"{game.ident.wtypes[stick.kind]} of light({game.ident.wmades[stick.kind]})")
+
+    def test_unknown_equipment_hud_hides_instance_bonuses(self):
+        game = new_game(seed=4103)
+        game.p.wpn = rogue.Item(rogue.CAT_WPN, 0, hit_plus=-1, dam_plus=2, known=False)
+        game.p.arm = rogue.Item(rogue.CAT_ARM, 1, ench=-2, known=False)
+
+        self.assertEqual(game.hud_weapon_bonus(game.p.wpn), "?,?")
+        self.assertEqual(game.hud_armor_bonus(game.p.arm), "?")
+
 
 class TestPrintDisc(unittest.TestCase):
     def setUp(self):
@@ -21171,6 +21528,13 @@ class TestPrintDisc(unittest.TestCase):
         lines = self.g._disc_lines()
         texts = [t for _, t in lines]
         self.assertTrue(any("boo" in t for t in texts))
+
+    def test_disc_lines_use_text_color_for_discovered_items(self):
+        self.g.ident.pk[0] = True
+
+        lines = self.g._disc_lines()
+
+        self.assertIn((rogue.UI_TEXT_COL, "potion of confusion"), lines)
 
     def test_rogue_544_print_disc_omits_ring_bonus_and_stick_charges(self):
         # Rogue 5.4.4 things.c:print_disc() uses a dummy object with o_flags=0.
@@ -21204,6 +21568,34 @@ class TestPrintDisc(unittest.TestCase):
             self.assertEqual(len(calls), expected)
         finally:
             rogue.RNG.rnd = old_rnd
+
+    def test_draw_disc_uses_two_columns_when_many_lines(self):
+        for i in range(len(self.g.ident.pk)):
+            self.g.ident.pk[i] = True
+        for i in range(len(self.g.ident.sk)):
+            self.g.ident.sk[i] = True
+        self.g.disc_lines = self.g._disc_lines()
+        calls = []
+        self.g._box = lambda *args, **kwargs: None
+        self.g.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        self.g.draw_disc()
+
+        item_xs = {x for x, _y, s, _c in calls if "potion of " in s or "scroll of " in s}
+        self.assertGreaterEqual(len(item_xs), 2)
+
+    def test_draw_disc_uses_readable_line_spacing(self):
+        self.g.ident.pk[0] = True
+        self.g.ident.pk[1] = True
+        self.g.disc_lines = self.g._disc_lines()
+        calls = []
+        self.g._box = lambda *args, **kwargs: None
+        self.g.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        self.g.draw_disc()
+
+        item_ys = [y for _x, y, s, _c in calls if "potion of " in s]
+        self.assertGreaterEqual(item_ys[1] - item_ys[0], 11)
 
 
 if __name__ == "__main__":

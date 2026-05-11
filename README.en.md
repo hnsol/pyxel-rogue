@@ -91,8 +91,9 @@ Gamepad:
 - B tap: Menu / cancel
 - B hold + D-pad: Dash
 - A+B: Wait a turn
-- Select: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Select again for the next tab
+- Select: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Select to close
 - Action menu: Search / Trap / Quit
+- Title screen: choose difficulty after selecting `ENTER DUNGEON`. Changes are saved.
 - Settings: Auto pickup / Language / Palette. Changes are saved.
 - Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles
@@ -107,7 +108,7 @@ Keyboard:
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
 - Esc: Menu / cancel
-- Tab: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Tab again for the next tab
+- Tab: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Tab to close
 - Tab+Enter: Quick throw
 - Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap

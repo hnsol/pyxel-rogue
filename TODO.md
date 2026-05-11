@@ -34,12 +34,18 @@
 
 罠・隠し要素の実装では、Rogue 5.4.4 の `new_level.c`, `passages.c`, `command.c`, `move.c` にある生成頻度、発見率、ターン消費、踏んだ時の効果を明示してから実装する。推測、現代ローグライクの慣習、Rogue2.Official、既存 Pyxel 実装をゲーム挙動の正解にしない。
 
-- [ ] **難易度設計**
-  - [ ] `Easy`: 種類名の未鑑定負担を下げ、個体情報は隠す
-  - [ ] `Normal`: Rogue V5 on Pyxel 標準。Rogue 5.4.5p `idscrl` 準拠の統合 identify scroll
-  - [ ] `Classic`: Rogue 5.4.4 寄り。identify scroll 5種類分化、状態表示あり
-  - [ ] `Strict 5.4.4`: Rogue 5.4.4 準拠チャレンジ
-  - [ ] `Normal` の scroll table は 5.4.5p `extern.c:scr_info2[]` / `set_scroll_2()` を参照する
+- [x] **難易度設計**
+  - [x] `Easy`: 種類名の未鑑定負担を下げ、個体情報は隠す
+  - [x] `Normal`: Rogue V5 on Pyxel 標準。Rogue 5.4.5p `idscrl` 準拠の統合 identify scroll
+  - [x] `Classic`: Rogue 5.4.4 寄り。identify scroll 5種類分化、状態表示あり
+  - [x] `Strict 5.4.4`: Rogue 5.4.4 準拠チャレンジ。状態異常HUD表示なし
+  - [x] `Normal` の scroll table は 5.4.5p `extern.c:scr_info2[]` / `set_scroll_2()` を参照する
+  - [x] タイトルの `ENTER DUNGEON` 決定後に難易度選択画面を出し、短い説明を添える
+  - [x] 難易度選択画面はウィンドウ階層に合わせ、復元カーソル・選択中・説明文・操作ガイドを色分けする
+  - [x] 難易度名は選択画面・HUD・スコアボードで同じ英字表記に統一し、HUDとスコアボードは現在難度を表示する
+  - [x] Easy の発見リストは拾った・命名した・鑑定した種類だけを表示し、2列表示と読みやすい行間にする
+  - [x] 未鑑定装備のHUDボーナスは隠す。武器は装備しても未鑑定、防具は着ると鑑定済み
+  - [x] Normal の統合 identify scroll 日本語名を `鑑定の巻き物` にする
 
 完了条件: 26階で Amulet of Yendor が出現し、所持したまま1階へ帰還すると勝利できること。指輪・杖・罠・隠し要素が Rogue 5.4.4 の主要な攻略判断に影響する形で実装され、既知の忠実度バグを baseline として固定せず期待値テストで修正していること。
 
@@ -497,7 +503,7 @@
 - [x] 旧補助メニューを廃止し、Search / Trap / Quit は Action menu、Auto pickup / Language / Palette は Settings へ整理
 - [x] Select+A quick throw / Select+B search に整理
 - [x] Bメニューを移植UI層の3列×4行ラジアル風配置にし、初期カーソルを Eat にする
-- [x] Select単押しをInfo（持ちもの / Log / Settings / Help）、Info中Selectを次タブに整理
+- [x] Select単押しをInfo（持ちもの / Log / Settings / Help）、Info中Selectを閉じる操作に整理。タブ切替は左右
 - [x] Rogue 5.4.4 `^` + 方向相当の Trap Inspect 入力基盤（Select+D-pad / Tab+方向 / Action menu Trap / `^` then direction）
 - [x] Settings からの日英トグル
 - [x] A空押しを正面search、A+Bを足踏み専用として整理
@@ -517,7 +523,7 @@
 - [x] 地形・通路・部屋・プレイヤー移動領域を `x=0..79`, `y=1..22` へ制限
 - [x] 80×22メインASCIIマップを512×320の架空レトロコンソール風レイアウトで表示
 - [x] 四隅HUD（左下HP、右上Depth/Gold、右下Str/Arm/Exp/状態異常、左下装備補正）を追加
-- [x] 通常画面左上をゲーム名ではなく難度 `NORMAL` 表示へ変更
+- [x] 通常画面左上をゲーム名ではなく現在難度表示へ変更
 - [x] HP被ダメージバーをフレームタイマーではなく現在ターン中に残す
 - [x] 下ログを廃止し、近接メッセージtoastへ集約
 - [ ] 近接メッセージログの wiki 本文を整備する

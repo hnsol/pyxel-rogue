@@ -1,6 +1,24 @@
 """Rogue 5.4.4 scrolls.c helpers."""
 from __future__ import annotations
 
+from rogue_difficulty import profile as difficulty_profile
+
+
+IDSCRL_PROBS = [8, 5, 3, 5, 8, 27, 0, 0, 0, 0, 4, 4, 7, 10, 5, 8, 4, 2]
+IDSCRL_WORTHS = [140, 150, 180, 5, 160, 100, 0, 0, 0, 0, 200, 50, 165, 150, 75, 105, 20, 250]
+
+
+def active_scrolls(base_scrolls, difficulty):
+    """Return Rogue 5.4.4 scrolls or Rogue 5.4.5p idscrl-adjusted scrolls."""
+    scrolls = [dict(row) for row in base_scrolls]
+    if not difficulty_profile(difficulty).idscrl:
+        return scrolls
+    for i, row in enumerate(scrolls):
+        row["prob"] = IDSCRL_PROBS[i]
+        row["worth"] = IDSCRL_WORTHS[i]
+    scrolls[5]["name"] = "identify"
+    return scrolls
+
 
 def enchant_weapon(weapon, rnd) -> bool:
     """Apply Rogue 5.4.4 scrolls.c:S_ENCH to the current weapon."""
@@ -102,8 +120,10 @@ def call_it_guess_after_read(known: bool, guess):
     return None if known else guess
 
 
-def identify_target_cats(name: str, cats) -> tuple:
+def identify_target_cats(name: str, cats, idscrl: bool = False) -> tuple:
     """Return Rogue 5.4.4 scrolls.c:S_ID_* id_type[] category targets."""
+    if idscrl and name == "identify":
+        return (cats.CAT_POT, cats.CAT_SCR, cats.CAT_WPN, cats.CAT_ARM, cats.CAT_RING, cats.CAT_STICK)
     if name == "identify potion":
         return (cats.CAT_POT,)
     if name == "identify scroll":

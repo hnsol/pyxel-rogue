@@ -59,6 +59,7 @@ from rogue_items import (
     ISYM,
 )
 from rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings, settings_exists
+from rogue_difficulty import DIFFICULTY_ORDER, profile as difficulty_profile
 from rogue_layout import (
     DEAD_ZONE_X,
     DEAD_ZONE_Y,
@@ -249,6 +250,7 @@ from rogue_ui import (
     ST_AUX,
     ST_CALL,
     ST_DEAD,
+    ST_DIFFICULTY,
     ST_DIR,
     ST_DISC,
     ST_HELP,
@@ -276,7 +278,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260510_2314"
+UI_BUILD = "260512_0030"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -454,7 +456,7 @@ UI_SUBTEXT_COL = 4
 UI_HILITE_COL = 11
 UI_SECTION_COL = 15
 UI_SELECTED_COL = UI_HILITE_COL
-UI_RESTORED_CURSOR_COL = 7
+UI_RESTORED_CURSOR_COL = 12
 SCOREBOARD_HILITE_COL = UI_HILITE_COL
 SCOREBOARD_TEXT_COL = UI_TEXT_COL
 SCOREBOARD_DIM_COL = UI_SUBTEXT_COL
@@ -519,6 +521,7 @@ TITLE_MENU_H = 84
 TITLE_MENU_SELECTED_COL = 15
 TITLE_MENU_TEXT_COL = 5
 TITLE_MENU_BORDER_COL = 13
+TITLE_RESTORED_CURSOR_COL = 12
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
@@ -1059,24 +1062,29 @@ class Player:
             s.recalc_ac()
 
 class IdentTable:
-    def __init__(s, lang=LANG_EN):
+    def __init__(s, lang=LANG_EN, scrolls=None):
         s.lang = lang
+        s.scrolls = scrolls if scrolls is not None else SCROLLS
+        s.easy_type_known = False
         s.pcol=RNG.sample(POT_COLORS,len(POTIONS))
-        s.snam=[rogue_init.scroll_title_recipe(len(SCR_SYLS), RNG.rnd, syllables=SCR_SYLS) for _ in range(len(SCROLLS))]
-        s.pk=[False]*len(POTIONS); s.sk=[False]*len(SCROLLS)
+        s.snam=[rogue_init.scroll_title_recipe(len(SCR_SYLS), RNG.rnd, syllables=SCR_SYLS) for _ in range(len(s.scrolls))]
+        s.pk=[False]*len(POTIONS); s.sk=[False]*len(s.scrolls)
         s.pg=[None]*len(POTIONS); s.sg=[None]*len(SCROLLS)
+        s.pf=[False]*len(POTIONS); s.sf=[False]*len(s.scrolls)
         s.rstones,s.rworth=rogue_rings.init_stones_and_worths(RNG)
         s.rk=[False]*len(RINGS)
         s.rg=[None]*len(RINGS)
+        s.rf=[False]*len(RINGS)
         s.wtypes,s.wmades=rogue_sticks.init_materials(RNG)
         s.wk=[False]*len(STICKS)
         s.wg=[None]*len(STICKS)
+        s.wf=[False]*len(STICKS)
     def set_lang(s, lang):
         s.lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
     def name(s,it,lang=None):
         lang = s.lang if lang is None else lang
         if it.cat==CAT_POT:
-            if s.pk[it.kind]:
+            if s.pk[it.kind] or s.easy_type_known:
                 nm=TextCatalog.item_kind(lang, CAT_POT, POTIONS[it.kind]["name"])
                 return f"potion of {nm}" if lang==LANG_EN else f"{nm}水薬"
             if s.pg[it.kind] is not None:
@@ -1086,8 +1094,8 @@ class IdentTable:
             col=s.pcol[it.kind]
             return f"{col} potion" if lang==LANG_EN else f"{TextCatalog.potion_color(lang,col)}水薬"
         if it.cat==CAT_SCR:
-            if s.sk[it.kind]:
-                nm=TextCatalog.item_kind(lang, CAT_SCR, SCROLLS[it.kind]["name"])
+            if s.sk[it.kind] or s.easy_type_known:
+                nm=TextCatalog.item_kind(lang, CAT_SCR, s.scrolls[it.kind]["name"])
                 return f"scroll of {nm}" if lang==LANG_EN else f"{nm}巻き物"
             if s.sg[it.kind] is not None:
                 g=s.sg[it.kind]
@@ -1125,7 +1133,7 @@ class IdentTable:
             return f"{'+' if e>=0 else ''}{e} {nm} [{prot}]{label}"
         if it.cat==CAT_RING:
             spec=RINGS[it.kind]
-            if s.rk[it.kind]:
+            if s.rk[it.kind] or s.easy_type_known:
                 nm=TextCatalog.item_kind(lang, CAT_RING, spec["name"])
                 num=rogue_rings.ring_num(it) if it.known else ""
                 return f"ring of {nm}{num}" if lang==LANG_EN else f"{nm}指輪{num}"
@@ -1140,7 +1148,7 @@ class IdentTable:
             spec=STICKS[it.kind]
             typ=s.wtypes[it.kind]
             made=s.wmades[it.kind]
-            if s.wk[it.kind]:
+            if s.wk[it.kind] or s.easy_type_known:
                 nm=TextCatalog.item_kind(lang, CAT_STICK, spec["name"])
                 charges=s.stick_charge_str(it, lang) if it.known else ""
                 made_name=TextCatalog.material(lang, "stick", made)
@@ -1517,10 +1525,11 @@ class DGen:
 def wchoice(tbl):
     return rogue_things.pick_one([(e["name"], e["prob"]) for e in tbl], RNG.rnd(sum(e["prob"] for e in tbl)))
 
-def make_item(depth, no_food=0):
+def make_item(depth, no_food=0, scrolls=None):
+    scrolls = scrolls if scrolls is not None else SCROLLS
     cat=rogue_things.new_thing_category_roll(RNG.rnd, no_food)
     if cat=="potion": return Item(CAT_POT,wchoice(POTIONS))
-    if cat=="scroll": return Item(CAT_SCR,wchoice(SCROLLS))
+    if cat=="scroll": return Item(CAT_SCR,wchoice(scrolls))
     if cat=="food": return Item(CAT_FOOD,rogue_things.new_thing_food_kind(RNG.rnd))
     if cat=="weapon":
         k=wchoice(WEAPONS)
@@ -1998,19 +2007,25 @@ class Game:
         lang = self.lang if self.lang in (LANG_EN, LANG_JA) else LANG_EN
         if it.cat == CAT_WPN:
             nm=TextCatalog.hud_item_kind(lang, CAT_WPN, it.data["name"])
+            prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
+            if not getattr(it, "known", True):
+                return f"{prefix}{nm}"
             hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
             dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
-            prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
             return f"{prefix}{hp},{dp} {nm}"
         if it.cat == CAT_ARM:
-            e=it.ench
             nm=TextCatalog.hud_item_kind(lang, CAT_ARM, it.data["name"])
+            if not getattr(it, "known", True):
+                return nm
+            e=it.ench
             return f"{'+' if e>=0 else ''}{e} {nm}"
         return self.equip_name(it)
 
     def hud_weapon_bonus(self, it):
         if not it:
             return "+0,+0"
+        if not getattr(it, "known", True):
+            return "?,?"
         hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
         dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
         return f"{hp},{dp}"
@@ -2018,6 +2033,8 @@ class Game:
     def hud_armor_bonus(self, it):
         if not it:
             return "+0"
+        if not getattr(it, "known", True):
+            return "?"
         e = it.ench
         return f"{'+' if e>=0 else ''}{e}"
 
@@ -2037,6 +2054,8 @@ class Game:
         return "防具なし" if self.lang == LANG_JA else "no armor"
 
     def hud_condition_labels(self):
+        if not self.difficulty_profile().show_status_hud:
+            return []
         p = self.p
         if self.lang == LANG_JA:
             names = {
@@ -2080,6 +2099,8 @@ class Game:
         return eff
 
     def hud_condition_chips(self):
+        if not self.difficulty_profile().show_status_hud:
+            return []
         p = self.p
         chips = []
         labels = self.hud_condition_labels()
@@ -2132,7 +2153,9 @@ class Game:
         self.p = Player()
         inv,w,a = start_inv()
         self.p.inv=inv; self.p.wpn=w; self.p.arm=a; self.p.recalc_ac()
-        self.ident = IdentTable(self.lang)
+        self.scrolls = rogue_scrolls.active_scrolls(SCROLLS, self.difficulty)
+        self.ident = IdentTable(self.lang, self.scrolls)
+        self.apply_initial_difficulty_knowledge()
         self.msgs = []; self.msg_turns = []; self.explored = set(); self.visible = set()
         self.gitems = []; self.mons = []; self.turn = 0
         self.traps = {}; self.hidden_tiles = {}
@@ -2218,6 +2241,18 @@ class Game:
         self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
         self.turn_msg_start = len(self.msgs)
+
+    def difficulty_profile(self):
+        return difficulty_profile(self.difficulty)
+
+    def apply_initial_difficulty_knowledge(self):
+        if not self.difficulty_profile().easy_type_known:
+            return
+        self.ident.easy_type_known = True
+        self.ident.pg = [None] * len(self.ident.pg)
+        self.ident.sg = [None] * len(self.ident.sg)
+        self.ident.rg = [None] * len(self.ident.rg)
+        self.ident.wg = [None] * len(self.ident.wg)
 
     def result_level(self, outcome):
         return self.max_depth if outcome == "winner" else self.p.depth
@@ -2416,10 +2451,11 @@ class Game:
             player_name=self.current_score_player_name(),
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             gold=self.p.gold,
+            difficulty=self.difficulty,
         )
         save_score_entry(self.result_entry)
         self.result_online_submitted = False
-        self.result_scores = get_top_scores(load_score_entries(), limit=10)
+        self.result_scores = get_top_scores(load_score_entries(), limit=10, difficulty=self.difficulty)
         if outcome == "winner":
             self.st = ST_WIN
         elif outcome == "quit":
@@ -2451,6 +2487,14 @@ class Game:
     def toggle_auto_pickup(self):
         self.auto_pickup = not self.auto_pickup
         self.persist_settings()
+
+    @property
+    def difficulty(self):
+        return self.ensure_settings().difficulty
+
+    @difficulty.setter
+    def difficulty(self, value):
+        self.ensure_settings().difficulty = difficulty_profile(value).id
 
     def online_language_toggle_pressed(self):
         if self.key_lower(pyxel.KEY_L):
@@ -2682,7 +2726,7 @@ class Game:
         # C: things.c:new_thing(); new_level.c tracks no_food globally.
         before = getattr(self, "no_food", 0)
         try:
-            item = make_item(depth, before)
+            item = make_item(depth, before, self.scrolls)
         except TypeError:
             item = make_item(depth)
         self.no_food = rogue_things.no_food_after_new_thing(item.cat, before)
@@ -3932,31 +3976,79 @@ class Game:
             it.cat == CAT_ARM and (it.protected or it.ench != 0),
         )
 
+    def type_known(self, it):
+        if it.cat == CAT_POT:
+            return self.ident.pk[it.kind] or self.ident.easy_type_known
+        if it.cat == CAT_SCR:
+            return self.ident.sk[it.kind] or self.ident.easy_type_known
+        if it.cat == CAT_RING:
+            return self.ident.rk[it.kind] or self.ident.easy_type_known
+        if it.cat == CAT_STICK:
+            return self.ident.wk[it.kind] or self.ident.easy_type_known
+        return False
+
+    def clear_type_guess(self, it):
+        if it.cat == CAT_POT:
+            self.ident.pg[it.kind] = None
+        elif it.cat == CAT_SCR:
+            self.ident.sg[it.kind] = None
+        elif it.cat == CAT_RING:
+            self.ident.rg[it.kind] = None
+        elif it.cat == CAT_STICK:
+            self.ident.wg[it.kind] = None
+        return True
+
+    def set_type_known(self, it, known=True):
+        if it.cat == CAT_POT:
+            self.ident.pk[it.kind] = bool(known)
+            if known: self.ident.pf[it.kind] = True
+            if known: self.clear_type_guess(it)
+            return True
+        if it.cat == CAT_SCR:
+            self.ident.sk[it.kind] = bool(known)
+            if known: self.ident.sf[it.kind] = True
+            if known: self.clear_type_guess(it)
+            return True
+        if it.cat == CAT_RING:
+            self.ident.rk[it.kind] = bool(known)
+            if known: self.ident.rf[it.kind] = True
+            if known: self.clear_type_guess(it)
+            return True
+        if it.cat == CAT_STICK:
+            self.ident.wk[it.kind] = bool(known)
+            if known: self.ident.wf[it.kind] = True
+            if known: self.clear_type_guess(it)
+            return True
+        return False
+
+    def mark_type_discovered(self, it):
+        if it.cat == CAT_POT:
+            self.ident.pf[it.kind] = True
+            return True
+        if it.cat == CAT_SCR:
+            self.ident.sf[it.kind] = True
+            return True
+        if it.cat == CAT_RING:
+            self.ident.rf[it.kind] = True
+            return True
+        if it.cat == CAT_STICK:
+            self.ident.wf[it.kind] = True
+            return True
+        return False
+
+    def set_instance_known(self, it, known=True):
+        it.known = bool(known)
+        return True
+
     def set_know(self, it):
         # Rogue 5.4.4 wizard.c:set_know().
         # Sets type-level oi_know, clears oi_guess, sets instance ISKNOW flag.
-        if it.cat == CAT_POT:
-            self.ident.pk[it.kind] = True
-            self.ident.pg[it.kind] = None
-            it.known = True
+        if it.cat in (CAT_POT, CAT_SCR, CAT_RING, CAT_STICK):
+            self.set_type_known(it)
+            self.set_instance_known(it)
             return True
-        if it.cat == CAT_SCR:
-            self.ident.sk[it.kind] = True
-            self.ident.sg[it.kind] = None
-            it.known = True
-            return True
-        if it.cat == CAT_WPN or it.cat == CAT_ARM:
-            it.known = True
-            return True
-        if it.cat == CAT_RING:
-            self.ident.rk[it.kind] = True
-            self.ident.rg[it.kind] = None
-            it.known = True
-            return True
-        if it.cat == CAT_STICK:
-            self.ident.wk[it.kind] = True
-            self.ident.wg[it.kind] = None
-            it.known = True
+        if it.cat in (CAT_WPN, CAT_ARM):
+            self.set_instance_known(it)
             return True
         return False
 
@@ -3988,15 +4080,7 @@ class Game:
 
     def call_type_known(self, it):
         # Rogue 5.4.4 command.c:call() checks oi_know only for type-level items.
-        if it.cat == CAT_POT:
-            return self.ident.pk[it.kind]
-        if it.cat == CAT_SCR:
-            return self.ident.sk[it.kind]
-        if it.cat == CAT_RING:
-            return self.ident.rk[it.kind]
-        if it.cat == CAT_STICK:
-            return self.ident.wk[it.kind]
-        return False
+        return self.type_known(it)
 
     def call_result(self, it):
         return rogue_things.call_result(
@@ -4024,25 +4108,26 @@ class Game:
         lang = self.lang
         result = []
 
-        def section(label, cat, table, known_arr, guess_arr):
+        def section(label, cat, table, known_arr, guess_arr, found_arr):
             result.append((UI_SECTION_COL, f"-- {label} --"))
             found = 0
             order = rogue_things.discovery_order(len(table), rnd_func) if rnd_func else range(len(table))
             for i in order:
-                if known_arr[i] or (guess_arr[i] is not None):
+                easy_found = self.difficulty_profile().easy_type_known and found_arr[i]
+                if known_arr[i] or (guess_arr[i] is not None) or easy_found:
                     dummy = Item(cat, i, known=False)
-                    result.append((9, self.ident.name(dummy)))
+                    result.append((UI_TEXT_COL, self.ident.name(dummy)))
                     found += 1
             if found == 0:
                 result.append((5, nothing))
 
-        section("Potions" if lang == LANG_EN else "水薬",   CAT_POT,   POTIONS, self.ident.pk, self.ident.pg)
+        section("Potions" if lang == LANG_EN else "水薬",   CAT_POT,   POTIONS, self.ident.pk, self.ident.pg, self.ident.pf)
         result.append((0, ""))
-        section("Scrolls" if lang == LANG_EN else "巻き物", CAT_SCR,   SCROLLS, self.ident.sk, self.ident.sg)
+        section("Scrolls" if lang == LANG_EN else "巻き物", CAT_SCR,   self.ident.scrolls, self.ident.sk, self.ident.sg, self.ident.sf)
         result.append((0, ""))
-        section("Rings"   if lang == LANG_EN else "指輪",   CAT_RING,  RINGS,   self.ident.rk, self.ident.rg)
+        section("Rings"   if lang == LANG_EN else "指輪",   CAT_RING,  RINGS,   self.ident.rk, self.ident.rg, self.ident.rf)
         result.append((0, ""))
-        section("Sticks"  if lang == LANG_EN else "杖",     CAT_STICK, STICKS,  self.ident.wk, self.ident.wg)
+        section("Sticks"  if lang == LANG_EN else "杖",     CAT_STICK, STICKS,  self.ident.wk, self.ident.wg, self.ident.wf)
         return result
 
     def open_discoveries(self):
@@ -4072,7 +4157,7 @@ class Game:
 
     def identify_scroll_target_cats(self, nm):
         # Rogue 5.4.4 scrolls.c:S_ID_* id_type[].
-        return rogue_scrolls.identify_target_cats(nm, sys.modules[__name__])
+        return rogue_scrolls.identify_target_cats(nm, sys.modules[__name__], self.difficulty_profile().idscrl)
 
     def use_scr(self,it):
         # C: scrolls.c:read_scroll()
@@ -4083,11 +4168,11 @@ class Game:
         if it is p.wpn:
             p.wpn = None
         self.consume_pack_item(it)
-        nm=SCROLLS[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
+        nm=self.scrolls[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             rogue_scrolls.monster_confusion(p)
             self.msg("scrolls.your_hands_begin_to_glow_color", color=TextCatalog.color(self.lang, "red", "stem"))
-        elif nm.startswith("identify "):
+        elif nm == "identify" or nm.startswith("identify "):
             cats = self.identify_scroll_target_cats(nm)
             self.msg("scrolls.this_scroll_is_an_item_scroll", item=nm)
             unid=[i for i in p.inv if i.cat in cats and self.needs_identify(i)]
@@ -4533,11 +4618,11 @@ class Game:
             self.msg("misc.my_that_was_a_yummy_value", value=TextCatalog.item_kind(self.lang, CAT_FOOD, "slime-mold"))
         elif outcome == "awful":
             self.p.exp += exp_gain
-            self.msg("misc.value_this_food_tastes_awful", value="yuk")
+            self.msg("misc.value_this_food_tastes_awful", value=TextCatalog.msg(self.lang, "misc.yuk"))
             if self.p.lvlup():
                 self.msg_important("misc.welcome_to_level_level", level=self.p.level)
         else:
-            self.msg("misc.value_that_tasted_good", value="yum")
+            self.msg("misc.value_that_tasted_good", value=TextCatalog.msg(self.lang, "misc.yum"))
         self.consume_pack_item(it)
 
     def wield(self,it):
@@ -5318,6 +5403,7 @@ class Game:
         if p.add_item(gi):
             if gi.cat==CAT_AMULET:
                 p.has_amulet=True
+            self.mark_type_discovered(gi)
             self.gitems.remove(gi); self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
             return True
         gi.picked_up = was_picked_up
@@ -6532,6 +6618,27 @@ class Game:
         self.stop_title_bgm()
         self.title_bgm_stop_wait = TITLE_BGM_STOP_WAIT_FRAMES
 
+    def change_title_difficulty(self, delta):
+        current = DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1
+        self.difficulty = DIFFICULTY_ORDER[(current + delta) % len(DIFFICULTY_ORDER)]
+        self.persist_settings()
+
+    def enter_difficulty_select(self):
+        self.difficulty_cursor = DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1
+        self.difficulty_cursor_restored = True
+        self.st = ST_DIFFICULTY
+
+    def change_difficulty_cursor(self, delta):
+        current = getattr(self, "difficulty_cursor", DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1)
+        self.difficulty_cursor = (current + delta) % len(DIFFICULTY_ORDER)
+        self.difficulty_cursor_restored = False
+
+    def confirm_difficulty_select(self):
+        cursor = getattr(self, "difficulty_cursor", DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1)
+        self.difficulty = DIFFICULTY_ORDER[cursor % len(DIFFICULTY_ORDER)]
+        self.persist_settings()
+        self.request_title_new_game()
+
     def scoreboard_period_key(self, period, timestamp=None):
         if period == SCOREBOARD_PERIOD_LOCAL:
             return ""
@@ -6888,7 +6995,7 @@ class Game:
             self.online_profile = load_online_profile()
         self.online_period = SCOREBOARD_PERIOD_LOCAL
         local_entries = load_score_entries()
-        self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10)
+        self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10, difficulty=self.difficulty)
         guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             if period in self.online_score_loaded:
@@ -6898,7 +7005,7 @@ class Game:
             if not cached:
                 continue
             entries = cached if guest_mode else cached + local_entries
-            self.online_score_cache[period] = get_period_scores(entries, period, key, limit=10)
+            self.online_score_cache[period] = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
             self.online_score_loaded.add(period)
         if getattr(self, "online_sync_result", "") in (
             "No local scores yet.",
@@ -6918,7 +7025,7 @@ class Game:
         self.ensure_online_score_state()
         period = period or getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
         if period == SCOREBOARD_PERIOD_LOCAL:
-            scores = get_top_scores(load_score_entries(), limit=10)
+            scores = get_top_scores(load_score_entries(), limit=10, difficulty=self.difficulty)
             self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = scores
             return scores
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -6929,21 +7036,21 @@ class Game:
         if online is None:
             self.online_score_load_result = "failed"
             online = load_online_score_cache(period, key)
-            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10)
+            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10, difficulty=self.difficulty)
             if online:
                 entries = online if guest_mode else online + local
-                scores = get_period_scores(entries, period, key, limit=10)
+                scores = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
         elif online:
             save_online_score_cache(period, key, online)
             entries = online if guest_mode else online + local
-            scores = get_period_scores(entries, period, key, limit=10)
+            scores = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
         else:
             self.online_score_load_result = ""
             online = load_online_score_cache(period, key)
-            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10)
+            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10, difficulty=self.difficulty)
             if online:
                 entries = online if guest_mode else online + local
-                scores = get_period_scores(entries, period, key, limit=10)
+                scores = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
         self.online_scores = scores
         self.online_score_cache[period] = scores
         self.online_score_loaded.add(period)
@@ -6955,9 +7062,9 @@ class Game:
             return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             if normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True):
-                return get_period_scores(scores, period, self.scoreboard_period_key(period), limit=10)
+                return get_period_scores(scores, period, self.scoreboard_period_key(period), limit=10, difficulty=self.difficulty)
             key = self.scoreboard_period_key(period)
-            return get_period_scores(scores + load_score_entries(), period, key, limit=10)
+            return get_period_scores(scores + load_score_entries(), period, key, limit=10, difficulty=self.difficulty)
         return scores
 
     def guest_local_best_score_for_period(self, period):
@@ -6968,7 +7075,7 @@ class Game:
             entry for entry in load_score_entries()
             if str(entry.get("player_name", "")).lower() == "guest"
         ]
-        scores = get_period_scores(guest_entries, period, key, limit=1)
+        scores = get_period_scores(guest_entries, period, key, limit=1, difficulty=self.difficulty)
         return scores[0] if scores else None
 
     def refresh_online_scoreboard_periods(self):
@@ -7186,13 +7293,29 @@ class Game:
             self.title_cursor = (getattr(self, "title_cursor", 0) + d) % 3
         if self.btn_a() or self.btn_start_tap():
             if self.title_cursor == 0:
-                self.request_title_new_game()
+                self.enter_difficulty_select()
             elif self.title_cursor == 1:
                 self.enter_online_scoreboard()
             elif self.is_online_mode():
                 self.enter_guest_mode_confirm()
             else:
                 self.enter_online_register(reset_to_default=True)
+
+    def upd_difficulty_select(self):
+        if getattr(self, "title_bgm_stop_wait", 0) > 0:
+            self.title_bgm_stop_wait -= 1
+            if self.title_bgm_stop_wait <= 0:
+                self.prepare_title_new_game()
+            return
+        d = self.menu_vertical_press() or self.menu_horizontal_press()
+        if d:
+            self.change_difficulty_cursor(d)
+            return
+        if self.btn_overlay_cancel():
+            self.st = ST_TITLE
+            return
+        if self.btn_a() or self.btn_start_tap():
+            self.confirm_difficulty_select()
 
     def upd_name(self):
         if self.btn_start_tap():
@@ -7329,11 +7452,12 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
-        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
+        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
             elif self.st == ST_LANGUAGE: self.upd_language_select()
             elif self.st == ST_TITLE: self.upd_title()
+            elif self.st == ST_DIFFICULTY: self.upd_difficulty_select()
             elif self.st == ST_NAME: self.upd_name()
             elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
             elif self.st == ST_ONLINE_REGISTER: self.upd_online_register()
@@ -7740,7 +7864,7 @@ class Game:
             self.set_info_tab_index(self.info_tab_index() + dx)
             return True
         if self.btn_back():
-            self.set_info_tab_index(self.info_tab_index() + 1)
+            self.st = ST_PLAY
             return True
         if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
             self.st = ST_PLAY
@@ -7864,6 +7988,9 @@ class Game:
         if self.st == ST_TITLE:
             self.draw_title_screen()
             return
+        if self.st == ST_DIFFICULTY:
+            self.draw_difficulty_select_screen()
+            return
         if self.st == ST_NAME:
             self.draw_name_input()
             return
@@ -7961,6 +8088,32 @@ class Game:
         if online:
             self.txt(x, status_y + 12, f"{user_prefix}: {self.current_user_id()}", TITLE_MENU_SELECTED_COL)
 
+    def draw_difficulty_select_screen(self):
+        self.apply_title_palette()
+        if not hasattr(self, "title_bg"):
+            self.load_title_background()
+        if self.title_bg is not None:
+            pyxel.blt(0, 0, self.title_bg, 0, 0, SCR_W, SCR_H)
+        bx, by, bw, bh = self.center_rect(392, 166)
+        ja = getattr(self, "lang", LANG_EN) == LANG_JA
+        title = "難易度を選ぶ" if ja else "Choose Your Rogue"
+        hint = "A/Enter 決定  B/Esc 戻る" if ja else "A/Enter OK  B/Esc Back"
+        self._box(bx, by, bw, bh, self.ui_heading(title, UI_HEADING_PANEL))
+        previous = DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1
+        current = getattr(self, "difficulty_cursor", previous)
+        for i, diff_id in enumerate(DIFFICULTY_ORDER):
+            diff = difficulty_profile(diff_id)
+            y = by + 42 + i * 20
+            selected = i == current
+            restored = selected and getattr(self, "difficulty_cursor_restored", current == previous)
+            col = TITLE_RESTORED_CURSOR_COL if restored else UI_SELECTED_COL if selected else UI_TEXT_COL
+            self.txt(bx + 22, y, ">" if selected else " ", col if selected else UI_SUBTEXT_COL)
+            self.txt(bx + 42, y, diff.label, col)
+            if selected:
+                desc = diff.description_ja if ja else diff.description_en
+                self.txt(bx + 112, y, desc[:34], UI_SUBTEXT_COL)
+        self.txt(bx + 18, by + 146, hint, UI_SUBTEXT_COL)
+
     def draw_language_select_screen(self):
         self.apply_palette()
         bx, by, bw, bh = self.center_rect(328, 150)
@@ -8025,7 +8178,10 @@ class Game:
     def draw_score_title_line(self, x, y, title, period):
         self.txt(x, y, title, UI_SECTION_COL)
         x += self.ui_text_width(f"{title} ")
-        self.txt(x, y, self.scoreboard_period_label(period), UI_SUBTEXT_COL)
+        period_label = self.scoreboard_period_label(period)
+        self.txt(x, y, period_label, UI_SUBTEXT_COL)
+        x += self.ui_text_width(f"{period_label}  ")
+        self.txt(x, y, self.difficulty_profile().label, UI_SUBTEXT_COL)
 
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
@@ -8162,7 +8318,7 @@ class Game:
 
     def draw_title(self):
         pyxel.rect(0, 0, SCR_W, ZV_Y - 4, 1)
-        self.txt(ZV_X, 6, TextCatalog.msg(self.lang, "ui.status_normal"), UI_SUBTEXT_COL)
+        self.txt(ZV_X, 6, self.difficulty_profile().label, UI_SUBTEXT_COL)
 
     def should_draw_memory_tile(self, mx, my, tile):
         room = self.room_at(mx, my)
@@ -8408,12 +8564,13 @@ class Game:
         blink_on = (getattr(pyxel, "frame_count", 0) // 15) % 2 == 0
         for i,(m,c,age,first_part,src_i) in enumerate(rows):
             ty = y+i*MSG_LINE_H
-            important = ack_pending and first_part and src_i == last_index
-            marker = "!" if important else (">" if age == 0 and first_part else "")
-            text_col = UI_HILITE_COL if important else c
-            marker_col = UI_HILITE_COL if important else c
+            important_body = ack_pending and src_i == last_index
+            important_marker = important_body and first_part
+            marker = "!" if important_marker else (">" if age == 0 and first_part else "")
+            text_col = UI_HILITE_COL if important_body else c
+            marker_col = UI_HILITE_COL if important_marker else c
             text_x = x + 2 * FONT_ASCII_W
-            if marker and (not important or blink_on):
+            if marker and (not important_marker or blink_on):
                 self.txt(x + 1, ty + 1, marker, MSG_TOAST_SHADOW_COL)
                 self.txt(x, ty, marker, marker_col)
             self.txt(text_x + 1, ty + 1, m, MSG_TOAST_SHADOW_COL)
@@ -8559,12 +8716,24 @@ class Game:
         hint  = TextCatalog.msg(self.lang, "misc.discoveries_hint")
         self._box(bx, by, bw, bh, self.ui_heading(title, UI_HEADING_SCREEN))
         lines = getattr(self, "disc_lines", None) or self._disc_lines()
-        visible = (bh - 24) // 9
+        line_h = 11
+        visible = (bh - 24) // line_h
         start = self.disc_scroll
-        for i, (col, text) in enumerate(lines[start:start + visible]):
-            if not text:
-                continue
-            self.txt(bx + 6, by + 16 + i * 9, text[:60], col if col else 9)
+        if len(lines) - start > visible:
+            rows = visible
+            col_w = (bw - 18) // 2
+            shown = lines[start:start + rows * 2]
+            for i, (col, text) in enumerate(shown):
+                if not text:
+                    continue
+                cx = bx + 6 + (i // rows) * col_w
+                cy = by + 16 + (i % rows) * line_h
+                self.txt(cx, cy, text[:34], col if col else 9)
+        else:
+            for i, (col, text) in enumerate(lines[start:start + visible]):
+                if not text:
+                    continue
+                self.txt(bx + 6, by + 16 + i * line_h, text[:60], col if col else 9)
         self.txt(bx + 4, by + bh - 10, hint, UI_TEXT_COL)
 
     def draw_dirp(self, action=None):
@@ -8823,7 +8992,7 @@ class Game:
     def draw_top_scores(self, bx=412, by=30):
         bw=156; bh=144
         self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.top_10"), UI_HEADING_PANEL))
-        scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
+        scores = self.result_scores or get_top_scores(load_score_entries(), limit=10, difficulty=self.difficulty)
         y = by + 16
         for i, entry in enumerate(scores[:10], start=1):
             name = str(entry.get("player_name", "rogue"))[:8]
@@ -8836,8 +9005,9 @@ class Game:
     def draw_score_screen(self):
         bx,by,bw,bh = self.center_rect(340, 220)
         self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.top_10"), UI_HEADING_SCREEN))
-        scores = self.result_scores or get_top_scores(load_score_entries(), limit=10)
-        y = by + 14
+        scores = self.result_scores or get_top_scores(load_score_entries(), limit=10, difficulty=self.difficulty)
+        self.txt(bx + 12, by + 14, self.difficulty_profile().label, UI_SUBTEXT_COL)
+        y = by + 30
         lines = format_top_score_lines(scores)
         if lines:
             lines[0] = TextCatalog.msg(self.lang, "ui.score_header")

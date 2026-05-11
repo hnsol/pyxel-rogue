@@ -92,7 +92,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - B短押し: メニュー / キャンセル
 - B長押し + D-pad: ダッシュ
 - A+B: 足踏み
-- Select: Info（持ちもの / Log / Settings / Help）。Info中は左右でタブ切替、もう一度Selectで次タブ
+- Select: Info（持ちもの / Log / Settings / Help）。Info中は左右でタブ切替、Selectで閉じる
 - Select+A: quick throw（方向を選んでからアイテム選択）
 - Select+B: 周囲8マスsearch
 - Select+D-pad: 発見済み罠の種類確認
@@ -106,8 +106,9 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Enter+Esc: 足踏み
 - Shift+方向: ダッシュ
 - Esc: メニュー / キャンセル
-- Tab: Info（Inventory / Log / Settings / Help）。Info中は左右でタブ切替、もう一度Tabで次タブ
+- Tab: Info（Inventory / Log / Settings / Help）。Info中は左右でタブ切替、Tabで閉じる
 - Actionメニュー: Search / Trap / Quit
+- タイトル画面: `運命の洞窟に入る` 決定後に難易度を選択。変更は保存されます。
 - Settings: Auto pickup / Language / Palette。変更は保存されます。
 - Tab+Enter: quick throw
 - Tab+Esc: 周囲8マスsearch
