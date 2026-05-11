@@ -143,14 +143,14 @@
 ### Task 9: Docs and Build Stamp
 
 **Files:**
-- Modify: `DESIGN.md`
-- Modify: `TODO.md`
+- Modify: `docs/DESIGN.md`
+- Modify: `docs/TODO.md`
 - Modify: `README.md`
 - Modify: `README.en.md`
 - Modify: `rogue.py`
 - Modify: `tests/test_rogue_baseline.py`
 
-- [ ] Record 5.4.4 vs 5.4.5p `idscrl` difference in `DESIGN.md`.
+- [ ] Record 5.4.4 vs 5.4.5p `idscrl` difference in `docs/DESIGN.md`.
 - [ ] Record scoreboard split and no multiplier policy.
 - [ ] Mark relevant TODO items complete.
 - [ ] Document Settings difficulty.

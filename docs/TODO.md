@@ -556,7 +556,7 @@
 - [x] メッセージ履歴画面（Select -> Inventory -> 右 -> Log、直近100件、ターン非消費）
 - [x] 投擲アイテムの飛翔アニメーション
 - [ ] ダメージフラッシュ等のアニメーション
-- [ ] GBC風インタフェース刷新（優先度低。詳細は `DESIGN_ARCHIVE.md` 参照）
+- [ ] GBC風インタフェース刷新（優先度低。詳細は `archive/DESIGN_ARCHIVE.md` 参照）
   - [ ] 解像度 512×320 → 360×240 移行（80×24 論理座標を維持したままタイル寸法・四隅HUD・toast行数を再計算。`可変画面 / レイアウト再計算` の完了が前提）
   - [x] GBC寄りの32色パレット策定・実装（青灰/緑/琥珀/シアン、警告時のみ赤。`GBC_PALETTE` 定数として `rogue.py` に実装済み）
   - [x] 複数パレット定義（標準Flexoki Dark + 2候補）
@@ -583,7 +583,7 @@
 - [x] 死亡 / 勝利 / quit 後の Top 10 表示
 - [ ] スコア履歴画面
 - [ ] Death Review Stats（死亡 / 勝利 / quit 後に、プレイヤー既知情報だけで LLM に貼れる攻略支援statsを出す）
-- [ ] リプレイ（現時点では考えない。`DESIGN_ARCHIVE.md` 参照）
+- [ ] リプレイ（現時点では考えない。`archive/DESIGN_ARCHIVE.md` 参照）
 - [ ] **Wizard モード**（`wizard.c` / `command.c` の `+` トグル、CTRL-D/A/F/T/E/C/X/~/I 等）— 忠実度監査・バグ再現の検証用途。Pyxel版での入力割当は実装時に検討。
 - [ ] **ゲーム中セーブ (`S` コマンド)**（`save.c:save_game()/restore()`）— リプレイとは別枠。Pyxel Web での永続化方式（localStorage 等）は実装時に検討。
 

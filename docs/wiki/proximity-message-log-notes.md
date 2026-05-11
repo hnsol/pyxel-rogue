@@ -4,7 +4,7 @@
 
 ## 要旨
 
-近接メッセージログは、下部固定ログを廃止し、ダンジョン表示上に一時メッセージを配置する UI である。現行仕様は `DESIGN.md` の `message toast` 節を正とする。
+近接メッセージログは、下部固定ログを廃止し、ダンジョン表示上に一時メッセージを配置する UI である。現行仕様は `../DESIGN.md` の `message toast` 節を正とする。
 
 議論では、次の点が価値として整理された。
 
@@ -31,5 +31,5 @@ wiki では「世界初」とは書かず、「移動方向予測、3x3量子化
 - `wiki/Proximity-Message-Log.md`: 本文を書く
 - `wiki/Playable-Critical-Edition.md`: 本編から軽く参照する
 - `wiki/Critical-Edition-Outline.md`: 第5章の小節として位置づける
-- `DESIGN.md`: 仕様変更があった場合のみ同期する
-- `TODO.md`: wiki本文・画像・先行事例整理を追跡する
+- `../DESIGN.md`: 仕様変更があった場合のみ同期する
+- `../TODO.md`: wiki本文・画像・先行事例整理を追跡する

@@ -50,7 +50,7 @@ git push -u origin master
 
 ## Proximity Message Log
 
-仕様の正本は `DESIGN.md` と実装。wiki では、忠実性を損なわない移植UIとしての意義、視線設計、先行事例との距離を説明する。
+仕様の正本は `../DESIGN.md` と実装。wiki では、忠実性を損なわない移植UIとしての意義、視線設計、先行事例との距離を説明する。
 
 ## 保存資料
 

@@ -2,7 +2,7 @@
 PYXEL ROGUE
 Rogue 5.4.4 fidelity build for Pyxel.
 
-Current controls are documented in the in-game Help and DESIGN.md.
+Current controls are documented in the in-game Help and docs/DESIGN.md.
 """
 
 from __future__ import annotations
@@ -278,7 +278,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_0031"
+UI_BUILD = "260512_0032"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"

@@ -324,6 +324,12 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(root_py, ["rogue.py"])
 
+    def test_repository_root_keeps_only_entrypoint_markdown_files(self):
+        root = os.path.dirname(os.path.dirname(__file__))
+        root_md = sorted(name for name in os.listdir(root) if name.endswith(".md"))
+
+        self.assertEqual(root_md, ["AGENTS.md", "CLAUDE.md", "NOTES.md", "README.en.md", "README.md"])
+
     def test_palette_tables_are_split_without_changing_defaults(self):
         from pyxel_rogue import rogue_palettes
 
@@ -10196,7 +10202,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(len(en.gitems), len(ja.gitems))
 
     def test_language_does_not_change_quaff_read_eat_or_drop_state(self):
-        # DESIGN.md: translation must not alter game state for the same seed and operations.
+        # docs/DESIGN.md: translation must not alter game state for the same seed and operations.
         def run(lang):
             game = new_game(seed=2301, lang=lang)
             set_open_floor(game)
@@ -10977,7 +10983,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("通常", calls)
 
     def test_rogue_py_commits_update_ui_build_stamp(self):
-        # AGENTS.md / DESIGN.md: player-visible rogue.py changes must carry UI_BUILD.
+        # AGENTS.md / docs/DESIGN.md: player-visible rogue.py changes must carry UI_BUILD.
         try:
             worktree_diff = subprocess.check_output(
                 ["git", "diff", "--", "rogue.py"],

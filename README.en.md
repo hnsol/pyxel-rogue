@@ -14,7 +14,7 @@ The goal is for clearing this Pyxel version to mean that you could clear Rogue V
 - Preserve Rogue-like exploration choices and tension instead of adding overly convenient modern UI
 - Grow toward English/Japanese switching while referencing the Japanese Rogue tradition
 
-For detailed design notes, see [DESIGN.md](DESIGN.md). For the task list and current progress, see [TODO.md](TODO.md).
+For detailed design notes, see [DESIGN.md](docs/DESIGN.md). For the task list and current progress, see [TODO.md](docs/TODO.md).
 
 ## Screenshot
 
@@ -156,7 +156,7 @@ Implemented overview:
 - JSON message/term catalogs for English/Japanese text switching, plus logic test foundation
 - Bundled Rogue2.Official `mesg_E` / `mesg_J` files as wording reference data
 
-See [TODO.md](TODO.md) for the detailed implementation status.
+See [TODO.md](docs/TODO.md) for the detailed implementation status.
 
 ## Roadmap
 
