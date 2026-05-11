@@ -1,7 +1,7 @@
 """Rogue 5.4.4 scrolls.c helpers."""
 from __future__ import annotations
 
-from rogue_difficulty import profile as difficulty_profile
+from pyxel_rogue.rogue_difficulty import profile as difficulty_profile
 
 
 IDSCRL_PROBS = [8, 5, 3, 5, 8, 27, 0, 0, 0, 0, 4, 4, 7, 10, 5, 8, 4, 2]

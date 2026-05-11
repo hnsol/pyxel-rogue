@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import rogue_things
+from pyxel_rogue import rogue_things
 
 WS_LIGHT = 0
 WS_INVIS = 1

@@ -161,7 +161,7 @@ def set_two_room_floor(game):
 
 class TestDifficultyProfiles(unittest.TestCase):
     def test_difficulty_profiles_define_modes_and_normal_default(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         self.assertEqual(rogue_difficulty.DIFF_EASY, "easy")
         self.assertEqual(rogue_difficulty.DIFF_NORMAL, "normal")
@@ -179,7 +179,7 @@ class TestDifficultyProfiles(unittest.TestCase):
         )
 
     def test_difficulty_profiles_capture_identify_and_hud_rules(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         easy = rogue_difficulty.profile(rogue_difficulty.DIFF_EASY)
         normal = rogue_difficulty.profile(rogue_difficulty.DIFF_NORMAL)
@@ -197,8 +197,8 @@ class TestDifficultyProfiles(unittest.TestCase):
         self.assertEqual(rogue_difficulty.profile("bad").id, rogue_difficulty.DIFF_NORMAL)
 
     def test_idscrl_scroll_table_matches_rogue_545p_scr_info2(self):
-        import rogue_difficulty
-        import rogue_scrolls
+        from pyxel_rogue import rogue_difficulty
+        from pyxel_rogue import rogue_scrolls
 
         normal = rogue_scrolls.active_scrolls(rogue.SCROLLS, rogue_difficulty.DIFF_NORMAL)
         classic = rogue_scrolls.active_scrolls(rogue.SCROLLS, rogue_difficulty.DIFF_CLASSIC)
@@ -213,7 +213,7 @@ class TestDifficultyProfiles(unittest.TestCase):
         )
 
     def test_game_uses_difficulty_scroll_table_for_names(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         normal = new_game(seed=4110, difficulty=rogue_difficulty.DIFF_NORMAL)
         classic = new_game(seed=4111, difficulty=rogue_difficulty.DIFF_CLASSIC)
@@ -226,7 +226,7 @@ class TestDifficultyProfiles(unittest.TestCase):
         self.assertEqual(normal.item_name(rogue.Item(rogue.CAT_SCR, 5)), "鑑定の巻き物")
 
     def test_score_entries_are_separated_by_difficulty_without_score_multiplier(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         normal = rogue_scores.build_score_entry(
             score=0,
@@ -258,7 +258,7 @@ class TestDifficultyProfiles(unittest.TestCase):
         self.assertEqual(rogue_scores.get_top_scores([normal, classic], difficulty="classic"), [classic])
 
     def test_game_result_entry_uses_current_difficulty(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         game = new_game(seed=4120, difficulty=rogue_difficulty.DIFF_CLASSIC)
 
@@ -318,8 +318,14 @@ def reachable_tiles(tm, start):
 
 
 class RogueBaselineTest(unittest.TestCase):
+    def test_repository_root_keeps_only_rogue_entrypoint_python_file(self):
+        root = os.path.dirname(os.path.dirname(__file__))
+        root_py = sorted(name for name in os.listdir(root) if name.endswith(".py"))
+
+        self.assertEqual(root_py, ["rogue.py"])
+
     def test_palette_tables_are_split_without_changing_defaults(self):
-        import rogue_palettes
+        from pyxel_rogue import rogue_palettes
 
         self.assertEqual(rogue.DEFAULT_PALETTE, rogue_palettes.PALETTE_FLEXOKI_DARK)
         self.assertEqual(
@@ -336,7 +342,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(all(len(colors) == 16 for colors in rogue.PALETTES.values()))
 
     def test_map_tables_are_split_without_changing_play_area(self):
-        import rogue_map
+        from pyxel_rogue import rogue_map
 
         self.assertEqual((rogue.MAP_W, rogue.MAP_H), (rogue_map.MAP_W, rogue_map.MAP_H))
         self.assertEqual((rogue.PLAY_Y_MIN, rogue.PLAY_Y_MAX), (rogue_map.PLAY_Y_MIN, rogue_map.PLAY_Y_MAX))
@@ -346,7 +352,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.ROOM_DARK, rogue.ROOM_GONE, rogue.ROOM_MAZE), ("dark", "gone", "maze"))
 
     def test_item_category_tables_are_split_without_changing_symbols(self):
-        import rogue_items
+        from pyxel_rogue import rogue_items
 
         self.assertEqual(
             (rogue.CAT_POT, rogue.CAT_SCR, rogue.CAT_FOOD, rogue.CAT_WPN, rogue.CAT_ARM),
@@ -358,7 +364,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.HALLU_THINGS, rogue_items.HALLU_THINGS)
 
     def test_ui_tables_are_split_without_changing_menu_actions(self):
-        import rogue_ui
+        from pyxel_rogue import rogue_ui
 
         self.assertEqual((rogue.ST_PLAY, rogue.ST_MENU, rogue.ST_ITEM, rogue.ST_DIR), (0, 1, 2, 3))
         self.assertEqual((rogue.ST_QUIT, rogue.ST_QUIT_CONFIRM, rogue.ST_SCORE), (10, 11, 12))
@@ -398,7 +404,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((rogue.B_TAP_FRAMES, rogue.BACK_TAP_FRAMES), (8, 8))
 
     def test_layout_constants_use_512_320_hades_hud_geometry(self):
-        import rogue_layout
+        from pyxel_rogue import rogue_layout
 
         self.assertEqual((rogue.SCR_W, rogue.SCR_H), (512, 320))
         self.assertEqual((rogue.TILE_W, rogue.TILE_H), (6, 12))
@@ -423,7 +429,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.FONT_CJK_W = old_cjk
 
     def test_combat_message_keys_are_split_without_changing_order(self):
-        import rogue_combat_text
+        from pyxel_rogue import rogue_combat_text
 
         self.assertEqual(rogue.PLAYER_HIT_MESSAGE_KEYS, rogue_combat_text.PLAYER_HIT_MESSAGE_KEYS)
         self.assertEqual(rogue.PLAYER_MISS_MESSAGE_KEYS, rogue_combat_text.PLAYER_MISS_MESSAGE_KEYS)
@@ -432,8 +438,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.PLAYER_HIT_MESSAGE_KEYS[0], "fight.player_hit_excellent")
 
     def test_language_settings_are_split_without_changing_defaults(self):
-        import rogue_lang
-        import rogue_difficulty
+        from pyxel_rogue import rogue_lang
+        from pyxel_rogue import rogue_difficulty
 
         self.assertEqual((rogue.LANG_EN, rogue.LANG_JA), (rogue_lang.LANG_EN, rogue_lang.LANG_JA))
         self.assertEqual(rogue.DEFAULT_LANG, rogue_lang.DEFAULT_LANG)
@@ -443,7 +449,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.Settings(difficulty="bad").difficulty, rogue_difficulty.DIFF_NORMAL)
 
     def test_settings_save_load_round_trips_language_palette_and_pickup(self):
-        import rogue_lang
+        from pyxel_rogue import rogue_lang
 
         old_file = rogue_lang.SETTINGS_FILE
         try:
@@ -490,7 +496,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.save_settings = old_save
 
     def test_timing_constants_are_split_without_changing_values(self):
-        import rogue_timing
+        from pyxel_rogue import rogue_timing
 
         names = (
             "HUNGERTIME", "MORETIME", "STOMACHSIZE", "STARVETIME",
@@ -643,7 +649,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_stick_table_materials_and_names_audit(self):
         # Rogue 5.4.4 rogue.h:WS_*, extern.c:ws_info[], init.c:metal[]/wood[].
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertEqual(rogue.CAT_STICK, "stick")
         self.assertEqual([s.name for s in rogue_sticks.STICKS], [
@@ -666,7 +672,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_stick_generation_charges_and_fix_stick(self):
         # Rogue 5.4.4 things.c:new_thing() stick case and sticks.c:fix_stick().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         old_pick = rogue_sticks.pick_stick_kind
         try:
@@ -686,7 +692,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_light_consumes_charge_identifies_and_lights_room(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_LIGHT marks known, lights the room, then decrements charges.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=201)
         dark = rogue.Room(5, 5, 8, 6, flags={rogue.ROOM_DARK})
@@ -707,7 +713,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_light_lit_room_uses_room_message(self):
         # Rogue 5.4.4 sticks.c:WS_LIGHT uses the room-lit branch unless proom is ISGONE.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=201)
         room = rogue.Room(5, 5, 8, 6)
@@ -725,7 +731,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_light_uses_room_branch(self):
         # Rogue 5.4.4 sticks.c:WS_LIGHT uses corridor branch only for ISGONE/no room.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertTrue(rogue_sticks.light_uses_room_branch(True))
         self.assertFalse(rogue_sticks.light_uses_room_branch(False))
@@ -746,7 +752,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_invisibility_and_cancellation_monster_flags(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_INVIS sets ISINVIS; WS_CANCEL sets ISCANC and clears ISINVIS/CANHUH.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=202)
         set_open_floor(game)
@@ -770,7 +776,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_cancel_flytrap_releases_hold_without_resetting_vf_hit(self):
         # Rogue 5.4.4 sticks.c:do_zap() clears ISHELD for F but does not reset fight.c vf_hit.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=204)
         set_open_floor(game)
@@ -789,7 +795,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_any_flytrap_target_releases_player_hold(self):
         # Rogue 5.4.4 sticks.c:do_zap() clears player ISHELD when the target monster is F.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=205)
         set_open_floor(game)
@@ -808,7 +814,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_cancelled_revealed_xeroc_keeps_disguise_as_type(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_CANCEL sets t_disguise = t_type.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=305)
         set_open_floor(game)
@@ -824,7 +830,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_cancel_passes_item_disguised_xeroc(self):
         # Rogue 5.4.4 sticks.c:do_zap() scans while step_ok(winat()), and winat() returns t_disguise.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=306)
         set_open_floor(game)
@@ -841,7 +847,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_polymorph_replaces_monster_type_with_rnd_26(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_POLYMORPH calls new_monster(tp, rnd(26)+'A', pos).
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=203)
         set_open_floor(game)
@@ -870,7 +876,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_polymorph_reattaches_target_to_mlist_head(self):
         # Rogue 5.4.4 sticks.c:do_zap() detaches tp, then monsters.c:new_monster() attaches it to mlist head.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=607)
         set_open_floor(game)
@@ -897,7 +903,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_polymorph_preserves_monster_pack(self):
         # Rogue 5.4.4 sticks.c:do_zap() restores tp->t_pack after monsters.c:new_monster().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=608)
         set_open_floor(game)
@@ -937,7 +943,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_teleport_away_and_teleport_to_relocate_target(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_TELAWAY uses find_floor(!hero); WS_TELTO uses hero+delta.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=204)
         set_open_floor(game)
@@ -968,7 +974,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_zap_teleport_away_uses_find_floor_rnd_pos_not_choice(self):
         # Rogue 5.4.4 sticks.c:WS_TELAWAY uses rooms.c:find_floor(NULL, ..., TRUE)
         # and retries only if the result is hero.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=2041)
         set_two_room_floor(game)
@@ -1004,7 +1010,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_teleport_target_does_not_clear_monster_hold(self):
         # Rogue 5.4.4 sticks.c:WS_TELAWAY/WS_TELTO set ISRUN directly, not through chase.c:runto().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=206)
         set_open_floor(game)
@@ -1062,7 +1068,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_teleport_to_position(self):
         # Rogue 5.4.4 sticks.c:WS_TELTO sets new_pos to hero + delta.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertEqual(rogue_sticks.teleport_to_position((10, 7), (1, -1)), (11, 6))
 
@@ -1097,7 +1103,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_haste_and_slow_monster_toggle_speed_flags(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_HASTE_M/WS_SLOW_M toggle ISHASTE/ISSLOW and runto().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=205)
         set_open_floor(game)
@@ -1136,7 +1142,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_haste_slow_flytrap_does_not_release_player(self):
         # Rogue 5.4.4 sticks.c:do_zap() clears ISHELD for the misc target group, not WS_HASTE_M/WS_SLOW_M.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=206)
         set_open_floor(game)
@@ -1156,7 +1162,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_magic_missile_identifies_and_damages_unsaved_target(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE sets known, save_throw(VS_MAGIC), then hit_monster with 1x4 +1.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=207)
         set_open_floor(game)
@@ -1178,7 +1184,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_magic_missile_adds_current_weapon_damage_plus(self):
         # Rogue 5.4.4 sticks.c:WS_MISSILE sets o_launch=cur_weapon->o_which, so roll_em() adds cur_weapon o_dplus.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=229)
         set_open_floor(game)
@@ -1236,7 +1242,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_magic_missile_passes_item_disguised_xeroc(self):
         # Rogue 5.4.4 sticks.c:do_motion() uses winat(); item-like Xeroc disguise is step_ok().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=232)
         set_open_floor(game)
@@ -1257,14 +1263,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_magic_missile_damage(self):
         # Rogue 5.4.4 sticks.c:WS_MISSILE uses 1x4 + o_dplus + cur_weapon o_dplus + strength damage.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertEqual(rogue_sticks.magic_missile_damage(4, 3, 1), 9)
         self.assertEqual(rogue_sticks.magic_missile_damage(1, -5, 0), 0)
 
     def test_rogue_544_sticks_helper_zap_flytrap_release_group(self):
         # Rogue 5.4.4 sticks.c:do_zap() clears ISHELD only for this target-effect case group.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         releasing = {
             rogue_sticks.WS_INVIS,
@@ -1279,7 +1285,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_magic_missile_saved_target_takes_no_damage(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_MISSILE vanishes if save_throw(VS_MAGIC) succeeds.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=208)
         set_open_floor(game)
@@ -1298,7 +1304,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_magic_missile_stops_at_door_before_target(self):
         # Rogue 5.4.4 weapons.c:do_motion() stops WS_MISSILE on DOOR before moat().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=212)
         set_open_floor(game)
@@ -1318,7 +1324,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_drain_halves_player_hp_and_spreads_damage(self):
         # Rogue 5.4.4 sticks.c:drain() halves current HP, then divides that HP among monsters in the room.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=209)
         set_open_floor(game)
@@ -1339,7 +1345,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_drain_in_passage_is_not_adjacent_only(self):
         # Rogue 5.4.4 sticks.c:drain() includes monsters in the same passage, not only adjacent monsters.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=209)
         set_open_floor(game)
@@ -1357,7 +1363,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_drain_in_passage_skips_different_passage(self):
         # Rogue 5.4.4 sticks.c:drain() compares roomin()/F_PNUM passage identity.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=210)
         set_open_floor(game)
@@ -1379,7 +1385,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_drain_on_door_targets_room_and_passage(self):
         # Rogue 5.4.4 sticks.c:drain() uses proom plus corp when hero stands on DOOR.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=211)
         set_open_floor(game)
@@ -1410,14 +1416,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_drain_life_split(self):
         # Rogue 5.4.4 sticks.c:drain() halves HP first, then divides remaining HP by target count.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertEqual(rogue_sticks.drain_life_split(15, 2), (7, 3))
         self.assertEqual(rogue_sticks.drain_life_split(12, 0), (12, 0))
 
     def test_rogue_544_zap_drain_too_weak_does_not_consume_charge(self):
         # Rogue 5.4.4 sticks.c:do_zap() returns before charge decrement when HP is below 2.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=210)
         set_open_floor(game)
@@ -1432,7 +1438,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_zap_bolt_hits_unsaved_monster_for_6x6_damage(self):
         # Rogue 5.4.4 sticks.c:do_zap() WS_ELECT/WS_FIRE/WS_COLD calls fire_bolt();
         # fire_bolt() uses a FLAME weapon with 6x6 damage and marks ws_info known.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=218)
         set_open_floor(game)
@@ -1460,7 +1466,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_bolt_reveals_disguised_xeroc_and_continues_hit(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() hit_monster() uses fight(..., thrown=TRUE).
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=232)
         set_open_floor(game)
@@ -1482,7 +1488,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_bolt_saved_monster_takes_no_damage(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() leaves a saved monster unharmed and reports a miss.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=219)
         set_open_floor(game)
@@ -1517,7 +1523,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_bolt_bounces_from_wall_and_can_hit_hero(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() reverses direction on walls and can hit the hero.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=220)
         set_open_floor(game)
@@ -1540,7 +1546,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_hero_bounced_bolt_death_cause_is_bolt(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() calls death('b') when hero's own bolt kills him.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=228)
         set_open_floor(game)
@@ -1560,7 +1566,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_zap_fire_bounces_off_dragon_without_damage(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() prints "the flame bounces" for Dragon and does not hit_monster().
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=221)
         set_open_floor(game)
@@ -1579,7 +1585,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fire_bolt_stops_after_bouncing_off_dragon(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() sets used=TRUE in the Dragon flame-bounce branch.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=230)
         set_open_floor(game)
@@ -1605,7 +1611,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_bolt_hits_monster_standing_on_door_before_door_bounce(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses winat(); a monster on DOOR is seen before terrain bounce.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=229)
         set_open_floor(game)
@@ -1988,7 +1994,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_saved_monster_miss_feedback(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() saved monster miss display/runto branch.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(True), (True, True))
         self.assertEqual(rogue_sticks.saved_monster_miss_feedback(False), (False, True))
@@ -1997,14 +2003,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_bolt_death_cause(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() uses death('b') for hero-started bolt deaths.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertEqual(rogue_sticks.bolt_death_cause(True, None), "bolt")
         self.assertEqual(rogue_sticks.bolt_death_cause(False, "dragon"), "dragon")
 
     def test_rogue_544_sticks_helper_bolt_bounce_door_hero_exception(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() treats DOOR under hero as normal hit space.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertFalse(rogue_sticks.bolt_should_bounce(True, True))
         self.assertTrue(rogue_sticks.bolt_should_bounce(True, False))
@@ -2012,7 +2018,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_polymorph_identification(self):
         # Rogue 5.4.4 sticks.c:WS_POLYMORPH identifies only when see_monst(tp) is true after polymorph.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         self.assertTrue(rogue_sticks.polymorph_identifies(True, True))
         self.assertFalse(rogue_sticks.polymorph_identifies(True, False))
@@ -2138,7 +2144,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_table_and_stones_audit(self):
         # Rogue 5.4.4 extern.c:ring_info[], init.c:stones[] / init_stones().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         self.assertEqual(rogue.CAT_RING, "ring")
         self.assertEqual([r.name for r in rogue_rings.RINGS], [
@@ -2162,7 +2168,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_init_stones_uses_rnd_unique_order_and_adds_worth(self):
         # Rogue 5.4.4 init.c:init_stones() retries rnd(NSTONES) and adds stone value to ring_info[].oi_worth.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         class StoneRng:
             def __init__(self):
@@ -2183,8 +2189,8 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_ring_num_and_stick_charges_require_item_isknow(self):
         # Rogue 5.4.4 things.c:nameit() calls rings.c:ring_num() and
         # sticks.c:charge_str(), which hide details without ISKNOW.
-        import rogue_rings
-        import rogue_sticks
+        from pyxel_rogue import rogue_rings
+        from pyxel_rogue import rogue_sticks
 
         ident = rogue.IdentTable()
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2, known=False)
@@ -2203,7 +2209,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_sticks_helper_charge_str_matches_isknow_and_terse(self):
         # Rogue 5.4.4 sticks.c:charge_str() checks ISKNOW internally and has a terse branch.
-        import rogue_sticks
+        from pyxel_rogue import rogue_sticks
 
         stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT, charges=7, known=False)
         self.assertEqual(rogue_sticks.charge_str(stick), "")
@@ -2213,8 +2219,8 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_nameit_guess_order_for_potion_ring_and_stick(self):
         # Rogue 5.4.4 things.c:nameit() formats guesses as "type called guess(material)".
-        import rogue_rings
-        import rogue_sticks
+        from pyxel_rogue import rogue_rings
+        from pyxel_rogue import rogue_sticks
 
         ident = rogue.IdentTable()
         ident.pcol[0] = "red"
@@ -2247,7 +2253,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_generation_bonuses_and_curses(self):
         # Rogue 5.4.4 things.c:new_thing() ring case.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         old_pick = rogue_rings.pick_ring_kind
         try:
@@ -2268,7 +2274,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_slots_effects_and_cursed_remove(self):
         # Rogue 5.4.4 rings.c:ring_on/ring_off, misc.c:chg_str(), and things.c:dropcheck().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         player = rogue.Player()
         add_str = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR, ench=2)
@@ -2294,7 +2300,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_remove_curse_uncurses_equipped_rings(self):
         # Rogue 5.4.4 scrolls.c:S_REMOVE uncurses cur_ring[LEFT/RIGHT].
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=10)
         scroll = rogue.Item(rogue.CAT_SCR, next(i for i, s in enumerate(rogue.SCROLLS) if s["name"] == "remove curse"))
@@ -2474,7 +2480,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_protect_armor_matches_s_protect(self):
         # Rogue 5.4.4 scrolls.c:S_PROTECT sets ISPROT on current armor.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         armor = rogue.Item(rogue.CAT_ARM, 1)
         self.assertTrue(rogue_scrolls.protect_armor(armor))
@@ -2483,7 +2489,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_remove_curse_matches_s_remove(self):
         # Rogue 5.4.4 scrolls.c:S_REMOVE uncurses only equipped armor/weapon/rings.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         cursed = [rogue.Item(rogue.CAT_WPN, 0, cursed=True) for _ in range(4)]
         rogue_scrolls.remove_curse_equipment(cursed)
@@ -2492,7 +2498,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_monster_confusion_matches_s_confuse(self):
         # Rogue 5.4.4 scrolls.c:S_CONFUSE sets player CANHUH.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         player = rogue.Player()
         self.assertFalse(player.can_confuse_monster)
@@ -2501,7 +2507,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_sleep_adds_no_command(self):
         # Rogue 5.4.4 scrolls.c:S_SLEEP uses no_command += rnd(SLEEPTIME) + 4.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         player = rogue.Player()
         player.no_command = 5
@@ -2510,7 +2516,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_hold_monster_matches_s_hold(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD clears ISRUN and sets ISHELD within two cells.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         hero = rogue.Player()
         hero.x = 10
@@ -2530,7 +2536,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scroll_hold_monster_does_not_roll_duration(self):
         # Rogue 5.4.4 scrolls.c:S_HOLD sets ISHELD without a duration roll.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         hero = rogue.Player()
         hero.x = 10
@@ -2549,7 +2555,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_create_monster_pick_matches_s_create(self):
         # Rogue 5.4.4 scrolls.c:S_CREATE chooses candidate squares with rnd(++i) == 0.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         hero = rogue.Player()
         hero.x = 10
@@ -2563,7 +2569,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_food_detection_finds_food_positions(self):
         # Rogue 5.4.4 scrolls.c:S_FDET marks FOOD objects on the level.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         food = rogue.Item(rogue.CAT_FOOD, 0)
         food.x, food.y = 3, 4
@@ -2575,7 +2581,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_magic_mapping_targets_hidden_and_traps(self):
         # Rogue 5.4.4 scrolls.c:S_MAP reveals hidden features and traps.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         hidden = {(3, 4): rogue.T_DOOR, (5, 6): rogue.T_CORR}
         traps = {(7, 8): 1}
@@ -2587,7 +2593,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_aggravate_monsters_runs_all(self):
         # Rogue 5.4.4 scrolls.c:S_AGGR calls misc.c:aggravate(), which only runto()s all monsters.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         first = monster_at(1, 1)
         second = monster_at(2, 2)
@@ -2606,7 +2612,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_teleport_identifies_on_room_change(self):
         # Rogue 5.4.4 scrolls.c:S_TELEP identifies only when cur_room changes.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         room = object()
         self.assertFalse(rogue_scrolls.teleport_identifies(room, room))
@@ -2616,7 +2622,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_identify_target_cats_matches_id_type(self):
         # Rogue 5.4.4 scrolls.c:S_ID_* uses id_type[] for whatis(TRUE, ...).
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         self.assertEqual(rogue_scrolls.identify_target_cats("identify potion", rogue), (rogue.CAT_POT,))
         self.assertEqual(rogue_scrolls.identify_target_cats("identify scroll", rogue), (rogue.CAT_SCR,))
@@ -2731,7 +2737,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_enchant_weapon_matches_s_ench(self):
         # Rogue 5.4.4 scrolls.c:S_ENCH clears ISCURSED and increments one weapon plus.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         weapon = rogue.Item(rogue.CAT_WPN, 0, hit_plus=2, dam_plus=3, cursed=True)
         self.assertTrue(rogue_scrolls.enchant_weapon(weapon, lambda n: 1))
@@ -2768,7 +2774,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_scrolls_helper_enchant_armor_matches_s_armor(self):
         # Rogue 5.4.4 scrolls.c:S_ARMOR decrements o_arm and clears ISCURSED.
-        import rogue_scrolls
+        from pyxel_rogue import rogue_scrolls
 
         armor = rogue.Item(rogue.CAT_ARM, 0, ench=2, cursed=True)
         self.assertTrue(rogue_scrolls.enchant_armor(armor))
@@ -3265,7 +3271,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue_544_identify_potion_scroll_only_identifies_matching_type(self):
         # Rogue 5.4.4 scrolls.c:S_ID_POTION calls whatis(TRUE, POTION).
         # Now interactive: use_scr() sets up picker, item_confirm() completes it.
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         game = new_game(seed=317, difficulty=rogue_difficulty.DIFF_CLASSIC)
         pot = rogue.Item(rogue.CAT_POT, 0)
@@ -3293,7 +3299,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_normal_identify_scroll_can_identify_any_needed_item(self):
         # Rogue 5.4.5p scrolls.c idscrl calls whatis(FALSE, 0).
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         game = new_game(seed=3171, difficulty=rogue_difficulty.DIFF_NORMAL)
         pot = rogue.Item(rogue.CAT_POT, 0)
@@ -3384,7 +3390,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_food_consumption(self):
         # Rogue 5.4.4 rings.c:ring_eat() uses table and negative rnd gates.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         regen = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
         digest = rogue.Item(rogue.CAT_RING, rogue_rings.R_DIGEST)
@@ -3482,7 +3488,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_food_helper_eat_matches_misc_c_branches(self):
         # Rogue 5.4.4 misc.c:eat() food amount and ration/slime-mold outcome live in rogue_food.py.
-        import rogue_food
+        from pyxel_rogue import rogue_food
 
         amount = lambda n: 0
         awful = lambda n: 71
@@ -3502,7 +3508,7 @@ class RogueBaselineTest(unittest.TestCase):
         )
 
     def test_rogue_544_ring_damage_hit_and_regeneration_effects(self):
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=9)
         set_open_floor(game)
@@ -3532,7 +3538,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_searching_auto_searches_after_turn_without_extra_turn(self):
         # Rogue 5.4.4 command.c: after a turn, each R_SEARCH ring calls search().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=204)
         set_open_floor(game)
@@ -3554,7 +3560,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_teleportation_rolls_after_turn(self):
         # Rogue 5.4.4 command.c: R_TELEPORT teleports on rnd(50) == 0 after a turn.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=205)
         set_open_floor(game)
@@ -3575,7 +3581,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_see_invisible_reveals_phantom_in_view(self):
         # Rogue 5.4.4 rings.c:ring_on() calls invis_on(); display honors CANSEE.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=206)
         set_open_floor(game)
@@ -3616,7 +3622,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_see_invisible_potion_while_wearing_ring_does_not_start_unsee(self):
         # Rogue 5.4.4 rings.c:ring_on() sets CANSEE; potions.c:do_pot(P_SEEINVIS) then lengthens no fuse.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5034)
         potion_kind = next(i for i, p in enumerate(rogue.POTIONS) if p["name"] == "see invisible")
@@ -3636,7 +3642,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_taking_off_see_invisible_ring_extinguishes_unsee(self):
         # Rogue 5.4.4 things.c:dropcheck() calls unsee(); extinguish(unsee) for R_SEEINVIS.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5035)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_SEEINVIS)
@@ -3652,7 +3658,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_taking_off_unworn_ring_spends_turn(self):
         # Rogue 5.4.4 rings.c:ring_off() says "not wearing such a ring" without clearing after.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5045)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
@@ -3671,7 +3677,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_taking_off_cursed_ring_spends_turn(self):
         # Rogue 5.4.4 rings.c:ring_off() uses things.c:dropcheck(), which does not clear after.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5046)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN, cursed=True)
@@ -3765,7 +3771,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_restore_strength_does_not_lower_strength_above_max(self):
         # Rogue 5.4.4 potions.c:P_RESTORE only raises pstats.s_str when below max_stats.s_str.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=324)
         set_open_floor(game)
@@ -3847,7 +3853,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_magic_detection_sees_monster_pack_magic(self):
         # Rogue 5.4.4 potions.c:P_TFIND scans mlist t_pack with is_magic().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=320)
         set_open_floor(game)
@@ -3872,7 +3878,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_magic_detection_skips_monster_pack_when_no_level_objects(self):
         # Rogue 5.4.4 potions.c:P_TFIND scans monster packs only inside the lvl_obj != NULL block.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=323)
         set_open_floor(game)
@@ -4123,7 +4129,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_daemon_fuse_lengthen_extinguish_and_after_tick(self):
         # Rogue 5.4.4 daemon.c:fuse()/lengthen()/extinguish()/do_fuses(AFTER).
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         fuses = rogue_daemons.FuseList()
         fuses.fuse("nohaste", 2, rogue_daemons.AFTER)
@@ -4138,7 +4144,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_daemon_table_keeps_duplicate_slots(self):
         # Rogue 5.4.4 daemon.c:start_daemon()/kill_daemon() use slots, not a unique map.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         daemons = rogue_daemons.DaemonList()
         daemons.start("rollwand", rogue_daemons.BEFORE)
@@ -4150,7 +4156,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_daemon_table_reuses_first_empty_slot(self):
         # Rogue 5.4.4 daemon.c:d_slot() reuses the first EMPTY slot.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         daemons = rogue_daemons.DaemonList()
         daemons.start("first", rogue_daemons.AFTER)
@@ -4162,7 +4168,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_daemons_runs_each_daemon_immediately(self):
         # Rogue 5.4.4 daemon.c:do_daemons() skips slots killed by an earlier daemon.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         daemons = rogue_daemons.DaemonList()
         fired = []
@@ -4181,7 +4187,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_daemons_does_not_run_daemon_started_in_current_slot(self):
         # Rogue 5.4.4 daemon.c:do_daemons() does not clear the current daemon slot before callback.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         daemons = rogue_daemons.DaemonList()
         fired = []
@@ -4201,7 +4207,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_daemons_runs_daemon_started_in_later_empty_slot(self):
         # Rogue 5.4.4 daemon.c:do_daemons() scans d_list slots live, so new later slots can run.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         daemons = rogue_daemons.DaemonList()
         fired = []
@@ -4218,7 +4224,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_daemons_skips_reused_current_slot_but_runs_new_later_slot(self):
         # Rogue 5.4.4 daemon.c:do_daemons() advances past the current slot after callback.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         daemons = rogue_daemons.DaemonList()
         fired = []
@@ -4238,7 +4244,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fuse_table_keeps_duplicate_slots(self):
         # Rogue 5.4.4 daemon.c:fuse()/extinguish() use slots, not a unique map.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         fuses = rogue_daemons.FuseList()
         fuses.fuse("swander", 1, rogue_daemons.BEFORE)
@@ -4249,7 +4255,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fuse_table_reuses_first_empty_slot(self):
         # Rogue 5.4.4 daemon.c:d_slot() reuses the first EMPTY slot for fuses.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         fuses = rogue_daemons.FuseList()
         fuses.fuse("first", 1, rogue_daemons.AFTER)
@@ -4261,7 +4267,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_fuses_runs_each_fuse_immediately(self):
         # Rogue 5.4.4 daemon.c:do_fuses() empties and calls each fuse immediately.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         fuses = rogue_daemons.FuseList()
         fired = []
@@ -4280,7 +4286,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_fuses_clears_slot_before_callback(self):
         # Rogue 5.4.4 daemon.c:do_fuses() sets the slot EMPTY before calling d_func.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         fuses = rogue_daemons.FuseList()
         fired = []
@@ -4299,7 +4305,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_do_fuses_runs_new_later_slot_but_not_reused_current_slot(self):
         # Rogue 5.4.4 daemon.c:do_fuses() scans d_list live after clearing the current slot.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         fuses = rogue_daemons.FuseList()
         fired = []
@@ -4318,7 +4324,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_daemon_and_fuse_share_maxdaemon_slots(self):
         # Rogue 5.4.4 daemon.c stores daemons and fuses in one MAXDAEMONS d_list.
-        import rogue_daemons
+        from pyxel_rogue import rogue_daemons
 
         actions = rogue_daemons.DelayedActionTable()
         for idx in range(rogue_daemons.MAXDAEMONS):
@@ -4401,7 +4407,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_runners_filters_held_and_not_running(self):
         # Rogue 5.4.4 chase.c:runners() lives in rogue_chase.py as a small boundary.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         sleeping = monster_at(1, 1)
         held = monster_at(2, 1)
@@ -4417,7 +4423,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_runners_clears_target_after_move(self):
         # Rogue 5.4.4 chase.c:runners() clears ISTARGET if the monster moved.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         monster = monster_at(3, 1)
         monster.running = True
@@ -4460,7 +4466,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_monster_turn_repeats_for_flying_at_distance(self):
         # Rogue 5.4.4 chase.c:runners() calls move_monst() again for ISFLY at distance >= 3.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         monster = monster_at(9, 5, "K", "kestrel", flags="fly")
         monster.running = True
@@ -4472,7 +4478,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_monster_turn_stops_fly_repeat_after_minus_one(self):
         # Rogue 5.4.4 chase.c:runners() continues when move_monst() returns -1.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         monster = monster_at(9, 5, "K", "kestrel", flags="fly")
         monster.running = True
@@ -4484,7 +4490,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_move_monst_runs_steps_and_finishes_turn(self):
         # Rogue 5.4.4 chase.c:move_monst() runs chase steps, then toggles t_turn.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         monster = monster_at(3, 1)
         calls = []
@@ -4502,7 +4508,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_move_monst_does_not_apply_held_gate(self):
         # Rogue 5.4.4 chase.c:move_monst() does not check ISHELD; runners() owns that gate.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         monster = monster_at(3, 1)
         monster.held = 2
@@ -4520,7 +4526,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_runto_sets_running_and_clears_held(self):
         # Rogue 5.4.4 chase.c:runto() sets ISRUN, clears ISHELD, and sets destination.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         monster = monster_at(3, 1)
         monster.held = 3
@@ -4533,7 +4539,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_diag_ok_checks_diagonal_side_steps(self):
         # Rogue 5.4.4 chase.c:diag_ok() checks the two side squares for diagonal moves.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         blocked = {(5, 4)}
         step_calls = []
@@ -4547,7 +4553,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_diag_ok_allows_orthogonal_without_step_check(self):
         # Rogue 5.4.4 chase.c:diag_ok() returns TRUE for non-diagonal moves inside bounds.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         step_calls = []
 
@@ -4565,14 +4571,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_dist_uses_squared_distance(self):
         # Rogue 5.4.4 chase.c:dist() returns d^2, not the square root.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertEqual(rogue_chase.dist(2, 3, 6, 9), 52)
         self.assertEqual(rogue_chase.dist_points((3, 2), (9, 6)), 52)
 
     def test_rogue_544_chase_helper_roomin_matches_room_bounds(self):
         # Rogue 5.4.4 chase.c:roomin() treats the full room rectangle as inside.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         room = rogue.Room(10, 4, 6, 5)
 
@@ -4584,7 +4590,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_see_monst_blocks_blind_and_unseen_invisible(self):
         # Rogue 5.4.4 chase.c:see_monst() rejects blind sight and invisible monsters without CANSEE.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertFalse(rogue_chase.see_monst(player_blind=True, monster_invisible=False, can_see_invisible=True))
         self.assertFalse(rogue_chase.see_monst(player_blind=False, monster_invisible=True, can_see_invisible=False))
@@ -4592,14 +4598,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_lamp_sees_by_squared_distance(self):
         # Rogue 5.4.4 chase.c:see_monst()/cansee() use dist(...) < LAMPDIST.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.within_lamp_distance(2, 3))
         self.assertFalse(rogue_chase.within_lamp_distance(3, 3))
 
     def test_rogue_544_chase_helper_lamp_diagonal_needs_one_side_step(self):
         # Rogue 5.4.4 chase.c:see_monst()/cansee() block diagonal lamp sight only when both side cells are blocked.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.lamp_diagonal_clear((5, 5), (6, 6), lambda pos: pos == (5, 6)))
         self.assertFalse(rogue_chase.lamp_diagonal_clear((5, 5), (6, 6), lambda pos: False))
@@ -4607,7 +4613,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_room_sight_requires_same_lit_room(self):
         # Rogue 5.4.4 chase.c:cansee() outside lamp range requires roomin(tp) == proom and !ISDARK.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.same_lit_room_visible("room", "room", False))
         self.assertFalse(rogue_chase.same_lit_room_visible("room", "other", False))
@@ -4615,7 +4621,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_cansee_order_matches_source(self):
         # Rogue 5.4.4 chase.c:cansee() checks blind, lamp sight, then same lit room.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertFalse(rogue_chase.cansee(False, True, False))
         self.assertTrue(rogue_chase.cansee(True, True, False))
@@ -4624,7 +4630,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_see_monst_uses_lamp_then_room_when_supplied(self):
         # Rogue 5.4.4 chase.c:see_monst() checks blind/invisible, then lamp sight, then same lit room.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.see_monst(False, False, False, lamp_visible=True, same_lit_room_visible=False))
         self.assertTrue(rogue_chase.see_monst(False, False, False, lamp_visible=False, same_lit_room_visible=True))
@@ -4633,7 +4639,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_find_dest_skips_scare_and_claimed_items(self):
         # Rogue 5.4.4 chase.c:find_dest() skips S_SCARE and destinations already claimed by another monster.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         scare = object()
         claimed = object()
@@ -5096,7 +5102,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_dragon_breath_direction_matches_do_chase_gate(self):
         # Rogue 5.4.4 chase.c:do_chase() Dragon flame requires line, range, !ISCANC, and rnd(DRAGONSHOT)==0.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertEqual(rogue_chase.dragon_breath_direction("D", (10, 10), (16, 10), 36, 6, False, lambda n: 0), (1, 0))
         self.assertEqual(rogue_chase.dragon_breath_direction("D", (10, 10), (14, 14), 32, 6, False, lambda n: 0), (1, 1))
@@ -5108,7 +5114,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_nearest_exit_to_dest_uses_dist_cp(self):
         # Rogue 5.4.4 chase.c:do_chase() chooses the exit with the smallest dist_cp() to t_dest.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         exits = [(1, 1), (5, 5), (9, 1)]
         self.assertEqual(rogue_chase.nearest_exit_to_dest(exits, (8, 2), rogue_chase.dist_points), (9, 1))
@@ -5116,14 +5122,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_stop_after_dest_excludes_venus_flytrap(self):
         # Rogue 5.4.4 chase.c:do_chase() sets stoprun after t_dest except when t_type == 'F'.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.should_stop_after_dest("O"))
         self.assertFalse(rogue_chase.should_stop_after_dest("F"))
 
     def test_rogue_544_chase_helper_dragon_breath_uses_dragonshot_constant(self):
         # Rogue 5.4.4 chase.c:do_chase() rolls rnd(DRAGONSHOT).
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         calls = []
         rogue_chase.dragon_breath_direction("D", (10, 10), (16, 10), 36, 6, False, lambda n: calls.append(n) or 0, 7)
@@ -5132,7 +5138,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_greedy_destination_falls_back_to_hero_without_gold(self):
         # Rogue 5.4.4 chase.c:do_chase() sends ISGREED monsters after hero when room gold is gone.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertEqual(rogue_chase.greedy_destination(True, "gold", None, "player"), "player")
         self.assertEqual(rogue_chase.greedy_destination(True, "gold", (3, 4), "player"), (3, 4))
@@ -5140,7 +5146,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_destination_room_uses_proom_for_hero(self):
         # Rogue 5.4.4 chase.c:do_chase() uses proom when t_dest == &hero, otherwise roomin(t_dest).
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertEqual(rogue_chase.destination_room(True, "player-room", "dest-room"), "player-room")
         self.assertEqual(rogue_chase.destination_room(False, "player-room", "dest-room"), "dest-room")
@@ -5751,7 +5757,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_misc_helper_add_haste_potion_duration(self):
         # Rogue 5.4.4 misc.c:add_haste(TRUE) uses rnd(4)+4 for nohaste.
-        import rogue_misc
+        from pyxel_rogue import rogue_misc
 
         result = rogue_misc.add_haste_result(False, True, lambda n: 1)
 
@@ -5761,7 +5767,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_misc_helper_add_haste_second_use_faints(self):
         # Rogue 5.4.4 misc.c:add_haste() adds rnd(8) no_command when already hasted.
-        import rogue_misc
+        from pyxel_rogue import rogue_misc
 
         result = rogue_misc.add_haste_result(True, True, lambda n: n - 1)
 
@@ -6015,7 +6021,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_search_helper_probinc_and_reveal_rolls_match_source(self):
         # Rogue 5.4.4 command.c:search() uses ISHALU +3, ISBLIND +2 and door/trap/passage divisors.
-        import rogue_search
+        from pyxel_rogue import rogue_search
 
         self.assertEqual(rogue_search.search_probinc(False, False), 0)
         self.assertEqual(rogue_search.search_probinc(True, True), 5)
@@ -6193,7 +6199,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_monster_exp_add_uses_level_and_max_hp(self):
         # Rogue 5.4.4 monsters.c:exp_add() scales by level and max HP.
-        import rogue_monsters
+        from pyxel_rogue import rogue_monsters
 
         self.assertEqual(rogue_monsters.exp_add(1, 17), 2)
         self.assertEqual(rogue_monsters.exp_add(6, 17), 2)
@@ -6202,7 +6208,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_monster_new_stats_helper_matches_new_monster(self):
         # Rogue 5.4.4 monsters.c:new_monster() stat rebuild helper.
-        import rogue_monsters
+        from pyxel_rogue import rogue_monsters
 
         calls = []
         stats = rogue_monsters.new_monster_stats(
@@ -6219,14 +6225,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_save_throw_uses_monsters_c_threshold(self):
         # Rogue 5.4.4 monsters.c:save_throw() uses roll(1,20) >= 14 + which - lvl/2.
-        import rogue_monsters
+        from pyxel_rogue import rogue_monsters
 
         self.assertFalse(rogue_monsters.save_throw(rogue.VS_MAGIC, 4, lambda n, sides: 14))
         self.assertTrue(rogue_monsters.save_throw(rogue.VS_MAGIC, 4, lambda n, sides: 15))
 
     def test_rogue_544_save_magic_uses_protection_ring_adjustment(self):
         # Rogue 5.4.4 monsters.c:save() subtracts R_PROTECT enchantment from VS_MAGIC.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=309)
         game.p.level = 4
@@ -6252,7 +6258,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_new_monster_runs_when_aggravate_ring_worn(self):
         # Rogue 5.4.4 monsters.c:new_monster() calls runto() when ISWEARING(R_AGGR).
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=310)
         set_open_floor(game)
@@ -6300,7 +6306,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_aggravate_and_stealth_affect_monster_running(self):
         # Rogue 5.4.4 rings.c:ring_on() aggravates; monsters.c:wake_monster checks R_STEALTH.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=210)
         set_open_floor(game)
@@ -6328,7 +6334,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_bonus_ring_on_does_not_identify_type(self):
         # Rogue 5.4.4 rings.c:ring_on() uses misc.c:chg_str() but does not set ring_info[].oi_know.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=2101)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_ADDSTR, ench=2)
@@ -6344,7 +6350,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_ring_sustain_strength_blocks_poison_strength_loss(self):
         # Rogue 5.4.4 fight.c/move.c/potions.c check R_SUSTSTR before chg_str(-1).
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=212)
         set_open_floor(game)
@@ -6374,7 +6380,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_rattlesnake_save_runs_before_sustain_strength_check(self):
         # Rogue 5.4.4 fight.c:attack() calls save(VS_POISON), then checks R_SUSTSTR.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=213)
         set_open_floor(game)
@@ -6465,7 +6471,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_potions_helper_strength_changes_match_misc_add_str(self):
         # Rogue 5.4.4 misc.c:add_str()/chg_str() floor at 3, cap at 31, and track base max strength.
-        import rogue_potions
+        from pyxel_rogue import rogue_potions
 
         self.assertEqual(rogue_potions.add_str(4, -3), 3)
         self.assertEqual(rogue_potions.add_str(30, 5), 31)
@@ -6476,7 +6482,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_potions_helper_healing_matches_quaff(self):
         # Rogue 5.4.4 potions.c:P_HEALING/P_XHEAL max_hp overflow rules.
-        import rogue_potions
+        from pyxel_rogue import rogue_potions
 
         self.assertEqual(rogue_potions.healing_hp(10, 16, 6), (16, 16))
         self.assertEqual(rogue_potions.healing_hp(10, 16, 7), (17, 17))
@@ -6485,7 +6491,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_potions_helper_turn_see_state_matches_source(self):
         # Rogue 5.4.4 potions.c:turn_see(TRUE) clears SEEMONST; turn_see(FALSE) sets it.
-        import rogue_potions
+        from pyxel_rogue import rogue_potions
 
         self.assertEqual(rogue_potions.turn_see_state(True, rogue.HUHDURATION), 0)
         self.assertEqual(rogue_potions.turn_see_state(False, rogue.HUHDURATION), rogue.HUHDURATION)
@@ -6496,7 +6502,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_potions_helper_do_pot_state_matches_source(self):
         # Rogue 5.4.4 potions.c:do_pot() sets oi_know from knowit and fuses or lengthens by flag state.
-        import rogue_potions
+        from pyxel_rogue import rogue_potions
 
         self.assertFalse(rogue_potions.do_pot_known(False, False))
         self.assertTrue(rogue_potions.do_pot_known(False, True))
@@ -6510,7 +6516,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_potions_helper_see_invisible_duration_matches_source(self):
         # Rogue 5.4.4 potions.c:P_SEEINVIS do_pot() lengthens existing CANSEE but ring-only CANSEE has no potion fuse.
-        import rogue_potions
+        from pyxel_rogue import rogue_potions
 
         self.assertEqual(rogue_potions.see_invisible_duration(0, 10, wearing_ring=False), 10)
         self.assertEqual(rogue_potions.see_invisible_duration(5, 10, wearing_ring=False), 15)
@@ -6519,7 +6525,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_level_helper_check_level_matches_misc(self):
         # Rogue 5.4.4 misc.c:check_level() rolls one d10 per gained level.
-        import rogue_levels
+        from pyxel_rogue import rogue_levels
 
         class Rng:
             def __init__(self):
@@ -6537,13 +6543,13 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_level_helper_raise_level_exp_matches_potions(self):
         # Rogue 5.4.4 potions.c:raise_level() sets exp to e_levels[level-1]+1.
-        import rogue_levels
+        from pyxel_rogue import rogue_levels
 
         self.assertEqual(rogue_levels.raise_level_exp(10, rogue.Player.EXP_T), 5201)
 
     def test_rogue_544_ring_maintain_armor_blocks_rust_and_adornment_stays_unidentified(self):
         # Rogue 5.4.4 move.c:rust_armor() checks R_SUSTARM; R_NOP has no wear-time effect.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=210)
         armor = rogue.Item(rogue.CAT_ARM, 1, ench=0)
@@ -6884,7 +6890,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_init_helpers_match_init_player(self):
         # Rogue 5.4.4 init.c:init_player() uses rnd(15)+25 and add_pack order.
-        import rogue_init
+        from pyxel_rogue import rogue_init
 
         self.assertEqual(rogue_init.initial_arrow_count(lambda n: 6), 31)
         self.assertEqual(rogue_init.initial_pack_order("food", "armor", "mace", "bow", "arrows"),
@@ -6892,7 +6898,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_init_scroll_title_uses_source_word_and_syllable_rolls(self):
         # Rogue 5.4.4 init.c:init_names() uses nwords=rnd(3)+2 and nsyl=rnd(3)+1.
-        import rogue_init
+        from pyxel_rogue import rogue_init
 
         syllables = ["aa", "bb", "cc", "dd"]
         rolls = iter([1, 0, 0, 1, 2, 0, 1, 3, 2])
@@ -6905,7 +6911,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_init_scroll_title_maxname_limits_whole_title(self):
         # Rogue 5.4.4 init.c:init_names() checks cp against prbuf[MAXNAME], not each word.
-        import rogue_init
+        from pyxel_rogue import rogue_init
 
         syllables = ["aaaa", "bbbb"]
         rolls = iter([0, 0, 0, 0, 1])
@@ -6925,7 +6931,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_scroll_title_recipe_renders_by_language_syllable_table(self):
         # The recipe stores syllable indexes so language switching changes only rendering.
-        import rogue_init
+        from pyxel_rogue import rogue_init
 
         rolls = iter([1, 0, 0, 1, 2, 0, 1, 3, 2])
         calls = []
@@ -7093,7 +7099,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_throw_cursed_equipped_ring_failure_spends_turn(self):
         # Rogue 5.4.4 weapons.c:missile() calls things.c:dropcheck(obj) before is_current(obj).
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5049)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN, cursed=True)
@@ -7147,7 +7153,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_throw_see_invisible_ring_extinguishes_unsee(self):
         # Rogue 5.4.4 weapons.c:missile() calls things.c:dropcheck(); ring branch calls unsee()/extinguish().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5059)
         set_open_floor(game)
@@ -7540,7 +7546,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_put_on_current_ring_uses_is_current_before_two_ring_check(self):
         # Rogue 5.4.4 rings.c:ring_on() checks misc.c:is_current() before "wearing two".
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5043)
         left = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
@@ -7562,7 +7568,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_put_on_third_ring_spends_turn(self):
         # Rogue 5.4.4 rings.c:ring_on() "wearing two" path does not clear after.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5044)
         left = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
@@ -7585,7 +7591,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_rings_helper_ring_on_result_matches_ring_on_gates(self):
         # Rogue 5.4.4 rings.c:ring_on() gates non-ring, current ring, and wearing-two.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         self.assertEqual(rogue_rings.ring_on_result(item_is_ring=False, is_current=False, both_hands_full=False), "not-ring")
         self.assertEqual(rogue_rings.ring_on_result(item_is_ring=True, is_current=True, both_hands_full=True), "current")
@@ -7594,7 +7600,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_rings_helper_ring_off_result_matches_ring_off_gates(self):
         # Rogue 5.4.4 rings.c:ring_off() and things.c:dropcheck() gate unworn/cursed rings.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         self.assertEqual(rogue_rings.ring_off_result(is_wearing=False, is_cursed=False), "not-wearing")
         self.assertEqual(rogue_rings.ring_off_result(is_wearing=True, is_cursed=True), "cursed")
@@ -7602,7 +7608,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_wield_result_matches_wield_gates(self):
         # Rogue 5.4.4 weapons.c:wield() gates dropcheck(), armor, and is_current().
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         self.assertEqual(rogue_weapons.wield_result(current_cursed=True, item_is_armor=False, is_current=False), "cursed")
         self.assertEqual(rogue_weapons.wield_result(current_cursed=False, item_is_armor=True, is_current=False), "armor")
@@ -7833,7 +7839,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_potions_helper_is_magic_matches_source(self):
         # Rogue 5.4.4 potions.c:is_magic() treats only enchanted/protected weapon and armor as magic.
-        import rogue_potions
+        from pyxel_rogue import rogue_potions
 
         self.assertTrue(rogue_potions.is_magic_item("potion", False, False))
         self.assertFalse(rogue_potions.is_magic_item("weapon", False, False))
@@ -7843,7 +7849,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_nymph_steal_uses_reservoir_selection(self):
         # Rogue 5.4.4 fight.c:attack() excludes equipped items and uses rnd(++nobj)==0.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         equipped = object()
         first = object()
@@ -7953,7 +7959,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_rattlesnake_poison_reports_weakened_at_strength_floor(self):
         # Rogue 5.4.4 fight.c:attack() calls chg_str(-1), which clamps at 3, then still prints weakened text.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(
             rogue_fight.poison_bite_strength(3, poison_saved=False, sustain_strength=False),
@@ -8009,7 +8015,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_goldcalc_uses_level_scaled_roll(self):
         # Rogue 5.4.4 rogue.h:GOLDCALC is rnd(50 + 10 * level) + 2.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         calls = []
 
@@ -8018,7 +8024,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_leprechaun_gold_loss_rolls_once_plus_four_on_failed_save(self):
         # Rogue 5.4.4 fight.c:attack() subtracts one GOLDCALC, plus four more when save fails.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
 
@@ -8030,7 +8036,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_leprechaun_gold_loss_after_first(self):
         # Rogue 5.4.4 fight.c:attack() rolls save after the first purse -= GOLDCALC.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
         self.assertEqual(
@@ -8041,7 +8047,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_leprechaun_kill_gold_rolls_extra_on_saved_magic(self):
         # Rogue 5.4.4 fight.c:killed() gives GOLDCALC, plus four more when save(VS_MAGIC) succeeds.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
 
@@ -8053,7 +8059,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_leprechaun_kill_gold_after_first(self):
         # Rogue 5.4.4 fight.c:killed() rolls save after o_goldval = GOLDCALC.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
         self.assertEqual(
@@ -8064,7 +8070,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_leprechaun_kill_gold_gate_requires_max_depth_and_fallpos(self):
         # Rogue 5.4.4 fight.c:killed() requires fallpos(...) and level >= max_level before attaching gold.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.leprechaun_kill_gold_allowed(level=7, max_level=7, has_fallpos=True))
         self.assertFalse(rogue_fight.leprechaun_kill_gold_allowed(level=6, max_level=7, has_fallpos=True))
@@ -8208,7 +8214,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_wraith_drain_decrements_level_and_hp(self):
         # Rogue 5.4.4 fight.c:attack() decrements level, sets exp, and subtracts fewer from hp/max_hp.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(
             rogue_fight.wraith_drain(3, 50, 10, 20, rogue.Player.EXP_T, lambda: 2),
@@ -8313,14 +8319,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_vampire_drain_subtracts_hp_and_max_hp(self):
         # Rogue 5.4.4 fight.c:attack() Vampire drain subtracts roll(1,3) from hp and max_hp.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.max_hp_drain(10, 20, lambda: 3), (7, 17, False))
         self.assertEqual(rogue_fight.max_hp_drain(1, 2, lambda: 3), (1, -1, True))
 
     def test_rogue_544_fight_helper_drain_chance_uses_monster_type_threshold(self):
         # Rogue 5.4.4 fight.c:attack() uses 15% for Wraith, 30% for Vampire.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.drain_hits("W", lambda n: 14))
         self.assertFalse(rogue_fight.drain_hits("W", lambda n: 15))
@@ -8398,7 +8404,7 @@ class RogueBaselineTest(unittest.TestCase):
     def test_rogue544_treasure_room_counts_match_new_level_treas_room(self):
         # Rogue 5.4.4 new_level.c:treas_room() uses MINTREAS/MAXTREAS
         # and forces monster count to at least treasure count + 2.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         rng = SequenceRng([0, 0])
         self.assertEqual(rogue_dungeon.treasure_room_counts(16, rng), (2, 4))
@@ -8495,7 +8501,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_put_things_uses_nine_36_percent_item_attempts(self):
         # Rogue 5.4.4 rogue.h:MAXOBJ=9 and new_level.c:put_things() places when rnd(100)<36.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         rng = SequenceRng([0, 35, 36, 99, 12, 60, 34, 35, 90])
         self.assertEqual(rogue_dungeon.put_things_item_count(rng), 5)
@@ -8540,7 +8546,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_put_things_skips_when_returning_up_with_amulet(self):
         # Rogue 5.4.4 new_level.c:put_things() returns when amulet && level < max_level.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         self.assertFalse(rogue_dungeon.should_put_things(True, 3, 4))
         self.assertTrue(rogue_dungeon.should_put_things(True, 4, 4))
@@ -8548,7 +8554,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_room_gold_gate_matches_do_rooms(self):
         # Rogue 5.4.4 rooms.c:do_rooms() places gold on rnd(2)==0 unless ascending with Amulet.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         self.assertTrue(rogue_dungeon.should_place_room_gold(SequenceRng([0]), False, 3, 4))
         self.assertFalse(rogue_dungeon.should_place_room_gold(SequenceRng([1]), False, 3, 4))
@@ -8781,7 +8787,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_room_monster_gate_matches_do_rooms(self):
         # Rogue 5.4.4 rooms.c:do_rooms() uses 80% with gold in room, otherwise 25%.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         self.assertTrue(rogue_dungeon.should_place_room_monster(SequenceRng([79]), True))
         self.assertFalse(rogue_dungeon.should_place_room_monster(SequenceRng([80]), True))
@@ -8790,7 +8796,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_io_helper_step_ok_matches_source_char_gate(self):
         # Rogue 5.4.4 io.c:step_ok() rejects spaces, walls, and alphabetic glyphs.
-        import rogue_io
+        from pyxel_rogue import rogue_io
 
         for ch in (" ", "|", "-", "A", "z"):
             self.assertFalse(rogue_io.step_ok_char(ch))
@@ -8799,7 +8805,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_io_helper_step_ok_tile_uses_tile_glyphs(self):
         # Rogue 5.4.4 io.c:step_ok() works on map glyphs returned by chat()/winat().
-        import rogue_io
+        from pyxel_rogue import rogue_io
 
         self.assertFalse(rogue_io.step_ok_tile(rogue.T_VOID, rogue.TILE_CH))
         self.assertFalse(rogue_io.step_ok_tile(rogue.T_HWALL, rogue.TILE_CH))
@@ -8810,7 +8816,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_find_floor_monster_candidates_match_rooms_find_floor_gate(self):
         # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) accepts step_ok() room cells.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         room_a = object()
         room_b = object()
@@ -8841,7 +8847,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_find_floor_monster_candidates_use_step_ok_tile_gate(self):
         # Rogue 5.4.4 rooms.c:find_floor(..., monst=TRUE) gates through io.c:step_ok().
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         room = object()
         tm = [[rogue.T_HWALL, rogue.T_VWALL, rogue.T_FLOOR, rogue.T_DOOR]]
@@ -8861,7 +8867,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_find_floor_monster_candidates_can_scope_to_source_room(self):
         # Rogue 5.4.4 rooms.c:find_floor(rp, ...) only samples the supplied room.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         room_a = object()
         room_b = object()
@@ -8883,7 +8889,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_find_floor_object_candidates_use_maze_passage_compchar(self):
         # Rogue 5.4.4 rooms.c:find_floor(..., monst=FALSE) uses PASSAGE for ISMAZE rooms.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         normal = rogue.Room(0, 0, 3, 3)
         maze = rogue.Room(3, 0, 3, 3, flags={rogue.ROOM_MAZE})
@@ -8930,7 +8936,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_rooms_helper_gone_room_selection_allows_duplicates(self):
         # Rogue 5.4.4 rooms.c:do_rooms() loops left_out times and may pick the same room twice.
-        import rogue_rooms
+        from pyxel_rogue import rogue_rooms
 
         rng = SequenceRng([3, 2, 2, 5])
         self.assertEqual(rogue_rooms.gone_room_indices(9, rng), {2, 5})
@@ -8938,7 +8944,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_rooms_helper_room_kind_flags_match_dark_maze_gate(self):
         # Rogue 5.4.4 rooms.c:do_rooms() sets ISDARK on rnd(10)<level-1, then ISMAZE on rnd(15)==0.
-        import rogue_rooms
+        from pyxel_rogue import rogue_rooms
 
         self.assertIsNone(rogue_rooms.room_kind_flag(5, SequenceRng([4])))
         self.assertEqual(rogue_rooms.room_kind_flag(5, SequenceRng([3, 1])), "dark")
@@ -9074,7 +9080,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_init_dam_table_matches_source(self):
         # Rogue 5.4.4 weapons.c:init_dam[] lives in rogue_weapons.py.
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         self.assertEqual(rogue_weapons.INIT_DAM[0], ("2x4", "1x3", None, ()))
         self.assertEqual(rogue_weapons.INIT_DAM[3], ("1x1", "2x3", 2, ("many", "missile")))
@@ -9099,7 +9105,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_swing_uses_d20_threshold(self):
         # Rogue 5.4.4 fight.c:swing() hits when rnd(20)+wplus >= (20-at_lvl)-op_arm.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertFalse(rogue_fight.swing(1, 5, 0, lambda n: 13))
         self.assertTrue(rogue_fight.swing(1, 5, 0, lambda n: 14))
@@ -9130,7 +9136,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_roll_damage_expr_sums_damage_parts(self):
         # Rogue 5.4.4 fight.c:roll_em() parses each "%dx%d" damage part.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
 
@@ -9142,7 +9148,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_roll_damage_expr_requires_x_separator(self):
         # Rogue 5.4.4 fight.c:roll_em() searches for 'x'; dice-style 'd' is not a combat damage separator.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
 
@@ -9175,7 +9181,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_bare_attack_profile_matches_roll_em_null_weapon(self):
         # Rogue 5.4.4 fight.c:roll_em() uses attacker s_dmg and zero pluses when weap == NULL.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.bare_attack_profile("1x4"), ("1x4", 0, 0))
 
@@ -9192,13 +9198,13 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_non_weapon_profile_keeps_current_item_ring_bonus(self):
         # Rogue 5.4.4 fight.c:roll_em() still applies current-weapon rings before using o_damage "0x0".
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.non_weapon_profile(2, 3), ("0x0", 2, 3))
 
     def test_rogue_544_wielded_non_weapon_gets_ring_hit_and_damage_bonus(self):
         # Rogue 5.4.4 fight.c:roll_em() applies R_ADDHIT/R_ADDDAM when weap == cur_weapon.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5066)
         potion = rogue.Item(rogue.CAT_POT, 0)
@@ -9215,8 +9221,8 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_wielded_stick_uses_fix_stick_damage_profile(self):
         # Rogue 5.4.4 sticks.c:fix_stick() gives staff "2x3" and wand "1x1" o_damage.
-        import rogue_rings
-        import rogue_sticks
+        from pyxel_rogue import rogue_rings
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=5067)
         staff = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_LIGHT)
@@ -9233,7 +9239,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_thrown_current_weapon_gets_ring_hit_and_damage_bonus(self):
         # Rogue 5.4.4 fight.c:roll_em() applies cur_weapon ring bonuses before hurl handling.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=5067)
         dagger = rogue.Item(rogue.CAT_WPN, next(i for i, w in enumerate(rogue.WEAPONS) if w["name"] == "dagger"))
@@ -9249,7 +9255,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_roll_em_damage_adds_only_hit_parts(self):
         # Rogue 5.4.4 fight.c:roll_em() rolls damage only after each successful swing().
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         swings = iter([False, True])
         rolls = []
@@ -9268,7 +9274,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_roll_em_damage_stops_before_malformed_part(self):
         # Rogue 5.4.4 fight.c:roll_em() breaks before swing() when a damage part has no 'x'.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         swings = []
         hit, damage = rogue_fight.roll_em_damage(
@@ -9285,7 +9291,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_damage_expr_uses_atoi_prefixes(self):
         # Rogue 5.4.4 fight.c:roll_em() parses ndice/nsides with atoi(), then searches for '/'.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
 
@@ -9300,7 +9306,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_roll_em_damage_uses_atoi_prefixes(self):
         # Rogue 5.4.4 fight.c:roll_em() lets atoi("4junk") mean 4 before the next '/'.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         rolls = []
         hit, damage = rogue_fight.roll_em_damage(
@@ -9319,14 +9325,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_roll_em_part_damage_clamps_negative(self):
         # Rogue 5.4.4 fight.c:roll_em() subtracts max(0, dplus + proll + add_dam[s_str]).
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.roll_em_part_damage(1, dplus=-8, add_dam=2), 0)
         self.assertEqual(rogue_fight.roll_em_part_damage(4, dplus=1, add_dam=2), 7)
 
     def test_rogue_544_fight_helper_attack_pluses_include_strength_tables(self):
         # Rogue 5.4.4 fight.c:roll_em() adds str_plus/add_dam after defender !ISRUN and base dplus.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.attack_hit_plus(1, defender_running=False, strength=18), 6)
         self.assertEqual(rogue_fight.attack_damage_plus(2, strength=18), 4)
@@ -9366,14 +9372,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_hit_plus_adds_four_when_defender_not_running(self):
         # Rogue 5.4.4 fight.c:roll_em() adds +4 when !ISRUN on the defender.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.hit_plus_vs_defender(0, defender_running=False), 4)
         self.assertEqual(rogue_fight.hit_plus_vs_defender(2, defender_running=True), 2)
 
     def test_rogue_544_fight_helper_combat_message_key_uses_rnd_family_size(self):
         # Rogue 5.4.4 fight.c:hit()/miss() chooses one of four h_names/m_names with rnd(4).
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         calls = []
         key = rogue_fight.combat_message_key(
@@ -9386,7 +9392,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_combat_message_key_does_not_depend_on_tuple_length(self):
         # Rogue 5.4.4 fight.c:hit()/miss() uses rnd(4), not the Python tuple length.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         calls = []
         key = rogue_fight.combat_message_key(
@@ -9399,7 +9405,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_prname_formats_player_and_monster_names(self):
         # Rogue 5.4.4 fight.c:prname() uses "you" for NULL and uppercases the first character when requested.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.prname(None, upper=False), "you")
         self.assertEqual(rogue_fight.prname(None, upper=True), "You")
@@ -9407,55 +9413,55 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_player_defense_armor_matches_roll_em(self):
         # Rogue 5.4.4 fight.c:roll_em() uses current armor o_arm, then subtracts protection rings.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.player_defense_armor(10, armor_ac=None, protection_bonus=0), 10)
         self.assertEqual(rogue_fight.player_defense_armor(10, armor_ac=4, protection_bonus=2), 2)
 
     def test_rogue_544_fight_helper_player_defender_running_ignores_no_move(self):
         # Rogue 5.4.4 no_command clears ISRUN; move.c:T_BEAR no_move does not.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertFalse(rogue_fight.player_defender_running(no_command=1))
         self.assertTrue(rogue_fight.player_defender_running(no_command=0))
 
     def test_rogue_544_fight_helper_monster_attack_message_gate_skips_ice(self):
         # Rogue 5.4.4 fight.c:attack() skips hit()/miss() for Ice monster.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertFalse(rogue_fight.monster_attack_message_allowed("I"))
         self.assertTrue(rogue_fight.monster_attack_message_allowed("R"))
 
     def test_rogue_544_fight_helper_attack_activity_reset_matches_source(self):
         # Rogue 5.4.4 fight.c:fight()/attack() clear running/count and set quiet = 0.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.attack_activity_state(), (False, 0))
 
     def test_rogue_544_fight_helper_attack_special_gate_matches_iscanc(self):
         # Rogue 5.4.4 fight.c:attack() runs the special switch only when !ISCANC.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.attack_specials_allowed(cancelled=False))
         self.assertFalse(rogue_fight.attack_specials_allowed(cancelled=True))
 
     def test_rogue_544_fight_helper_attack_result_matches_removed_monster(self):
         # Rogue 5.4.4 fight.c:attack() returns -1 when remove_mon() sets mp = NULL.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.attack_result(monster_removed=True), -1)
         self.assertEqual(rogue_fight.attack_result(monster_removed=False), 0)
 
     def test_rogue_544_fight_helper_remove_mon_pack_falls_only_on_kill(self):
         # Rogue 5.4.4 fight.c:remove_mon() falls t_pack only when waskill is TRUE.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.remove_monster_pack_should_fall(was_kill=True))
         self.assertFalse(rogue_fight.remove_monster_pack_should_fall(was_kill=False))
 
     def test_rogue_544_fight_helper_attack_reveals_disguised_xeroc_when_not_blind(self):
         # Rogue 5.4.4 fight.c:fight()/attack() reveal X when t_disguise != 'X' and !ISBLIND.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.attack_reveals_disguised_xeroc(disguised=True, blind=False))
         self.assertFalse(rogue_fight.attack_reveals_disguised_xeroc(disguised=True, blind=True))
@@ -9463,14 +9469,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_revealed_xeroc_stops_only_melee(self):
         # Rogue 5.4.4 fight.c:fight() returns FALSE after Xeroc reveal only when !thrown.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.revealed_xeroc_stops_attack(thrown=False))
         self.assertFalse(rogue_fight.revealed_xeroc_stops_attack(thrown=True))
 
     def test_rogue_544_fight_helper_confusion_message_requires_canhuh_hit_and_sight(self):
         # Rogue 5.4.4 fight.c:fight() uses did_hit && !ISBLIND for the appears-confused message.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.confusion_message_allowed(confused_by_hit=True, blind=False))
         self.assertFalse(rogue_fight.confusion_message_allowed(confused_by_hit=True, blind=True))
@@ -9478,21 +9484,21 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_confusion_hit_effect(self):
         # Rogue 5.4.4 fight.c:fight() consumes CANHUH on a successful hit.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.confusion_hit_effect(True), (False, True))
         self.assertEqual(rogue_fight.confusion_hit_effect(False), (False, False))
 
     def test_rogue_544_fight_helper_thrown_message_weapon_gate(self):
         # Rogue 5.4.4 fight.c:thunk()/bounce() use "the item" only for WEAPON objects.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertTrue(rogue_fight.thrown_message_uses_weapon_name(rogue.CAT_WPN))
         self.assertFalse(rogue_fight.thrown_message_uses_weapon_name(rogue.CAT_STICK))
 
     def test_rogue_544_fight_helper_thrown_message_key_matches_thunk_bounce(self):
         # Rogue 5.4.4 fight.c:thunk()/bounce() split WEAPON and non-WEAPON messages.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_WPN, hit=True), "fight.thrown_weapon_hits")
         self.assertEqual(rogue_fight.thrown_message_key(rogue.CAT_WPN, hit=False), "fight.thrown_weapon_misses")
@@ -9501,7 +9507,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_killed_message_key_matches_normal_non_terse(self):
         # Rogue 5.4.4 fight.c:killed() prints "you have defeated" for normal non-terse kills.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(
             rogue_fight.killed_message_key(pr=True, has_hit=False, terse=False),
@@ -9510,13 +9516,13 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_killed_exp_adds_monster_exp(self):
         # Rogue 5.4.4 fight.c:killed() does pstats.s_exp += tp->t_stats.s_exp.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.killed_experience(20, 55), 75)
 
     def test_rogue_544_fight_helper_weapon_profile_uses_hurl_damage_and_launcher_pluses(self):
         # Rogue 5.4.4 fight.c:roll_em() uses o_hurldmg and adds launcher pluses for matching missiles.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         damage, hplus, dplus = rogue_fight.weapon_profile(
             weapon={"damage": "1x1", "hurl_damage": "2x3", "missile": True, "launcher": 2},
@@ -9534,7 +9540,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_strength_tables_match_source(self):
         # Rogue 5.4.4 fight.c:str_plus/add_dam tables clamp by strength index.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.str_hit_plus(0), -7)
         self.assertEqual(rogue_fight.str_hit_plus(31), 3)
@@ -9591,7 +9597,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_venus_flytrap_miss_subtracts_vf_hit(self):
         # Rogue 5.4.4 fight.c:attack() applies vf_hit even on a Venus Flytrap miss.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.venus_flytrap_miss_hp(20, 4), 16)
         self.assertEqual(rogue_fight.venus_flytrap_miss_hp(20, 0), 20)
@@ -9612,7 +9618,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_venus_flytrap_hit_increments_vf_hit(self):
         # Rogue 5.4.4 fight.c:attack() increments vf_hit and sets next F damage to "%dx1".
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.venus_flytrap_hit(3), (4, "4x1"))
 
@@ -9634,7 +9640,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_venus_flytrap_release_resets_hold_damage(self):
         # Rogue 5.4.4 fight.c:killed() clears vf_hit and restores F damage to "0x0".
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.venus_flytrap_release(), (0, "0x0"))
 
@@ -11215,7 +11221,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("空腹", calls)
 
     def test_strict_difficulty_hides_helpful_status_condition_hud(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         game = new_game(seed=35001, difficulty=rogue_difficulty.DIFF_STRICT)
         game.p.state = "hungry"
@@ -12525,7 +12531,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(line, " 7   614 NIX: killed on level 8 by a kestrel.")
 
     def test_score_period_keys_include_week_and_fixed_season(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         keys = rogue_scores.score_period_keys("2026-02-01T12:00:00Z")
 
@@ -12541,14 +12547,14 @@ class RogueBaselineTest(unittest.TestCase):
         )
 
     def test_user_id_is_lowercase_alnum_and_display_name_has_no_local_mark(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         self.assertEqual(rogue_scores.sanitize_user_id("Rogue-54!xxxx"), "rogue54x")
         self.assertEqual(rogue_scores.sanitize_user_id("!!!"), "rogue54")
         self.assertEqual(rogue_scores.display_score_name({"user_name": "rogue54"}), "rogue54")
 
     def test_online_profile_v3_uses_user_name_and_ignores_old_profile_keys(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         self.assertEqual(rogue_scores.ONLINE_PROFILE_STORAGE_KEY, "pyxel-rogue-online-profile-v3")
 
@@ -12560,7 +12566,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(profile["profile_exists"])
 
     def test_online_profile_v3_display_names_do_not_use_local_mark(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         local = rogue_scores.normalize_online_profile({"user_name": "ace", "local_only": True, "profile_exists": True})
         registered = rogue_scores.normalize_online_profile({
@@ -12582,7 +12588,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_scores.display_score_name(synced), "ace")
 
     def test_daily_period_scores_are_no_longer_supported(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         entries = [
             {"player_name": "ACE", "score": 10, "period_day": "2026-04-29"},
@@ -12595,7 +12601,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(daily, [])
 
     def test_fetch_online_scores_uses_weekly_and_season_only(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         calls = []
         old_http_json = rogue_scores._http_json
@@ -12608,7 +12614,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [("https://example.test/exec?period=weekly&key=2026-W18", None)])
 
     def test_online_user_registration_payload_and_reserved_names(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         calls = []
         old_http_json = rogue_scores._http_json
@@ -12640,7 +12646,7 @@ class RogueBaselineTest(unittest.TestCase):
         )])
 
     def test_check_online_user_posts_user_name(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         calls = []
         old_http_json = rogue_scores._http_json
@@ -12654,7 +12660,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [("https://example.test/exec", {"action": "checkUser", "user_name": "newuser"})])
 
     def test_server_token_obfuscation_round_trips_without_plaintext_storage(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         encoded = rogue_scores.obfuscate_server_token("abc123", "newuser")
 
@@ -12662,7 +12668,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_scores.deobfuscate_server_token(encoded, "newuser"), "abc123")
 
     def test_sync_online_scoreboard_posts_user_token_entries_and_returns_cooldown(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         calls = []
         old_http_json = rogue_scores._http_json
@@ -12689,12 +12695,12 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls[0][1]["entries"][0]["score"], 30)
 
     def test_online_http_timeout_allows_apps_script_sync_response(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         self.assertGreaterEqual(rogue_scores.ONLINE_HTTP_TIMEOUT_SECONDS, 15)
 
     def test_local_best_sync_entries_only_keeps_current_week_and_season_best(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         entries = [
             {"score_id": "low", "player_name": "ace", "score": 30, "period_week": "2026-W18", "period_season": "2026-Spring"},
@@ -12707,7 +12713,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual([entry["score_id"] for entry in sync_entries], ["best", "old"])
 
     def test_online_scores_deduplicate_weekly_and_season_by_player_best(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         entries = [
             {"player_name": "ACE", "score": 10, "period_week": "2026-W17", "period_season": "2026-Spring"},
@@ -12723,7 +12729,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual([(e["player_name"], e["score"]) for e in season], [("ACE", 99), ("DOT", 15)])
 
     def test_online_scores_preserve_display_name_case_when_deduplicating(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         entries = [
             {"player_name": "ace", "score": 20, "period_week": "2026-W18", "period_season": "2026-Spring"},
@@ -12735,7 +12741,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual([(e["player_name"], e["score"]) for e in weekly], [("ace", 20)])
 
     def test_dummy_scores_are_sheet_rows_with_consistent_periods(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         rows = rogue_scores.build_dummy_score_rows("2026-04-28T00:00:00Z", count=12, seed=3)
 
@@ -12747,7 +12753,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreaterEqual(len(rogue_scores.DUMMY_PLAYER_NAMES), 80)
 
     def test_sync_missing_local_best_posts_when_online_lacks_it(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         local = [
             {"player_name": "ACE", "score": 300, "period_week": "2026-W18", "period_season": "2026-Spring"},
@@ -12767,7 +12773,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(posted[0]["score"], 300)
 
     def test_sync_missing_local_best_skips_duplicate_score_id(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         local = [
             {"score_id": "same-run", "player_name": "ACE", "score": 300, "period_week": "2026-W18", "period_season": "2026-Spring"},
@@ -12958,13 +12964,13 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn('"SAVE_SC"', dummy_names)
 
     def test_online_score_url_defaults_to_blank_without_environment(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         self.assertEqual(rogue_scores.DEFAULT_ONLINE_SCORE_URL, "")
         self.assertEqual(rogue_scores.ONLINE_SCORE_URL, os.environ.get("PYXEL_ROGUE_SCORE_URL", ""))
 
     def test_seed_dummy_online_scores_posts_seed_action(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         calls = []
         old_http_json = rogue_scores._http_json
@@ -12977,7 +12983,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(calls, [("https://example.test/exec?action=seedDummy", None)])
 
     def test_emscripten_http_json_uses_simple_cors_requests_for_apps_script(self):
-        import rogue_scores
+        from pyxel_rogue import rogue_scores
 
         calls = []
 
@@ -15168,7 +15174,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.TITLE_BG_PALETTE[rogue.TITLE_RESTORED_CURSOR_COL], rogue.FLEXOKI_DARK_PALETTE[12])
 
     def test_title_enter_opens_difficulty_select_before_new_game(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN, difficulty=rogue_difficulty.DIFF_NORMAL)
@@ -19087,7 +19093,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_ice_freeze_adds_duration_and_reports_initial_freeze(self):
         # Rogue 5.4.4 fight.c:attack() adds rnd(2)+2; message only when no_command was zero.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(
             rogue_fight.ice_freeze(0, bore_level=50, rnd=lambda n: 1),
@@ -19170,7 +19176,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_poison_bite_strength_loss(self):
         # Rogue 5.4.4 fight.c:attack() calls chg_str(-1), which clamps at 3 but still reports weakness.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=False), (9, "weakened"))
         self.assertEqual(rogue_fight.poison_bite_strength(10, poison_saved=False, sustain_strength=True), (10, "sustained"))
@@ -19179,7 +19185,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fight_helper_poison_bite_message_key_matches_attack_non_terse(self):
         # Rogue 5.4.4 fight.c:attack() has distinct non-terse messages for weakened and sustained poison bites.
-        import rogue_fight
+        from pyxel_rogue import rogue_fight
 
         self.assertEqual(
             rogue_fight.poison_bite_message_key("weakened", terse=False),
@@ -19193,7 +19199,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_can_rust_armor_matches_source_gate(self):
         # Rogue 5.4.4 move.c:rust_armor() skips NULL, non-armor, LEATHER, and o_arm >= 9.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         self.assertTrue(rogue_move.can_rust_armor(True, False, 8))
         self.assertFalse(rogue_move.can_rust_armor(False, False, 8))
@@ -19202,7 +19208,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_rust_armor_result_matches_source_branches(self):
         # Rogue 5.4.4 move.c:rust_armor() preserves protected/sustain armor, otherwise increments o_arm.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         self.assertEqual(rogue_move.rust_armor_result(protected=True, sustain_armor=False), "vanish")
         self.assertEqual(rogue_move.rust_armor_result(protected=False, sustain_armor=True), "vanish")
@@ -19210,7 +19216,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_mysterious_trap_message_table_matches_source(self):
         # Rogue 5.4.4 move.c:be_trapped() T_MYST switch has 11 fixed message cases.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         self.assertEqual(rogue_move.mysterious_trap_message(0), ("move.you_are_suddenly_in_a_parallel_dimension", None))
         self.assertEqual(rogue_move.mysterious_trap_message(1), ("move.the_light_in_here_suddenly_seems_color", "color"))
@@ -19219,7 +19225,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_rndmove_tries_one_random_square_only(self):
         # Rogue 5.4.4 move.c:rndmove() rolls y then x once and stays put if that square is bad.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         rng = SequenceRng([0, 2])
         self.assertEqual(
@@ -19236,7 +19242,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_confused_player_random_gate_uses_rnd5(self):
         # Rogue 5.4.4 move.c:do_move() gates player rndmove() with rnd(5) != 0.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         calls = []
         self.assertFalse(rogue_move.confused_player_uses_random_move(False, lambda n: calls.append(n) or 1))
@@ -19247,7 +19253,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_held_gate_blocks_non_f_destinations(self):
         # Rogue 5.4.4 move.c:do_move() ISHELD gate checks destination ch != 'F'.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         self.assertTrue(rogue_move.held_move_blocked(True, False))
         self.assertFalse(rogue_move.held_move_blocked(True, True))
@@ -19491,7 +19497,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_random_move_gate_matches_source_order(self):
         # Rogue 5.4.4 chase.c:chase() tests ISHUH, Phantom, then Bat random movement.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         rng = SequenceRng([1])
         self.assertTrue(rogue_chase.should_random_move(1, "O", rng.rnd))
@@ -19525,7 +19531,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_confusion_clears_on_rnd20_zero(self):
         # Rogue 5.4.4 chase.c:chase() always rolls rnd(20) after random movement.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         rng = SequenceRng([0])
         self.assertTrue(rogue_chase.confusion_clears_after_random_move(1, rng.rnd))
@@ -19563,7 +19569,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_choose_chase_step_matches_tie_roll(self):
         # Rogue 5.4.4 chase.c:chase() replaces equal-distance candidates only when rnd(++plcnt)==0.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertEqual(
             rogue_chase.choose_chase_step((1, 1), 10, 1, (2, 2), 5, lambda n: 0),
@@ -19585,7 +19591,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_candidate_gate_blocks_diag_step_scare_and_xeroc(self):
         # Rogue 5.4.4 chase.c:chase() skips bad diagonals, non-step cells, scare scrolls, and Xerocs.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.is_chase_candidate(True, True, False, False))
         self.assertFalse(rogue_chase.is_chase_candidate(False, True, False, False))
@@ -19595,7 +19601,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_candidate_offsets_match_source_scan_order(self):
         # Rogue 5.4.4 chase.c:chase() loops x from left to right, with y inner.
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertEqual(
             rogue_chase.chase_candidate_offsets(),
@@ -19684,7 +19690,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_chase_helper_continues_unless_at_goal_or_hero(self):
         # Rogue 5.4.4 chase.c:chase() returns curdist != 0 && !ce(ch_ret, hero).
-        import rogue_chase
+        from pyxel_rogue import rogue_chase
 
         self.assertTrue(rogue_chase.chase_continues(5, (4, 4), (1, 1)))
         self.assertFalse(rogue_chase.chase_continues(0, (4, 4), (1, 1)))
@@ -19910,7 +19916,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_fallpos_candidate_matches_source_tiles(self):
         # Rogue 5.4.4 weapons.c:fallpos() skips hero and accepts only FLOOR/PASSAGE.
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         self.assertTrue(rogue_weapons.is_fallpos_candidate((4, 4), (5, 5), "FLOOR"))
         self.assertTrue(rogue_weapons.is_fallpos_candidate((4, 4), (5, 5), "PASSAGE"))
@@ -19919,7 +19925,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_choose_fallpos_matches_rnd_count(self):
         # Rogue 5.4.4 weapons.c:fallpos() replaces newpos when rnd(++cnt)==0.
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         rng = SequenceRng([0])
         self.assertEqual(rogue_weapons.choose_fallpos(None, 0, (4, 4), rng.rnd), ((4, 4), 1))
@@ -19964,7 +19970,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_fall_result_matches_source_branches(self):
         # Rogue 5.4.4 weapons.c:fall() attaches on fallpos success, otherwise only pr prints vanish.
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         self.assertEqual(rogue_weapons.fall_result((4, 4), pr=True), ("drop", (4, 4)))
         self.assertEqual(rogue_weapons.fall_result(None, pr=True), ("vanish", None))
@@ -19972,7 +19978,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_initial_weapon_count_matches_source(self):
         # Rogue 5.4.4 weapons.c:init_weapon() gives daggers rnd(4)+2, ISMANY weapons rnd(8)+8, others 1.
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         self.assertEqual(rogue_weapons.initial_weapon_count("dagger", False, lambda n: 3), 5)
         self.assertEqual(rogue_weapons.initial_weapon_count("arrow", True, lambda n: 7), 15)
@@ -19980,7 +19986,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_weapons_helper_new_thing_weapon_enchant_matches_source(self):
         # Rogue 5.4.4 things.c:new_thing() curses weapons on rnd(100)<10, enchants on r<15.
-        import rogue_weapons
+        from pyxel_rogue import rogue_weapons
 
         self.assertEqual(rogue_weapons.new_thing_weapon_enchant(9, lambda n: 2), (-3, True))
         self.assertEqual(rogue_weapons.new_thing_weapon_enchant(14, lambda n: 1), (2, False))
@@ -19988,7 +19994,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_armor_helper_new_thing_armor_enchant_matches_source(self):
         # Rogue 5.4.4 things.c:new_thing() curses armor on rnd(100)<20, enchants on r<28.
-        import rogue_armor
+        from pyxel_rogue import rogue_armor
 
         self.assertEqual(rogue_armor.new_thing_armor_enchant(19, lambda n: 2), (-3, True))
         self.assertEqual(rogue_armor.new_thing_armor_enchant(27, lambda n: 1), (2, False))
@@ -19996,14 +20002,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_things_helper_food_kind_matches_new_thing_ratio(self):
         # Rogue 5.4.4 things.c:new_thing() makes ration unless rnd(10)==0.
-        import rogue_things
+        from pyxel_rogue import rogue_things
 
         self.assertEqual(rogue_things.new_thing_food_kind(lambda n: 1), 0)
         self.assertEqual(rogue_things.new_thing_food_kind(lambda n: 0), 1)
 
     def test_rogue_544_things_helper_category_weights_match_source_table(self):
         # Rogue 5.4.4 extern.c:things[] uses 26/36/16/7/7/4/4 weights.
-        import rogue_things
+        from pyxel_rogue import rogue_things
 
         self.assertEqual(rogue_things.new_thing_category(0), "potion")
         self.assertEqual(rogue_things.new_thing_category(25), "potion")
@@ -20017,7 +20023,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_things_helper_pick_one_uses_subtractive_prob_table(self):
         # Rogue 5.4.4 things.c:pick_one() subtracts oi_prob from rnd(100).
-        import rogue_things
+        from pyxel_rogue import rogue_things
 
         table = [("potion", 26), ("scroll", 36), ("food", 16), ("weapon", 7),
                  ("armor", 7), ("ring", 4), ("stick", 4)]
@@ -20031,7 +20037,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_things_helper_set_order_matches_print_disc(self):
         # Rogue 5.4.4 things.c:set_order() shuffles by swapping i-1 with rnd(i).
-        import rogue_things
+        from pyxel_rogue import rogue_things
 
         rolls = [0, 1, 0, 0]
         calls = []
@@ -20045,7 +20051,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_things_helper_category_roll_forces_food_after_four_levels(self):
         # Rogue 5.4.4 things.c:new_thing() bypasses pick_one() when no_food > 3.
-        import rogue_things
+        from pyxel_rogue import rogue_things
 
         calls = []
 
@@ -20060,7 +20066,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_things_helper_no_food_counter_matches_new_level_and_new_thing(self):
         # Rogue 5.4.4 new_level.c:new_level() increments no_food; things.c:new_thing() resets it on FOOD.
-        import rogue_things
+        from pyxel_rogue import rogue_things
 
         self.assertEqual(rogue_things.no_food_after_new_level(3), 4)
         self.assertEqual(rogue_things.no_food_after_new_thing("food", 4), 0)
@@ -20082,21 +20088,21 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_pack_helper_scare_scroll_found_flag_and_dust(self):
         # Rogue 5.4.4 pack.c:add_pack() sets ISFOUND, then dusts S_SCARE on pickup.
-        import rogue_pack
+        from pyxel_rogue import rogue_pack
 
         self.assertEqual(rogue_pack.scare_scroll_pickup_result(False), "mark_found")
         self.assertEqual(rogue_pack.scare_scroll_pickup_result(True), "dust")
 
     def test_rogue_544_pack_helper_checks_room_before_stacking_floor_item(self):
         # Rogue 5.4.4 pack.c:add_pack() calls pack_room() before stacking ISMULT items.
-        import rogue_pack
+        from pyxel_rogue import rogue_pack
 
         self.assertTrue(rogue_pack.pack_room_allows(25, 26))
         self.assertFalse(rogue_pack.pack_room_allows(26, 26))
 
     def test_rogue_544_monsters_helper_give_pack_gate_matches_source(self):
         # Rogue 5.4.4 monsters.c:give_pack() uses level >= max_level && rnd(100) < m_carry.
-        import rogue_monsters
+        from pyxel_rogue import rogue_monsters
 
         self.assertTrue(rogue_monsters.should_give_pack(10, 10, 20, lambda n: 19))
         self.assertFalse(rogue_monsters.should_give_pack(9, 10, 20, lambda n: 0))
@@ -20537,7 +20543,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_remove_ring_action_filters_equipped_rings(self):
         # Rogue 5.4.4 command.c:'R' calls rings.c:ring_off(), not armor.c:take_off().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=557)
         armor = rogue.Item(rogue.CAT_ARM, 0)
@@ -20565,7 +20571,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_take_off_armor_action_filters_current_armor(self):
         # Rogue 5.4.4 command.c:'T' calls armor.c:take_off(), not rings.c:ring_off().
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=559)
         armor = rogue.Item(rogue.CAT_ARM, 0)
@@ -20581,7 +20587,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_take_off_armor_no_armor_uses_take_off_message(self):
         # Rogue 5.4.4 armor.c:take_off() reports no armor and sets after=FALSE.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         game = new_game(seed=560)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
@@ -20735,7 +20741,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_new_level_trap_count_and_kind_helpers_match_source(self):
         # Rogue 5.4.4 new_level.c:new_level() uses rnd(10)<level, rnd(level/4)+1, MAXTRAPS, NTRAPS.
-        import rogue_dungeon
+        from pyxel_rogue import rogue_dungeon
 
         self.assertEqual(rogue_dungeon.trap_count_for_level(1, SequenceRng([1])), 0)
         self.assertEqual(rogue_dungeon.trap_count_for_level(1, SequenceRng([0, 0])), 1)
@@ -20874,7 +20880,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue544_passage_helper_secret_feature_gate_matches_source(self):
         # Rogue 5.4.4 passages.c:door()/putpass() use rnd(10)+1<level and rnd(denom)==0.
-        import rogue_search
+        from pyxel_rogue import rogue_search
 
         self.assertFalse(rogue_search.secret_feature_hidden(1, SequenceRng([0, 0]), 5))
         self.assertTrue(rogue_search.secret_feature_hidden(2, SequenceRng([0, 0]), 5))
@@ -21074,7 +21080,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_simple_trap_state_additions_match_source(self):
         # Rogue 5.4.4 move.c:be_trapped() T_BEAR/T_SLEEP add fixed constants.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         self.assertEqual(rogue_move.bear_trap_no_move(4, rogue.BEARTIME), 4 + rogue.BEARTIME)
         self.assertEqual(rogue_move.sleep_trap_no_command(7, rogue.SLEEPTIME), 7 + rogue.SLEEPTIME)
@@ -21294,7 +21300,7 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_move_helper_dart_poison_strength_matches_source(self):
         # Rogue 5.4.4 move.c:T_DART lowers strength only without sustain strength and failed poison save.
-        import rogue_move
+        from pyxel_rogue import rogue_move
 
         self.assertEqual(rogue_move.dart_poison_strength(10, False, False), 9)
         self.assertEqual(rogue_move.dart_poison_strength(10, True, False), 10)
@@ -21442,7 +21448,7 @@ class TestCallIt(unittest.TestCase):
 
     def test_identification_helpers_split_type_instance_and_guess(self):
         # Rogue 5.4.4 separates obj_info.oi_know, obj_info.oi_guess, and ISKNOW.
-        import rogue_rings
+        from pyxel_rogue import rogue_rings
 
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2, known=False)
         self.g.ident.rg[ring.kind] = "guard"
@@ -21470,7 +21476,7 @@ class TestCallIt(unittest.TestCase):
         self.assertFalse(potion.known)
 
     def test_easy_starts_type_names_known_but_discoveries_empty_until_found(self):
-        import rogue_difficulty
+        from pyxel_rogue import rogue_difficulty
 
         game = new_game(seed=4101, difficulty=rogue_difficulty.DIFF_EASY)
         potion = rogue.Item(rogue.CAT_POT, 0, known=False)
@@ -21484,9 +21490,9 @@ class TestCallIt(unittest.TestCase):
         self.assertIn("potion of confusion", texts)
 
     def test_easy_type_known_still_hides_ring_bonus_and_stick_charges(self):
-        import rogue_difficulty
-        import rogue_rings
-        import rogue_sticks
+        from pyxel_rogue import rogue_difficulty
+        from pyxel_rogue import rogue_rings
+        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=4102, difficulty=rogue_difficulty.DIFF_EASY)
         ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT, ench=2, known=False)
@@ -21538,8 +21544,8 @@ class TestPrintDisc(unittest.TestCase):
 
     def test_rogue_544_print_disc_omits_ring_bonus_and_stick_charges(self):
         # Rogue 5.4.4 things.c:print_disc() uses a dummy object with o_flags=0.
-        import rogue_rings
-        import rogue_sticks
+        from pyxel_rogue import rogue_rings
+        from pyxel_rogue import rogue_sticks
 
         self.g.ident.rk[rogue_rings.R_PROTECT] = True
         self.g.ident.wk[rogue_sticks.WS_LIGHT] = True

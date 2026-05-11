@@ -37,7 +37,7 @@ PYXEL_ROGUE_LANG=ja python3 -m unittest
 
 ## コード構造
 
-現行実装は `rogue.py` が中心。
+現行実装は root の `rogue.py` を入口にし、補助モジュールは `pyxel_rogue/` 配下に置く。
 
 ```
 rogue.py
@@ -51,6 +51,7 @@ rogue.py
 ```
 
 単一ファイルは前提にしない。見通しがよく、Rogue 5.4.4 の原作ロジックと比較しやすく、テストしやすい構造になるなら分割してよい。
+新規の補助モジュールは root 直下の `rogue_*.py` ではなく、`pyxel_rogue/rogue_*.py` として追加する。
 
 ## 画面・マップ
 

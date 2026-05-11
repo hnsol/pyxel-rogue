@@ -1,8 +1,8 @@
 """Rogue 5.4.4 misc.c:look() visibility helpers."""
 from __future__ import annotations
 
-import rogue_io
-from rogue_map import TILE_CH, T_CORR, T_DOOR, T_VOID
+from pyxel_rogue import rogue_io
+from pyxel_rogue.rogue_map import TILE_CH, T_CORR, T_DOOR, T_VOID
 
 
 def look_cell_visible(

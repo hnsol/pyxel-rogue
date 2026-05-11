@@ -13,11 +13,12 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "${STAGE_DIR}" "${OUT_DIR}"
-cp -p "${ROOT_DIR}"/rogue*.py "${STAGE_DIR}/"
+cp -p "${ROOT_DIR}/rogue.py" "${STAGE_DIR}/"
+cp -Rp "${ROOT_DIR}/pyxel_rogue" "${STAGE_DIR}/pyxel_rogue"
 cp -Rp "${ROOT_DIR}/assets" "${STAGE_DIR}/assets"
 
 if [[ -n "${PYXEL_ROGUE_SCORE_URL:-}" ]]; then
-    python3 - "${STAGE_DIR}/rogue_scores.py" <<'PY'
+    python3 - "${STAGE_DIR}/pyxel_rogue/rogue_scores.py" <<'PY'
 import os
 import pathlib
 import sys

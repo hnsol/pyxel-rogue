@@ -1,4 +1,4 @@
-from rogue_items import CAT_ARM, CAT_FOOD, CAT_POT, CAT_RING, CAT_SCR, CAT_STICK, CAT_WPN
+from pyxel_rogue.rogue_items import CAT_ARM, CAT_FOOD, CAT_POT, CAT_RING, CAT_SCR, CAT_STICK, CAT_WPN
 
 ST_PLAY = 0
 ST_MENU = 1

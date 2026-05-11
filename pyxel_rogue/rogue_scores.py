@@ -12,7 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any
 
-from rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
+from pyxel_rogue.rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
 
 SCORE_STORAGE_KEY = "pyxel-rogue-scores-v2"
 PLAYER_NAME_STORAGE_KEY = "pyxel-rogue-player-name-v2"

@@ -14,37 +14,37 @@ import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from rogue_rng import RogueRng
-import rogue_monsters
-import rogue_pack
-import rogue_potions
-import rogue_scrolls
-import rogue_rings
-import rogue_rooms
-import rogue_search
-import rogue_sticks
-import rogue_things
-import rogue_vision
-import rogue_dungeon
-import rogue_daemons
-import rogue_armor
-import rogue_chase
-import rogue_fight
-import rogue_food
-import rogue_init
-import rogue_io
-import rogue_levels
-import rogue_misc
-import rogue_move
-import rogue_passages
-import rogue_weapons
-from rogue_combat_text import (
+from pyxel_rogue.rogue_rng import RogueRng
+from pyxel_rogue import rogue_monsters
+from pyxel_rogue import rogue_pack
+from pyxel_rogue import rogue_potions
+from pyxel_rogue import rogue_scrolls
+from pyxel_rogue import rogue_rings
+from pyxel_rogue import rogue_rooms
+from pyxel_rogue import rogue_search
+from pyxel_rogue import rogue_sticks
+from pyxel_rogue import rogue_things
+from pyxel_rogue import rogue_vision
+from pyxel_rogue import rogue_dungeon
+from pyxel_rogue import rogue_daemons
+from pyxel_rogue import rogue_armor
+from pyxel_rogue import rogue_chase
+from pyxel_rogue import rogue_fight
+from pyxel_rogue import rogue_food
+from pyxel_rogue import rogue_init
+from pyxel_rogue import rogue_io
+from pyxel_rogue import rogue_levels
+from pyxel_rogue import rogue_misc
+from pyxel_rogue import rogue_move
+from pyxel_rogue import rogue_passages
+from pyxel_rogue import rogue_weapons
+from pyxel_rogue.rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
     MONSTER_MISS_MESSAGE_KEYS,
     PLAYER_HIT_MESSAGE_KEYS,
     PLAYER_MISS_MESSAGE_KEYS,
 )
-from rogue_items import (
+from pyxel_rogue.rogue_items import (
     CAT_AMULET,
     CAT_ARM,
     CAT_FOOD,
@@ -58,9 +58,9 @@ from rogue_items import (
     ICOL,
     ISYM,
 )
-from rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings, settings_exists
-from rogue_difficulty import DIFFICULTY_ORDER, profile as difficulty_profile
-from rogue_layout import (
+from pyxel_rogue.rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings, settings_exists
+from pyxel_rogue.rogue_difficulty import DIFFICULTY_ORDER, profile as difficulty_profile
+from pyxel_rogue.rogue_layout import (
     DEAD_ZONE_X,
     DEAD_ZONE_Y,
     FONT_ASCII_W,
@@ -92,7 +92,7 @@ from rogue_layout import (
     ZV_X,
     ZV_Y,
 )
-from rogue_map import (
+from pyxel_rogue.rogue_map import (
     GRID_C,
     GRID_R,
     MAP_H,
@@ -124,7 +124,7 @@ from rogue_map import (
     T_VWALL,
     WALKABLE,
 )
-from rogue_palettes import (
+from pyxel_rogue.rogue_palettes import (
     DEFAULT_PALETTE,
     FLEXOKI_DARK_PALETTE,
     GBC_HIGH_CONTRAST_PALETTE,
@@ -177,7 +177,7 @@ from rogue_palettes import (
     palette_role_color,
     palette_theme,
 )
-from rogue_scores import (
+from pyxel_rogue.rogue_scores import (
     SCOREBOARD_PERIOD_LOCAL,
     SCOREBOARD_PERIOD_SEASON,
     SCOREBOARD_PERIOD_WEEKLY,
@@ -214,7 +214,7 @@ from rogue_scores import (
     total_winner_item_worth,
     total_winner_score,
 )
-from rogue_timing import (
+from pyxel_rogue.rogue_timing import (
     AMULET_LEVEL,
     BEARTIME,
     BOLT_LENGTH,
@@ -233,7 +233,7 @@ from rogue_timing import (
     VS_MAGIC,
     WANDERTIME,
 )
-from rogue_ui import (
+from pyxel_rogue.rogue_ui import (
     AUX_ACTIONS,
     BACK_TAP_FRAMES,
     B_TAP_FRAMES,
@@ -278,7 +278,7 @@ from rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_0030"
+UI_BUILD = "260512_0031"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -558,7 +558,7 @@ class TextCatalog:
                     with open(path, encoding="utf-8") as f:
                         catalogs[lang] = json.load(f)
         except Exception:
-            from rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
+            from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
             catalogs = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
         cls._catalogs = catalogs
         return cls._catalogs
@@ -583,7 +583,7 @@ class TextCatalog:
                     with open(path, encoding="utf-8") as f:
                         terms[lang] = json.load(f)
         except Exception:
-            from rogue_terms import EN_TERMS, JA_TERMS
+            from pyxel_rogue.rogue_terms import EN_TERMS, JA_TERMS
 
             terms = {LANG_EN: EN_TERMS, LANG_JA: JA_TERMS}
         cls._terms = terms

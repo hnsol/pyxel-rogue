@@ -29,11 +29,11 @@ class FakeBackend:
 
 class RogueRngTest(unittest.TestCase):
     def test_module_imports_without_pyxel(self):
-        module = importlib.import_module("rogue_rng")
+        module = importlib.import_module("pyxel_rogue.rogue_rng")
         self.assertTrue(hasattr(module, "RogueRng"))
 
     def test_rnd_matches_rogue_range_contract(self):
-        from rogue_rng import RogueRng
+        from pyxel_rogue.rogue_rng import RogueRng
 
         backend = FakeBackend()
         rng = RogueRng(backend)
@@ -44,7 +44,7 @@ class RogueRngTest(unittest.TestCase):
         self.assertEqual(backend.randrange_calls, [5])
 
     def test_roll_uses_rnd_plus_one_for_each_die(self):
-        from rogue_rng import RogueRng
+        from pyxel_rogue.rogue_rng import RogueRng
 
         backend = FakeBackend()
         rng = RogueRng(backend)
@@ -53,7 +53,7 @@ class RogueRngTest(unittest.TestCase):
         self.assertEqual(backend.randrange_calls, [6, 6])
 
     def test_compatibility_wrappers_delegate_to_backend(self):
-        from rogue_rng import RogueRng
+        from pyxel_rogue.rogue_rng import RogueRng
 
         backend = FakeBackend()
         rng = RogueRng(backend)

@@ -1,7 +1,7 @@
 """Rogue 5.4.4 chase.c helpers."""
 from __future__ import annotations
 
-import rogue_monsters
+from pyxel_rogue import rogue_monsters
 
 
 def runners(monsters, monster_turn, target_moved=None) -> None:

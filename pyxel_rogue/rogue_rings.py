@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import rogue_things
+from pyxel_rogue import rogue_things
 
 LEFT = 0
 RIGHT = 1

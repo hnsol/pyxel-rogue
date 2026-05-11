@@ -1,4 +1,4 @@
-import rogue_io
+from pyxel_rogue import rogue_io
 
 TREAS_ROOM = 20
 MINTREAS = 2

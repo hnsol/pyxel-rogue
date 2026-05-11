@@ -1,4 +1,4 @@
-from rogue_map import MAP_W, PLAY_H
+from pyxel_rogue.rogue_map import MAP_W, PLAY_H
 
 FONT_ASCII_W, FONT_CJK_W, FONT_LINE_H = 6, 10, 12
 SCR_W, SCR_H = 512, 320

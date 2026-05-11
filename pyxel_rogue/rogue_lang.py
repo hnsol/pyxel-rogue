@@ -3,8 +3,8 @@ import os
 import sys
 from dataclasses import dataclass
 
-from rogue_palettes import DEFAULT_PALETTE, PALETTE_IDS
-from rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
+from pyxel_rogue.rogue_palettes import DEFAULT_PALETTE, PALETTE_IDS
+from pyxel_rogue.rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
 
 LANG_EN = "en"
 LANG_JA = "ja"
