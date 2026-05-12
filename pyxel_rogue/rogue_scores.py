@@ -138,6 +138,7 @@ def build_score_entry(
     timestamp: str,
     gold: int,
     difficulty: str = DEFAULT_DIFFICULTY,
+    variant: str | None = None,
 ) -> dict[str, Any]:
     entry = {
         "score": int(score) if score else score_value(gold, result_flags),
@@ -148,6 +149,8 @@ def build_score_entry(
         "timestamp": str(timestamp),
         "difficulty": normalize_difficulty(difficulty),
     }
+    if variant:
+        entry["variant"] = str(variant)
     entry["score_id"] = score_entry_id(entry)
     return entry
 

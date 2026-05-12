@@ -29,6 +29,7 @@ ST_LANGUAGE = 25
 ST_SETTINGS = 26
 ST_DIFFICULTY = 27
 ST_NYANDOR_BRIEF = 28
+ST_NYANDOR_GUIDE = 29
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",

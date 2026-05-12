@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cat and Amulet of Nyandor Promo</title>
+  <style>
+    :root {
+      --ink: #f8e9b6;
+      --gold: #f0b23a;
+      --red: #ff3b2f;
+      --hot: #ffd02a;
+      --night: #071018;
+      --panel: rgba(5, 10, 13, 0.72);
+      --line: rgba(248, 233, 182, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #111;
+      color: var(--ink);
+      font-family: "Courier New", "Hiragino Sans", "Yu Gothic", monospace;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    .poster {
+      position: relative;
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(2, 5, 8, 0.96) 0%, rgba(2, 5, 8, 0.68) 42%, rgba(2, 5, 8, 0.02) 100%),
+        url("../assets/images/title_background_nyandor.png") center / cover no-repeat;
+      border: 1px solid #1f2a28;
+      image-rendering: pixelated;
+    }
+
+    .poster::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 4px),
+        radial-gradient(circle at 78% 24%, rgba(255, 208, 42, 0.36), transparent 27%),
+        radial-gradient(circle at 20% 82%, rgba(255, 59, 47, 0.28), transparent 28%);
+      pointer-events: none;
+    }
+
+    .poster::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px 34px -80px;
+      height: 126px;
+      background: linear-gradient(90deg, rgba(255, 59, 47, 0.94), rgba(255, 208, 42, 0.94));
+      transform: rotate(-3deg);
+      box-shadow: 0 14px 0 rgba(0, 0, 0, 0.62), 0 -6px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      width: 720px;
+      height: 100%;
+      padding: 54px 0 42px 58px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: #b8ddff;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    h1 {
+      margin: 24px 0 0;
+      color: #fff3c8;
+      font-size: 58px;
+      line-height: 0.94;
+      letter-spacing: 0;
+      text-shadow:
+        0 4px 0 #000,
+        4px 0 0 #000,
+        0 0 22px rgba(240, 178, 58, 0.24);
+    }
+
+    .subtitle {
+      margin: 20px 0 0;
+      width: 760px;
+      color: #fff;
+      font-size: 54px;
+      font-weight: 700;
+      line-height: 1.04;
+      text-shadow:
+        0 5px 0 #000,
+        5px 0 0 #000,
+        0 0 20px rgba(255, 59, 47, 0.56);
+    }
+
+    .copy {
+      width: 620px;
+      margin: 18px 0 0;
+      padding: 14px 18px 15px;
+      background: rgba(5, 10, 13, 0.78);
+      border-left: 6px solid var(--red);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 12px 28px rgba(0,0,0,0.3);
+      color: #fff3c8;
+      font-size: 23px;
+      font-weight: 700;
+      line-height: 1.28;
+      text-shadow: 0 3px 0 #000;
+    }
+
+    .meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      width: 680px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      padding: 9px 12px;
+      background: rgba(0, 0, 0, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e5f7ff;
+      font-size: 20px;
+      font-weight: 700;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    .cta {
+      position: absolute;
+      right: 48px;
+      bottom: 88px;
+      z-index: 1;
+      width: 340px;
+      min-height: 82px;
+      padding: 14px 18px;
+      background: rgba(5, 9, 12, 0.82);
+      border: 1px solid rgba(248, 233, 182, 0.42);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.46);
+      text-align: center;
+    }
+
+    .cta strong {
+      display: block;
+      color: #fff;
+      font-size: 28px;
+      line-height: 1.2;
+      text-shadow: 0 3px 0 #000;
+    }
+
+    .cta span {
+      display: block;
+      margin-top: 8px;
+      color: #b8ddff;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .ascii {
+      position: absolute;
+      right: 64px;
+      top: 48px;
+      z-index: 1;
+      color: rgba(248, 233, 182, 0.72);
+      font-size: 18px;
+      line-height: 1.08;
+      text-shadow: 0 2px 0 #000;
+      white-space: pre;
+    }
+
+    .burst {
+      position: absolute;
+      right: 54px;
+      top: 64px;
+      z-index: 3;
+      width: 168px;
+      height: 168px;
+      display: grid;
+      place-items: center;
+      background: var(--red);
+      color: #fff;
+      border: 6px solid var(--hot);
+      border-radius: 50%;
+      box-shadow: 0 8px 0 #000, 0 0 32px rgba(255, 208, 42, 0.5);
+      transform: rotate(8deg);
+      text-align: center;
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 0.96;
+      text-shadow: 0 4px 0 #000;
+    }
+  </style>
+</head>
+<body>
+  <main class="poster" aria-label="Cat and Amulet of Nyandor promotional image">
+    <section class="content">
+      <div>
+        <div class="badge">ROGUE V5 ON PYXEL / 5F PLAYABLE BETA</div>
+        <h1>CAT AND<br>AMULET OF<br>NYANDOR</h1>
+        <p class="subtitle">猫を拾って、<br>死なずに帰れ。</p>
+        <div class="meta">
+          <span class="pill">ブラウザで即プレイ</span>
+          <span class="pill">ゲームパッド対応</span>
+          <span class="pill">日本語 / English</span>
+        </div>
+        <p class="copy">地下5階の猫を連れ戻す短編Rogue。</p>
+      </div>
+    </section>
+    <div class="burst">5F<br>体験版</div>
+    <pre class="ascii">###########
+#...?...@.#
+#.###.###.#
+#...^...,.#
+###...#####
+  #...#
+  #...#
+  #####</pre>
+    <aside class="cta">
+      <strong>体験版公開中</strong>
+      <span>初見クリア・死因報告歓迎</span>
+    </aside>
+  </main>
+</body>
+</html>

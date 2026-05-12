@@ -10239,7 +10239,7 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.GAME_VARIANT = old_variant
 
-    def test_nyandor_mission_brief_accepts_or_returns_to_title(self):
+    def test_nyandor_mission_brief_opens_guide_or_returns_to_title(self):
         old_variant = rogue.GAME_VARIANT
         try:
             rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
@@ -10250,7 +10250,8 @@ class RogueBaselineTest(unittest.TestCase):
 
             rogue.pyxel.set_input(pressed={rogue.pyxel.KEY_RETURN})
             game.upd_nyandor_brief()
-            self.assertEqual(game.title_bgm_stop_wait, rogue.TITLE_BGM_STOP_WAIT_FRAMES)
+            self.assertEqual(game.st, rogue.ST_NYANDOR_GUIDE)
+            self.assertEqual(game.title_bgm_stop_wait, 0)
 
             game.st = rogue.ST_NYANDOR_BRIEF
             game.title_bgm_stop_wait = 0
@@ -10260,14 +10261,86 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.GAME_VARIANT = old_variant
 
+    def test_nyandor_quick_guide_starts_or_returns_to_brief(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.st = rogue.ST_NYANDOR_GUIDE
+        game.title_bgm_stop_wait = 0
+        game.title_bgm_started = False
+
+        rogue.pyxel.set_input(pressed={rogue.pyxel.KEY_RETURN})
+        game.upd_nyandor_guide()
+        self.assertEqual(game.title_bgm_stop_wait, rogue.TITLE_BGM_STOP_WAIT_FRAMES)
+
+        game.st = rogue.ST_NYANDOR_GUIDE
+        game.title_bgm_stop_wait = 0
+        rogue.pyxel.set_input(pressed={rogue.pyxel.KEY_ESCAPE})
+        game.upd_nyandor_guide()
+        self.assertEqual(game.st, rogue.ST_NYANDOR_BRIEF)
+
     def test_nyandor_mission_brief_copy_names_depth_five_goal(self):
         en = rogue.variant_mission_brief_lines(rogue.LANG_EN)
         ja = rogue.variant_mission_brief_lines(rogue.LANG_JA)
 
         self.assertIn("level 5", en[1])
         self.assertIn("Amulet of Nyandor", en[2])
+        self.assertEqual(ja[0], "ねこを回収せよ")
         self.assertIn("地下5階", ja[1])
-        self.assertIn("Amulet of Nyandor", ja[2])
+        self.assertEqual(ja[2], "ニャンダーの魔除けを首につけたねこを")
+        self.assertEqual(ja[3], "回収し、地上へ連れ戻せ。")
+
+    def test_nyandor_quick_guide_lists_basic_controls(self):
+        ja = rogue.variant_quick_guide_lines(rogue.LANG_JA)
+
+        self.assertEqual(ja[0], "はじめての操作")
+        self.assertIn("D-pad", ja[1])
+        self.assertIn("拾う", ja[2])
+        self.assertIn("持ちもの", ja[4])
+        self.assertIn("A/Space/Enter", ja[5])
+
+    def test_nyandor_typo_aliases_keep_old_web_keys_from_missing(self):
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_JA, "pixel.nyandor_cat_recovered"),
+            "ねこを回収した。ねこは不満そうだ。",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_JA, "pixel.nyandor_vitory_line1"),
+            "ギルドの大切なねこを回収した",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_JA, "pixel.nyandor_vitory_line2"),
+            "そして地上へ連れ戻した。",
+        )
+
+    def test_nyandor_typo_keys_survive_stale_external_message_json(self):
+        old_catalogs = rogue.TextCatalog._catalogs
+        try:
+            rogue.TextCatalog._catalogs = {
+                rogue.LANG_EN: {},
+                rogue.LANG_JA: {},
+            }
+            self.assertEqual(
+                rogue.TextCatalog.msg(rogue.LANG_JA, "pixel.nyandor_cat_recovered"),
+                "ねこを回収した。ねこは不満そうだ。",
+            )
+            self.assertNotIn(
+                "[missing:",
+                rogue.TextCatalog.msg(rogue.LANG_JA, "pixel.nyandor_cat_recovered"),
+            )
+        finally:
+            rogue.TextCatalog._catalogs = old_catalogs
+
+    def test_japanese_message_text_follows_rogue2_official_when_available(self):
+        expected = {
+            "pyxel.wrenching_sensation_gut": "胃袋をねじ切られるような気分がした。",
+            "command.you_feel_a_wrenching_sensation_in_your_gut": "胃袋をねじ切られるような気分がした。",
+            "pyxel.fall_asleep": "知らないうちに眠り込んでしまった。",
+            "pyxel.feel_weaker": "強さが減ってしまった！",
+            "scrolls.the_monster_freezes": "怪物は動けなくなった！",
+            "scrolls.the_monsters_around_you_freeze": "怪物どもは動けなくなった！",
+        }
+        for key, text in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_JA, key), text)
 
     def test_nyandor_online_score_fetch_uses_variant_parameter(self):
         old_variant = rogue.GAME_VARIANT
@@ -10313,6 +10386,7 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(len(cats), 1)
             self.assertEqual(cats[0].sym, "c")
             self.assertEqual(game.ident.name(cats[0]), rogue.NYANDOR_CAT_NAME)
+            self.assertEqual(game.ident.name(cats[0], rogue.LANG_JA), rogue.NYANDOR_CAT_NAME_JA)
         finally:
             rogue.GAME_VARIANT = old_variant
 
@@ -10332,20 +10406,21 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertTrue(game.p.has_amulet)
             self.assertIn(cat, game.p.inv)
             self.assertIn("you recover the cat. it objects", game.msgs)
+            self.assertEqual(game.ident.name(cat, rogue.LANG_JA), rogue.NYANDOR_CAT_NAME_JA)
 
             turn_before_drop = game.turn
             self.assertFalse(game.drop(cat))
             self.assertEqual(game.turn, turn_before_drop)
             self.assertTrue(game.p.has_amulet)
             self.assertIn(cat, game.p.inv)
-            self.assertIn("the asset is not to be dropped", game.msgs)
+            self.assertIn("the cat is not to be dropped", game.msgs)
 
             game.p.depth = 1
             game.tm[game.p.y][game.p.x] = rogue.T_STAIR
             game.use_stairs()
 
             self.assertEqual(game.st, rogue.ST_WIN)
-            self.assertIn("you return the guild property. the guild is satisfied", game.msgs)
+            self.assertIn("you return the guild's cat. the guild is satisfied", game.msgs)
         finally:
             rogue.GAME_VARIANT = old_variant
 
@@ -12102,12 +12177,16 @@ class RogueBaselineTest(unittest.TestCase):
         game.turn = 20
         game.msg_text("old floor")
         self.assertEqual(game.msg_turns, [20])
+        game.txt = lambda *args: None
+        game.draw_msgs()
+        self.assertTrue(game.msg_toast_visible_keys)
 
         game.descend()
 
         self.assertEqual(game.msgs, ["old floor"])
         self.assertEqual(len(game.msg_turns), 1)
         self.assertLess(game.msg_turns[0], game.turn - rogue.MSG_TOAST_DIM_TURNS)
+        self.assertEqual(game.msg_toast_visible_keys, ())
         calls = []
         game.txt = lambda x, y, s, c: calls.append(str(s))
         game.draw_msgs()
@@ -17339,6 +17418,59 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(s.endswith("個の金塊") and c == rogue.UI_HILITE_COL for s, c in calls))
         self.assertTrue(any(s.startswith("レベル:") and c == rogue.UI_TEXT_COL for s, c in calls))
 
+    def test_japanese_winner_score_line_follows_rogue2_official(self):
+        # Rogue 5.4.4 rip.c:score() uses "A total winner"; Rogue2.Official mesg_J maps it.
+        game = new_game(seed=473442)
+        game.lang = rogue.LANG_JA
+
+        line = game.format_score_line_for_board(
+            1,
+            {"score": 9999, "player_name": "ace", "result_flags": "winner", "level": 26},
+            rogue.SCOREBOARD_PERIOD_LOCAL,
+        )
+
+        self.assertEqual(line, " 1  9999 ace: 運命の洞窟より生きて帰りたる勇者")
+        self.assertNotIn("勝利者", line)
+
+    def test_nyandor_winner_score_line_uses_variant_wording(self):
+        game = new_game(seed=473443)
+        game.lang = rogue.LANG_JA
+
+        ja_line = game.format_score_line_for_board(
+            1,
+            {"score": 555, "player_name": "cat", "result_flags": "winner", "level": 5, "variant": "nyandor"},
+            rogue.SCOREBOARD_PERIOD_LOCAL,
+        )
+        game.lang = rogue.LANG_EN
+        en_line = game.format_score_line_for_board(
+            1,
+            {"score": 555, "player_name": "cat", "result_flags": "winner", "level": 5, "variant": "nyandor"},
+            rogue.SCOREBOARD_PERIOD_LOCAL,
+        )
+
+        self.assertEqual(ja_line, " 1   555 cat: ニャンダーのねこを連れ帰りし者")
+        self.assertEqual(en_line, " 1   555 cat: returned with the Nyandor cat.")
+        self.assertNotIn("運命の洞窟", ja_line)
+        self.assertNotIn("A total winner", en_line)
+
+    def test_nyandor_result_entry_records_score_variant(self):
+        old_variant = rogue.GAME_VARIANT
+        saved = []
+        old_save = rogue.save_score_entry
+        old_load = rogue.load_score_entries
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            rogue.save_score_entry = lambda entry: saved.append(entry)
+            rogue.load_score_entries = lambda: saved[:]
+            game = new_game(seed=473444)
+            game.enter_result_state("winner")
+        finally:
+            rogue.save_score_entry = old_save
+            rogue.load_score_entries = old_load
+            rogue.GAME_VARIANT = old_variant
+
+        self.assertEqual(saved[0].get("variant"), "nyandor")
+
     def test_name_input_screen_uses_localized_screen_frame_and_subtext(self):
         game = new_game(seed=47345)
         game.lang = rogue.LANG_JA
@@ -20486,10 +20618,10 @@ class RogueBaselineTest(unittest.TestCase):
             (rogue.pyxel.KEY_R, set(), "Read"),
             (rogue.pyxel.KEY_E, set(), "Eat"),
             (rogue.pyxel.KEY_D, set(), "Drop"),
-            (rogue.pyxel.KEY_W, set(), "Wear"),
+            (rogue.pyxel.KEY_W, set(), "Wield"),
             (rogue.pyxel.KEY_Z, set(), "Zap"),
-            (rogue.pyxel.KEY_W, {rogue.pyxel.KEY_SHIFT}, "Wield"),
-            (rogue.pyxel.KEY_T, {rogue.pyxel.KEY_SHIFT}, "Take off armor"),
+            (rogue.pyxel.KEY_W, {rogue.pyxel.KEY_SHIFT}, "Wear"),
+            (rogue.pyxel.KEY_T, {rogue.pyxel.KEY_SHIFT}, "Take off"),
             (rogue.pyxel.KEY_P, {rogue.pyxel.KEY_SHIFT}, "Put on"),
             (rogue.pyxel.KEY_R, {rogue.pyxel.KEY_SHIFT}, "Remove ring"),
         ]
@@ -20513,6 +20645,29 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
 
         self.assertEqual(calls, [])
+
+    def test_action_menu_actions_have_matching_rogue_keyboard_commands(self):
+        # Rogue 5.4.4 command.c: q r e w W T P R d t z c.
+        expected = {
+            "Quaff": (rogue.pyxel.KEY_Q, set()),
+            "Read": (rogue.pyxel.KEY_R, set()),
+            "Eat": (rogue.pyxel.KEY_E, set()),
+            "Wield": (rogue.pyxel.KEY_W, set()),
+            "Wear": (rogue.pyxel.KEY_W, {rogue.pyxel.KEY_SHIFT}),
+            "Put on": (rogue.pyxel.KEY_P, {rogue.pyxel.KEY_SHIFT}),
+            "Take off": (rogue.pyxel.KEY_T, {rogue.pyxel.KEY_SHIFT}),
+            "Throw": (rogue.pyxel.KEY_T, set()),
+            "Drop": (rogue.pyxel.KEY_D, set()),
+            "Zap": (rogue.pyxel.KEY_Z, set()),
+            "Call": (rogue.pyxel.KEY_C, set()),
+            "Remove ring": (rogue.pyxel.KEY_R, {rogue.pyxel.KEY_SHIFT}),
+        }
+        for action, (key, modifiers) in expected.items():
+            with self.subTest(action=action):
+                game = new_game(seed=5501)
+                held = set(modifiers) | {key}
+                rogue.pyxel.set_input(held=held, pressed={key})
+                self.assertEqual(game.rogue_command_action(), action)
 
     def test_rogue_544_item_overlay_pack_letter_can_select_filtered_out_type(self):
         # Rogue 5.4.4 pack.c:get_item() filters only the '*' inventory list;
@@ -20812,6 +20967,22 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ITEM)
         self.assertEqual(game.fitems, [armor])
 
+    def test_action_menu_take_off_matches_keyboard_t_and_excludes_weapon(self):
+        # Action menu "Take off" maps to Rogue 5.4.4 command.c:'T' / armor.c:take_off().
+        game = new_game(seed=5591)
+        armor = rogue.Item(rogue.CAT_ARM, 0)
+        weapon = rogue.Item(rogue.CAT_WPN, 0)
+        game.p.inv = [weapon, armor]
+        game.p.wpn = weapon
+        game.p.arm = armor
+
+        game.open_menu()
+        game.mcur = rogue.action_index(rogue.MENU_ACTIONS, "Take off")
+        game.menu_select()
+
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [armor])
+
     def test_rogue_544_take_off_armor_no_armor_uses_take_off_message(self):
         # Rogue 5.4.4 armor.c:take_off() reports no armor and sets after=FALSE.
         from pyxel_rogue import rogue_rings
@@ -20887,6 +21058,8 @@ class RogueBaselineTest(unittest.TestCase):
         action_x = by_text["投げる"][0]
         right_title_x = by_text["--- キーボード専用 ---"][0]
         self.assertLess(action_x - key_end, 80)
+        self.assertIn("w 武器を持つ", by_text)
+        self.assertIn("W よろいを着る", by_text)
         self.assertIn("T よろい脱ぐ", by_text)
         self.assertLess(right_title_x - action_x, 120)
 
