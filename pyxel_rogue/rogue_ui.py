@@ -28,6 +28,7 @@ ST_LOG = 24
 ST_LANGUAGE = 25
 ST_SETTINGS = 26
 ST_DIFFICULTY = 27
+ST_NYANDOR_BRIEF = 28
 
 CALL_PRESETS = [
     "good", "bad", "meh", "skip",

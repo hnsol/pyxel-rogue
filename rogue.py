@@ -262,6 +262,7 @@ from pyxel_rogue.rogue_ui import (
     ST_LANGUAGE,
     ST_MENU,
     ST_NAME,
+    ST_NYANDOR_BRIEF,
     ST_ONLINE_SCORE,
     ST_ONLINE_REGISTER,
     ST_ONLINE_PIN,
@@ -278,7 +279,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_2221"
+UI_BUILD = "260512_2234"
 VARIANT_ROGUE = "rogue"
 VARIANT_NYANDOR = "nyandor"
 NYANDOR_TARGET_DEPTH = 5
@@ -313,6 +314,23 @@ def variant_title_background_path():
 
 def variant_title_palette():
     return TITLE_BG_NYANDOR_PALETTE if is_nyandor_variant() else TITLE_BG_PALETTE
+
+def variant_mission_brief_lines(lang):
+    if lang == LANG_JA:
+        return (
+            "探索猫回収命令",
+            "ギルド資産が地下5階で行方不明。",
+            "Amulet of Nyandor をつけた猫を回収し、",
+            "地上へ連れ戻せ。",
+            "A/Enter 確認   B/Esc 戻る",
+        )
+    return (
+        "CAT RECOVERY ORDER",
+        "Guild property is missing on level 5.",
+        "Recover the cat wearing the Amulet of Nyandor.",
+        "Return to the surface with the asset.",
+        "A/Enter acknowledge   B/Esc back",
+    )
 
 def is_nyandor_cat_item(item):
     return (
@@ -6744,7 +6762,7 @@ class Game:
     def enter_difficulty_select(self):
         if variant_fixed_difficulty():
             self.difficulty = variant_fixed_difficulty()
-            self.request_title_new_game()
+            self.st = ST_NYANDOR_BRIEF
             return
         self.difficulty_cursor = DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1
         self.difficulty_cursor_restored = True
@@ -7439,6 +7457,18 @@ class Game:
         if self.btn_a() or self.btn_start_tap():
             self.confirm_difficulty_select()
 
+    def upd_nyandor_brief(self):
+        if getattr(self, "title_bgm_stop_wait", 0) > 0:
+            self.title_bgm_stop_wait -= 1
+            if self.title_bgm_stop_wait <= 0:
+                self.prepare_title_new_game()
+            return
+        if self.btn_overlay_cancel():
+            self.st = ST_TITLE
+            return
+        if self.btn_a() or self.btn_start_tap():
+            self.request_title_new_game()
+
     def upd_name(self):
         if self.btn_start_tap():
             self.confirm_name_input()
@@ -7574,12 +7604,13 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
-        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
+        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NYANDOR_BRIEF, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
             elif self.st == ST_LANGUAGE: self.upd_language_select()
             elif self.st == ST_TITLE: self.upd_title()
             elif self.st == ST_DIFFICULTY: self.upd_difficulty_select()
+            elif self.st == ST_NYANDOR_BRIEF: self.upd_nyandor_brief()
             elif self.st == ST_NAME: self.upd_name()
             elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
             elif self.st == ST_ONLINE_REGISTER: self.upd_online_register()
@@ -8113,6 +8144,9 @@ class Game:
         if self.st == ST_DIFFICULTY:
             self.draw_difficulty_select_screen()
             return
+        if self.st == ST_NYANDOR_BRIEF:
+            self.draw_nyandor_brief_screen()
+            return
         if self.st == ST_NAME:
             self.draw_name_input()
             return
@@ -8241,6 +8275,19 @@ class Game:
                 desc = diff.description_ja if ja else diff.description_en
                 self.txt(bx + 112, y, desc[:34], UI_SUBTEXT_COL)
         self.txt(bx + 18, by + 146, hint, UI_SUBTEXT_COL)
+
+    def draw_nyandor_brief_screen(self):
+        self.apply_title_palette()
+        if not hasattr(self, "title_bg"):
+            self.load_title_background()
+        if self.title_bg is not None:
+            pyxel.blt(0, 0, self.title_bg, 0, 0, SCR_W, SCR_H)
+        bx, by, bw, bh = self.center_rect(392, 150)
+        lines = variant_mission_brief_lines(getattr(self, "lang", LANG_EN))
+        self._box(bx, by, bw, bh, self.ui_heading(lines[0], UI_HEADING_PANEL))
+        for i, line in enumerate(lines[1:4]):
+            self.txt(bx + 24, by + 34 + i * 22, line, UI_TEXT_COL)
+        self.txt(bx + 24, by + 122, lines[4], UI_SUBTEXT_COL)
 
     def draw_language_select_screen(self):
         self.apply_palette()

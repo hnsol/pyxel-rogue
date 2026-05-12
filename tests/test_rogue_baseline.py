@@ -10223,6 +10223,52 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLess(max(used_indices), len(rogue.TITLE_BG_NYANDOR_PALETTE))
         self.assertGreaterEqual(min(used_indices), len(rogue.FLEXOKI_DARK_PALETTE) * 2)
 
+    def test_nyandor_enter_dungeon_shows_mission_brief_first(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = rogue.Game.__new__(rogue.Game)
+            game.difficulty = "easy"
+            game.st = rogue.ST_TITLE
+
+            game.enter_difficulty_select()
+
+            self.assertEqual(game.difficulty, rogue.DIFF_NORMAL)
+            self.assertEqual(game.st, rogue.ST_NYANDOR_BRIEF)
+            self.assertEqual(getattr(game, "title_bgm_stop_wait", 0), 0)
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_mission_brief_accepts_or_returns_to_title(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = rogue.Game.__new__(rogue.Game)
+            game.st = rogue.ST_NYANDOR_BRIEF
+            game.title_bgm_stop_wait = 0
+            game.title_bgm_started = False
+
+            rogue.pyxel.set_input(pressed={rogue.pyxel.KEY_RETURN})
+            game.upd_nyandor_brief()
+            self.assertEqual(game.title_bgm_stop_wait, rogue.TITLE_BGM_STOP_WAIT_FRAMES)
+
+            game.st = rogue.ST_NYANDOR_BRIEF
+            game.title_bgm_stop_wait = 0
+            rogue.pyxel.set_input(pressed={rogue.pyxel.KEY_ESCAPE})
+            game.upd_nyandor_brief()
+            self.assertEqual(game.st, rogue.ST_TITLE)
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_mission_brief_copy_names_depth_five_goal(self):
+        en = rogue.variant_mission_brief_lines(rogue.LANG_EN)
+        ja = rogue.variant_mission_brief_lines(rogue.LANG_JA)
+
+        self.assertIn("level 5", en[1])
+        self.assertIn("Amulet of Nyandor", en[2])
+        self.assertIn("地下5階", ja[1])
+        self.assertIn("Amulet of Nyandor", ja[2])
+
     def test_nyandor_cat_spawns_on_depth_five(self):
         old_variant = rogue.GAME_VARIANT
         try:
