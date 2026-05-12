@@ -52,9 +52,15 @@ if [[ -d "${ROOT_DIR}/web/rogue" ]]; then
         cp "${ROOT_DIR}/web/rogue/pyxel-rogue.pyxapp" "${PAGES_DIR}/rogue/pyxel-rogue.pyxapp"
     fi
 fi
+if [[ -f "${ROOT_DIR}/web/announce.html" ]]; then
+    cp "${ROOT_DIR}/web/announce.html" "${PAGES_DIR}/announce.html"
+fi
 touch "${PAGES_DIR}/.nojekyll"
 
 git -C "${PAGES_DIR}" add index.html .nojekyll
+if [[ -f "${PAGES_DIR}/announce.html" ]]; then
+    git -C "${PAGES_DIR}" add announce.html
+fi
 if [[ -f "${PAGES_DIR}/pyxel-rogue.pyxapp" ]]; then
     git -C "${PAGES_DIR}" add -f pyxel-rogue.pyxapp
 fi
