@@ -2114,8 +2114,9 @@
   "pyxel.fall_asleep": {
     "source": "rogue.py:1760",
     "params": [],
-    "ja_status": "manual",
-    "origin": "pyxel-rogue"
+    "ja_status": "matched",
+    "origin": "pyxel-rogue",
+    "ja_source": "mesg_J:254"
   },
   "pyxel.feel_better_amount": {
     "source": "rogue.py:1697",
@@ -2180,8 +2181,9 @@
   "pyxel.feel_weaker": {
     "source": "rogue.py:1549",
     "params": [],
-    "ja_status": "manual",
-    "origin": "pyxel-rogue"
+    "ja_status": "matched",
+    "origin": "pyxel-rogue",
+    "ja_source": "mesg_J:208"
   },
   "pyxel.gold_pieces": {
     "source": "rogue.py:2213",
@@ -2513,8 +2515,9 @@
   "pyxel.wrenching_sensation_gut": {
     "source": "rogue.py:2199",
     "params": [],
-    "ja_status": "manual",
-    "origin": "pyxel-rogue"
+    "ja_status": "matched",
+    "origin": "pyxel-rogue",
+    "ja_source": "mesg_J:52"
   },
   "pyxel.you_hit_monster": {
     "source": "rogue.py:1481",
@@ -3202,8 +3205,8 @@
     "origin": "msg()"
   },
   "__summary__": {
-        "en_key_count": 435,
-        "ja_key_count": 435,
+    "en_key_count": 438,
+    "ja_key_count": 438,
     "ja_missing_count": 0,
     "ja_missing_keys": [],
     "placeholder_vocabulary": [
@@ -3242,5 +3245,19 @@
       "x",
       "y"
     ]
+  },
+  "scrolls.the_monster_freezes": {
+    "source": "Rogue2.Official",
+    "params": [],
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:270"
+  },
+  "scrolls.the_monsters_around_you_freeze": {
+    "source": "Rogue2.Official",
+    "params": [],
+    "ja_status": "matched",
+    "origin": "msg()",
+    "ja_source": "mesg_J:271"
   }
 }

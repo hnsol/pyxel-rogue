@@ -263,6 +263,7 @@ from pyxel_rogue.rogue_ui import (
     ST_MENU,
     ST_NAME,
     ST_NYANDOR_BRIEF,
+    ST_NYANDOR_GUIDE,
     ST_ONLINE_SCORE,
     ST_ONLINE_REGISTER,
     ST_ONLINE_PIN,
@@ -279,11 +280,12 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_2256"
+UI_BUILD = "260513_0044"
 VARIANT_ROGUE = "rogue"
 VARIANT_NYANDOR = "nyandor"
 NYANDOR_TARGET_DEPTH = 5
 NYANDOR_CAT_NAME = "The Cat (wearing the Amulet of Nyandor)"
+NYANDOR_CAT_NAME_JA = "ねこ（ニャンダーの魔除けつき）"
 
 def normalize_variant(value):
     value = str(value or VARIANT_ROGUE).strip().lower()
@@ -318,10 +320,10 @@ def variant_title_palette():
 def variant_mission_brief_lines(lang):
     if lang == LANG_JA:
         return (
-            "探索猫回収命令",
-            "ギルド資産が地下5階で行方不明。",
-            "Amulet of Nyandor をつけた猫を回収し、",
-            "地上へ連れ戻せ。",
+            "ねこを回収せよ",
+            "ギルドの大切なねこが地下5階で行方不明。",
+            "ニャンダーの魔除けを首につけたねこを",
+            "回収し、地上へ連れ戻せ。",
             "A/Enter 確認   B/Esc 戻る",
         )
     return (
@@ -332,6 +334,25 @@ def variant_mission_brief_lines(lang):
         "A/Enter acknowledge   B/Esc back",
     )
 
+def variant_quick_guide_lines(lang):
+    if lang == LANG_JA:
+        return (
+            "はじめての操作",
+            "D-pad / 矢印: 移動",
+            "A / Enter: 拾う・階段・調べる",
+            "B / Esc: Actionメニュー",
+            "Select / Tab: 持ちもの・ログ・ヘルプ",
+            "A/Space/Enter 開始   B/Esc 戻る",
+        )
+    return (
+        "QUICK START",
+        "D-pad / Arrows: move",
+        "A / Enter: pick up, stairs, inspect",
+        "B / Esc: Action menu",
+        "Select / Tab: Inventory, Log, Help",
+        "A/Space/Enter start   B/Esc back",
+    )
+
 def is_nyandor_cat_item(item):
     return (
         item is not None
@@ -339,11 +360,17 @@ def is_nyandor_cat_item(item):
         and getattr(item, "variant_item", None) == "nyandor_cat"
     )
 
+def nyandor_cat_name(lang):
+    return NYANDOR_CAT_NAME_JA if lang == LANG_JA else NYANDOR_CAT_NAME
+
 def variant_escape_message_key():
     return "pyxel.escaped_with_nyandor" if is_nyandor_variant() else "pyxel.escaped_with_amulet"
 
 def variant_scoreboard_key():
     return VARIANT_NYANDOR if is_nyandor_variant() else None
+
+def score_entry_is_nyandor(entry):
+    return str(entry.get("variant", "")).lower() == VARIANT_NYANDOR
 
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
@@ -639,6 +666,11 @@ class TextCatalog:
     _catalogs = None
     _terms = None
     _missing_warned = set()
+    _message_aliases = {
+        "pixel.nyandor_cat_recovered": "pyxel.nyandor_cat_recovered",
+        "pixel.nyandor_vitory_line1": "ui.nyandor_victory_line_1",
+        "pixel.nyandor_vitory_line2": "ui.nyandor_victory_line_2",
+    }
 
     @classmethod
     def _load_catalogs(cls):
@@ -700,11 +732,19 @@ class TextCatalog:
 
     @staticmethod
     def msg(lang, key, **kw):
+        key = TextCatalog._message_aliases.get(key, key)
         catalogs = TextCatalog._load_catalogs()
         lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
         s = catalogs.get(lang, {}).get(key)
         if s is None and lang != LANG_EN:
             s = catalogs.get(LANG_EN, {}).get(key)
+        if s is None:
+            from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
+
+            builtins = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
+            s = builtins.get(lang, {}).get(key)
+            if s is None and lang != LANG_EN:
+                s = builtins.get(LANG_EN, {}).get(key)
         if s is None:
             TextCatalog._warn_missing(key)
             s = f"[missing:{key}]"
@@ -1273,7 +1313,7 @@ class IdentTable:
             return f"{made} {typ}" if lang==LANG_EN else f"{made_name}の{typ_name}"
         if it.cat==CAT_AMULET:
             if getattr(it, "variant_item", None) == "nyandor_cat":
-                return it.data["name"]
+                return nyandor_cat_name(lang)
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
             return f"the {nm}" if lang==LANG_EN else nm
         return "something" if lang==LANG_EN else "何者か"
@@ -2257,6 +2297,10 @@ class Game:
             self.msg_turns = [self.turn] * len(self.msgs)
         expired_turn = self.turn - MSG_TOAST_DIM_TURNS - 1
         self.msg_turns = [expired_turn] * len(self.msgs)
+        self.msg_toast_visible_keys = ()
+        self.msg_toast_expire_keys = ()
+        self.msg_toast_expire_frame = getattr(pyxel, "frame_count", 0)
+        self.msg_toast_expire_turn = self.turn
         self.msg_toast_block = None
         self.msg_toast_rows = 0
         self.msg_toast_reposition_needed = True
@@ -2566,6 +2610,7 @@ class Game:
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             gold=self.p.gold,
             difficulty=self.difficulty,
+            variant=variant_scoreboard_key(),
         )
         save_score_entry(self.result_entry)
         self.result_online_submitted = False
@@ -5920,9 +5965,7 @@ class Game:
             self.command_look()
         self.action_origin = self.st
         self.cact = aname; p = self.p
-        if aname=="Take off":
-            self.fitems=[i for i in p.inv if i is p.wpn or i is p.arm or i is p.ring_l or i is p.ring_r]
-        elif aname=="Take off armor":
+        if aname in ("Take off", "Take off armor"):
             self.fitems=[p.arm] if p.arm is not None else []
         elif aname=="Remove ring":
             self.fitems=[i for i in (p.ring_l, p.ring_r) if i is not None]
@@ -5936,7 +5979,7 @@ class Game:
             and aname in self.get_item_actions()
         ):
             self.msg("pack.you_arent_carrying_anything"); self.close_menu(); return
-        if aname=="Take off armor" and not self.fitems:
+        if aname in ("Take off", "Take off armor") and not self.fitems:
             self.msg("armor.you_arent_wearing_any_armor"); self.close_menu(); return
         if aname=="Remove ring" and not self.fitems:
             self.msg("rings.you_arent_wearing_any_rings"); self.close_menu(); return
@@ -6736,10 +6779,10 @@ class Game:
         if self.key_lower(pyxel.KEY_R): return "Read"
         if self.key_lower(getattr(pyxel, "KEY_E", None)): return "Eat"
         if self.key_lower(getattr(pyxel, "KEY_D", None)): return "Drop"
-        if self.key_lower(getattr(pyxel, "KEY_W", None)): return "Wear"
+        if self.key_lower(getattr(pyxel, "KEY_W", None)): return "Wield"
         if self.key_lower(pyxel.KEY_Z): return "Zap"
-        if self.key_upper(getattr(pyxel, "KEY_W", None)): return "Wield"
-        if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off armor"
+        if self.key_upper(getattr(pyxel, "KEY_W", None)): return "Wear"
+        if self.key_upper(getattr(pyxel, "KEY_T", None)): return "Take off"
         if self.key_upper(getattr(pyxel, "KEY_P", None)): return "Put on"
         if self.key_upper(getattr(pyxel, "KEY_R", None)): return "Remove ring"
         if self.key_lower(pyxel.KEY_C): return "Call"
@@ -7304,6 +7347,12 @@ class Game:
 
     def format_score_line_for_board(self, rank, entry, period):
         row = dict(entry)
+        if row.get("result_flags") == "winner" and score_entry_is_nyandor(row):
+            score = int(row.get("score", 0))
+            name = str(row.get("player_name", "rogue"))
+            if self.lang == LANG_JA:
+                return f"{rank:2d} {score:5d} {name}: ニャンダーのねこを連れ帰りし者"
+            return f"{rank:2d} {score:5d} {name}: returned with the Nyandor cat."
         if self.lang == LANG_JA:
             return self.format_score_line_for_board_ja(rank, row)
         return format_score_line(rank, row)
@@ -7314,7 +7363,8 @@ class Game:
         flags = str(entry.get("result_flags", ""))
         level = int(entry.get("level", entry.get("depth", 0)) or 0)
         if flags == "winner":
-            reason = "勝利者"
+            reason = "運命の洞窟より生きて帰りたる勇者"
+            return f"{rank:2d} {score:5d} {name}: {reason}"
         elif flags == "quit":
             reason = f"{level}階で中断"
         elif flags == "killed_with_amulet":
@@ -7475,6 +7525,18 @@ class Game:
             self.st = ST_TITLE
             return
         if self.btn_a() or self.btn_start_tap():
+            self.st = ST_NYANDOR_GUIDE
+
+    def upd_nyandor_guide(self):
+        if getattr(self, "title_bgm_stop_wait", 0) > 0:
+            self.title_bgm_stop_wait -= 1
+            if self.title_bgm_stop_wait <= 0:
+                self.prepare_title_new_game()
+            return
+        if self.btn_overlay_cancel():
+            self.st = ST_NYANDOR_BRIEF
+            return
+        if self.btn_a() or self.btn_start_tap():
             self.request_title_new_game()
 
     def upd_name(self):
@@ -7612,13 +7674,14 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
-        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NYANDOR_BRIEF, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
+        if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NYANDOR_BRIEF, ST_NYANDOR_GUIDE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
             elif self.st == ST_LANGUAGE: self.upd_language_select()
             elif self.st == ST_TITLE: self.upd_title()
             elif self.st == ST_DIFFICULTY: self.upd_difficulty_select()
             elif self.st == ST_NYANDOR_BRIEF: self.upd_nyandor_brief()
+            elif self.st == ST_NYANDOR_GUIDE: self.upd_nyandor_guide()
             elif self.st == ST_NAME: self.upd_name()
             elif self.st == ST_ONLINE_SCORE: self.upd_online_score()
             elif self.st == ST_ONLINE_REGISTER: self.upd_online_register()
@@ -8155,6 +8218,9 @@ class Game:
         if self.st == ST_NYANDOR_BRIEF:
             self.draw_nyandor_brief_screen()
             return
+        if self.st == ST_NYANDOR_GUIDE:
+            self.draw_nyandor_guide_screen()
+            return
         if self.st == ST_NAME:
             self.draw_name_input()
             return
@@ -8296,6 +8362,19 @@ class Game:
         for i, line in enumerate(lines[1:4]):
             self.txt(bx + 24, by + 34 + i * 22, line, UI_TEXT_COL)
         self.txt(bx + 24, by + 122, lines[4], UI_SUBTEXT_COL)
+
+    def draw_nyandor_guide_screen(self):
+        self.apply_title_palette()
+        if not hasattr(self, "title_bg"):
+            self.load_title_background()
+        if self.title_bg is not None:
+            pyxel.blt(0, 0, self.title_bg, 0, 0, SCR_W, SCR_H)
+        bx, by, bw, bh = self.center_rect(392, 170)
+        lines = variant_quick_guide_lines(getattr(self, "lang", LANG_EN))
+        self._box(bx, by, bw, bh, self.ui_heading(lines[0], UI_HEADING_PANEL))
+        for i, line in enumerate(lines[1:5]):
+            self.txt(bx + 24, by + 32 + i * 22, line, UI_TEXT_COL)
+        self.txt(bx + 24, by + 142, lines[5], UI_SUBTEXT_COL)
 
     def draw_language_select_screen(self):
         self.apply_palette()
@@ -8852,8 +8931,8 @@ class Game:
             "Quaff": "q",
             "Read": "r",
             "Eat": "e",
-            "Wield": "W",
-            "Wear": "w",
+            "Wield": "w",
+            "Wear": "W",
             "Take off": "T",
             "Drop": "d",
             "Call": "c",
@@ -9122,7 +9201,7 @@ class Game:
                 ("a 再実行", "R 外す", "q 飲む"),
                 ("r 巻物を読む", "e 食べる", "z 杖を振る"),
                 ("P 指輪", "o 設定", "Q 中止"),
-                ("w よろいを着る", "W 武器を持つ", "T よろい脱ぐ"),
+                ("w 武器を持つ", "W よろいを着る", "T よろい脱ぐ"),
             ]
         else:
             basic_title = self.ui_heading("Basic Controls", UI_HEADING_SECTION)
@@ -9149,7 +9228,7 @@ class Game:
                 ("a Again", "R Remove", "q Quaff"),
                 ("r Read", "e Eat", "z Zap"),
                 ("P Put on", "o Options", "Q Quit"),
-                ("w Wear", "W Wield", "T Take off"),
+                ("w Wield", "W Wear", "T Take off"),
             ]
         y=by+50
         line_h = FONT_LINE_H
