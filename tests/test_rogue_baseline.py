@@ -10179,8 +10179,49 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertEqual(game.difficulty, "normal")
             self.assertIn("5F PLAYABLE BETA", rogue.variant_title_lines())
             self.assertIn("CAT AND AMULET OF NYANDOR", rogue.variant_title_lines())
+            self.assertTrue(rogue.variant_title_background_path().endswith("title_background_nyandor.png"))
+            self.assertIs(rogue.variant_title_palette(), rogue.TITLE_BG_NYANDOR_PALETTE)
         finally:
             rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_title_image_replaces_text_subtitle_when_loaded(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = rogue.Game.__new__(rogue.Game)
+            game.settings = rogue.Settings(language=rogue.LANG_EN)
+            game.lang = rogue.LANG_EN
+            game.player_name = "guest"
+            game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+            game.title_cursor = 0
+            game.title_bg = object()
+            game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+            calls = []
+            game.txt = lambda x, y, s, c: calls.append(str(s))
+
+            game.draw_title_screen()
+
+            self.assertNotIn("CAT AND AMULET OF NYANDOR", calls)
+            self.assertIn("ENTER DUNGEON", calls)
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_title_background_palette_keeps_ui_slots_and_covers_image_indices(self):
+        from PIL import Image
+
+        image_path = os.path.join(ROOT, "assets", "images", "title_background_nyandor.png")
+        image = Image.open(image_path)
+        used_indices = set(image.tobytes())
+
+        self.assertEqual(image.mode, "P")
+        self.assertEqual(image.size, (rogue.SCR_W, rogue.SCR_H))
+        self.assertEqual(len(rogue.TITLE_BG_NYANDOR_PALETTE), 256)
+        self.assertEqual(
+            tuple(rogue.TITLE_BG_NYANDOR_PALETTE[: len(rogue.FLEXOKI_DARK_PALETTE)]),
+            tuple(rogue.FLEXOKI_DARK_PALETTE),
+        )
+        self.assertLess(max(used_indices), len(rogue.TITLE_BG_NYANDOR_PALETTE))
+        self.assertGreaterEqual(min(used_indices), len(rogue.FLEXOKI_DARK_PALETTE) * 2)
 
     def test_nyandor_cat_spawns_on_depth_five(self):
         old_variant = rogue.GAME_VARIANT

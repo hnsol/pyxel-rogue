@@ -278,7 +278,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_0138"
+UI_BUILD = "260512_2221"
 VARIANT_ROGUE = "rogue"
 VARIANT_NYANDOR = "nyandor"
 NYANDOR_TARGET_DEPTH = 5
@@ -307,6 +307,12 @@ def variant_title_lines():
 
 def variant_window_title():
     return "Cat and Amulet of Nyandor" if is_nyandor_variant() else "Pyxel Rogue"
+
+def variant_title_background_path():
+    return TITLE_BG_NYANDOR_PATH if is_nyandor_variant() else TITLE_BG_PATH
+
+def variant_title_palette():
+    return TITLE_BG_NYANDOR_PALETTE if is_nyandor_variant() else TITLE_BG_PALETTE
 
 def is_nyandor_cat_item(item):
     return (
@@ -508,6 +514,7 @@ UI_HEADING_SECTION = "section"
 _pyxel_dir = os.path.dirname(pyxel.__file__)
 FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
 TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
+TITLE_BG_NYANDOR_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background_nyandor.png")
 TITLE_FADE_FRAMES = 156
 LOGO_BGM_DELAY_FRAMES = 78
 LOGO_FADE_FRAMES = 78
@@ -549,6 +556,41 @@ TITLE_BG_EXTRA_PALETTE = (
     0x000102, 0x000002, 0x000301, 0x000101, 0x000001, 0x000300, 0x000100, 0x000000,
 )
 TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
+TITLE_BG_NYANDOR_EXTRA_PALETTE = (
+    0xFEF4B1, 0xF2E3AA, 0xE6D69D, 0xD3CBB3, 0xD1C5A2, 0xC3B88E, 0xC89834, 0xA0966F,
+    0xCB8403, 0xCD8501, 0xC98301, 0xC98201, 0xCC8500, 0xC98200, 0xC68201, 0xC68001,
+    0xC37E01, 0x928054, 0xB8650E, 0x82622C, 0x6E6A58, 0x6B542C, 0x5B5C57, 0x575752,
+    0x545450, 0x51514F, 0x534F42, 0x4E504F, 0x485054, 0x40511E, 0x4A4D4D, 0x404C25,
+    0x494A49, 0x42494B, 0x434832, 0x2F4900, 0x7E3C12, 0x49391E, 0x414544, 0x403B2F,
+    0x394144, 0x383E38, 0x363937, 0x353228, 0x2D4017, 0x2C4101, 0x2D4400, 0x2B4100,
+    0x2A3F00, 0x2E383C, 0x2C3235, 0x293A03, 0x2D2D28, 0x21362F, 0x233602, 0x253A01,
+    0x213401, 0x253C00, 0x243900, 0x233500, 0x1E3400, 0x232E33, 0x162C40, 0x202E0B,
+    0x1A2C04, 0x1F3001, 0x1D2D01, 0x1B2D01, 0x172C00, 0x54220B, 0x362208, 0x2B2111,
+    0x21272A, 0x22241E, 0x211A0E, 0x1A272C, 0x1A2705, 0x192701, 0x1A201C, 0x1A160E,
+    0x152527, 0x152503, 0x152701, 0x152301, 0x151F1A, 0x142001, 0x151A16, 0x15130E,
+    0x0F212D, 0x0F1C23, 0x102006, 0x0E1B0A, 0x112401, 0x102101, 0x101F01, 0x101C01,
+    0x0D1B01, 0x0E171B, 0x0E1708, 0x0E1801, 0x0D1601, 0x0E1314, 0x0D1011, 0x0C1302,
+    0x0D1007, 0x062459, 0x042053, 0x031C49, 0x041A3D, 0x03173A, 0x011638, 0x001638,
+    0x081914, 0x041623, 0x011534, 0x001535, 0x011533, 0x071510, 0x011434, 0x011432,
+    0x001435, 0x001433, 0x001432, 0x011431, 0x071411, 0x011331, 0x01122E, 0x001333,
+    0x001331, 0x001230, 0x00122D, 0x01112C, 0x00112E, 0x000F2C, 0x041120, 0x020F22,
+    0x000F26, 0x091011, 0x061010, 0x091202, 0x090F02, 0x061002, 0x060E02, 0x120B04,
+    0x0B0A08, 0x080C08, 0x080806, 0x070C07, 0x070706, 0x060B0B, 0x060B02, 0x060706,
+    0x050A0A, 0x050707, 0x050A02, 0x050606, 0x050605, 0x050603, 0x050505, 0x04090A,
+    0x040902, 0x040606, 0x040605, 0x040603, 0x040506, 0x040505, 0x040504, 0x040503,
+    0x040405, 0x040404, 0x040402, 0x040302, 0x03090E, 0x030903, 0x030606, 0x030603,
+    0x030507, 0x030505, 0x030504, 0x030503, 0x030407, 0x030405, 0x030404, 0x030403,
+    0x030302, 0x010C20, 0x010911, 0x01060D, 0x010506, 0x020704, 0x020504, 0x010504,
+    0x020405, 0x020404, 0x010404, 0x020702, 0x020503, 0x010502, 0x020403, 0x020402,
+    0x010403, 0x010402, 0x010207, 0x010304, 0x010204, 0x020303, 0x010303, 0x010203,
+    0x000103, 0x020302, 0x010302, 0x010202, 0x000202, 0x000102, 0x020301, 0x010201,
+    0x000201, 0x010101, 0x000101, 0x000005, 0x000002, 0x000001, 0x010000, 0x000000,
+)
+TITLE_BG_NYANDOR_PALETTE = (
+    tuple(FLEXOKI_DARK_PALETTE)
+    + tuple(FLEXOKI_DARK_PALETTE)
+    + TITLE_BG_NYANDOR_EXTRA_PALETTE
+)
 LOGO_ACCENT_COL = 11
 LOGO_TEXT_COL = 14
 TITLE_MENU_Y = 158
@@ -1794,7 +1836,7 @@ class Game:
         try:
             self.apply_title_palette()
             img = pyxel.Image(SCR_W, SCR_H)
-            img.load(0, 0, TITLE_BG_PATH)
+            img.load(0, 0, variant_title_background_path())
             self.title_bg = img
         except Exception:
             self.title_bg = None
@@ -1856,7 +1898,7 @@ class Game:
         self.apply_palette_values(palette)
 
     def apply_title_palette(self):
-        self.apply_palette_values(TITLE_BG_PALETTE)
+        self.apply_palette_values(variant_title_palette())
 
     def apply_palette_values(self, palette):
         if not hasattr(pyxel, 'colors'):
@@ -8143,11 +8185,12 @@ class Game:
             pyxel.dither(1.0)
         if title_alpha < 1.0:
             return
-        title_lines = variant_title_lines()
-        title_y = 42 if is_nyandor_variant() else 58
-        for i, line in enumerate(title_lines):
-            col = TITLE_MENU_SELECTED_COL if i == 0 else TITLE_MENU_TEXT_COL
-            self.txt_centered(TITLE_LOGO_RIGHT_X // 2 + 34, title_y + i * 12, line, col)
+        if not is_nyandor_variant() or self.title_bg is None:
+            title_lines = variant_title_lines()
+            title_y = 42 if is_nyandor_variant() else 58
+            for i, line in enumerate(title_lines):
+                col = TITLE_MENU_SELECTED_COL if i == 0 else TITLE_MENU_TEXT_COL
+                self.txt_centered(TITLE_LOGO_RIGHT_X // 2 + 34, title_y + i * 12, line, col)
         online = self.is_online_mode()
         if getattr(self, "lang", LANG_EN) == LANG_JA:
             items = ["運命の洞窟に入る", "スコアボード", "ゲストモード" if online else "オンラインモード"]
