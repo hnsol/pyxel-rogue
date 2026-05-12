@@ -10269,6 +10269,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("地下5階", ja[1])
         self.assertIn("Amulet of Nyandor", ja[2])
 
+    def test_nyandor_online_score_fetch_uses_variant_parameter(self):
+        old_variant = rogue.GAME_VARIANT
+        old_fetch = rogue.fetch_online_scores
+        old_load_entries = rogue.load_score_entries
+        old_load_cache = rogue.load_online_score_cache
+        old_save_cache = rogue.save_online_score_cache
+        try:
+            calls = []
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            rogue.fetch_online_scores = lambda period, timestamp=None, variant=None: calls.append((period, variant)) or []
+            rogue.load_score_entries = lambda: []
+            rogue.load_online_score_cache = lambda period, key: []
+            rogue.save_online_score_cache = lambda period, key, entries: None
+            game = rogue.Game.__new__(rogue.Game)
+            game.settings = rogue.Settings(difficulty=rogue.DIFF_NORMAL)
+            game.online_profile = {"local_only": True}
+            game.online_score_cache = {}
+            game.online_score_loaded = set()
+            game.online_score_load_result = ""
+
+            game.load_online_period_scores(rogue.SCOREBOARD_PERIOD_WEEKLY, force=True)
+
+            self.assertEqual(calls, [(rogue.SCOREBOARD_PERIOD_WEEKLY, rogue.VARIANT_NYANDOR)])
+        finally:
+            rogue.GAME_VARIANT = old_variant
+            rogue.fetch_online_scores = old_fetch
+            rogue.load_score_entries = old_load_entries
+            rogue.load_online_score_cache = old_load_cache
+            rogue.save_online_score_cache = old_save_cache
+
     def test_nyandor_cat_spawns_on_depth_five(self):
         old_variant = rogue.GAME_VARIANT
         try:
@@ -12785,6 +12815,27 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(calls, [("https://example.test/exec?period=weekly&key=2026-W18", None)])
 
+    def test_fetch_online_scores_can_request_nyandor_variant(self):
+        from pyxel_rogue import rogue_scores
+
+        calls = []
+        old_http_json = rogue_scores._http_json
+        try:
+            rogue_scores._http_json = lambda url, payload=None: calls.append((url, payload)) or {"scores": []}
+            rogue_scores.fetch_online_scores(
+                "weekly",
+                "https://example.test/exec",
+                "2026-04-29T12:00:00Z",
+                variant="nyandor",
+            )
+        finally:
+            rogue_scores._http_json = old_http_json
+
+        self.assertEqual(
+            calls,
+            [("https://example.test/exec?period=weekly&key=2026-W18&variant=nyandor", None)],
+        )
+
     def test_online_user_registration_payload_and_reserved_names(self):
         from pyxel_rogue import rogue_scores
 
@@ -12978,8 +13029,8 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn("DUMMY_PAST_WEEKS = 10", script)
         self.assertIn("ensureDummyRows(", script)
-        self.assertIn("ensureScoreboardDummyContext(ctx)", script)
-        self.assertIn("ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx)", script)
+        self.assertIn("ensureScoreboardDummyContext(ctx, scoreVariant(variant))", script)
+        self.assertIn("ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx, v)", script)
         self.assertIn("ensureSeededDummyRows(", script)
         self.assertIn("currentPeriods().period_week", script)
         self.assertIn("DUMMY_TARGET_COUNT", script)
@@ -12995,19 +13046,22 @@ class RogueBaselineTest(unittest.TestCase):
         with open(path, encoding="utf-8") as f:
             script = f.read()
 
-        self.assertIn("seededDummyNames(period, key, context)", script)
+        self.assertIn("seededDummyNames(period, key, context, v)", script)
         self.assertIn("countSeededOnly", script)
         self.assertIn(": Math.max(scores.length, seeded.size)", script)
         self.assertIn("targetCount - visibleOrSeeded", script)
-        self.assertIn("dummyNameOffset(period, key)", script)
+        self.assertIn("dummyNameOffset(period, key, v)", script)
         self.assertIn("dummyValue(period, key, offset,", script)
-        self.assertIn("dummyScore(period, key, i, targetCount)", script)
+        self.assertIn("dummyScore(period, key, i, targetCount, v)", script)
         self.assertIn('if (period === "weekly")', script)
-        self.assertIn("dummyDepth(period, key, i)", script)
-        self.assertIn('dummyValue(period, key, offset, "depth", 16)', script)
-        self.assertIn("const depth = dummyDepth(period, key, offset)", script)
+        self.assertIn("dummyDepth(period, key, i, v)", script)
+        self.assertIn("SCORE_VARIANT_NYANDOR", script)
+        self.assertIn("NYANDOR_DUMMY_MAX_DEPTH = 5", script)
+        self.assertIn("const maxDepth = scoreVariant(variant) === SCORE_VARIANT_NYANDOR ? NYANDOR_DUMMY_MAX_DEPTH : 16", script)
+        self.assertIn("const depth = dummyDepth(period, key, offset, v)", script)
+        self.assertIn('return depth * 90 + dummyValue(period, key, offset, "score", 181, v)', script)
         self.assertIn('return depth * 70 + dummyValue(period, key, offset, "score", 351)', script)
-        self.assertIn("dummyKiller(period, key, i)", script)
+        self.assertIn("dummyKiller(period, key, i, v)", script)
         self.assertIn("function dummyKillersForDepth(depth)", script)
         killers = script[script.index("function dummyKillersForDepth"):]
         self.assertIn('["hobgoblin", "kestrel"]', killers)
@@ -13021,7 +13075,8 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn('"ice monster"', killers)
         self.assertNotIn('"nymph"', killers)
         self.assertNotIn('"leprechaun"', killers)
-        self.assertIn("dummy-\" + period + \"-\" + key + \"-", script)
+        self.assertIn('const head = v === SCORE_VARIANT_NYANDOR ? "dummy-nyandor" : "dummy"', script)
+        self.assertIn('return head + "-" + period + "-" + key + "-"', script)
 
     def test_apps_script_weekly_and_season_dummy_rows_use_period_dates(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
@@ -13040,13 +13095,13 @@ class RogueBaselineTest(unittest.TestCase):
 
         do_get = script[script.index("function doGet"):script.index("function doPost")]
         self.assertIn("const ctx = scoreContext()", do_get)
-        self.assertIn('ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx)', do_get)
+        self.assertIn('ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx, variant)', do_get)
         self.assertIn('if (period === "season") {', do_get)
-        self.assertIn('ensureHistoricalWeeklyRows(new Date(), key, ctx)', do_get)
-        self.assertIn('ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx)', do_get)
+        self.assertIn('ensureHistoricalWeeklyRows(new Date(), key, ctx, variant)', do_get)
+        self.assertIn('ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, variant)', do_get)
         self.assertIn("flushScoreRows(ctx)", do_get)
-        self.assertIn("topScores(period, key, ctx)", do_get)
-        self.assertLess(do_get.index("ensureDummyRows(period, key,"), do_get.index("topScores(period, key, ctx)"))
+        self.assertIn("topScores(period, key, ctx, variant)", do_get)
+        self.assertLess(do_get.index("ensureDummyRows(period, key,"), do_get.index("topScores(period, key, ctx, variant)"))
 
     def test_apps_script_get_uses_single_score_context_for_dummy_and_top_scores(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
@@ -13058,10 +13113,10 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("function flushScoreRows(ctx)", script)
         self.assertIn("context.pendingRows.push", script)
         self.assertIn("rowsForContext(ctx)", script)
-        self.assertIn("function topScores(period, key, ctx)", script)
-        self.assertIn("function seededDummyNames(period, key, ctx)", script)
-        self.assertIn("function ensureHistoricalWeeklyRows(now, seasonKey, ctx)", script)
-        self.assertIn("function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx)", script)
+        self.assertIn("function topScores(period, key, ctx, variant)", script)
+        self.assertIn("function seededDummyNames(period, key, ctx, variant)", script)
+        self.assertIn("function ensureHistoricalWeeklyRows(now, seasonKey, ctx, variant)", script)
+        self.assertIn("function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx, variant)", script)
 
     def test_apps_script_sync_scoreboard_does_not_generate_dummy_or_payload_scores(self):
         path = os.path.join(ROOT, "docs", "apps_script_scoreboard.gs")
@@ -13129,7 +13184,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn(".toLowerCase()", clean_name)
         self.assertIn("replace(/[^a-z0-9]/g, \"\")", clean_name)
-        self.assertIn('"dummy-" + period + "-" + key + "-" + clean', script)
+        self.assertIn("dummyScoreIdPrefix(period, key, v) + clean", script)
         self.assertIn('"rodney"', dummy_names)
         self.assertIn('"savesc"', dummy_names)
         self.assertNotIn('"RODNEY"', dummy_names)

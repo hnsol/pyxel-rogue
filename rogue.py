@@ -279,7 +279,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_2234"
+UI_BUILD = "260512_2256"
 VARIANT_ROGUE = "rogue"
 VARIANT_NYANDOR = "nyandor"
 NYANDOR_TARGET_DEPTH = 5
@@ -341,6 +341,10 @@ def is_nyandor_cat_item(item):
 
 def variant_escape_message_key():
     return "pyxel.escaped_with_nyandor" if is_nyandor_variant() else "pyxel.escaped_with_amulet"
+
+def variant_scoreboard_key():
+    return VARIANT_NYANDOR if is_nyandor_variant() else None
+
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -7169,7 +7173,11 @@ class Game:
             self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = scores
             return scores
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        online = fetch_online_scores(period, timestamp=now)
+        score_variant = variant_scoreboard_key()
+        if score_variant:
+            online = fetch_online_scores(period, timestamp=now, variant=score_variant)
+        else:
+            online = fetch_online_scores(period, timestamp=now)
         key = self.scoreboard_period_key(period, now)
         local = load_score_entries()
         guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)

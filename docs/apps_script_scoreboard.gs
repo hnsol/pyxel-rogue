@@ -4,6 +4,9 @@ const GUEST_METRICS_SHEET_NAME = "guest_metrics";
 const DUMMY_TARGET_COUNT = 10;
 const DUMMY_PAST_WEEKS = 10;
 const DUMMY_BACKFILL_COUNT = 1;
+const SCORE_VARIANT_ROGUE = "rogue";
+const SCORE_VARIANT_NYANDOR = "nyandor";
+const NYANDOR_DUMMY_MAX_DEPTH = 5;
 const USER_NAME_MAX = 8;
 const SYNC_COOLDOWN_HOURS = 24;
 const USER_PASSWORD_FAIL_LIMIT = 5;
@@ -113,26 +116,27 @@ const DUMMY_NAMES = [
 
 function doGet(e) {
   if ((e.parameter.action || "") === "seedDummy")
-    return json({ rows: seedDummy() });
+    return json({ rows: seedDummy(e.parameter.variant) });
   if ((e.parameter.action || "") === "rank")
     return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
+  const variant = scoreVariant(e.parameter.variant);
   const ctx = scoreContext();
   if (period === "weekly") {
-    ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx);
+    ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx, variant);
   }
   if (period === "season") {
-    ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx);
-    ensureHistoricalWeeklyRows(new Date(), key, ctx);
+    ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, variant);
+    ensureHistoricalWeeklyRows(new Date(), key, ctx, variant);
   }
   flushScoreRows(ctx);
-  return json({ scores: topScores(period, key, ctx) });
+  return json({ scores: topScores(period, key, ctx, variant) });
 }
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents || "{}");
-  if (body.action === "seedDummy") return json({ rows: seedDummy() });
+  if (body.action === "seedDummy") return json({ rows: seedDummy(body.variant) });
   if (body.action === "checkUser") return json(checkUser(body));
   if (body.action === "registerUser") return json(registerUser(body));
   if (body.action === "linkUser") return json(linkUser(body));
@@ -429,13 +433,45 @@ function scoreIdFor(entry, timestamp, name) {
   ].join("|");
 }
 
-function topScores(period, key, ctx) {
+function scoreVariant(value) {
+  const text = String(value || "").toLowerCase();
+  return text === SCORE_VARIANT_NYANDOR ? SCORE_VARIANT_NYANDOR : SCORE_VARIANT_ROGUE;
+}
+
+function dummyScoreIdPrefix(period, key, variant) {
+  const v = scoreVariant(variant);
+  const head = v === SCORE_VARIANT_NYANDOR ? "dummy-nyandor" : "dummy";
+  return head + "-" + period + "-" + key + "-";
+}
+
+function dummyClientBuild(variant) {
+  return scoreVariant(variant) === SCORE_VARIANT_NYANDOR ? "dummy:nyandor" : "dummy";
+}
+
+function rowDummyVariant(row, idx) {
+  if (row[idx.is_dummy] !== true) return "";
+  const scoreId = String(idx.score_id === undefined ? "" : row[idx.score_id] || "");
+  const clientBuild = String(row[idx.client_build] || "");
+  if (scoreId.indexOf("dummy-nyandor-") === 0 || clientBuild === "dummy:nyandor") {
+    return SCORE_VARIANT_NYANDOR;
+  }
+  return SCORE_VARIANT_ROGUE;
+}
+
+function includeRowForVariant(row, idx, variant) {
+  if (row[idx.is_dummy] !== true) return true;
+  return rowDummyVariant(row, idx) === scoreVariant(variant);
+}
+
+function topScores(period, key, ctx, variant) {
   const context = ctx || scoreContext();
   const data = rowsForContext(context);
   const idx = context.idx;
   const field = periodField(period);
+  const v = scoreVariant(variant);
   const best = {};
   data.forEach((row) => {
+    if (!includeRowForVariant(row, idx, v)) return;
     if (periodCellValue(row[idx[field]], field) !== String(key)) return;
     const name = cleanName(row[idx.player_name]);
     const score = parseInt(row[idx.score] || 0, 10);
@@ -465,7 +501,7 @@ function scoreRank(params) {
   const period = (params.period || "weekly").toLowerCase();
   const key = params.key || currentPeriods()[periodField(period)];
   const score = Math.max(0, parseInt(params.score || 0, 10));
-  const scores = allScores(period, key);
+  const scores = allScores(period, key, null, params.variant);
   let rank = 1;
   scores.forEach((row) => {
     if (row.score > score) rank++;
@@ -473,13 +509,15 @@ function scoreRank(params) {
   return rank;
 }
 
-function allScores(period, key, ctx) {
+function allScores(period, key, ctx, variant) {
   const context = ctx || scoreContext();
   const data = rowsForContext(context);
   const idx = context.idx;
   const field = periodField(period);
+  const v = scoreVariant(variant);
   const best = {};
   data.forEach((row) => {
+    if (!includeRowForVariant(row, idx, v)) return;
     if (periodCellValue(row[idx[field]], field) !== String(key)) return;
     const name = cleanName(row[idx.player_name]);
     const score = parseInt(row[idx.score] || 0, 10);
@@ -501,23 +539,25 @@ function periodCellValue(value, field) {
   return String(value || "");
 }
 
-function seedDummy() {
+function seedDummy(variant) {
   const ctx = scoreContext();
-  const rows = ensureScoreboardDummyContext(ctx);
+  const rows = ensureScoreboardDummyContext(ctx, scoreVariant(variant));
   flushScoreRows(ctx);
   return rows;
 }
 
-function ensureScoreboardDummyContext(ctx) {
+function ensureScoreboardDummyContext(ctx, variant) {
   const now = new Date();
+  const v = scoreVariant(variant);
   let rows = 0;
-  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx);
-  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx);
+  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, v);
+  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx, v);
   return rows;
 }
 
-function ensureHistoricalWeeklyRows(now, seasonKey, ctx) {
+function ensureHistoricalWeeklyRows(now, seasonKey, ctx, variant) {
   const base = now || new Date();
+  const v = scoreVariant(variant);
   let rows = 0;
   for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
     const p = periodsFor(addUtcDays(base, historicalWeeklyDayOffset(i)));
@@ -527,6 +567,7 @@ function ensureHistoricalWeeklyRows(now, seasonKey, ctx) {
       p.period_week,
       DUMMY_BACKFILL_COUNT,
       ctx,
+      v,
     );
   }
   return rows;
@@ -536,26 +577,27 @@ function historicalWeeklyDayOffset(i) {
   return -(2 + (i - 1) * 7);
 }
 
-function ensureDummyRows(period, key, targetCount, ctx) {
-  return ensureDummyRowsForPeriod(period, key, targetCount, false, ctx);
+function ensureDummyRows(period, key, targetCount, ctx, variant) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, false, ctx, scoreVariant(variant));
 }
 
-function ensureSeededDummyRows(period, key, targetCount, ctx) {
-  return ensureDummyRowsForPeriod(period, key, targetCount, true, ctx);
+function ensureSeededDummyRows(period, key, targetCount, ctx, variant) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, true, ctx, scoreVariant(variant));
 }
 
-function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx) {
+function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx, variant) {
   const context = ctx || scoreContext();
-  const scores = topScores(period, key, context);
+  const v = scoreVariant(variant);
+  const scores = topScores(period, key, context, v);
   const used = new Set(scores.map((r) => cleanName(r.player_name)));
-  const seeded = seededDummyNames(period, key, context);
+  const seeded = seededDummyNames(period, key, context, v);
   seeded.forEach((name) => used.add(cleanName(name)));
   const visibleOrSeeded = countSeededOnly
     ? seeded.size
     : Math.max(scores.length, seeded.size);
   const needed = Math.max(0, targetCount - visibleOrSeeded);
   if (needed === 0) return 0;
-  const offset = dummyNameOffset(period, key);
+  const offset = dummyNameOffset(period, key, v);
   let rows = 0;
   for (let i = 0; i < DUMMY_NAMES.length && rows < needed; i++) {
     const name = DUMMY_NAMES[(offset + i) % DUMMY_NAMES.length];
@@ -568,13 +610,13 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx
       p.period_week,
       p.period_season,
       clean,
-      dummyScore(period, key, i, targetCount),
-      dummyDepth(period, key, i),
+      dummyScore(period, key, i, targetCount, v),
+      dummyDepth(period, key, i, v),
       "killed",
-      dummyKiller(period, key, i),
-      "dummy",
+      dummyKiller(period, key, i, v),
+      dummyClientBuild(v),
       true,
-      "dummy-" + period + "-" + key + "-" + clean,
+      dummyScoreIdPrefix(period, key, v) + clean,
     ]);
     used.add(clean);
     rows++;
@@ -583,11 +625,11 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx
   return rows;
 }
 
-function seededDummyNames(period, key, ctx) {
+function seededDummyNames(period, key, ctx, variant) {
   const context = ctx || scoreContext();
   const data = rowsForContext(context);
   const idx = context.idx;
-  const prefix = "dummy-" + period + "-" + key + "-";
+  const prefix = dummyScoreIdPrefix(period, key, variant);
   const names = new Set();
   data.forEach((row) => {
     if (String(row[idx.score_id] || "").indexOf(prefix) === 0) {
@@ -597,27 +639,32 @@ function seededDummyNames(period, key, ctx) {
   return names;
 }
 
-function dummyNameOffset(period, key) {
-  return hashString(period + ":" + key) % DUMMY_NAMES.length;
+function dummyNameOffset(period, key, variant) {
+  return hashString(scoreVariant(variant) + ":" + period + ":" + key) % DUMMY_NAMES.length;
 }
 
-function dummyValue(period, key, offset, salt, max) {
-  return hashString([period, key, offset, salt].join(":")) % max;
+function dummyValue(period, key, offset, salt, max, variant) {
+  return hashString([scoreVariant(variant), period, key, offset, salt].join(":")) % max;
 }
 
-function dummyScore(period, key, offset, targetCount) {
-  const depth = dummyDepth(period, key, offset);
+function dummyScore(period, key, offset, targetCount, variant) {
+  const v = scoreVariant(variant);
+  const depth = dummyDepth(period, key, offset, v);
+  if (v === SCORE_VARIANT_NYANDOR) {
+    return depth * 90 + dummyValue(period, key, offset, "score", 181, v);
+  }
   return depth * 70 + dummyValue(period, key, offset, "score", 351);
 }
 
-function dummyDepth(period, key, offset) {
-  return 1 + dummyValue(period, key, offset, "depth", 16);
+function dummyDepth(period, key, offset, variant) {
+  const maxDepth = scoreVariant(variant) === SCORE_VARIANT_NYANDOR ? NYANDOR_DUMMY_MAX_DEPTH : 16;
+  return 1 + dummyValue(period, key, offset, "depth", maxDepth, variant);
 }
 
-function dummyKiller(period, key, offset) {
-  const depth = dummyDepth(period, key, offset);
+function dummyKiller(period, key, offset, variant) {
+  const depth = dummyDepth(period, key, offset, variant);
   const killers = dummyKillersForDepth(depth);
-  return killers[dummyValue(period, key, offset, "killer", killers.length)];
+  return killers[dummyValue(period, key, offset, "killer", killers.length, variant)];
 }
 
 function dummyKillersForDepth(depth) {

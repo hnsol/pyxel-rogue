@@ -692,19 +692,27 @@ def record_guest_scoreboard_sync(url: str | None = None) -> bool:
         return False
 
 
-def seed_dummy_online_scores(url: str | None = None) -> bool:
+def seed_dummy_online_scores(url: str | None = None, variant: str | None = None) -> bool:
     target = url if url is not None else ONLINE_SCORE_URL
     if not target:
         return False
     try:
         sep = "&" if "?" in target else "?"
-        _http_json(target + sep + urllib.parse.urlencode({"action": "seedDummy"}))
+        query = {"action": "seedDummy"}
+        if variant:
+            query["variant"] = str(variant)
+        _http_json(target + sep + urllib.parse.urlencode(query))
         return True
     except Exception:
         return False
 
 
-def fetch_online_scores(period: str, url: str | None = None, timestamp: str | None = None) -> list[dict[str, Any]] | None:
+def fetch_online_scores(
+    period: str,
+    url: str | None = None,
+    timestamp: str | None = None,
+    variant: str | None = None,
+) -> list[dict[str, Any]] | None:
     if period == SCOREBOARD_PERIOD_LOCAL or period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
         return []
     target = url if url is not None else ONLINE_SCORE_URL
@@ -713,7 +721,10 @@ def fetch_online_scores(period: str, url: str | None = None, timestamp: str | No
     key = score_period_keys(timestamp).get(_period_field(period), "")
     try:
         sep = "&" if "?" in target else "?"
-        query = urllib.parse.urlencode({"period": period, "key": key})
+        params = {"period": period, "key": key}
+        if variant:
+            params["variant"] = str(variant)
+        query = urllib.parse.urlencode(params)
         data = _http_json(target + sep + query)
         if isinstance(data, dict):
             data = data.get("scores", [])
