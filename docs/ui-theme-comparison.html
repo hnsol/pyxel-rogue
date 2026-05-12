@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rogue V5 UI Theme Comparison</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --paper: #100f0f;
+      --ink: #fffcf0;
+      --muted: #878580;
+      --line: #343331;
+      --panel: #1c1b1a;
+      --accent: #d0a215;
+      --bad: #d14d41;
+      --ok: #3aa99f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      line-height: 1.45;
+    }
+
+    header {
+      padding: 32px clamp(18px, 4vw, 48px) 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #1c1b1a 0%, #100f0f 100%);
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      max-width: 980px;
+      font-size: clamp(24px, 4vw, 44px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 920px;
+      margin-top: 14px;
+      color: #cecdc3;
+      font-size: 15px;
+    }
+
+    main {
+      padding: 22px clamp(14px, 3vw, 40px) 40px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    button {
+      border: 1px solid #6f6e69;
+      border-radius: 6px;
+      background: #1c1b1a;
+      color: #fffcf0;
+      font: inherit;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    button[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #343331;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .theme {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .theme.hidden { display: none; }
+
+    .theme-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      padding: 12px 14px;
+      border-bottom: 1px solid color-mix(in srgb, var(--line), transparent 20%);
+    }
+
+    .theme h2 {
+      font-size: 16px;
+      color: var(--section);
+    }
+
+    .theme .id {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .screen {
+      position: relative;
+      margin: 14px;
+      border: 1px solid var(--ui);
+      background: var(--bg);
+      color: var(--text);
+      aspect-ratio: 512 / 320;
+      min-height: 200px;
+      overflow: hidden;
+      image-rendering: pixelated;
+    }
+
+    .map {
+      position: absolute;
+      left: 3%;
+      top: 7.5%;
+      width: 94%;
+      height: 76%;
+      white-space: pre;
+      font-size: clamp(8px, 1.43vw, 12px);
+      line-height: 1.1;
+      color: var(--floor);
+    }
+
+    .ch { color: var(--text); }
+    .memory { color: var(--memory); }
+    .wall { color: var(--wall); }
+    .floor { color: var(--floor); }
+    .corridor { color: var(--corridor); }
+    .door { color: var(--door); }
+    .trap { color: var(--trap); }
+    .gold { color: var(--gold); }
+    .player { color: var(--player); }
+    .beast { color: var(--m-beast); }
+    .undead { color: var(--m-undead); }
+    .magic { color: var(--m-magic); }
+    .thief { color: var(--m-thief); }
+    .deadly { color: var(--m-deadly); }
+    .mimic { color: var(--m-mimic); }
+    .aquatic { color: var(--m-aquatic); }
+    .basic { color: var(--m-basic); }
+    .item { color: #d14d41; }
+    .food { color: #da702c; }
+    .stick { color: #4385be; }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      font-size: clamp(8px, 1.3vw, 12px);
+    }
+
+    .hud .tl, .hud .tr, .hud .bl, .hud .br, .hud .msg {
+      position: absolute;
+      color: var(--text);
+      text-shadow: 0 1px 0 var(--bg);
+    }
+
+    .tl { left: 3%; top: 1.6%; color: var(--muted) !important; }
+    .tr { right: 3%; top: 1.6%; }
+    .bl { left: 3%; bottom: 4%; }
+    .br { right: 3%; bottom: 4%; text-align: right; }
+    .msg {
+      left: 32%;
+      right: 3%;
+      bottom: 13%;
+      color: var(--memory) !important;
+    }
+
+    .label { color: var(--memory); }
+    .value { color: var(--text); }
+    .warn { color: var(--status-warn); }
+    .bad { color: var(--status-bad); }
+    .buff { color: var(--status-buff); }
+
+    .hp {
+      display: inline-block;
+      width: 96px;
+      height: 8px;
+      margin: 0 6px;
+      border: 1px solid var(--hp-frame);
+      vertical-align: -1px;
+      background: var(--bg-2);
+    }
+
+    .hp::before {
+      content: "";
+      display: block;
+      width: 62%;
+      height: 100%;
+      background: var(--gold);
+      box-shadow: 28px 0 0 var(--status-warn);
+    }
+
+    .swatches, .roles, .monsters {
+      display: grid;
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    .swatches {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    .swatch {
+      min-height: 42px;
+      border: 1px solid color-mix(in srgb, var(--line), transparent 10%);
+      border-radius: 5px;
+      padding: 5px;
+      background: var(--c);
+      color: var(--fg);
+      font-size: 10px;
+    }
+
+    .roles, .monsters {
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    }
+
+    .role {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .role small {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      background: var(--dot);
+      border: 1px solid color-mix(in srgb, var(--line), transparent 20%);
+      flex: 0 0 auto;
+    }
+
+    .section-title {
+      padding: 0 14px 8px;
+      color: var(--section);
+      font-size: 12px;
+    }
+
+    .note {
+      padding: 0 14px 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 720px) {
+      main { padding-inline: 10px; }
+      .grid { grid-template-columns: 1fr; }
+      .swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .screen { margin-inline: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Rogue V5 UI Theme Comparison</h1>
+    <p class="lead">実装中のFlexoki系パレットを、ゲーム画面モック、地形・敵・罠・HUD・ログのrole一覧で比較するHTMLメモ。</p>
+  </header>
+  <main>
+    <div class="toolbar" aria-label="Theme filters">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-filter="light" aria-pressed="false">Light</button>
+      <button type="button" data-filter="syntax" aria-pressed="false">Syntax</button>
+    </div>
+
+    <section class="grid" id="themes"></section>
+  </main>
+
+  <template id="theme-template">
+    <article class="theme">
+      <div class="theme-head">
+        <h2></h2>
+        <div class="id"></div>
+      </div>
+      <div class="screen" aria-label="screen mock">
+        <div class="map" aria-hidden="true"></div>
+        <div class="hud">
+          <div class="tl">Normal</div>
+          <div class="tr"><span class="label">D:</span> <span class="value">26</span> <span class="label">G:</span> <span class="gold">1240</span></div>
+          <div class="bl"><span class="label">Hp</span><span class="hp"></span><span class="value">32(52)</span></div>
+          <div class="br"><span class="label">Str</span> <span class="value">16(18)</span> <span class="label">Arm</span> <span class="value">3</span> <span class="label">Exp</span> <span class="value">8/1640</span><br><span class="warn">Hungry</span> <span class="buff">SeeInvis</span></div>
+          <div class="msg">You hear a faint cry in the distance. The trap is revealed.</div>
+        </div>
+      </div>
+      <div class="section-title">16 color CLUT</div>
+      <div class="swatches"></div>
+      <div class="section-title">terrain / UI roles</div>
+      <div class="roles"></div>
+      <div class="section-title">monster roles</div>
+      <div class="monsters"></div>
+      <p class="note"></p>
+    </article>
+  </template>
+
+  <script>
+    const themes = [
+      {
+        id: "flexoki_dark",
+        tag: ["dark"],
+        label: "Flexoki Dark",
+        colors: ["#100f0f", "#1c1b1a", "#4f3685", "#343331", "#6f6e69", "#878580", "#dad8ce", "#66800b", "#71320d", "#d14d41", "#da702c", "#d0a215", "#3aa99f", "#4385be", "#cecdc3", "#fffcf0"],
+        names: ["black", "base-950", "purple-700", "base-850", "base-600", "base-500", "base-150", "green-600", "orange-800", "red-400", "orange-400", "yellow-400", "cyan-400", "blue-400", "base-200", "paper"],
+        roles: { bg: 0, bg_2: 1, memory: 3, ui: 3, wall: 4, corridor: 5, floor: 7, door: 8, trap: 11, gold: 11, player: 14, flag_on: 11, flag_off: 5, status_bad: 9, status_warn: 10, status_mind: 13, status_buff: 12, text: 14, hilite: 11, section: 15, hp_low_frame_dim: 1, hp_low_frame_shadow: 3, hp_low_frame_mid: 4, hp_low_frame_glow: 5 },
+        monsters: { beast: 7, undead: 12, magic: 13, thief: 10, deadly: 9, mimic: 2, aquatic: 12, basic: 14 },
+        note: "低彩度の探索画面を基準に、P/U/X系の特殊さを紫へ圧縮する標準テーマ。"
+      },
+      {
+        id: "flexoki_syntax_dark",
+        tag: ["dark", "syntax"],
+        label: "Flexoki Syntax Dark",
+        colors: ["#100f0f", "#1c1b1a", "#4f3685", "#343331", "#6f6e69", "#878580", "#dad8ce", "#879a39", "#da702c", "#d14d41", "#ce5d97", "#d0a215", "#3aa99f", "#4385be", "#cecdc3", "#fffcf0"],
+        names: ["black", "base-950", "purple-700", "base-850", "base-600", "base-500", "base-150", "green-400", "orange-400", "red-400", "magenta-400", "yellow-400", "cyan-400", "blue-400", "base-200", "paper"],
+        roles: { bg: 0, bg_2: 1, memory: 3, ui: 3, wall: 4, corridor: 5, floor: 7, door: 8, trap: 11, gold: 11, player: 14, flag_on: 11, flag_off: 5, status_bad: 9, status_warn: 10, status_mind: 13, status_buff: 12, text: 14, hilite: 11, section: 15, hp_low_frame_dim: 1, hp_low_frame_shadow: 3, hp_low_frame_mid: 4, hp_low_frame_glow: 5 },
+        monsters: { beast: 7, undead: 12, magic: 13, thief: 10, deadly: 9, mimic: 10, aquatic: 12, basic: 14 },
+        note: "Darkの階層を保ちつつ、敵・罠・警告など攻略上の記号をsyntax色へ寄せる派生。"
+      },
+      {
+        id: "flexoki_light",
+        tag: ["light"],
+        label: "Flexoki Light",
+        colors: ["#e6e4d9", "#dad8ce", "#5e409d", "#b7b5ac", "#878580", "#b7b5ac", "#a0af54", "#879a39", "#bc5215", "#af3029", "#ad8301", "#d0a215", "#24837b", "#4385be", "#403e3c", "#282726"],
+        names: ["base-100", "base-150", "purple-600", "base-300", "base-500", "base-300", "green-300", "green-400", "orange-600", "red-600", "yellow-600", "yellow-400", "cyan-600", "blue-400", "base-800", "base-900"],
+        roles: { bg: 0, bg_2: 1, memory: 5, ui: 3, wall: 4, corridor: 4, floor: 7, door: 8, trap: 11, gold: 11, player: 14, flag_on: 11, flag_off: 3, status_bad: 9, status_warn: 10, status_mind: 2, status_buff: 12, text: 14, hilite: 11, section: 15, hp_low_frame_dim: 1, hp_low_frame_shadow: 3, hp_low_frame_mid: 5, hp_low_frame_glow: 4 },
+        monsters: { beast: 6, undead: 12, magic: 13, thief: 10, deadly: 9, mimic: 2, aquatic: 12, basic: 14 },
+        note: "明色背景でも記憶地形と現在視界が分かれるよう、memory/corridor/status mindを調整。"
+      },
+      {
+        id: "flexoki_syntax_light",
+        tag: ["light", "syntax"],
+        label: "Flexoki Syntax Light",
+        colors: ["#fffcf0", "#e6e4d9", "#8b7ec8", "#b7b5ac", "#6f6e69", "#9f9d96", "#879a39", "#879a39", "#da702c", "#d14d41", "#ad8301", "#d0a215", "#3aa99f", "#4385be", "#403e3c", "#282726"],
+        names: ["paper", "base-100", "purple-400", "base-300", "base-600", "base-400", "green-400", "green-400", "orange-400", "red-400", "yellow-600", "yellow-400", "cyan-400", "blue-400", "base-800", "base-900"],
+        roles: { bg: 0, bg_2: 1, memory: 5, ui: 3, wall: 4, corridor: 4, floor: 7, door: 8, trap: 11, gold: 11, player: 14, flag_on: 11, flag_off: 3, status_bad: 9, status_warn: 10, status_mind: 2, status_buff: 12, text: 14, hilite: 11, section: 15, hp_low_frame_dim: 1, hp_low_frame_shadow: 3, hp_low_frame_mid: 5, hp_low_frame_glow: 4 },
+        monsters: { beast: 6, undead: 12, magic: 13, thief: 10, deadly: 9, mimic: 2, aquatic: 12, basic: 14 },
+        note: "Lightの読みやすさを維持しつつ、Flexoki Light標準の400系に近い明度・彩度へ寄せる。"
+      }
+    ];
+
+    const roleLabels = [
+      ["wall", "wall | / -"],
+      ["corridor", "corridor #"],
+      ["floor", "floor ."],
+      ["door", "door +"],
+      ["trap", "trap ^"],
+      ["memory", "memory"],
+      ["gold", "gold *"],
+      ["player", "player @"],
+      ["text", "text"],
+      ["section", "section"],
+      ["status_bad", "status bad"],
+      ["status_warn", "status warn"],
+      ["status_mind", "status mind"],
+      ["status_buff", "status buff"]
+    ];
+
+    const monsterLabels = [
+      ["beast", "beast A/B/C"],
+      ["undead", "undead G/M/Z"],
+      ["magic", "magic I/N"],
+      ["thief", "thief L/N"],
+      ["deadly", "deadly D/J"],
+      ["mimic", "mimic X"],
+      ["aquatic", "aquatic A"],
+      ["basic", "basic"]
+    ];
+
+    const mapLines = [
+      '<span class="memory">###################</span>          <span class="wall">-------------------</span>',
+      '<span class="memory">#.................#</span>          <span class="wall">|</span><span class="floor">.....</span><span class="item">!</span><span class="floor">....</span><span class="beast">K</span><span class="floor">.....</span><span class="wall">|</span>',
+      '<span class="memory">#.................#</span><span class="corridor">##########</span><span class="door">+</span><span class="floor">..</span><span class="gold">*</span><span class="floor">....</span><span class="trap">^</span><span class="floor">......</span><span class="wall">|</span>',
+      '<span class="memory">#.................#</span>          <span class="wall">|</span><span class="floor">......</span><span class="player">@</span><span class="floor">...</span><span class="undead">Z</span><span class="floor">....</span><span class="wall">|</span>',
+      '<span class="memory">#########+#########</span>          <span class="wall">|</span><span class="floor">..</span><span class="stick">/</span><span class="floor">......</span><span class="magic">I</span><span class="floor">.....</span><span class="wall">|</span>',
+      '          <span class="corridor">#</span>                 <span class="wall">-------------------</span>',
+      '          <span class="corridor">#</span>',
+      '    <span class="wall">--------------</span>        <span class="wall">----------------</span>',
+      '    <span class="wall">|</span><span class="floor">....</span><span class="mimic">X</span><span class="floor">....</span><span class="food">:</span><span class="floor">..</span><span class="wall">|</span><span class="corridor">########</span><span class="door">+</span><span class="floor">....</span><span class="thief">L</span><span class="floor">......</span><span class="wall">|</span>',
+      '    <span class="wall">|</span><span class="floor">.....</span><span class="deadly">D</span><span class="floor">......</span><span class="wall">|</span>        <span class="wall">|</span><span class="floor">.....</span><span class="aquatic">A</span><span class="floor">......</span><span class="wall">|</span>',
+      '    <span class="wall">--------------</span>        <span class="wall">----------------</span>'
+    ];
+
+    const root = document.querySelector("#themes");
+    const template = document.querySelector("#theme-template");
+
+    function color(theme, role) {
+      return theme.colors[theme.roles[role]];
+    }
+
+    function colorName(theme, index) {
+      return theme.names[index] || `color-${index}`;
+    }
+
+    function monsterColor(theme, role) {
+      return theme.colors[theme.monsters[role]];
+    }
+
+    function readable(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      const r = (n >> 16) & 255;
+      const g = (n >> 8) & 255;
+      const b = n & 255;
+      return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#100f0f" : "#fffcf0";
+    }
+
+    function applyVars(el, theme) {
+      const vars = {
+        "--bg": color(theme, "bg"),
+        "--bg-2": color(theme, "bg_2"),
+        "--memory": color(theme, "memory"),
+        "--ui": color(theme, "ui"),
+        "--wall": color(theme, "wall"),
+        "--corridor": color(theme, "corridor"),
+        "--floor": color(theme, "floor"),
+        "--door": color(theme, "door"),
+        "--trap": color(theme, "trap"),
+        "--gold": color(theme, "gold"),
+        "--player": color(theme, "player"),
+        "--text": color(theme, "text"),
+        "--section": color(theme, "section"),
+        "--status-bad": color(theme, "status_bad"),
+        "--status-warn": color(theme, "status_warn"),
+        "--status-mind": color(theme, "status_mind"),
+        "--status-buff": color(theme, "status_buff"),
+        "--hp-frame": color(theme, "hp_low_frame_mid"),
+        "--m-beast": monsterColor(theme, "beast"),
+        "--m-undead": monsterColor(theme, "undead"),
+        "--m-magic": monsterColor(theme, "magic"),
+        "--m-thief": monsterColor(theme, "thief"),
+        "--m-deadly": monsterColor(theme, "deadly"),
+        "--m-mimic": monsterColor(theme, "mimic"),
+        "--m-aquatic": monsterColor(theme, "aquatic"),
+        "--m-basic": monsterColor(theme, "basic"),
+        "--panel": color(theme, "bg_2"),
+        "--line": color(theme, "ui"),
+        "--muted": color(theme, "memory")
+      };
+      for (const [name, value] of Object.entries(vars)) {
+        el.style.setProperty(name, value);
+      }
+    }
+
+    function renderTheme(theme) {
+      const node = template.content.firstElementChild.cloneNode(true);
+      node.dataset.tags = theme.tag.join(" ");
+      applyVars(node, theme);
+      node.querySelector("h2").textContent = theme.label;
+      node.querySelector(".id").textContent = theme.id;
+      node.querySelector(".map").innerHTML = mapLines.join("\n");
+      node.querySelector(".note").textContent = theme.note;
+
+      const swatches = node.querySelector(".swatches");
+      theme.colors.forEach((hex, i) => {
+        const item = document.createElement("div");
+        item.className = "swatch";
+        item.style.setProperty("--c", hex);
+        item.style.setProperty("--fg", readable(hex));
+        item.innerHTML = `<strong>${i}</strong><br>${colorName(theme, i)}<br>${hex}`;
+        swatches.append(item);
+      });
+
+      const roles = node.querySelector(".roles");
+      roleLabels.forEach(([role, label]) => {
+        const index = theme.roles[role];
+        const item = document.createElement("div");
+        item.className = "role";
+        item.innerHTML = `<span class="dot" style="--dot:${color(theme, role)}"></span><span>${label}<small>${colorName(theme, index)} / ${theme.colors[index]}</small></span>`;
+        roles.append(item);
+      });
+
+      const monsters = node.querySelector(".monsters");
+      monsterLabels.forEach(([role, label]) => {
+        const index = theme.monsters[role];
+        const item = document.createElement("div");
+        item.className = "role";
+        item.innerHTML = `<span class="dot" style="--dot:${monsterColor(theme, role)}"></span><span>${label}<small>${colorName(theme, index)} / ${theme.colors[index]}</small></span>`;
+        monsters.append(item);
+      });
+
+      return node;
+    }
+
+    themes.forEach((theme) => root.append(renderTheme(theme)));
+
+    document.querySelector(".toolbar").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-filter]");
+      if (!button) return;
+      const filter = button.dataset.filter;
+      document.querySelectorAll(".toolbar button").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b === button));
+      });
+      document.querySelectorAll(".theme").forEach((theme) => {
+        const show = filter === "all" || theme.dataset.tags.split(" ").includes(filter);
+        theme.classList.toggle("hidden", !show);
+      });
+    });
+  </script>
+</body>
+</html>

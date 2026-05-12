@@ -1,0 +1,300 @@
+<style>
+  .rv5-theme-note {
+    --paper: #100f0f;
+    --ink: #fffcf0;
+    --muted: #878580;
+    --line: #343331;
+    --panel: #1c1b1a;
+    --accent: #d0a215;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    line-height: 1.45;
+    padding: 18px;
+  }
+  .rv5-theme-note * { box-sizing: border-box; }
+  .rv5-theme-note h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: 0; }
+  .rv5-theme-note h2 { margin: 0; font-size: 16px; color: var(--section); }
+  .rv5-theme-note p { margin: 0; }
+  .rv5-lead { color: #cecdc3; margin-bottom: 16px; }
+  .rv5-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .rv5-theme {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .rv5-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .rv5-id { color: var(--muted); font-size: 11px; }
+  .rv5-screen {
+    position: relative;
+    margin: 14px;
+    border: 1px solid var(--ui);
+    background: var(--bg);
+    color: var(--text);
+    aspect-ratio: 512 / 320;
+    min-height: 200px;
+    overflow: hidden;
+  }
+  .rv5-map {
+    position: absolute;
+    left: 3%;
+    top: 7.5%;
+    width: 94%;
+    height: 76%;
+    white-space: pre;
+    font-size: clamp(8px, 1.43vw, 12px);
+    line-height: 1.1;
+  }
+  .rv5-memory { color: var(--memory); }
+  .rv5-wall { color: var(--wall); }
+  .rv5-floor { color: var(--floor); }
+  .rv5-corridor { color: var(--corridor); }
+  .rv5-door { color: var(--door); }
+  .rv5-trap { color: var(--trap); }
+  .rv5-gold { color: var(--gold); }
+  .rv5-player { color: var(--player); }
+  .rv5-beast { color: var(--m-beast); }
+  .rv5-undead { color: var(--m-undead); }
+  .rv5-magic { color: var(--m-magic); }
+  .rv5-thief { color: var(--m-thief); }
+  .rv5-deadly { color: var(--m-deadly); }
+  .rv5-mimic { color: var(--m-mimic); }
+  .rv5-aquatic { color: var(--m-aquatic); }
+  .rv5-item { color: #d14d41; }
+  .rv5-food { color: #da702c; }
+  .rv5-stick { color: #4385be; }
+  .rv5-hud { position: absolute; inset: 0; font-size: clamp(8px, 1.3vw, 12px); }
+  .rv5-tl, .rv5-tr, .rv5-bl, .rv5-br, .rv5-msg { position: absolute; text-shadow: 0 1px 0 var(--bg); }
+  .rv5-tl { left: 3%; top: 1.6%; color: var(--muted); }
+  .rv5-tr { right: 3%; top: 1.6%; }
+  .rv5-bl { left: 3%; bottom: 4%; }
+  .rv5-br { right: 3%; bottom: 4%; text-align: right; }
+  .rv5-msg { left: 32%; right: 3%; bottom: 13%; color: var(--memory); }
+  .rv5-label { color: var(--memory); }
+  .rv5-value { color: var(--text); }
+  .rv5-warn { color: var(--status-warn); }
+  .rv5-buff { color: var(--status-buff); }
+  .rv5-hp {
+    display: inline-block;
+    width: 96px;
+    height: 8px;
+    margin: 0 6px;
+    border: 1px solid var(--hp-frame);
+    vertical-align: -1px;
+    background: var(--bg-2);
+  }
+  .rv5-hp span {
+    display: block;
+    width: 62%;
+    height: 100%;
+    background: var(--gold);
+    box-shadow: 28px 0 0 var(--status-warn);
+  }
+  .rv5-title { padding: 0 14px 8px; color: var(--section); font-size: 12px; }
+  .rv5-swatches, .rv5-roles {
+    display: grid;
+    gap: 8px;
+    padding: 0 14px 14px;
+  }
+  .rv5-swatches { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .rv5-roles { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
+  .rv5-swatch {
+    min-height: 46px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 5px;
+    background: var(--c);
+    color: var(--fg);
+    font-size: 10px;
+  }
+  .rv5-role {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .rv5-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--dot);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .rv5-role small { display: block; color: var(--muted); font-size: 10px; }
+  .rv5-note { padding: 0 14px 14px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 720px) {
+    .rv5-theme-note { padding: 10px; }
+    .rv5-grid { grid-template-columns: 1fr; }
+    .rv5-swatches { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+</style>
+
+<div class="rv5-theme-note">
+  <h1>Rogue V5 UI Theme Comparison</h1>
+  <p class="rv5-lead">Obsidianノート貼り付け用のJSなし静的HTML版。Flexoki系パレットを、ゲーム画面モック、地形・敵・罠・HUD・ログのrole一覧で比較する。</p>
+
+  <div class="rv5-grid">
+    <article class="rv5-theme" style="--bg:#100f0f;--bg-2:#1c1b1a;--memory:#343331;--ui:#343331;--wall:#6f6e69;--corridor:#878580;--floor:#66800b;--door:#71320d;--trap:#d0a215;--gold:#d0a215;--player:#cecdc3;--text:#cecdc3;--section:#fffcf0;--status-bad:#d14d41;--status-warn:#da702c;--status-buff:#3aa99f;--hp-frame:#6f6e69;--m-beast:#66800b;--m-undead:#3aa99f;--m-magic:#4385be;--m-thief:#da702c;--m-deadly:#d14d41;--m-mimic:#4f3685;--m-aquatic:#3aa99f;--panel:#1c1b1a;--line:#343331;--muted:#343331;">
+      <div class="rv5-head"><h2>Flexoki Dark</h2><div class="rv5-id">flexoki_dark</div></div>
+      <div class="rv5-screen">
+        <div class="rv5-map"><span class="rv5-memory">###################</span>          <span class="rv5-wall">-------------------</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-item">!</span><span class="rv5-floor">....</span><span class="rv5-beast">K</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span><span class="rv5-corridor">##########</span><span class="rv5-door">+</span><span class="rv5-floor">..</span><span class="rv5-gold">*</span><span class="rv5-floor">....</span><span class="rv5-trap">^</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">......</span><span class="rv5-player">@</span><span class="rv5-floor">...</span><span class="rv5-undead">Z</span><span class="rv5-floor">....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#########+#########</span>          <span class="rv5-wall">|</span><span class="rv5-floor">..</span><span class="rv5-stick">/</span><span class="rv5-floor">......</span><span class="rv5-magic">I</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+          <span class="rv5-corridor">#</span>                 <span class="rv5-wall">-------------------</span>
+          <span class="rv5-corridor">#</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">....</span><span class="rv5-mimic">X</span><span class="rv5-floor">....</span><span class="rv5-food">:</span><span class="rv5-floor">..</span><span class="rv5-wall">|</span><span class="rv5-corridor">########</span><span class="rv5-door">+</span><span class="rv5-floor">....</span><span class="rv5-thief">L</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-deadly">D</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>        <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-aquatic">A</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span></div>
+        <div class="rv5-hud">
+          <div class="rv5-tl">Normal</div>
+          <div class="rv5-tr"><span class="rv5-label">D:</span> <span class="rv5-value">26</span> <span class="rv5-label">G:</span> <span class="rv5-gold">1240</span></div>
+          <div class="rv5-bl"><span class="rv5-label">Hp</span><span class="rv5-hp"><span></span></span><span class="rv5-value">32(52)</span></div>
+          <div class="rv5-br"><span class="rv5-label">Str</span> <span class="rv5-value">16(18)</span> <span class="rv5-label">Arm</span> <span class="rv5-value">3</span> <span class="rv5-label">Exp</span> <span class="rv5-value">8/1640</span><br><span class="rv5-warn">Hungry</span> <span class="rv5-buff">SeeInvis</span></div>
+          <div class="rv5-msg">You hear a faint cry in the distance. The trap is revealed.</div>
+        </div>
+      </div>
+      <div class="rv5-title">16 color CLUT</div>
+      <div class="rv5-swatches">
+        <div class="rv5-swatch" style="--c:#100f0f;--fg:#fffcf0"><b>0</b><br>black<br>#100f0f</div><div class="rv5-swatch" style="--c:#1c1b1a;--fg:#fffcf0"><b>1</b><br>base-950<br>#1c1b1a</div><div class="rv5-swatch" style="--c:#4f3685;--fg:#fffcf0"><b>2</b><br>purple-700<br>#4f3685</div><div class="rv5-swatch" style="--c:#343331;--fg:#fffcf0"><b>3</b><br>base-850<br>#343331</div><div class="rv5-swatch" style="--c:#6f6e69;--fg:#fffcf0"><b>4</b><br>base-600<br>#6f6e69</div><div class="rv5-swatch" style="--c:#878580;--fg:#100f0f"><b>5</b><br>base-500<br>#878580</div><div class="rv5-swatch" style="--c:#dad8ce;--fg:#100f0f"><b>6</b><br>base-150<br>#dad8ce</div><div class="rv5-swatch" style="--c:#66800b;--fg:#fffcf0"><b>7</b><br>green-600<br>#66800b</div>
+        <div class="rv5-swatch" style="--c:#71320d;--fg:#fffcf0"><b>8</b><br>orange-800<br>#71320d</div><div class="rv5-swatch" style="--c:#d14d41;--fg:#100f0f"><b>9</b><br>red-400<br>#d14d41</div><div class="rv5-swatch" style="--c:#da702c;--fg:#100f0f"><b>10</b><br>orange-400<br>#da702c</div><div class="rv5-swatch" style="--c:#d0a215;--fg:#100f0f"><b>11</b><br>yellow-400<br>#d0a215</div><div class="rv5-swatch" style="--c:#3aa99f;--fg:#100f0f"><b>12</b><br>cyan-400<br>#3aa99f</div><div class="rv5-swatch" style="--c:#4385be;--fg:#fffcf0"><b>13</b><br>blue-400<br>#4385be</div><div class="rv5-swatch" style="--c:#cecdc3;--fg:#100f0f"><b>14</b><br>base-200<br>#cecdc3</div><div class="rv5-swatch" style="--c:#fffcf0;--fg:#100f0f"><b>15</b><br>paper<br>#fffcf0</div>
+      </div>
+      <div class="rv5-title">terrain / UI roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#6f6e69"></span><span>wall | / -<small>base-600 / #6f6e69</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#878580"></span><span>corridor #<small>base-500 / #878580</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#66800b"></span><span>floor .<small>green-600 / #66800b</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#71320d"></span><span>door +<small>orange-800 / #71320d</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>trap ^<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#343331"></span><span>memory<small>base-850 / #343331</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>gold *<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#cecdc3"></span><span>player @<small>base-200 / #cecdc3</small></span></div>
+      </div>
+      <div class="rv5-title">monster roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#66800b"></span><span>beast<small>green-600 / #66800b</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#3aa99f"></span><span>undead<small>cyan-400 / #3aa99f</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#4385be"></span><span>magic<small>blue-400 / #4385be</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#da702c"></span><span>thief<small>orange-400 / #da702c</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d14d41"></span><span>deadly<small>red-400 / #d14d41</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#4f3685"></span><span>mimic<small>purple-700 / #4f3685</small></span></div>
+      </div>
+      <p class="rv5-note">低彩度の探索画面を基準に、P/U/X系の特殊さを紫へ圧縮する標準テーマ。</p>
+    </article>
+
+    <article class="rv5-theme" style="--bg:#100f0f;--bg-2:#1c1b1a;--memory:#343331;--ui:#343331;--wall:#6f6e69;--corridor:#878580;--floor:#879a39;--door:#da702c;--trap:#d0a215;--gold:#d0a215;--player:#cecdc3;--text:#cecdc3;--section:#fffcf0;--status-bad:#d14d41;--status-warn:#ce5d97;--status-buff:#3aa99f;--hp-frame:#6f6e69;--m-beast:#879a39;--m-undead:#3aa99f;--m-magic:#4385be;--m-thief:#ce5d97;--m-deadly:#d14d41;--m-mimic:#ce5d97;--m-aquatic:#3aa99f;--panel:#1c1b1a;--line:#343331;--muted:#343331;">
+      <div class="rv5-head"><h2>Flexoki Syntax Dark</h2><div class="rv5-id">flexoki_syntax_dark</div></div>
+      <div class="rv5-screen">
+        <div class="rv5-map"><span class="rv5-memory">###################</span>          <span class="rv5-wall">-------------------</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-item">!</span><span class="rv5-floor">....</span><span class="rv5-beast">K</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span><span class="rv5-corridor">##########</span><span class="rv5-door">+</span><span class="rv5-floor">..</span><span class="rv5-gold">*</span><span class="rv5-floor">....</span><span class="rv5-trap">^</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">......</span><span class="rv5-player">@</span><span class="rv5-floor">...</span><span class="rv5-undead">Z</span><span class="rv5-floor">....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#########+#########</span>          <span class="rv5-wall">|</span><span class="rv5-floor">..</span><span class="rv5-stick">/</span><span class="rv5-floor">......</span><span class="rv5-magic">I</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+          <span class="rv5-corridor">#</span>                 <span class="rv5-wall">-------------------</span>
+          <span class="rv5-corridor">#</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">....</span><span class="rv5-mimic">X</span><span class="rv5-floor">....</span><span class="rv5-food">:</span><span class="rv5-floor">..</span><span class="rv5-wall">|</span><span class="rv5-corridor">########</span><span class="rv5-door">+</span><span class="rv5-floor">....</span><span class="rv5-thief">L</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-deadly">D</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>        <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-aquatic">A</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span></div>
+        <div class="rv5-hud">
+          <div class="rv5-tl">Normal</div><div class="rv5-tr"><span class="rv5-label">D:</span> <span class="rv5-value">26</span> <span class="rv5-label">G:</span> <span class="rv5-gold">1240</span></div>
+          <div class="rv5-bl"><span class="rv5-label">Hp</span><span class="rv5-hp"><span></span></span><span class="rv5-value">32(52)</span></div>
+          <div class="rv5-br"><span class="rv5-label">Str</span> <span class="rv5-value">16(18)</span> <span class="rv5-label">Arm</span> <span class="rv5-value">3</span> <span class="rv5-label">Exp</span> <span class="rv5-value">8/1640</span><br><span class="rv5-warn">Hungry</span> <span class="rv5-buff">SeeInvis</span></div>
+          <div class="rv5-msg">You hear a faint cry in the distance. The trap is revealed.</div>
+        </div>
+      </div>
+      <div class="rv5-title">16 color CLUT</div>
+      <div class="rv5-swatches">
+        <div class="rv5-swatch" style="--c:#100f0f;--fg:#fffcf0"><b>0</b><br>black<br>#100f0f</div><div class="rv5-swatch" style="--c:#1c1b1a;--fg:#fffcf0"><b>1</b><br>base-950<br>#1c1b1a</div><div class="rv5-swatch" style="--c:#4f3685;--fg:#fffcf0"><b>2</b><br>purple-700<br>#4f3685</div><div class="rv5-swatch" style="--c:#343331;--fg:#fffcf0"><b>3</b><br>base-850<br>#343331</div><div class="rv5-swatch" style="--c:#6f6e69;--fg:#fffcf0"><b>4</b><br>base-600<br>#6f6e69</div><div class="rv5-swatch" style="--c:#878580;--fg:#100f0f"><b>5</b><br>base-500<br>#878580</div><div class="rv5-swatch" style="--c:#dad8ce;--fg:#100f0f"><b>6</b><br>base-150<br>#dad8ce</div><div class="rv5-swatch" style="--c:#879a39;--fg:#100f0f"><b>7</b><br>green-400<br>#879a39</div>
+        <div class="rv5-swatch" style="--c:#da702c;--fg:#100f0f"><b>8</b><br>orange-400<br>#da702c</div><div class="rv5-swatch" style="--c:#d14d41;--fg:#100f0f"><b>9</b><br>red-400<br>#d14d41</div><div class="rv5-swatch" style="--c:#ce5d97;--fg:#100f0f"><b>10</b><br>magenta-400<br>#ce5d97</div><div class="rv5-swatch" style="--c:#d0a215;--fg:#100f0f"><b>11</b><br>yellow-400<br>#d0a215</div><div class="rv5-swatch" style="--c:#3aa99f;--fg:#100f0f"><b>12</b><br>cyan-400<br>#3aa99f</div><div class="rv5-swatch" style="--c:#4385be;--fg:#fffcf0"><b>13</b><br>blue-400<br>#4385be</div><div class="rv5-swatch" style="--c:#cecdc3;--fg:#100f0f"><b>14</b><br>base-200<br>#cecdc3</div><div class="rv5-swatch" style="--c:#fffcf0;--fg:#100f0f"><b>15</b><br>paper<br>#fffcf0</div>
+      </div>
+      <div class="rv5-title">terrain / UI roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#6f6e69"></span><span>wall | / -<small>base-600 / #6f6e69</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#878580"></span><span>corridor #<small>base-500 / #878580</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#879a39"></span><span>floor .<small>green-400 / #879a39</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#da702c"></span><span>door +<small>orange-400 / #da702c</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>trap ^<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#343331"></span><span>memory<small>base-850 / #343331</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>gold *<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#cecdc3"></span><span>player @<small>base-200 / #cecdc3</small></span></div>
+      </div>
+      <div class="rv5-title">monster roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#879a39"></span><span>beast<small>green-400 / #879a39</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#3aa99f"></span><span>undead<small>cyan-400 / #3aa99f</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#4385be"></span><span>magic<small>blue-400 / #4385be</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#ce5d97"></span><span>thief<small>magenta-400 / #ce5d97</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d14d41"></span><span>deadly<small>red-400 / #d14d41</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#ce5d97"></span><span>mimic<small>magenta-400 / #ce5d97</small></span></div>
+      </div>
+      <p class="rv5-note">Darkの階層を保ちつつ、敵・罠・警告など攻略上の記号をsyntax色へ寄せる派生。</p>
+    </article>
+
+    <article class="rv5-theme" style="--bg:#e6e4d9;--bg-2:#dad8ce;--memory:#b7b5ac;--ui:#b7b5ac;--wall:#878580;--corridor:#878580;--floor:#879a39;--door:#bc5215;--trap:#d0a215;--gold:#d0a215;--player:#403e3c;--text:#403e3c;--section:#282726;--status-bad:#af3029;--status-warn:#ad8301;--status-buff:#24837b;--hp-frame:#b7b5ac;--m-beast:#a0af54;--m-undead:#24837b;--m-magic:#4385be;--m-thief:#ad8301;--m-deadly:#af3029;--m-mimic:#5e409d;--m-aquatic:#24837b;--panel:#dad8ce;--line:#b7b5ac;--muted:#b7b5ac;">
+      <div class="rv5-head"><h2>Flexoki Light</h2><div class="rv5-id">flexoki_light</div></div>
+      <div class="rv5-screen">
+        <div class="rv5-map"><span class="rv5-memory">###################</span>          <span class="rv5-wall">-------------------</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-item">!</span><span class="rv5-floor">....</span><span class="rv5-beast">K</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span><span class="rv5-corridor">##########</span><span class="rv5-door">+</span><span class="rv5-floor">..</span><span class="rv5-gold">*</span><span class="rv5-floor">....</span><span class="rv5-trap">^</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">......</span><span class="rv5-player">@</span><span class="rv5-floor">...</span><span class="rv5-undead">Z</span><span class="rv5-floor">....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#########+#########</span>          <span class="rv5-wall">|</span><span class="rv5-floor">..</span><span class="rv5-stick">/</span><span class="rv5-floor">......</span><span class="rv5-magic">I</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+          <span class="rv5-corridor">#</span>                 <span class="rv5-wall">-------------------</span>
+          <span class="rv5-corridor">#</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">....</span><span class="rv5-mimic">X</span><span class="rv5-floor">....</span><span class="rv5-food">:</span><span class="rv5-floor">..</span><span class="rv5-wall">|</span><span class="rv5-corridor">########</span><span class="rv5-door">+</span><span class="rv5-floor">....</span><span class="rv5-thief">L</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-deadly">D</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>        <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-aquatic">A</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span></div>
+        <div class="rv5-hud">
+          <div class="rv5-tl">Normal</div><div class="rv5-tr"><span class="rv5-label">D:</span> <span class="rv5-value">26</span> <span class="rv5-label">G:</span> <span class="rv5-gold">1240</span></div>
+          <div class="rv5-bl"><span class="rv5-label">Hp</span><span class="rv5-hp"><span></span></span><span class="rv5-value">32(52)</span></div>
+          <div class="rv5-br"><span class="rv5-label">Str</span> <span class="rv5-value">16(18)</span> <span class="rv5-label">Arm</span> <span class="rv5-value">3</span> <span class="rv5-label">Exp</span> <span class="rv5-value">8/1640</span><br><span class="rv5-warn">Hungry</span> <span class="rv5-buff">SeeInvis</span></div>
+          <div class="rv5-msg">You hear a faint cry in the distance. The trap is revealed.</div>
+        </div>
+      </div>
+      <div class="rv5-title">16 color CLUT</div>
+      <div class="rv5-swatches">
+        <div class="rv5-swatch" style="--c:#e6e4d9;--fg:#100f0f"><b>0</b><br>base-100<br>#e6e4d9</div><div class="rv5-swatch" style="--c:#dad8ce;--fg:#100f0f"><b>1</b><br>base-150<br>#dad8ce</div><div class="rv5-swatch" style="--c:#5e409d;--fg:#fffcf0"><b>2</b><br>purple-600<br>#5e409d</div><div class="rv5-swatch" style="--c:#b7b5ac;--fg:#100f0f"><b>3</b><br>base-300<br>#b7b5ac</div><div class="rv5-swatch" style="--c:#878580;--fg:#100f0f"><b>4</b><br>base-500<br>#878580</div><div class="rv5-swatch" style="--c:#b7b5ac;--fg:#100f0f"><b>5</b><br>base-300<br>#b7b5ac</div><div class="rv5-swatch" style="--c:#a0af54;--fg:#100f0f"><b>6</b><br>green-300<br>#a0af54</div><div class="rv5-swatch" style="--c:#879a39;--fg:#100f0f"><b>7</b><br>green-400<br>#879a39</div>
+        <div class="rv5-swatch" style="--c:#bc5215;--fg:#fffcf0"><b>8</b><br>orange-600<br>#bc5215</div><div class="rv5-swatch" style="--c:#af3029;--fg:#fffcf0"><b>9</b><br>red-600<br>#af3029</div><div class="rv5-swatch" style="--c:#ad8301;--fg:#100f0f"><b>10</b><br>yellow-600<br>#ad8301</div><div class="rv5-swatch" style="--c:#d0a215;--fg:#100f0f"><b>11</b><br>yellow-400<br>#d0a215</div><div class="rv5-swatch" style="--c:#24837b;--fg:#fffcf0"><b>12</b><br>cyan-600<br>#24837b</div><div class="rv5-swatch" style="--c:#4385be;--fg:#fffcf0"><b>13</b><br>blue-400<br>#4385be</div><div class="rv5-swatch" style="--c:#403e3c;--fg:#fffcf0"><b>14</b><br>base-800<br>#403e3c</div><div class="rv5-swatch" style="--c:#282726;--fg:#fffcf0"><b>15</b><br>base-900<br>#282726</div>
+      </div>
+      <div class="rv5-title">terrain / UI roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#878580"></span><span>wall | / -<small>base-500 / #878580</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#878580"></span><span>corridor #<small>base-500 / #878580</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#879a39"></span><span>floor .<small>green-400 / #879a39</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#bc5215"></span><span>door +<small>orange-600 / #bc5215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>trap ^<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#b7b5ac"></span><span>memory<small>base-300 / #b7b5ac</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>gold *<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#403e3c"></span><span>player @<small>base-800 / #403e3c</small></span></div>
+      </div>
+      <div class="rv5-title">monster roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#a0af54"></span><span>beast<small>green-300 / #a0af54</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#24837b"></span><span>undead<small>cyan-600 / #24837b</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#4385be"></span><span>magic<small>blue-400 / #4385be</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#ad8301"></span><span>thief<small>yellow-600 / #ad8301</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#af3029"></span><span>deadly<small>red-600 / #af3029</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#5e409d"></span><span>mimic<small>purple-600 / #5e409d</small></span></div>
+      </div>
+      <p class="rv5-note">明色背景でも記憶地形と現在視界が分かれるよう、memory/corridor/status mindを調整。</p>
+    </article>
+
+    <article class="rv5-theme" style="--bg:#fffcf0;--bg-2:#e6e4d9;--memory:#9f9d96;--ui:#b7b5ac;--wall:#6f6e69;--corridor:#6f6e69;--floor:#879a39;--door:#da702c;--trap:#d0a215;--gold:#d0a215;--player:#403e3c;--text:#403e3c;--section:#282726;--status-bad:#d14d41;--status-warn:#ad8301;--status-buff:#3aa99f;--hp-frame:#9f9d96;--m-beast:#879a39;--m-undead:#3aa99f;--m-magic:#4385be;--m-thief:#ad8301;--m-deadly:#d14d41;--m-mimic:#8b7ec8;--m-aquatic:#3aa99f;--panel:#e6e4d9;--line:#b7b5ac;--muted:#9f9d96;">
+      <div class="rv5-head"><h2>Flexoki Syntax Light</h2><div class="rv5-id">flexoki_syntax_light</div></div>
+      <div class="rv5-screen">
+        <div class="rv5-map"><span class="rv5-memory">###################</span>          <span class="rv5-wall">-------------------</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-item">!</span><span class="rv5-floor">....</span><span class="rv5-beast">K</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span><span class="rv5-corridor">##########</span><span class="rv5-door">+</span><span class="rv5-floor">..</span><span class="rv5-gold">*</span><span class="rv5-floor">....</span><span class="rv5-trap">^</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#.................#</span>          <span class="rv5-wall">|</span><span class="rv5-floor">......</span><span class="rv5-player">@</span><span class="rv5-floor">...</span><span class="rv5-undead">Z</span><span class="rv5-floor">....</span><span class="rv5-wall">|</span>
+<span class="rv5-memory">#########+#########</span>          <span class="rv5-wall">|</span><span class="rv5-floor">..</span><span class="rv5-stick">/</span><span class="rv5-floor">......</span><span class="rv5-magic">I</span><span class="rv5-floor">.....</span><span class="rv5-wall">|</span>
+          <span class="rv5-corridor">#</span>                 <span class="rv5-wall">-------------------</span>
+          <span class="rv5-corridor">#</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">....</span><span class="rv5-mimic">X</span><span class="rv5-floor">....</span><span class="rv5-food">:</span><span class="rv5-floor">..</span><span class="rv5-wall">|</span><span class="rv5-corridor">########</span><span class="rv5-door">+</span><span class="rv5-floor">....</span><span class="rv5-thief">L</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-deadly">D</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>        <span class="rv5-wall">|</span><span class="rv5-floor">.....</span><span class="rv5-aquatic">A</span><span class="rv5-floor">......</span><span class="rv5-wall">|</span>
+    <span class="rv5-wall">--------------</span>        <span class="rv5-wall">----------------</span></div>
+        <div class="rv5-hud">
+          <div class="rv5-tl">Normal</div><div class="rv5-tr"><span class="rv5-label">D:</span> <span class="rv5-value">26</span> <span class="rv5-label">G:</span> <span class="rv5-gold">1240</span></div>
+          <div class="rv5-bl"><span class="rv5-label">Hp</span><span class="rv5-hp"><span></span></span><span class="rv5-value">32(52)</span></div>
+          <div class="rv5-br"><span class="rv5-label">Str</span> <span class="rv5-value">16(18)</span> <span class="rv5-label">Arm</span> <span class="rv5-value">3</span> <span class="rv5-label">Exp</span> <span class="rv5-value">8/1640</span><br><span class="rv5-warn">Hungry</span> <span class="rv5-buff">SeeInvis</span></div>
+          <div class="rv5-msg">You hear a faint cry in the distance. The trap is revealed.</div>
+        </div>
+      </div>
+      <div class="rv5-title">16 color CLUT</div>
+      <div class="rv5-swatches">
+        <div class="rv5-swatch" style="--c:#fffcf0;--fg:#100f0f"><b>0</b><br>paper<br>#fffcf0</div><div class="rv5-swatch" style="--c:#e6e4d9;--fg:#100f0f"><b>1</b><br>base-100<br>#e6e4d9</div><div class="rv5-swatch" style="--c:#8b7ec8;--fg:#100f0f"><b>2</b><br>purple-400<br>#8b7ec8</div><div class="rv5-swatch" style="--c:#b7b5ac;--fg:#100f0f"><b>3</b><br>base-300<br>#b7b5ac</div><div class="rv5-swatch" style="--c:#6f6e69;--fg:#fffcf0"><b>4</b><br>base-600<br>#6f6e69</div><div class="rv5-swatch" style="--c:#9f9d96;--fg:#100f0f"><b>5</b><br>base-400<br>#9f9d96</div><div class="rv5-swatch" style="--c:#879a39;--fg:#100f0f"><b>6</b><br>green-400<br>#879a39</div><div class="rv5-swatch" style="--c:#879a39;--fg:#100f0f"><b>7</b><br>green-400<br>#879a39</div>
+        <div class="rv5-swatch" style="--c:#da702c;--fg:#100f0f"><b>8</b><br>orange-400<br>#da702c</div><div class="rv5-swatch" style="--c:#d14d41;--fg:#100f0f"><b>9</b><br>red-400<br>#d14d41</div><div class="rv5-swatch" style="--c:#ad8301;--fg:#100f0f"><b>10</b><br>yellow-600<br>#ad8301</div><div class="rv5-swatch" style="--c:#d0a215;--fg:#100f0f"><b>11</b><br>yellow-400<br>#d0a215</div><div class="rv5-swatch" style="--c:#3aa99f;--fg:#100f0f"><b>12</b><br>cyan-400<br>#3aa99f</div><div class="rv5-swatch" style="--c:#4385be;--fg:#fffcf0"><b>13</b><br>blue-400<br>#4385be</div><div class="rv5-swatch" style="--c:#403e3c;--fg:#fffcf0"><b>14</b><br>base-800<br>#403e3c</div><div class="rv5-swatch" style="--c:#282726;--fg:#fffcf0"><b>15</b><br>base-900<br>#282726</div>
+      </div>
+      <div class="rv5-title">terrain / UI roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#6f6e69"></span><span>wall | / -<small>base-600 / #6f6e69</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#6f6e69"></span><span>corridor #<small>base-600 / #6f6e69</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#879a39"></span><span>floor .<small>green-400 / #879a39</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#da702c"></span><span>door +<small>orange-400 / #da702c</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>trap ^<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#9f9d96"></span><span>memory<small>base-400 / #9f9d96</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d0a215"></span><span>gold *<small>yellow-400 / #d0a215</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#403e3c"></span><span>player @<small>base-800 / #403e3c</small></span></div>
+      </div>
+      <div class="rv5-title">monster roles</div>
+      <div class="rv5-roles">
+        <div class="rv5-role"><span class="rv5-dot" style="--dot:#879a39"></span><span>beast<small>green-400 / #879a39</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#3aa99f"></span><span>undead<small>cyan-400 / #3aa99f</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#4385be"></span><span>magic<small>blue-400 / #4385be</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#ad8301"></span><span>thief<small>yellow-600 / #ad8301</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#d14d41"></span><span>deadly<small>red-400 / #d14d41</small></span></div><div class="rv5-role"><span class="rv5-dot" style="--dot:#8b7ec8"></span><span>mimic<small>purple-400 / #8b7ec8</small></span></div>
+      </div>
+      <p class="rv5-note">Lightの読みやすさを維持しつつ、Flexoki Light標準の400系に近い明度・彩度へ寄せる。</p>
+    </article>
+  </div>
+</div>
