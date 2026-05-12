@@ -59,7 +59,7 @@ from pyxel_rogue.rogue_items import (
     ISYM,
 )
 from pyxel_rogue.rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings, settings_exists
-from pyxel_rogue.rogue_difficulty import DIFFICULTY_ORDER, profile as difficulty_profile
+from pyxel_rogue.rogue_difficulty import DIFF_NORMAL, DIFFICULTY_ORDER, profile as difficulty_profile
 from pyxel_rogue.rogue_layout import (
     DEAD_ZONE_X,
     DEAD_ZONE_Y,
@@ -278,7 +278,45 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260512_0032"
+UI_BUILD = "260512_0138"
+VARIANT_ROGUE = "rogue"
+VARIANT_NYANDOR = "nyandor"
+NYANDOR_TARGET_DEPTH = 5
+NYANDOR_CAT_NAME = "The Cat (wearing the Amulet of Nyandor)"
+
+def normalize_variant(value):
+    value = str(value or VARIANT_ROGUE).strip().lower()
+    return VARIANT_NYANDOR if value in (VARIANT_NYANDOR, "nyander", "cat") else VARIANT_ROGUE
+
+GAME_VARIANT = normalize_variant(os.environ.get("PYXEL_ROGUE_VARIANT"))
+
+def is_nyandor_variant():
+    return GAME_VARIANT == VARIANT_NYANDOR
+
+def variant_fixed_difficulty():
+    return DIFF_NORMAL if is_nyandor_variant() else None
+
+def variant_title_lines():
+    if is_nyandor_variant():
+        return (
+            "ROGUE V5 ON PYXEL",
+            "5F PLAYABLE BETA",
+            "CAT AND AMULET OF NYANDOR",
+        )
+    return ("ROGUE V5 ON PYXEL",)
+
+def variant_window_title():
+    return "Cat and Amulet of Nyandor" if is_nyandor_variant() else "Pyxel Rogue"
+
+def is_nyandor_cat_item(item):
+    return (
+        item is not None
+        and getattr(item, "cat", None) == CAT_AMULET
+        and getattr(item, "variant_item", None) == "nyandor_cat"
+    )
+
+def variant_escape_message_key():
+    return "pyxel.escaped_with_nyandor" if is_nyandor_variant() else "pyxel.escaped_with_amulet"
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
 MSG_KINSOKU_LINE_START = "、。！？"
@@ -952,6 +990,7 @@ class Item:
         s.x=s.y=0
         s.picked_up=False
         s.protected=False
+        s.variant_item=None
     @property
     def known(s):
         return FLAG_ISKNOW in s.o_flags
@@ -968,13 +1007,19 @@ class Item:
         if s.cat==CAT_ARM: return ARMORS[s.kind]
         if s.cat==CAT_RING: return RINGS[s.kind]
         if s.cat==CAT_STICK: return STICKS[s.kind]
-        if s.cat==CAT_AMULET: return {"name":"Amulet of Yendor"}
+        if s.cat==CAT_AMULET:
+            if getattr(s, "variant_item", None) == "nyandor_cat":
+                return {"name": NYANDOR_CAT_NAME}
+            return {"name":"Amulet of Yendor"}
         return {}
     @property
     def stackable(s):
         return s.cat in (CAT_POT, CAT_SCR, CAT_FOOD) or (s.cat==CAT_WPN and (s.data.get("stack",False) or s.data.get("name")=="dagger"))
     @property
-    def sym(s): return ISYM.get(s.cat,"?")
+    def sym(s):
+        if s.cat == CAT_AMULET and getattr(s, "variant_item", None) == "nyandor_cat":
+            return "c"
+        return ISYM.get(s.cat,"?")
     def plus_key(s):
         return (s.hit_plus,s.dam_plus) if s.cat==CAT_WPN else (s.ench,0)
 
@@ -1163,6 +1208,8 @@ class IdentTable:
             typ_name=TextCatalog.stick_type(lang, typ)
             return f"{made} {typ}" if lang==LANG_EN else f"{made_name}の{typ_name}"
         if it.cat==CAT_AMULET:
+            if getattr(it, "variant_item", None) == "nyandor_cat":
+                return it.data["name"]
             nm=TextCatalog.item_kind(lang, CAT_AMULET, it.data["name"])
             return f"the {nm}" if lang==LANG_EN else nm
         return "something" if lang==LANG_EN else "何者か"
@@ -1652,7 +1699,10 @@ class Game:
     def __init__(self):
         self.settings_missing = not settings_exists()
         self.settings = load_settings()
-        pyxel.init(SCR_W, SCR_H, title="Pyxel Rogue", fps=30, quit_key=pyxel.KEY_NONE)
+        fixed_difficulty = variant_fixed_difficulty()
+        if fixed_difficulty:
+            self.settings.difficulty = fixed_difficulty
+        pyxel.init(SCR_W, SCR_H, title=variant_window_title(), fps=30, quit_key=pyxel.KEY_NONE)
         self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
         self.init_frontend_state()
@@ -2490,10 +2540,17 @@ class Game:
 
     @property
     def difficulty(self):
+        fixed = variant_fixed_difficulty()
+        if fixed:
+            return fixed
         return self.ensure_settings().difficulty
 
     @difficulty.setter
     def difficulty(self, value):
+        fixed = variant_fixed_difficulty()
+        if fixed:
+            self.ensure_settings().difficulty = fixed
+            return
         self.ensure_settings().difficulty = difficulty_profile(value).id
 
     def online_language_toggle_pressed(self):
@@ -2838,7 +2895,10 @@ class Game:
 
     def _spawn_amulet(self):
         # Rogue 5.4.4 new_level.c: level >= AMULETLEVEL && !amulet.
-        if self.p.depth < AMULET_LEVEL or self.p.has_amulet:
+        if is_nyandor_variant():
+            if self.p.depth != NYANDOR_TARGET_DEPTH or self.p.has_amulet:
+                return
+        elif self.p.depth < AMULET_LEVEL or self.p.has_amulet:
             return
         if any(item.cat==CAT_AMULET for item in self.p.inv + self.gitems):
             return
@@ -2852,6 +2912,8 @@ class Game:
             return
         x,y=pos
         amulet=Item(CAT_AMULET,0)
+        if is_nyandor_variant():
+            amulet.variant_item = "nyandor_cat"
         amulet.x,amulet.y=x,y
         self.gitems.append(amulet)
 
@@ -4733,6 +4795,9 @@ class Game:
 
     def drop(self,it):
         # C: things.c:drop()
+        if is_nyandor_cat_item(it):
+            self.msg("pyxel.nyandor_cat_drop_blocked")
+            return False
         if self.tm[self.p.y][self.p.x] not in (T_FLOOR, T_CORR) or self.gi_at(self.p.x, self.p.y):
             self.msg("things.there_is_something_there_already")
             return False
@@ -5330,13 +5395,16 @@ class Game:
             return
         if p.has_amulet:
             if p.depth <= 1:
-                self.msg("pyxel.escaped_with_amulet")
+                self.msg(variant_escape_message_key())
                 self.enter_result_state("winner")
                 return
             p.depth-=2
             self.descend()
             self.msg("pyxel.wrenching_sensation_gut")
             self.end_turn()
+            return
+        if is_nyandor_variant() and p.depth >= NYANDOR_TARGET_DEPTH:
+            self.msg("pyxel.nyandor_depth_limit")
             return
         self.descend()
         self.end_turn()
@@ -5349,6 +5417,10 @@ class Game:
             return
         if self.tm[self.p.y][self.p.x] != T_STAIR:
             self.msg("command.i_see_no_way_down")
+            self.command_look_done = False
+            return
+        if is_nyandor_variant() and self.p.depth >= NYANDOR_TARGET_DEPTH:
+            self.msg("pyxel.nyandor_depth_limit")
             self.command_look_done = False
             return
         self.descend()
@@ -5370,7 +5442,7 @@ class Game:
             self.command_look_done = False
             return
         if self.p.depth <= 1:
-            self.msg("pyxel.escaped_with_amulet")
+            self.msg(variant_escape_message_key())
             self.command_look_done = False
             self.enter_result_state("winner")
             return
@@ -5404,7 +5476,11 @@ class Game:
             if gi.cat==CAT_AMULET:
                 p.has_amulet=True
             self.mark_type_discovered(gi)
-            self.gitems.remove(gi); self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
+            self.gitems.remove(gi)
+            if is_nyandor_cat_item(gi):
+                self.msg("pyxel.nyandor_cat_recovered")
+            else:
+                self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
             return True
         gi.picked_up = was_picked_up
         self.msg_important("pyxel.pack_too_full")
@@ -6624,6 +6700,10 @@ class Game:
         self.persist_settings()
 
     def enter_difficulty_select(self):
+        if variant_fixed_difficulty():
+            self.difficulty = variant_fixed_difficulty()
+            self.request_title_new_game()
+            return
         self.difficulty_cursor = DIFFICULTY_ORDER.index(self.difficulty) if self.difficulty in DIFFICULTY_ORDER else 1
         self.difficulty_cursor_restored = True
         self.st = ST_DIFFICULTY
@@ -8063,6 +8143,11 @@ class Game:
             pyxel.dither(1.0)
         if title_alpha < 1.0:
             return
+        title_lines = variant_title_lines()
+        title_y = 42 if is_nyandor_variant() else 58
+        for i, line in enumerate(title_lines):
+            col = TITLE_MENU_SELECTED_COL if i == 0 else TITLE_MENU_TEXT_COL
+            self.txt_centered(TITLE_LOGO_RIGHT_X // 2 + 34, title_y + i * 12, line, col)
         online = self.is_online_mode()
         if getattr(self, "lang", LANG_EN) == LANG_JA:
             items = ["運命の洞窟に入る", "スコアボード", "ゲストモード" if online else "オンラインモード"]
@@ -9054,8 +9139,10 @@ class Game:
         bx,by,bw,bh = self.center_rect(334, 176)
         self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.result_victory"), UI_HEADING_SCREEN))
         p=self.p; x=bx+18; y=by+26
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_1"),UI_HILITE_COL); y+=16
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.victory_line_2"),UI_HILITE_COL); y+=24
+        line_1 = "ui.nyandor_victory_line_1" if is_nyandor_variant() else "ui.victory_line_1"
+        line_2 = "ui.nyandor_victory_line_2" if is_nyandor_variant() else "ui.victory_line_2"
+        self.txt(x,y,TextCatalog.msg(self.lang, line_1),UI_HILITE_COL); y+=16
+        self.txt(x,y,TextCatalog.msg(self.lang, line_2),UI_HILITE_COL); y+=24
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_gold", gold=p.gold),UI_HILITE_COL); y+=14
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
         self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_exp", exp=p.exp),UI_TEXT_COL); y+=14

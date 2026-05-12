@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_DIR="${ROOT_DIR}/web"
+OUT_DIR="${PYXEL_ROGUE_WEB_OUT_DIR:-${ROOT_DIR}/web}"
 APP_NAME="pyxel-rogue"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pyxel-rogue-web.XXXXXX")"
 STAGE_DIR="${WORK_DIR}/${APP_NAME}"
@@ -16,6 +16,21 @@ mkdir -p "${STAGE_DIR}" "${OUT_DIR}"
 cp -p "${ROOT_DIR}/rogue.py" "${STAGE_DIR}/"
 cp -Rp "${ROOT_DIR}/pyxel_rogue" "${STAGE_DIR}/pyxel_rogue"
 cp -Rp "${ROOT_DIR}/assets" "${STAGE_DIR}/assets"
+
+python3 - "${STAGE_DIR}/rogue.py" <<'PY'
+import os
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+variant = os.environ.get("PYXEL_ROGUE_VARIANT", "rogue")
+text = path.read_text(encoding="utf-8")
+old = 'GAME_VARIANT = normalize_variant(os.environ.get("PYXEL_ROGUE_VARIANT"))'
+new = f"GAME_VARIANT = normalize_variant({variant!r})"
+if old not in text:
+    raise SystemExit("GAME_VARIANT placeholder not found")
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
 
 if [[ -n "${PYXEL_ROGUE_SCORE_URL:-}" ]]; then
     python3 - "${STAGE_DIR}/pyxel_rogue/rogue_scores.py" <<'PY'

@@ -10170,6 +10170,85 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_WIN)
         self.assertIn("you escaped with the Amulet of Yendor!", game.msgs)
 
+    def test_nyandor_variant_fixes_normal_difficulty_and_title_lines(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = new_game(seed=262, difficulty="easy")
+
+            self.assertEqual(game.difficulty, "normal")
+            self.assertIn("5F PLAYABLE BETA", rogue.variant_title_lines())
+            self.assertIn("CAT AND AMULET OF NYANDOR", rogue.variant_title_lines())
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_cat_spawns_on_depth_five(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = new_game(seed=263)
+            game.p.depth = rogue.NYANDOR_TARGET_DEPTH - 1
+
+            game.descend()
+
+            cats = [item for item in game.gitems if rogue.is_nyandor_cat_item(item)]
+            self.assertEqual(game.p.depth, rogue.NYANDOR_TARGET_DEPTH)
+            self.assertEqual(len(cats), 1)
+            self.assertEqual(cats[0].sym, "c")
+            self.assertEqual(game.ident.name(cats[0]), rogue.NYANDOR_CAT_NAME)
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_cat_pickup_cannot_drop_and_wins_on_surface(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = new_game(seed=264)
+            set_open_floor(game)
+            cat = rogue.Item(rogue.CAT_AMULET, 0)
+            cat.variant_item = "nyandor_cat"
+            cat.x, cat.y = game.p.x, game.p.y
+            game.gitems = [cat]
+
+            game.do_pickup()
+
+            self.assertTrue(game.p.has_amulet)
+            self.assertIn(cat, game.p.inv)
+            self.assertIn("you recover the cat. it objects", game.msgs)
+
+            turn_before_drop = game.turn
+            self.assertFalse(game.drop(cat))
+            self.assertEqual(game.turn, turn_before_drop)
+            self.assertTrue(game.p.has_amulet)
+            self.assertIn(cat, game.p.inv)
+            self.assertIn("the asset is not to be dropped", game.msgs)
+
+            game.p.depth = 1
+            game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+            game.use_stairs()
+
+            self.assertEqual(game.st, rogue.ST_WIN)
+            self.assertIn("you return the guild property. the guild is satisfied", game.msgs)
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
+    def test_nyandor_depth_five_blocks_deeper_descent_without_cat(self):
+        old_variant = rogue.GAME_VARIANT
+        try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
+            game = new_game(seed=265)
+            set_open_floor(game)
+            game.p.depth = rogue.NYANDOR_TARGET_DEPTH
+            game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+
+            game.use_stairs()
+
+            self.assertEqual(game.p.depth, rogue.NYANDOR_TARGET_DEPTH)
+            self.assertEqual(game.turn, 0)
+            self.assertIn("the assignment does not authorize deeper travel", game.msgs)
+        finally:
+            rogue.GAME_VARIANT = old_variant
+
     def test_ident_table_names_in_both_languages(self):
         random.seed(3)
         ident = rogue.IdentTable()

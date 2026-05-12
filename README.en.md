@@ -30,13 +30,19 @@ You can launch the game in a browser with Pyxel Web Launcher.
 
 The web version lets you try the game without installing Python or Pyxel locally. The URL enables the virtual gamepad, which is useful for phones and tablets.
 
-For faster device debugging, build a local HTML file:
+For faster device debugging, build a local HTML file. By default this builds the main `rogue` variant:
 
 ```bash
 tools/build_web.sh
 ```
 
 The output is `web/index.html`.
+To build the Nyandor beta:
+
+```bash
+PYXEL_ROGUE_VARIANT=nyandor tools/build_web.sh
+```
+
 To check that the tracked web build is current after program changes:
 
 ```bash
@@ -50,6 +56,7 @@ PYXEL_ROGUE_SCORE_URL="new URL" tools/deploy_pages_clean.sh
 ```
 
 Set `PYXEL_ROGUE_SCORE_URL` to the online scoreboard deployment URL. Keep the URL out of the repository and pass it only as an environment variable when deploying.
+The Pages root is built as the `Cat and Amulet of Nyandor` beta, while `/rogue/` is built as the main debug build.
 
 ## Download and Play Locally
 

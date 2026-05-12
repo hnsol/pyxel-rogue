@@ -22,6 +22,12 @@ fi
 
 echo "Building Web deploy with PYXEL_ROGUE_SCORE_URL=${PYXEL_ROGUE_SCORE_URL}"
 
+PYXEL_ROGUE_VARIANT=nyandor \
+PYXEL_ROGUE_WEB_OUT_DIR="${ROOT_DIR}/web" \
+"${ROOT_DIR}/tools/build_web.sh"
+
+PYXEL_ROGUE_VARIANT=rogue \
+PYXEL_ROGUE_WEB_OUT_DIR="${ROOT_DIR}/web/rogue" \
 "${ROOT_DIR}/tools/build_web.sh"
 
 if git -C "${ROOT_DIR}" ls-remote --exit-code --heads "${REMOTE}" "${BRANCH}" >/dev/null 2>&1; then
@@ -39,11 +45,21 @@ cp "${ROOT_DIR}/web/index.html" "${PAGES_DIR}/index.html"
 if [[ -f "${ROOT_DIR}/web/pyxel-rogue.pyxapp" ]]; then
     cp "${ROOT_DIR}/web/pyxel-rogue.pyxapp" "${PAGES_DIR}/pyxel-rogue.pyxapp"
 fi
+if [[ -d "${ROOT_DIR}/web/rogue" ]]; then
+    mkdir -p "${PAGES_DIR}/rogue"
+    cp "${ROOT_DIR}/web/rogue/index.html" "${PAGES_DIR}/rogue/index.html"
+    if [[ -f "${ROOT_DIR}/web/rogue/pyxel-rogue.pyxapp" ]]; then
+        cp "${ROOT_DIR}/web/rogue/pyxel-rogue.pyxapp" "${PAGES_DIR}/rogue/pyxel-rogue.pyxapp"
+    fi
+fi
 touch "${PAGES_DIR}/.nojekyll"
 
 git -C "${PAGES_DIR}" add index.html .nojekyll
 if [[ -f "${PAGES_DIR}/pyxel-rogue.pyxapp" ]]; then
     git -C "${PAGES_DIR}" add -f pyxel-rogue.pyxapp
+fi
+if [[ -d "${PAGES_DIR}/rogue" ]]; then
+    git -C "${PAGES_DIR}" add -f rogue
 fi
 
 if git -C "${PAGES_DIR}" diff --cached --quiet; then
