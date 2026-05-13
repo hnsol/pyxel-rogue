@@ -1,11 +1,29 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
+:root {
+  --paper: #100f0f;
+  --base: #1c1b1a;
+  --ui: #282726;
+  --ui-2: #343331;
+  --tx: #cecdc3;
+  --tx-2: #878580;
+  --tx-3: #575653;
+  --yellow: #d0a215;
+  --orange: #da702c;
+  --red: #d14d41;
+  --green: #879a39;
+  --cyan: #3aa99f;
+  --blue: #4385be;
+  --purple: #8b7ec8;
+  --magenta: #ce5d97;
+}
+
 body {
   width: 1200px;
   height: 630px;
   overflow: hidden;
-  background: #fffcf0;
+  background: var(--paper);
   font-family: 'Courier New', Courier, monospace;
 }
 
@@ -42,7 +60,7 @@ body {
   background: linear-gradient(
     to right,
     transparent 40%,
-    #fffcf0 100%
+    var(--paper) 100%
   );
 }
 
@@ -54,7 +72,7 @@ body {
   background: linear-gradient(
     to bottom,
     transparent 60%,
-    rgba(255,252,240,0.3) 100%
+    rgba(16,15,15,0.55) 100%
   );
   z-index: 1;
 }
@@ -63,7 +81,7 @@ body {
 .panel {
   flex: 1;
   height: 630px;
-  background: #fffcf0;
+  background: var(--paper);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -80,8 +98,8 @@ body {
 }
 
 .badge {
-  background: #ad8301;
-  color: #fffcf0;
+  background: var(--yellow);
+  color: var(--paper);
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 2.5px;
@@ -89,8 +107,8 @@ body {
 }
 
 .badge-outline {
-  border: 1px solid #dad8ce;
-  color: #6f6e69;
+  border: 1px solid var(--ui-2);
+  color: var(--tx-2);
   font-size: 11px;
   letter-spacing: 2px;
   padding: 6px 12px;
@@ -98,7 +116,7 @@ body {
 
 .game-name {
   font-size: 13px;
-  color: #6f6e69;
+  color: var(--cyan);
   letter-spacing: 3px;
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -107,7 +125,7 @@ body {
 .headline {
   font-size: 52px;
   font-weight: 900;
-  color: #100f0f;
+  color: var(--tx);
   line-height: 1.05;
   margin-bottom: 8px;
   font-family: Georgia, serif;
@@ -116,13 +134,13 @@ body {
 }
 
 .headline em {
-  color: #bc5215;
+  color: var(--orange);
   font-style: italic;
 }
 
 .subline {
   font-size: 17px;
-  color: #b7b5ac;
+  color: var(--tx-2);
   letter-spacing: 1px;
   margin-bottom: 28px;
   font-family: 'Courier New', monospace;
@@ -132,7 +150,7 @@ body {
 .divider {
   width: 40px;
   height: 2px;
-  background: #ad8301;
+  background: var(--yellow);
   margin-bottom: 20px;
 }
 
@@ -143,7 +161,7 @@ body {
 
 .mission-label {
   font-size: 11px;
-  color: #bc5215;
+  color: var(--magenta);
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -151,7 +169,7 @@ body {
 
 .mission-text {
   font-size: 14px;
-  color: #6f6e69;
+  color: var(--tx-2);
   line-height: 2;
 }
 
@@ -164,8 +182,8 @@ body {
 }
 
 .feat {
-  border: 1px solid #e6e4d9;
-  color: #b7b5ac;
+  border: 1px solid var(--ui-2);
+  color: var(--tx-2);
   font-size: 11px;
   letter-spacing: 1.5px;
   padding: 5px 10px;
@@ -180,8 +198,8 @@ body {
 }
 
 .cta-btn {
-  background: #ad8301;
-  color: #fffcf0;
+  background: var(--green);
+  color: var(--paper);
   font-size: 14px;
   font-weight: bold;
   letter-spacing: 1.5px;
@@ -191,7 +209,7 @@ body {
 
 .cta-note {
   font-size: 12px;
-  color: #b7b5ac;
+  color: var(--tx-3);
   letter-spacing: 1px;
   line-height: 1.8;
 }
@@ -205,29 +223,29 @@ body {
 
   <div class="panel">
     <div class="badge-row">
-      <div class="badge">PLAYABLE BETA</div>
-      <div class="badge-outline">5F ONLY</div>
+      <div class="badge">ORIGIN BUILD</div>
+      <div class="badge-outline">ROGUE V5</div>
     </div>
 
-    <div class="game-name">Cat and Amulet of Nyandor</div>
+    <div class="game-name">Pyxel Rogue</div>
 
-    <div class="headline">猫を<em>連れて</em>、<br>帰れ。</div>
-    <div class="subline">地下5階。ブラウザで今すぐ。</div>
+    <div class="headline">原点にして<br><em>究極</em></div>
+    <div class="subline">ASCIIローグを、ブラウザで。</div>
 
     <div class="divider"></div>
 
     <div class="mission">
-      <div class="mission-label">Mission Brief</div>
+      <div class="mission-label">Core Promise</div>
       <div class="mission-text">
-        Guild property is missing on level 5.<br>
-        Recover the cat. Return to the surface.
+        Rogue 5.4.4 の緊張感を、Pyxelで。<br>
+        迷い、拾い、識別し、生きて帰れ。
       </div>
     </div>
 
     <div class="features">
-      <div class="feat">約10分で遊べる</div>
-      <div class="feat">ゲームパッド推奨</div>
-      <div class="feat">Normal Mode</div>
+      <div class="feat">ASCII Dungeon</div>
+      <div class="feat">Rogue V5</div>
+      <div class="feat">Gamepad Ready</div>
       <div class="feat">Gamepad Recommended</div>
       <div class="feat">Browser Play</div>
       <div class="feat">Free</div>
@@ -238,7 +256,7 @@ body {
       <a class="cta-btn" href="https://x.gd/Ero21" target="_blank" style="text-decoration:none;display:inline-block;">▶ &nbsp;Play Now</a>
       <div class="cta-note">
         インストール不要<br>
-        ブラウザで即プレイ
+        冒険は一手目から
       </div>
     </div>
   </div>
