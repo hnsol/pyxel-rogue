@@ -122,7 +122,7 @@ function doGet(e) {
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
   const variant = scoreVariant(e.parameter.variant);
-  const ctx = scoreContext();
+  const ctx = scoreContext(variant);
   if (period === "weekly") {
     ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx, variant);
   }
@@ -141,18 +141,22 @@ function doPost(e) {
   if (body.action === "registerUser") return json(registerUser(body));
   if (body.action === "linkUser") return json(linkUser(body));
   if (body.action === "syncScoreboard") return json(syncScoreboard(body));
-  if (body.action === "guestScoreboardSync") return json(recordGuestScoreboardSync());
+  if (body.action === "guestScoreboardSync") return json(recordGuestScoreboardSync(body.variant));
   if (body.action === "submit") {
-    appendScore(body.entry || {});
+    appendScore(body.entry || {}, body.variant);
     return json({ ok: true });
   }
   return json({ ok: false });
 }
 
-function userSheet() {
+function tabName(baseName, variant) {
+  return baseName + "_" + scoreVariant(variant);
+}
+
+function userSheet(variant) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(USER_SHEET_NAME);
-  if (!sh) sh = ss.insertSheet(USER_SHEET_NAME);
+  let sh = ss.getSheetByName(tabName(USER_SHEET_NAME, variant));
+  if (!sh) sh = ss.insertSheet(tabName(USER_SHEET_NAME, variant));
   if (sh.getLastRow() === 0) {
     sh.appendRow([
       "user_name",
@@ -168,18 +172,18 @@ function userSheet() {
   return sh;
 }
 
-function guestMetricsSheet() {
+function guestMetricsSheet(variant) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(GUEST_METRICS_SHEET_NAME);
-  if (!sh) sh = ss.insertSheet(GUEST_METRICS_SHEET_NAME);
+  let sh = ss.getSheetByName(tabName(GUEST_METRICS_SHEET_NAME, variant));
+  if (!sh) sh = ss.insertSheet(tabName(GUEST_METRICS_SHEET_NAME, variant));
   if (sh.getLastRow() === 0) {
     sh.appendRow(["timestamp", "event"]);
   }
   return sh;
 }
 
-function recordGuestScoreboardSync() {
-  guestMetricsSheet().appendRow([new Date().toISOString(), "scoreboard_sync"]);
+function recordGuestScoreboardSync(variant) {
+  guestMetricsSheet(variant).appendRow([new Date().toISOString(), "scoreboard_sync"]);
   return { ok: true };
 }
 
@@ -188,9 +192,9 @@ function userIndex(data) {
   return Object.fromEntries(header.map((h, i) => [h, i]));
 }
 
-function findUser(userId) {
+function findUser(userId, variant) {
   const clean = cleanUserId(userId);
-  const sh = userSheet();
+  const sh = userSheet(variant);
   const data = sh.getDataRange().getValues();
   const idx = userIndex(data);
   for (let r = 1; r < data.length; r++) {
@@ -204,7 +208,7 @@ function findUser(userId) {
 function checkUser(body) {
   const userName = cleanUserId(body.user_name);
   if (isReservedUserId(userName)) return { ok: true, exists: true, reserved: true };
-  return { ok: true, exists: Boolean(findUser(userName)), reserved: false };
+  return { ok: true, exists: Boolean(findUser(userName, body.variant)), reserved: false };
 }
 
 function registerUser(body) {
@@ -212,9 +216,9 @@ function registerUser(body) {
   const password = cleanUserPassword(body.user_password);
   if (isReservedUserId(userId)) return { ok: false, status: "reserved" };
   if (!password) return { ok: false, status: "bad_password" };
-  if (findUser(userId)) return { ok: false, status: "exists" };
+  if (findUser(userId, body.variant)) return { ok: false, status: "exists" };
   const token = makeServerToken();
-  const sh = userSheet();
+  const sh = userSheet(body.variant);
   sh.appendRow([
     userId,
     password,
@@ -236,7 +240,7 @@ function registerUser(body) {
 }
 
 function linkUser(body) {
-  const user = findUser(body.user_name);
+  const user = findUser(body.user_name, body.variant);
   const password = cleanUserPassword(body.user_password);
   if (!user || !password) return { ok: false, status: "auth_failed" };
   const lockedUntil = user.values[user.idx.locked_until];
@@ -266,7 +270,7 @@ function linkUser(body) {
 }
 
 function syncScoreboard(body) {
-  const user = findUser(body.user_name);
+  const user = findUser(body.user_name, body.variant);
   if (!user || String(user.values[user.idx.server_token]) !== String(body.server_token || "")) {
     return { ok: false, status: "auth_failed" };
   }
@@ -274,7 +278,7 @@ function syncScoreboard(body) {
   const entries = Array.isArray(body.entries) ? body.entries : [];
   const last = String(user.values[user.idx.last_sync_at] || "");
   const next = nextSyncAt(last);
-  const firstScorePost = entries.length > 0 && !hasUserScore(userName);
+  const firstScorePost = entries.length > 0 && !hasUserScore(userName, body.variant);
   if (next && new Date(next).getTime() > Date.now() && !firstScorePost) {
     return {
       ok: false,
@@ -296,7 +300,7 @@ function syncScoreboard(body) {
   entries.forEach((entry) => appendScore(Object.assign({}, entry, {
     user_name: userName,
     player_name: userName,
-  })) && posted++);
+  }), body.variant) && posted++);
   const now = new Date().toISOString();
   user.sheet.getRange(user.row, user.idx.last_sync_at + 1).setValue(now);
   return {
@@ -308,9 +312,9 @@ function syncScoreboard(body) {
   };
 }
 
-function hasUserScore(userName) {
+function hasUserScore(userName, variant) {
   const clean = cleanName(userName);
-  const data = sheet().getDataRange().getValues();
+  const data = sheet(variant).getDataRange().getValues();
   const header = data.shift();
   const idx = Object.fromEntries(header.map((h, i) => [h, i]));
   return data.some((row) =>
@@ -329,10 +333,10 @@ function makeServerToken() {
   return Utilities.getUuid().replace(/-/g, "") + "-" + Math.floor(Math.random() * 1000000);
 }
 
-function sheet() {
+function sheet(variant) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) sh = ss.insertSheet(SHEET_NAME);
+  let sh = ss.getSheetByName(tabName(SHEET_NAME, variant));
+  if (!sh) sh = ss.insertSheet(tabName(SHEET_NAME, variant));
   if (sh.getLastRow() === 0) {
     sh.appendRow([
       "timestamp",
@@ -354,8 +358,8 @@ function sheet() {
   return sh;
 }
 
-function scoreContext() {
-  const sh = sheet();
+function scoreContext(variant) {
+  const sh = sheet(variant);
   const data = sh.getDataRange().getValues();
   const header = data.shift();
   return {
@@ -380,13 +384,13 @@ function flushScoreRows(ctx) {
   return rows.length;
 }
 
-function appendScore(entry) {
+function appendScore(entry, variant) {
   const now = entry.timestamp || new Date().toISOString();
   const p = periodsFor(new Date(now));
   const name = cleanName(entry.player_name);
   const scoreId = String(entry.score_id || scoreIdFor(entry, now, name));
-  if (scoreIdExists(scoreId)) return false;
-  const sh = sheet();
+  if (scoreIdExists(scoreId, variant)) return false;
+  const sh = sheet(variant);
   sh.appendRow([
     now,
     entry.period_day || p.period_day,
@@ -412,9 +416,9 @@ function ensureScoreIdColumn(sh) {
   }
 }
 
-function scoreIdExists(scoreId) {
+function scoreIdExists(scoreId, variant) {
   if (!scoreId) return false;
-  const sh = sheet();
+  const sh = sheet(variant);
   const data = sh.getDataRange().getValues();
   const header = data.shift();
   const idx = header.indexOf("score_id");
@@ -464,7 +468,7 @@ function includeRowForVariant(row, idx, variant) {
 }
 
 function topScores(period, key, ctx, variant) {
-  const context = ctx || scoreContext();
+  const context = ctx || scoreContext(variant);
   const data = rowsForContext(context);
   const idx = context.idx;
   const field = periodField(period);
@@ -510,7 +514,7 @@ function scoreRank(params) {
 }
 
 function allScores(period, key, ctx, variant) {
-  const context = ctx || scoreContext();
+  const context = ctx || scoreContext(variant);
   const data = rowsForContext(context);
   const idx = context.idx;
   const field = periodField(period);
@@ -540,7 +544,7 @@ function periodCellValue(value, field) {
 }
 
 function seedDummy(variant) {
-  const ctx = scoreContext();
+  const ctx = scoreContext(variant);
   const rows = ensureScoreboardDummyContext(ctx, scoreVariant(variant));
   flushScoreRows(ctx);
   return rows;
@@ -586,7 +590,7 @@ function ensureSeededDummyRows(period, key, targetCount, ctx, variant) {
 }
 
 function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx, variant) {
-  const context = ctx || scoreContext();
+  const context = ctx || scoreContext(variant);
   const v = scoreVariant(variant);
   const scores = topScores(period, key, context, v);
   const used = new Set(scores.map((r) => cleanName(r.player_name)));
@@ -626,7 +630,7 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx
 }
 
 function seededDummyNames(period, key, ctx, variant) {
-  const context = ctx || scoreContext();
+  const context = ctx || scoreContext(variant);
   const data = rowsForContext(context);
   const idx = context.idx;
   const prefix = dummyScoreIdPrefix(period, key, variant);

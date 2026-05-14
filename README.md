@@ -53,10 +53,10 @@ tools/check_web_build.sh
 GitHub Pages は `gh-pages` ブランチのrootを公開元にします。`main` のrootや `docs/` に生成物を置かず、次で `web/` の成果物を公開ブランチへ反映します。Pages root は `Cat and Amulet of Nyandor` 体験版、`/rogue/` は本編デバッグ版として生成します。
 
 ```bash
-PYXEL_ROGUE_SCORE_URL="新URL" tools/deploy_pages_clean.sh
+PYXEL_ROGUE_SCORE_URL="スコアボードURL" tools/deploy_pages_clean.sh
 ```
 
-`PYXEL_ROGUE_SCORE_URL` にはオンラインスコアボードのデプロイURLを指定します。URLはリポジトリに保存せず、デプロイ時だけ環境変数で渡します。
+`PYXEL_ROGUE_SCORE_URL` にはオンラインスコアボードのデプロイURLを指定します。1つのGoogle Spreadsheet内でvariant別タブ（`scores_nyandor` / `scores_rogue` など）を使い分けます。URLはリポジトリに保存せず、デプロイ時だけ環境変数で渡します。
 
 ## 手元でダウンロードして遊ぶ
 

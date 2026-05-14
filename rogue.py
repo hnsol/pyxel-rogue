@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260514_2348"
+UI_BUILD = "260515_0008"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6409,7 +6409,7 @@ class Game:
 
     def perform_online_user_check(self):
         user_name = getattr(self, "online_pending_user_name", "rogue54")
-        result = check_online_user(user_name)
+        result = check_online_user(user_name, variant=variant_scoreboard_key())
         if not result.get("ok"):
             self.online_sync_result = "Could not check user. Try again."
             return
@@ -6495,9 +6495,9 @@ class Game:
         pin = "".join(getattr(self, "online_password_chars", []))
         user_name = getattr(self, "online_pending_user_name", "rogue54")
         if action == "link_user":
-            result = link_online_user(user_name, pin)
+            result = link_online_user(user_name, pin, variant=variant_scoreboard_key())
         else:
-            result = register_online_user(user_name, pin)
+            result = register_online_user(user_name, pin, variant=variant_scoreboard_key())
             if result.get("status") in ("exists", "name_used"):
                 self.online_password_mode = "link"
                 self.online_sync_result = "Name exists. Enter its 6-digit PIN."
@@ -6568,52 +6568,71 @@ class Game:
         else:
             online = fetch_online_scores(period, timestamp=now)
         key = self.scoreboard_period_key(period, now)
-        local = load_score_entries()
-        guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         if online is None:
             self.online_score_load_result = "failed"
             online = load_online_score_cache(period, key)
-            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10, difficulty=self.difficulty)
+            online = self.online_dedicated_variant_entries(online)
+            scores = []
             if online:
-                entries = online if guest_mode else online + local
-                scores = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
+                scores = get_period_scores(online, period, key, limit=10, difficulty=self.difficulty)
         elif online:
+            online = self.online_dedicated_variant_entries(online)
             save_online_score_cache(period, key, online)
-            entries = online if guest_mode else online + local
-            scores = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
+            scores = get_period_scores(online, period, key, limit=10, difficulty=self.difficulty)
         else:
             self.online_score_load_result = ""
             online = load_online_score_cache(period, key)
-            scores = [] if guest_mode else get_period_scores(local, period, key, limit=10, difficulty=self.difficulty)
+            online = self.online_dedicated_variant_entries(online)
+            scores = []
             if online:
-                entries = online if guest_mode else online + local
-                scores = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
+                scores = get_period_scores(online, period, key, limit=10, difficulty=self.difficulty)
         self.online_scores = scores
         self.online_score_cache[period] = scores
         self.online_score_loaded.add(period)
         return scores
+
+    def online_dedicated_variant_entries(self, entries):
+        score_variant = variant_scoreboard_key()
+        if not score_variant:
+            return entries
+        return [
+            {**entry, "variant": str(entry.get("variant") or score_variant)}
+            for entry in entries
+        ]
 
     def display_online_period_scores(self, period):
         scores = self.online_score_cache.get(period, [])
         if period == SCOREBOARD_PERIOD_LOCAL:
             return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
-            if normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True):
-                return get_period_scores(scores, period, self.scoreboard_period_key(period), limit=10, difficulty=self.difficulty)
             key = self.scoreboard_period_key(period)
-            return get_period_scores(scores + load_score_entries(), period, key, limit=10, difficulty=self.difficulty)
+            return get_period_scores(self.online_dedicated_variant_entries(scores), period, key, limit=10, difficulty=self.difficulty)
         return scores
 
-    def guest_local_best_score_for_period(self, period):
+    def current_local_best_score_for_period(self, period, online_scores=None):
         if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             return None
         key = self.scoreboard_period_key(period)
-        guest_entries = [
+        player_name = self.current_score_player_name().lower()
+        local_entries = [
             entry for entry in load_score_entries()
-            if str(entry.get("player_name", "")).lower() == "guest"
+            if str(entry.get("player_name", "")).lower() == player_name
         ]
-        scores = get_period_scores(guest_entries, period, key, limit=1, difficulty=self.difficulty)
-        return scores[0] if scores else None
+        scores = get_period_scores(local_entries, period, key, limit=1, difficulty=self.difficulty)
+        if not scores:
+            return None
+        best = scores[0]
+        for online in online_scores or []:
+            best_id = str(best.get("score_id", ""))
+            online_id = str(online.get("score_id", ""))
+            if best_id and best_id == online_id:
+                return None
+            if (
+                str(best.get("player_name", "")).lower() == str(online.get("player_name", "")).lower()
+                and int(best.get("score", 0)) == int(online.get("score", 0))
+            ):
+                return None
+        return best
 
     def refresh_online_scoreboard_periods(self):
         ok = True
@@ -6637,7 +6656,7 @@ class Game:
             self.online_score_load_result = ""
             self.online_sync_status = "loading scoreboard..."
             try:
-                record_guest_scoreboard_sync()
+                record_guest_scoreboard_sync(variant=variant_scoreboard_key())
             except Exception:
                 pass
             if not self.refresh_online_scoreboard_periods():
@@ -6665,6 +6684,7 @@ class Game:
         result = sync_online_scoreboard(
             getattr(self, "online_profile", None),
             entries,
+            variant=variant_scoreboard_key(),
         )
         status = str(result.get("status", "success" if result.get("ok") else "failed"))
         if result.get("ok"):
@@ -7743,9 +7763,8 @@ class Game:
             col = SCOREBOARD_HILITE_COL if row.highlight else SCOREBOARD_TEXT_COL
             self.txt(x, y, row.line[:56], col)
             y += 10
-        profile = normalize_online_profile(getattr(self, "online_profile", None))
-        if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON) and profile.get("local_only", True):
-            local_best = self.guest_local_best_score_for_period(period)
+        if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
+            local_best = self.current_local_best_score_for_period(period, scores)
             local_best_row = rogue_online_scoreboard.score_guest_local_best_row(local_best, period, self.lang)
             if local_best_row:
                 y += 10

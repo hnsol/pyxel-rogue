@@ -608,6 +608,7 @@ def register_online_user(
     user_name: str,
     user_password: str,
     url: str | None = None,
+    variant: str | None = None,
 ) -> dict[str, Any]:
     clean_id = sanitize_user_id(user_name)
     if not can_register_user_id(clean_id):
@@ -617,6 +618,8 @@ def register_online_user(
         "user_name": clean_id,
         "user_password": validate_user_password(user_password),
     }
+    if variant:
+        payload["variant"] = str(variant)
     try:
         data = _http_json(url if url is not None else ONLINE_SCORE_URL, payload)
         return data if isinstance(data, dict) else {"ok": False, "status": "failed"}
@@ -628,6 +631,7 @@ def link_online_user(
     user_name: str,
     user_password: str,
     url: str | None = None,
+    variant: str | None = None,
 ) -> dict[str, Any]:
     clean_id = sanitize_user_id(user_name)
     payload = {
@@ -635,6 +639,8 @@ def link_online_user(
         "user_name": clean_id,
         "user_password": validate_user_password(user_password),
     }
+    if variant:
+        payload["variant"] = str(variant)
     try:
         data = _http_json(url if url is not None else ONLINE_SCORE_URL, payload)
         return data if isinstance(data, dict) else {"ok": False, "status": "failed"}
@@ -642,9 +648,11 @@ def link_online_user(
         return {"ok": False, "status": "failed"}
 
 
-def check_online_user(user_name: str, url: str | None = None) -> dict[str, Any]:
+def check_online_user(user_name: str, url: str | None = None, variant: str | None = None) -> dict[str, Any]:
     clean = sanitize_user_id(user_name)
     payload = {"action": "checkUser", "user_name": clean}
+    if variant:
+        payload["variant"] = str(variant)
     try:
         data = _http_json(url if url is not None else ONLINE_SCORE_URL, payload)
         return data if isinstance(data, dict) else {"ok": False, "status": "failed", "exists": False}
@@ -656,6 +664,7 @@ def sync_online_scoreboard(
     profile: dict[str, Any],
     entries: list[dict[str, Any]],
     url: str | None = None,
+    variant: str | None = None,
 ) -> dict[str, Any]:
     clean = normalize_online_profile(profile)
     if clean["local_only"] or not clean["server_token"]:
@@ -667,6 +676,8 @@ def sync_online_scoreboard(
         "entries": [with_score_periods(entry) for entry in entries],
         "periods": [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON],
     }
+    if variant:
+        payload["variant"] = str(variant)
     try:
         data = _http_json(url if url is not None else ONLINE_SCORE_URL, payload)
         return data if isinstance(data, dict) else {"ok": False, "status": "failed", "scores": {}}
@@ -674,12 +685,15 @@ def sync_online_scoreboard(
         return {"ok": False, "status": "failed", "scores": {}}
 
 
-def record_guest_scoreboard_sync(url: str | None = None) -> bool:
+def record_guest_scoreboard_sync(url: str | None = None, variant: str | None = None) -> bool:
     target = url if url is not None else ONLINE_SCORE_URL
     if not target:
         return False
     try:
-        data = _http_json(target, {"action": "guestScoreboardSync"})
+        payload = {"action": "guestScoreboardSync"}
+        if variant:
+            payload["variant"] = str(variant)
+        data = _http_json(target, payload)
         return bool(isinstance(data, dict) and data.get("ok"))
     except Exception:
         return False

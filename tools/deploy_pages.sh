@@ -13,19 +13,24 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ -z "${PYXEL_ROGUE_SCORE_URL:-}" ]]; then
+SCORE_URL="${PYXEL_ROGUE_SCORE_URL:-}"
+
+if [[ -z "${SCORE_URL}" ]]; then
     echo "ERROR: PYXEL_ROGUE_SCORE_URL is not set." >&2
     echo "Set the online scoreboard endpoint before deploying:" >&2
-    echo '  PYXEL_ROGUE_SCORE_URL="新URL" tools/deploy_pages_clean.sh' >&2
+    echo '  PYXEL_ROGUE_SCORE_URL="Scoreboard URL" tools/deploy_pages_clean.sh' >&2
     exit 1
 fi
 
-echo "Building Web deploy with PYXEL_ROGUE_SCORE_URL=${PYXEL_ROGUE_SCORE_URL}"
+echo "Building Nyandor Web deploy with PYXEL_ROGUE_SCORE_URL=${SCORE_URL}"
 
+PYXEL_ROGUE_SCORE_URL="${SCORE_URL}" \
 PYXEL_ROGUE_VARIANT=nyandor \
 PYXEL_ROGUE_WEB_OUT_DIR="${ROOT_DIR}/web" \
 "${ROOT_DIR}/tools/build_web.sh"
 
+echo "Building Rogue Web deploy with PYXEL_ROGUE_SCORE_URL=${SCORE_URL}"
+PYXEL_ROGUE_SCORE_URL="${SCORE_URL}" \
 PYXEL_ROGUE_VARIANT=rogue \
 PYXEL_ROGUE_WEB_OUT_DIR="${ROOT_DIR}/web/rogue" \
 "${ROOT_DIR}/tools/build_web.sh"
