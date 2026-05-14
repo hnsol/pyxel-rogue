@@ -89,12 +89,12 @@ class OnlineScoreboardModuleTest(unittest.TestCase):
 
     def test_result_lines_split_translated_messages_for_scoreboard_box(self):
         self.assertEqual(
-            online_result_lines("Ranking refreshed. POST once per 24h.", LANG_EN),
-            ["Ranking refreshed.", "POST once per 24h."],
+            online_result_lines("Ranking refreshed. POST once per hour.", LANG_EN),
+            ["Ranking refreshed.", "POST once per hour."],
         )
         self.assertEqual(
-            online_result_lines("Ranking refreshed. POST once per 24h.", LANG_JA),
-            ["ランキング更新。", "POSTは24時間に1回。"],
+            online_result_lines("Ranking refreshed. POST once per hour.", LANG_JA),
+            ["ランキング更新。", "POSTは1時間に1回。"],
         )
         self.assertEqual(online_result_lines("one two three four", LANG_EN, limit=9), ["one two", "three"])
 

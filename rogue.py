@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260515_0008"
+UI_BUILD = "260515_0041"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6545,7 +6545,7 @@ class Game:
             "No local scores yet.",
             "Ranking updated. No local scores yet.",
             "Ranking refreshed. No local scores yet.",
-            "Ranking refreshed. POST once per 24h.",
+            "Ranking refreshed. POST once per hour.",
             "Score posted. Ranking refreshed.",
         ):
             self.online_sync_result = ""
@@ -6672,13 +6672,13 @@ class Game:
         post_allowed = bool(getattr(self, "online_sync_post_allowed", True))
         if not entries or not post_allowed:
             if entries:
-                self.online_sync_result = "Ranking refreshed. POST once per 24h."
+                self.online_sync_result = "Ranking refreshed. POST once per hour."
             else:
                 self.online_sync_result = "Ranking refreshed. No local scores yet."
             self.online_score_load_result = ""
             self.online_sync_status = "loading scoreboard..."
             if not self.refresh_online_scoreboard_periods():
-                self.online_sync_result = "Refresh failed. POST once per 24h." if entries else "Refresh failed. No local scores yet."
+                self.online_sync_result = "Refresh failed. POST once per hour." if entries else "Refresh failed. No local scores yet."
             status = "cooldown_refresh" if entries else "no_local_scores"
             return {"ok": True, "status": status, "posted_count": 0}
         result = sync_online_scoreboard(
@@ -6690,11 +6690,11 @@ class Game:
         if result.get("ok"):
             self.online_sync_result = "Score posted. Ranking refreshed." if entries else "Ranking refreshed. No local scores yet."
         elif status == "cooldown":
-            self.online_sync_result = "Ranking refreshed. POST once per 24h."
+            self.online_sync_result = "Ranking refreshed. POST once per hour."
             self.online_score_load_result = ""
             self.online_sync_status = "loading scoreboard..."
             if not self.refresh_online_scoreboard_periods():
-                self.online_sync_result = "Refresh failed. POST once per 24h."
+                self.online_sync_result = "Refresh failed. POST once per hour."
         elif status == "auth_failed":
             self.online_sync_result = "Authentication failed. Register again."
             self.online_register_prompt = True

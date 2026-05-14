@@ -14256,7 +14256,7 @@ class RogueBaselineTest(unittest.TestCase):
             (rogue.SCOREBOARD_PERIOD_WEEKLY, True),
             (rogue.SCOREBOARD_PERIOD_SEASON, True),
         ])
-        self.assertEqual(game.online_sync_result, "Ranking refreshed. POST once per 24h.")
+        self.assertEqual(game.online_sync_result, "Ranking refreshed. POST once per hour.")
 
     def test_online_score_screen_cancel_is_safe_before_new_game_initializes_input_guards(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -14492,7 +14492,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.sync_online_scoreboard = old_sync
             rogue.load_score_entries = old_load
 
-        self.assertEqual(game.online_sync_result, "Ranking refreshed. POST once per 24h.")
+        self.assertEqual(game.online_sync_result, "Ranking refreshed. POST once per hour.")
         self.assertEqual(loaded, [(rogue.SCOREBOARD_PERIOD_WEEKLY, True)])
 
     def test_online_score_cooldown_reports_refresh_failed_when_fetch_fails(self):
@@ -14515,7 +14515,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.fetch_online_scores = old_fetch
             rogue.load_score_entries = old_load
 
-        self.assertEqual(game.online_sync_result, "Refresh failed. POST once per 24h.")
+        self.assertEqual(game.online_sync_result, "Refresh failed. POST once per hour.")
 
     def test_online_score_tabs_do_not_sync_and_refresh_syncs_all_periods(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -15080,7 +15080,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.online_score_cache = {rogue.SCOREBOARD_PERIOD_LOCAL: []}
         game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_LOCAL}
         game.online_syncing = False
-        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.online_sync_result = "Ranking refreshed. POST once per hour."
         game.load_online_period_scores = lambda *args, **kwargs: []
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
@@ -15092,11 +15092,11 @@ class RogueBaselineTest(unittest.TestCase):
         bx = (rogue.SCR_W - 380) // 2
         right = bx + 380 - 10
         first_x = max(bx + 16, right - game.ui_text_width("Ranking refreshed."))
-        second_x = max(bx + 16, right - game.ui_text_width("POST once per 24h."))
+        second_x = max(bx + 16, right - game.ui_text_width("POST once per hour."))
         self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 22), result_lines)
-        self.assertIn(("POST once per 24h.", rogue.SCOREBOARD_HILITE_COL, second_x, 34), result_lines)
+        self.assertIn(("POST once per hour.", rogue.SCOREBOARD_HILITE_COL, second_x, 34), result_lines)
         for text, _c, x, _y in result_lines:
-            if text in ("Ranking refreshed.", "POST once per 24h."):
+            if text in ("Ranking refreshed.", "POST once per hour."):
                 self.assertLessEqual(x + game.ui_text_width(text), right)
 
     def test_online_score_japanese_result_messages_split_on_sentence_end(self):
@@ -15104,10 +15104,10 @@ class RogueBaselineTest(unittest.TestCase):
         game.settings = rogue.Settings(language=rogue.LANG_JA)
 
         cases = {
-            "Ranking refreshed. POST once per 24h.": ["ランキング更新。", "POSTは24時間に1回。"],
+            "Ranking refreshed. POST once per hour.": ["ランキング更新。", "POSTは1時間に1回。"],
             "Ranking refreshed. No local scores yet.": ["ランキング更新。", "ローカルスコアなし。"],
             "Score posted. Ranking refreshed.": ["スコア投稿。", "ランキング更新。"],
-            "Refresh failed. POST once per 24h.": ["更新失敗。", "POSTは24時間に1回。"],
+            "Refresh failed. POST once per hour.": ["更新失敗。", "POSTは1時間に1回。"],
             "Refresh failed. No local scores yet.": ["更新失敗。", "ローカルスコアなし。"],
             "Authentication failed. Register again.": ["認証失敗。", "同期IDを確認してください。"],
             "Score posted. Ranking refresh failed.": ["スコア投稿。", "ランキング更新失敗。"],
@@ -15124,7 +15124,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.online_score_cache = {rogue.SCOREBOARD_PERIOD_LOCAL: []}
         game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_LOCAL}
         game.online_syncing = False
-        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.online_sync_result = "Ranking refreshed. POST once per hour."
         game.load_online_period_scores = lambda *args, **kwargs: []
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
@@ -15136,7 +15136,7 @@ class RogueBaselineTest(unittest.TestCase):
             if len(item) != 4:
                 continue
             text, _c, x, _y = item
-            if text in ("ランキング更新。", "POSTは24時間に1回。"):
+            if text in ("ランキング更新。", "POSTは1時間に1回。"):
                 self.assertLessEqual(x + game.ui_text_width(text), 468)
 
     def test_online_score_screen_fits_steamdeck_browser_height(self):
@@ -15153,7 +15153,7 @@ class RogueBaselineTest(unittest.TestCase):
         }
         game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
         game.online_syncing = False
-        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.online_sync_result = "Ranking refreshed. POST once per hour."
         game.online_score_load_result = "Scoreboard cache updated."
         game.scoreboard_period_ends_line = lambda period: "This Week ends in 3d 00h 00m at UTC 2026-05-04 00:00"
         game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
@@ -15256,7 +15256,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.settings = rogue.Settings()
         game.apply_palette = lambda: None
         game.st = rogue.ST_DEAD
-        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.online_sync_result = "Ranking refreshed. POST once per hour."
         game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
         old_load = rogue.load_score_entries
         try:
@@ -15392,7 +15392,7 @@ class RogueBaselineTest(unittest.TestCase):
         }
         game.online_syncing = False
         game.online_register_prompt = True
-        game.online_sync_result = "Ranking refreshed. POST once per 24h."
+        game.online_sync_result = "Ranking refreshed. POST once per hour."
         game.load_online_period_scores = lambda period=None, force=False: game.online_score_cache[rogue.SCOREBOARD_PERIOD_LOCAL]
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
@@ -15407,9 +15407,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("ace: 3階で中断。", text)
         self.assertIn("ゲストのスコアは送信されません", text)
         self.assertIn("左右: 表示切替  Select/Tab: オンライン同期  B/Esc: 戻る", text)
-        self.assertIn("オンライン同期で1日1回投稿できます。", text)
+        self.assertIn("オンライン同期で1時間に1回投稿できます。", text)
         self.assertIn("ランキング更新。", text)
-        self.assertIn("POSTは24時間に1回。", text)
+        self.assertIn("POSTは1時間に1回。", text)
 
     def test_online_scoreboard_period_labels_use_natural_japanese_and_english(self):
         game = rogue.Game.__new__(rogue.Game)
