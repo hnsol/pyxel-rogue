@@ -16021,6 +16021,24 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_HELP)
 
+        game = new_game(seed=36)
+        game.st = rogue.ST_INVENTORY
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SLASH, rogue.pyxel.KEY_SHIFT},
+            pressed={rogue.pyxel.KEY_SLASH},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_HELP)
+
+        game = new_game(seed=36)
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SLASH},
+            pressed={rogue.pyxel.KEY_SLASH},
+        )
+        game.update()
+        self.assertNotEqual(game.st, rogue.ST_HELP)
+        self.assertTrue(game.identify_symbol_pending)
+
         for key, direction in (
             (rogue.pyxel.KEY_Y, (-1, -1)),
             (rogue.pyxel.KEY_U, (1, -1)),
@@ -21066,6 +21084,14 @@ class RogueBaselineTest(unittest.TestCase):
             self.assertIn(item, calls)
         self.assertIn("Diag assist", calls)
         self.assertIn("Enter+Esc", calls)
+        self.assertIn("B+D-pad", calls)
+        self.assertIn("Shift+Arrow", calls)
+        self.assertIn("Select+D-pad", calls)
+        self.assertIn("Tab+Arrow", calls)
+        self.assertNotIn("B+Dir", calls)
+        self.assertNotIn("Shift+Dir", calls)
+        self.assertNotIn("Select+Dir", calls)
+        self.assertNotIn("Tab+Dir", calls)
         self.assertNotIn("Info+Select", calls)
         self.assertNotIn("Next tab", calls)
         self.assertIn("HJKL/YUBN Move/Diag", text)
@@ -21098,6 +21124,15 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(by_text["キー"][0], by_text["Space"][0])
         self.assertEqual(by_text["パッド"][0], by_text["D-pad"][0])
         self.assertEqual(by_text["パッド"][0], by_text["Start"][0])
+        self.assertIn("B+D-pad", by_text)
+        self.assertIn("Shift+Arrow", by_text)
+        self.assertIn("Select+D-pad", by_text)
+        self.assertIn("Tab+Arrow", by_text)
+        self.assertNotIn("B+Dir", by_text)
+        self.assertNotIn("Shift+Dir", by_text)
+        self.assertNotIn("Select+Dir", by_text)
+        self.assertNotIn("Tab+Dir", by_text)
+        self.assertFalse(any(s.endswith(".") and not s.startswith(".") for s in by_text))
 
     def test_help_basic_action_column_uses_calculated_gap(self):
         game = new_game(seed=5602, lang=rogue.LANG_JA)
@@ -21113,7 +21148,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLess(action_x - key_end, 80)
         self.assertIn("w 武器を持つ", by_text)
         self.assertIn("W よろいを着る", by_text)
-        self.assertIn("T よろい脱ぐ", by_text)
+        self.assertIn("T よろいを脱ぐ", by_text)
         self.assertLess(right_title_x - action_x, 120)
 
     def test_help_text_uses_high_contrast_colors(self):

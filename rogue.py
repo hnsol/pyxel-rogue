@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260514_2257"
+UI_BUILD = "260514_2313"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -4693,7 +4693,7 @@ class Game:
             return "^"
         if self.kp(getattr(pyxel, "KEY_QUESTION", None)):
             return "?"
-        if self.kp(getattr(pyxel, "KEY_SLASH", None)):
+        if self.key_lower(getattr(pyxel, "KEY_SLASH", None)):
             return "/"
         for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
             key = getattr(pyxel, f"KEY_{c}", None)
@@ -6221,7 +6221,10 @@ class Game:
             self.back_used=True
             return direction
         return None
-    def btn_r(self): return self.kp(pyxel.KEY_QUESTION)
+    def btn_r(self):
+        return self.kp(pyxel.KEY_QUESTION) or (
+            self.kp(getattr(pyxel, "KEY_SLASH", None)) and self.shift_held()
+        )
     def btn_any_key(self):
         """Return True if any meaningful key or gamepad button was pressed this frame.
         Used to dismiss help/info overlays."""
@@ -8447,11 +8450,11 @@ class Game:
                 ("A", "Enter", "行動"),
                 ("A+B", "Enter+Esc", "足踏み"),
                 ("B", "Esc", "メニュー"),
-                ("B+Dir", "Shift+Dir", "走る"),
+                ("B+D-pad", "Shift+Arrow", "走る"),
                 ("Select", "Tab", "情報"),
                 ("Select+A", "Tab+Enter", "投げる"),
                 ("Select+B", "Tab+Esc", "探す"),
-                ("Select+Dir", "Tab+Dir", "罠"),
+                ("Select+D-pad", "Tab+Arrow", "罠"),
             ]
             key_rows = [
                 ("HJKL/YUBN 移動/斜め", "", ""),
@@ -8463,7 +8466,7 @@ class Game:
                 ("q 飲む", "r 巻物を読む", "e 食べる"),
                 ("z 杖を振る", "P 指輪", "o 設定"),
                 ("Q 中止", "w 武器を持つ", ""),
-                ("W よろいを着る", "T よろい脱ぐ", ""),
+                ("W よろいを着る", "T よろいを脱ぐ", ""),
             ]
         else:
             basic_title = self.ui_heading("Basic Controls", UI_HEADING_SECTION)
@@ -8475,11 +8478,11 @@ class Game:
                 ("A", "Enter", "Action"),
                 ("A+B", "Enter+Esc", "Wait"),
                 ("B", "Esc", "Menu"),
-                ("B+Dir", "Shift+Dir", "Dash"),
+                ("B+D-pad", "Shift+Arrow", "Dash"),
                 ("Select", "Tab", "Info"),
                 ("Select+A", "Tab+Enter", "Throw"),
                 ("Select+B", "Tab+Esc", "Search"),
-                ("Select+Dir", "Tab+Dir", "Trap"),
+                ("Select+D-pad", "Tab+Arrow", "Trap"),
             ]
             key_rows = [
                 ("HJKL/YUBN Move/Diag", "", ""),
@@ -8495,8 +8498,8 @@ class Game:
             ]
         y=by+50
         line_h = FONT_LINE_H
-        left_x = (bx + 8, bx + 82, bx + 142)
-        right_x = (bx + 224, bx + 320, bx + 396)
+        left_x = (bx + 8, bx + 84, bx + 154)
+        right_x = (bx + 236, bx + 324, bx + 400)
         self.txt(left_x[0], y, basic_title, HELP_HEADER_COL)
         self.txt(right_x[0], y, keys_title, HELP_HEADER_COL)
         y += line_h
