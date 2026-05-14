@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260514_2313"
+UI_BUILD = "260514_2348"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6644,8 +6644,8 @@ class Game:
                 self.online_sync_result = "Refresh failed. No local scores yet."
             return {"ok": True, "status": "guest_refresh", "posted_count": 0}
         self.online_sync_status = "posting local scores..."
-        entries = local_best_sync_entries(load_score_entries())
         user_name = str(profile.get("user_name", "")).lower()
+        entries = local_best_sync_entries(load_score_entries(), player_name=user_name)
         entries = [
             entry for entry in entries
             if str(entry.get("player_name", "")).lower() == user_name

@@ -13057,6 +13057,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([entry["score_id"] for entry in sync_entries], ["best", "old"])
 
+    def test_local_best_sync_entries_can_keep_current_user_below_guest(self):
+        from pyxel_rogue import rogue_scores
+
+        entries = [
+            {"score_id": "guest", "player_name": "guest", "score": 2954, "period_week": "2026-W20", "period_season": "2026-Spring"},
+            {"score_id": "user", "player_name": "hmslmb", "score": 2346, "period_week": "2026-W20", "period_season": "2026-Spring"},
+        ]
+
+        sync_entries = rogue_scores.local_best_sync_entries(
+            entries,
+            "2026-05-14T14:39:57Z",
+            player_name="hmslmb",
+        )
+
+        self.assertEqual([entry["score_id"] for entry in sync_entries], ["user"])
+
     def test_online_scores_deduplicate_weekly_and_season_by_player_best(self):
         from pyxel_rogue import rogue_scores
 
@@ -13614,7 +13630,7 @@ class RogueBaselineTest(unittest.TestCase):
         old_local_best = rogue.local_best_sync_entries
         old_sync = rogue.sync_online_scoreboard
         try:
-            rogue.local_best_sync_entries = lambda entries: [
+            rogue.local_best_sync_entries = lambda entries, **kwargs: [
                 {"score": 99, "player_name": "guest", "period_week": "2026-W18", "period_season": "2026-Spring"}
             ]
             rogue.sync_online_scoreboard = lambda *args, **kwargs: self.fail("guest mode must not post scores")
@@ -13640,7 +13656,7 @@ class RogueBaselineTest(unittest.TestCase):
         old_sync = rogue.sync_online_scoreboard
         try:
             rogue.load_score_entries = lambda: []
-            rogue.local_best_sync_entries = lambda entries: [
+            rogue.local_best_sync_entries = lambda entries, **kwargs: [
                 {"score": 400, "player_name": "guest", "period_week": "2026-W18", "period_season": "2026-Spring"},
                 {"score": 100, "player_name": "ace", "period_week": "2026-W18", "period_season": "2026-Spring"},
             ]

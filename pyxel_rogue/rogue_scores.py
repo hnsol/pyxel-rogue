@@ -278,8 +278,18 @@ def sync_missing_local_best(
     return True
 
 
-def local_best_sync_entries(entries: list[dict[str, Any]], timestamp: str | None = None) -> list[dict[str, Any]]:
+def local_best_sync_entries(
+    entries: list[dict[str, Any]],
+    timestamp: str | None = None,
+    player_name: str | None = None,
+) -> list[dict[str, Any]]:
     keys = score_period_keys(timestamp)
+    if player_name is not None:
+        name_key = str(player_name).lower()
+        entries = [
+            entry for entry in entries
+            if str(entry.get("player_name", "")).lower() == name_key
+        ]
     out = []
     seen_ids = set()
     for period, key in (
