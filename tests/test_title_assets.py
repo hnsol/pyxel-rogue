@@ -47,6 +47,22 @@ class TitleAssetsModuleTest(unittest.TestCase):
         self.assertIsNotNone(game.title_bg)
         self.assertEqual(game.title_bg.load_calls, [(0, 0, rogue.variant_title_background_path())])
 
+    def test_normal_title_background_suppresses_duplicate_logo_text(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.lang = rogue.LANG_EN
+        game.title_bg = object()
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        game.title_cursor = 0
+        game.apply_title_palette = lambda: None
+        game.is_online_mode = lambda: False
+        game.txt = lambda *a, **kw: None
+        centered = []
+        game.txt_centered = lambda x, y, s, c: centered.append(s)
+
+        game.draw_title_screen()
+
+        self.assertNotIn("ROGUE V5 ON PYXEL", centered)
+
 
 if __name__ == "__main__":
     unittest.main()

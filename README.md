@@ -97,7 +97,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 
 - D-pad: 8方向移動
 - Start押下中: 斜め補助モード
-- A: 決定 / 拾う / 階段 / 正面1マスsearch
+- A: 決定 / 拾う / 階段
 - B短押し: メニュー / キャンセル
 - B長押し + D-pad: ダッシュ
 - A+B: 足踏み
@@ -111,7 +111,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 矢印 / HJKL: 移動
 - YUBN: 斜め移動
 - Space押下中: 斜め補助モード
-- Enter: 決定 / 拾う / 階段 / 正面1マスsearch
+- Enter: 決定 / 拾う / 階段
 - Enter+Esc: 足踏み
 - Shift+方向: ダッシュ
 - Esc: メニュー / キャンセル
@@ -123,6 +123,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認
 - .: 足踏み
+- ,: 拾う
 - > / <: 階段を降りる / 登る
 - s: 周囲8マスsearch
 - t: quick throw

@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260514_0338"
+UI_BUILD = "260514_2257"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -4824,11 +4824,7 @@ class Game:
         return None
 
     def do_action(self):
-        p=self.p; px,py=p.x,p.y
-        if self.tm[py][px]==T_STAIR or self.gi_at(px,py):
-            self.do_pickup(); return
-        self.msg("pyxel.swing_empty_air")
-        self.do_search(front_only=True)
+        self.do_pickup()
 
     def do_pickup(self):
         self.command_look()
@@ -5884,6 +5880,8 @@ class Game:
             self.redraw_command()
         elif command == "legal_space":
             self.legal_space_command()
+        elif command == "pickup":
+            self.do_pickup()
         elif command == "quit":
             self.quit_command()
         elif command in ("fight", "fight_to_death"):
@@ -7092,6 +7090,9 @@ class Game:
         if self.key_upper(getattr(pyxel, "KEY_COMMA", None)):
             self.record_repeat_command("stairs_up")
             self.stairs_up_command(); return
+        if self.key_lower(getattr(pyxel, "KEY_COMMA", None)):
+            self.record_repeat_command("pickup")
+            self.do_pickup(); return
         if self.key_lower(getattr(pyxel, "KEY_V", None)):
             self.record_repeat_command("version")
             self.show_version_command(); return
@@ -7361,7 +7362,10 @@ class Game:
         if self.btn_back():
             self.st = ST_PLAY
             return True
-        if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory() or self.btn_r():
+        if self.btn_r():
+            self.st = ST_HELP
+            return True
+        if self.btn_a() or self.btn_overlay_cancel() or self.btn_inventory():
             self.st = ST_PLAY
             return True
         return False
@@ -7564,7 +7568,7 @@ class Game:
             pyxel.dither(1.0)
         if title_alpha < 1.0:
             return
-        if not is_nyandor_variant() or self.title_bg is None:
+        if self.title_bg is None:
             title_lines = variant_title_lines()
             title_y = 42 if is_nyandor_variant() else 58
             for i, line in enumerate(title_lines):
@@ -8451,14 +8455,15 @@ class Game:
             ]
             key_rows = [
                 ("HJKL/YUBN 移動/斜め", "", ""),
-                (". 待機", "</> 階段", "s 探す"),
-                ("^ 罠", "t 投げる", "d 捨てる"),
-                ("i 持ちもの", "I 詳細", "? ヘルプ"),
-                ("/ 識別", "m 移動", "f 攻撃"),
-                ("a 再実行", "R 外す", "q 飲む"),
-                ("r 巻物を読む", "e 食べる", "z 杖を振る"),
-                ("P 指輪", "o 設定", "Q 中止"),
-                ("w 武器を持つ", "W よろいを着る", "T よろい脱ぐ"),
+                (". 待機", ", 拾う", "</> 階段"),
+                ("s 探す", "^ 罠", "t 投げる"),
+                ("d 捨てる", "i 持ちもの", "I 詳細"),
+                ("? ヘルプ", "/ 識別", "m 移動"),
+                ("f 攻撃", "a 再実行", "R 外す"),
+                ("q 飲む", "r 巻物を読む", "e 食べる"),
+                ("z 杖を振る", "P 指輪", "o 設定"),
+                ("Q 中止", "w 武器を持つ", ""),
+                ("W よろいを着る", "T よろい脱ぐ", ""),
             ]
         else:
             basic_title = self.ui_heading("Basic Controls", UI_HEADING_SECTION)
@@ -8478,14 +8483,15 @@ class Game:
             ]
             key_rows = [
                 ("HJKL/YUBN Move/Diag", "", ""),
-                (". Wait", "</> Stairs", "s Search"),
-                ("^ Trap", "t Throw", "d Drop"),
-                ("i Inventory", "I Item", "? Help"),
-                ("/ Identify", "m Move", "f Fight"),
-                ("a Again", "R Remove", "q Quaff"),
-                ("r Read", "e Eat", "z Zap"),
-                ("P Put on", "o Options", "Q Quit"),
-                ("w Wield", "W Wear", "T Take off"),
+                (". Wait", ", Pickup", "</> Stairs"),
+                ("s Search", "^ Trap", "t Throw"),
+                ("d Drop", "i Inventory", "I Item"),
+                ("? Help", "/ Identify", "m Move"),
+                ("f Fight", "a Again", "R Remove"),
+                ("q Quaff", "r Read", "e Eat"),
+                ("z Zap", "P Put on", "o Options"),
+                ("Q Quit", "w Wield", "W Wear"),
+                ("T Take off", "", ""),
             ]
         y=by+50
         line_h = FONT_LINE_H

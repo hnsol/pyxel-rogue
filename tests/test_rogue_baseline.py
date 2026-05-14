@@ -10847,6 +10847,50 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertFalse(any("descend" in msg.lower() for msg in game.msgs))
         self.assertFalse(any("depth" in msg.lower() for msg in game.msgs[1:]))
 
+        game = new_game(seed=314)
+        set_open_floor(game)
+        game.gitems = []
+        before_turn = game.turn
+
+        game.do_action()
+
+        self.assertEqual(game.turn, before_turn)
+        self.assertIn("nothing here", game.msgs)
+        self.assertNotIn("you swing at empty air", game.msgs)
+
+        game.lang = rogue.LANG_JA
+        game.do_action()
+
+        self.assertIn("ここには何もない", game.msgs)
+
+    def test_keyboard_comma_pickup_matches_action_and_shift_comma_keeps_stairs_up(self):
+        game = new_game(seed=312)
+        set_open_floor(game)
+        item = rogue.Item(rogue.CAT_FOOD, 0)
+        item.x, item.y = game.p.x, game.p.y
+        game.gitems = [item]
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_COMMA}, pressed={rogue.pyxel.KEY_COMMA})
+        game.update()
+
+        self.assertEqual(game.turn, 1)
+        self.assertNotIn(item, game.gitems)
+        self.assertTrue(any(i.cat == rogue.CAT_FOOD and i.kind == 0 and i.qty == 2 for i in game.p.inv))
+
+        game = new_game(seed=313)
+        set_open_floor(game)
+        game.p.has_amulet = True
+        game.p.depth = 2
+        game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_COMMA, rogue.pyxel.KEY_SHIFT},
+            pressed={rogue.pyxel.KEY_COMMA},
+        )
+        game.update()
+
+        self.assertEqual(game.p.depth, 1)
+
     def test_first_move_auto_pickup_does_not_refresh_welcome_message_age(self):
         game = new_game(seed=3101)
         set_open_floor(game)
@@ -15968,6 +16012,15 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.st, rogue.ST_HELP)
 
+        game = new_game(seed=36)
+        game.st = rogue.ST_INVENTORY
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_QUESTION},
+            pressed={rogue.pyxel.KEY_QUESTION},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_HELP)
+
         for key, direction in (
             (rogue.pyxel.KEY_Y, (-1, -1)),
             (rogue.pyxel.KEY_U, (1, -1)),
@@ -20097,7 +20150,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(monster.held, 2)
         self.assertNotEqual((monster.x, monster.y), (7, 5))
 
-    def test_wait_select_shortcuts_and_empty_action_search(self):
+    def test_wait_select_shortcuts_and_empty_action_message(self):
         game = new_game(seed=46)
         set_open_floor(game)
         searched = []
@@ -20131,7 +20184,8 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_A},
         )
         game.update()
-        self.assertEqual(searched[-1], True)
+        self.assertEqual(searched, [])
+        self.assertIn("nothing here", game.msgs)
 
     def test_keyboard_pad_style_enter_esc_tab_shortcuts(self):
         game = new_game(seed=46)
@@ -21016,7 +21070,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn("Next tab", calls)
         self.assertIn("HJKL/YUBN Move/Diag", text)
         self.assertIn("T Take off", calls)
-        for item in (". Wait", "</> Stairs", "s Search", "a Again", "R Remove", "q Quaff", "P Put on", "o Options", "Q Quit"):
+        for item in (". Wait", ", Pickup", "</> Stairs", "s Search", "a Again", "R Remove", "q Quaff", "P Put on", "o Options", "Q Quit"):
             self.assertIn(item, calls)
         self.assertFalse(any(s.endswith(".") and not s.startswith(".") for s in calls))
         self.assertNotIn("Keyboard commands", text)

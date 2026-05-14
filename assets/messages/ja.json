@@ -329,7 +329,7 @@
   "pyxel.monster_is_defeated": "{monster}を倒した！",
   "pyxel.monster_misses": "{monster}の攻撃はそれた",
   "pyxel.nearby_monsters_freeze": "近くの怪物が動きを止めた！",
-  "pyxel.nothing_here": "ここには、何もない",
+  "pyxel.nothing_here": "ここには何もない",
   "pyxel.nothing_to_action": "{action}ものがない",
   "pyxel.nothing_to_call": "名付けるものがない",
   "pyxel.nothing_to_eat": "食べるものがない",

@@ -97,7 +97,7 @@ Gamepad:
 
 - D-pad: Move in 8 directions
 - Hold Start: Diagonal assist
-- A: Confirm / pick up / stairs / search one tile ahead
+- A: Confirm / pick up / stairs
 - B tap: Menu / cancel
 - B hold + D-pad: Dash
 - A+B: Wait a turn
@@ -114,7 +114,7 @@ Keyboard:
 - Arrow keys / HJKL: Move
 - YUBN: Diagonal movement
 - Hold Space: Diagonal assist
-- Enter: Confirm / pick up / stairs / search one tile ahead
+- Enter: Confirm / pick up / stairs
 - Enter+Esc: Wait a turn
 - Shift+direction: Dash
 - Esc: Menu / cancel
@@ -123,6 +123,7 @@ Keyboard:
 - Tab+Esc: Search around all 8 neighboring tiles
 - Tab+direction: Inspect a discovered trap
 - .: Wait a turn
+- ,: Pick up
 - > / <: Go down / up stairs
 - s: Search around all 8 neighboring tiles
 - t: Quick throw

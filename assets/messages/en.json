@@ -329,7 +329,7 @@
   "pyxel.monster_is_defeated": "The {monster} is defeated!",
   "pyxel.monster_misses": "the {monster} misses",
   "pyxel.nearby_monsters_freeze": "Nearby monsters freeze!",
-  "pyxel.nothing_here": "Nothing here",
+  "pyxel.nothing_here": "nothing here",
   "pyxel.nothing_to_action": "Nothing to {action}",
   "pyxel.nothing_to_call": "nothing to call",
   "pyxel.nothing_to_eat": "nothing to eat",
