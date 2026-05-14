@@ -1591,7 +1591,6 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_rogue_544_fire_bolt_stops_after_bouncing_off_dragon(self):
         # Rogue 5.4.4 sticks.c:fire_bolt() sets used=TRUE in the Dragon flame-bounce branch.
-        from pyxel_rogue import rogue_sticks
 
         game = new_game(seed=230)
         set_open_floor(game)
@@ -17353,8 +17352,8 @@ class RogueBaselineTest(unittest.TestCase):
         w_call = next(call for call in calls if call[2] == "武" and call[3] == rogue.UI_SUBTEXT_COL)
         self.assertEqual(w_call[1], sub_y)
         self.assertGreater(w_call[0], rogue.SCR_W // 2)
-        w_value = next(call for call in calls if call[2] == "+1,+1")
-        str_value = next(call for call in calls if call[2] == "16(16)")
+        next(call for call in calls if call[2] == "+1,+1")
+        next(call for call in calls if call[2] == "16(16)")
         a_value = next(call for call in calls if call[2] == "+1")
         exp_value = next(call for call in calls if call[2] == "1/0")
         self.assertEqual(a_value[0] + game.ui_text_width(a_value[2]), rogue.SCR_W - 16)
@@ -18014,7 +18013,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.p.x, game.p.y = 5, 5
         item = rogue.Item(rogue.CAT_FOOD, 0)
         game.p.inv = [item]
-        monster = command_look_monster(game)
+        command_look_monster(game)
         calls = []
         game.wake_visible_monsters = lambda: calls.append("wake")
 

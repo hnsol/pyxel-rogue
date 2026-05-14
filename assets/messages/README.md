@@ -44,10 +44,10 @@ uses Python `str.format` style placeholders instead.
 Current placeholders:
 
 ```text
-action, armor, color, color2, command, command2, command3, command4, count,
-count2, damage, depth, exp, exp_level, file, gold, hp, hp_width, item, item2,
-level, max_hp, max_hp_width, max_strength, monster, strength, subject, target,
-trap, value, value2, version, x, y
+action, armor, cause, color, color2, command, command2, command3, command4,
+count, count2, damage, depth, exp, exp_level, file, gold, hp, hp_width, item,
+item2, level, max_hp, max_hp_width, max_strength, monster, name, palette,
+strength, subject, target, trap, turn, user, value, value2, version, x, y
 ```
 
 Prefer the existing names when adding keys. Add a new placeholder only when the

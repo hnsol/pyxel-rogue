@@ -258,5 +258,26 @@ def palette_theme(palette_id):
     return PALETTE_THEMES.get(palette_id, PALETTE_THEMES[DEFAULT_PALETTE])
 
 
+MROLE = {
+    "A": MONSTER_AQUATIC, "B": MONSTER_BEAST, "C": MONSTER_BASIC, "D": MONSTER_DEADLY,
+    "E": MONSTER_BEAST, "F": MONSTER_AQUATIC, "G": MONSTER_UNDEAD, "H": MONSTER_BASIC,
+    "I": MONSTER_MAGIC, "J": MONSTER_DEADLY, "K": MONSTER_BEAST, "L": MONSTER_THIEF,
+    "M": MONSTER_DEADLY, "N": MONSTER_THIEF, "O": MONSTER_BASIC, "P": MONSTER_MAGIC,
+    "Q": MONSTER_BEAST, "R": MONSTER_DEADLY, "S": MONSTER_BEAST, "T": MONSTER_BEAST,
+    "U": MONSTER_MAGIC, "V": MONSTER_UNDEAD, "W": MONSTER_UNDEAD, "X": MONSTER_MIMIC,
+    "Y": MONSTER_BEAST, "Z": MONSTER_UNDEAD,
+}
+
+
+def palette_monster_color(palette_id, sym):
+    theme = palette_theme(palette_id)
+    if sym in theme.monster_overrides:
+        return theme.monster_overrides[sym]
+    return theme.monster_roles.get(MROLE.get(sym, MONSTER_BASIC), theme.roles[ROLE_TEXT])
+
+
+MCOL = {sym: palette_monster_color(DEFAULT_PALETTE, sym) for sym in MROLE}
+
+
 def palette_role_color(palette_id, role):
     return palette_theme(palette_id).roles[role]

@@ -7,13 +7,11 @@ Current controls are documented in the in-game Help and docs/DESIGN.md.
 
 from __future__ import annotations
 import pyxel
-import json
 import random
 import os
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from pyxel_rogue.rogue_rng import RogueRng
 from pyxel_rogue import rogue_monsters
 from pyxel_rogue import rogue_pack
@@ -38,6 +36,12 @@ from pyxel_rogue import rogue_misc
 from pyxel_rogue import rogue_move
 from pyxel_rogue import rogue_passages
 from pyxel_rogue import rogue_weapons
+from pyxel_rogue import rogue_hud
+from pyxel_rogue import rogue_input
+from pyxel_rogue import rogue_online_scoreboard
+from pyxel_rogue import rogue_online_state
+from pyxel_rogue import rogue_online_text
+from pyxel_rogue import rogue_variant
 from pyxel_rogue.rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
     MONSTER_MISS_MESSAGE_KEYS,
@@ -60,6 +64,15 @@ from pyxel_rogue.rogue_items import (
 )
 from pyxel_rogue.rogue_lang import DEFAULT_LANG, LANG_EN, LANG_JA, Settings, load_settings, save_settings, settings_exists
 from pyxel_rogue.rogue_difficulty import DIFF_NORMAL, DIFFICULTY_ORDER, profile as difficulty_profile
+from pyxel_rogue.rogue_message_toast import (
+    _dominant_msg_toast_dir,
+    _sign,
+    msg_toast_block_origin,
+    msg_toast_color,
+    msg_toast_home_block,
+    pick_msg_toast_block,
+)
+from pyxel_rogue.rogue_text import TextCatalog
 from pyxel_rogue.rogue_layout import (
     DEAD_ZONE_X,
     DEAD_ZONE_Y,
@@ -132,14 +145,8 @@ from pyxel_rogue.rogue_palettes import (
     FLEXOKI_LIGHT_PALETTE,
     FLEXOKI_SYNTAX_DARK_PALETTE,
     FLEXOKI_SYNTAX_LIGHT_PALETTE,
-    MONSTER_AQUATIC,
-    MONSTER_BASIC,
-    MONSTER_BEAST,
-    MONSTER_DEADLY,
-    MONSTER_MAGIC,
-    MONSTER_MIMIC,
-    MONSTER_THIEF,
-    MONSTER_UNDEAD,
+    MCOL,
+    MROLE,
     PALETTE_COLOR_LIMIT,
     PALETTE_FLEXOKI_DARK,
     PALETTE_FLEXOKI_LIGHT,
@@ -174,6 +181,7 @@ from pyxel_rogue.rogue_palettes import (
     ROLE_TEXT,
     ROLE_TRAP,
     ROLE_WALL,
+    palette_monster_color,
     palette_role_color,
     palette_theme,
 )
@@ -194,7 +202,6 @@ from pyxel_rogue.rogue_scores import (
     link_online_user,
     load_online_score_cache,
     load_online_profile,
-    load_player_name,
     load_score_entries,
     local_best_sync_entries,
     normalize_online_profile,
@@ -280,36 +287,29 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260513_0044"
-VARIANT_ROGUE = "rogue"
-VARIANT_NYANDOR = "nyandor"
-NYANDOR_TARGET_DEPTH = 5
-NYANDOR_CAT_NAME = "The Cat (wearing the Amulet of Nyandor)"
-NYANDOR_CAT_NAME_JA = "ねこ（ニャンダーの魔除けつき）"
+UI_BUILD = "260514_0338"
+VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
+VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
+NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
+NYANDOR_CAT_NAME = rogue_variant.NYANDOR_CAT_NAME
+NYANDOR_CAT_NAME_JA = rogue_variant.NYANDOR_CAT_NAME_JA
 
 def normalize_variant(value):
-    value = str(value or VARIANT_ROGUE).strip().lower()
-    return VARIANT_NYANDOR if value in (VARIANT_NYANDOR, "nyander", "cat") else VARIANT_ROGUE
+    return rogue_variant.normalize_variant(value)
 
 GAME_VARIANT = normalize_variant(os.environ.get("PYXEL_ROGUE_VARIANT"))
 
 def is_nyandor_variant():
-    return GAME_VARIANT == VARIANT_NYANDOR
+    return rogue_variant.is_nyandor_variant(GAME_VARIANT)
 
 def variant_fixed_difficulty():
-    return DIFF_NORMAL if is_nyandor_variant() else None
+    return rogue_variant.variant_fixed_difficulty(GAME_VARIANT)
 
 def variant_title_lines():
-    if is_nyandor_variant():
-        return (
-            "ROGUE V5 ON PYXEL",
-            "5F PLAYABLE BETA",
-            "CAT AND AMULET OF NYANDOR",
-        )
-    return ("ROGUE V5 ON PYXEL",)
+    return rogue_variant.variant_title_lines(GAME_VARIANT)
 
 def variant_window_title():
-    return "Cat and Amulet of Nyandor" if is_nyandor_variant() else "Pyxel Rogue"
+    return rogue_variant.variant_window_title(GAME_VARIANT)
 
 def variant_title_background_path():
     return TITLE_BG_NYANDOR_PATH if is_nyandor_variant() else TITLE_BG_PATH
@@ -318,59 +318,25 @@ def variant_title_palette():
     return TITLE_BG_NYANDOR_PALETTE if is_nyandor_variant() else TITLE_BG_PALETTE
 
 def variant_mission_brief_lines(lang):
-    if lang == LANG_JA:
-        return (
-            "ねこを回収せよ",
-            "ギルドの大切なねこが地下5階で行方不明。",
-            "ニャンダーの魔除けを首につけたねこを",
-            "回収し、地上へ連れ戻せ。",
-            "A/Enter 確認   B/Esc 戻る",
-        )
-    return (
-        "CAT RECOVERY ORDER",
-        "Guild property is missing on level 5.",
-        "Recover the cat wearing the Amulet of Nyandor.",
-        "Return to the surface with the asset.",
-        "A/Enter acknowledge   B/Esc back",
-    )
+    return rogue_variant.variant_mission_brief_lines(lang)
 
 def variant_quick_guide_lines(lang):
-    if lang == LANG_JA:
-        return (
-            "はじめての操作",
-            "D-pad / 矢印: 移動",
-            "A / Enter: 拾う・階段・調べる",
-            "B / Esc: Actionメニュー",
-            "Select / Tab: 持ちもの・ログ・ヘルプ",
-            "A/Space/Enter 開始   B/Esc 戻る",
-        )
-    return (
-        "QUICK START",
-        "D-pad / Arrows: move",
-        "A / Enter: pick up, stairs, inspect",
-        "B / Esc: Action menu",
-        "Select / Tab: Inventory, Log, Help",
-        "A/Space/Enter start   B/Esc back",
-    )
+    return rogue_variant.variant_quick_guide_lines(lang)
 
 def is_nyandor_cat_item(item):
-    return (
-        item is not None
-        and getattr(item, "cat", None) == CAT_AMULET
-        and getattr(item, "variant_item", None) == "nyandor_cat"
-    )
+    return rogue_variant.is_nyandor_cat_item(item)
 
 def nyandor_cat_name(lang):
-    return NYANDOR_CAT_NAME_JA if lang == LANG_JA else NYANDOR_CAT_NAME
+    return rogue_variant.nyandor_cat_name(lang)
 
 def variant_escape_message_key():
-    return "pyxel.escaped_with_nyandor" if is_nyandor_variant() else "pyxel.escaped_with_amulet"
+    return rogue_variant.variant_escape_message_key(GAME_VARIANT)
 
 def variant_scoreboard_key():
-    return VARIANT_NYANDOR if is_nyandor_variant() else None
+    return rogue_variant.variant_scoreboard_key(GAME_VARIANT)
 
 def score_entry_is_nyandor(entry):
-    return str(entry.get("variant", "")).lower() == VARIANT_NYANDOR
+    return rogue_variant.score_entry_is_nyandor(entry)
 
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
@@ -391,159 +357,8 @@ HP_LOW_FRAME_PERIOD = 5
 HP_LOW_FRAME_PROBE_FRAMES = tuple(range(0, len(HP_LOW_FRAME_ROLES) * HP_LOW_FRAME_PERIOD, HP_LOW_FRAME_PERIOD))
 NAME_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789 "
 PIN_ALPHABET = "0123456789"
-SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
-ONLINE_UI_TEXT = {
-    LANG_EN: {
-        "confirm_title": "Online Scoreboard",
-        "confirm_prompt": "Set up online sync for scores?",
-        "confirm_register": "A/Enter sync",
-        "confirm_local": "B/Esc local only",
-        "confirm_mark": "Guest scores stay local.",
-        "language_hint": "Select/L Change Language（言語切替）",
-        "score_title": "Scoreboard",
-        "score_title_local": "My Rogue Chronicle",
-        "score_title_weekly": "This Week's Challengers",
-        "score_title_season": "Season Legends",
-        "score_period_local": "Local",
-        "score_tab_weekly": "This Week",
-        "score_tab_season": "Season",
-        "score_header": "   Score Name",
-        "score_hint": "Left/Right: View  Select/Tab: Online Sync  B/Esc: Back",
-        "score_register_prompt": "Online sync can post once per day.",
-        "score_register_hint": "A/Enter sync   B/Esc local only",
-        "score_register_mark": "Guest scores stay local.",
-        "score_guest_result": "Ranking refreshed. Guest mode.",
-        "period_week": "This Week",
-        "period_season": "Season",
-        "local_only_hint": "Guest scores are not sent",
-        "posted": "Posted",
-        "post_after": "POST after",
-        "register_title": "Online Sync",
-        "register_prompt": "Enter an 8-char lowercase sync ID.",
-        "register_cancel": "B/Esc cancels.",
-        "register_local": "B/Esc keeps guest mode.",
-        "register_hint": "A/Enter OK  B/Esc LOCAL ONLY",
-        "register_cancel_hint": "A/Enter OK  B/Esc CANCEL",
-        "local_confirm_title": "Local Only",
-        "local_confirm_prompt": "Save this name for local play only?",
-        "local_confirm_ok": "A/Enter save",
-        "local_confirm_cancel": "B/Esc cancel",
-        "guest_confirm_title": "Guest Mode",
-        "guest_confirm_prompt": "Switch to guest mode?",
-        "guest_confirm_ok": "A/Enter switch",
-        "guest_confirm_cancel": "B/Esc cancel",
-        "language_title": "Language / 言語",
-        "language_prompt": "Choose display language. / 表示言語を選んでください。",
-        "language_select_hint": "A/Enter OK  D-pad/Arrows select",
-        "pin_title": "6-Digit PIN",
-        "pin_server": "This PIN is stored on the server",
-        "pin_reuse": "without encryption. Do not reuse it.",
-        "pin_link_title": "Verify PIN",
-        "pin_link_server": "This name exists on the server.",
-        "pin_link_reuse": "Enter its PIN to link this device.",
-        "pin_hint": "A/Enter OK  B/Esc BACK",
-        "sync_title": "Sync",
-        "sync_scores": "Syncing scores...",
-        "refresh_ranking": "Refreshing ranking...",
-        "please_wait": "Please wait.",
-        "checking user...": "checking user...",
-        "registering user...": "setting up sync...",
-        "linking user...": "linking user...",
-        "posting local scores...": "posting local scores...",
-        "loading scoreboard...": "loading scoreboard...",
-        "searching scoreboard...": "searching scoreboard...",
-        "Local only.": "Local only.",
-        "Ranking refreshed. POST once per 24h.": "Ranking refreshed. POST once per 24h.",
-        "Ranking refreshed. No local scores yet.": "Ranking refreshed. No local scores yet.",
-        "Score posted. Ranking refreshed.": "Score posted. Ranking refreshed.",
-        "Refresh failed. POST once per 24h.": "Refresh failed. POST once per 24h.",
-        "Refresh failed. No local scores yet.": "Refresh failed. No local scores yet.",
-        "Authentication failed. Register again.": "Authentication failed. Check sync ID.",
-        "Score posted. Ranking refresh failed.": "Score posted. Ranking refresh failed.",
-        "That user name is already registered.": "That user name is already registered.",
-        "Could not check user. Try again.": "Could not check user. Try again.",
-        "Name exists. Enter its 6-digit PIN.": "Name exists. Enter its 6-digit PIN.",
-        "That name belongs to another player.": "That name belongs to another player.",
-        "Registration failed.": "Sync setup failed.",
-        "Enter a name.": "Enter a name.",
-        "Ranking refreshed. Guest mode.": "Ranking refreshed. Guest mode.",
-    },
-    LANG_JA: {
-        "confirm_title": "オンラインスコア",
-        "confirm_prompt": "オンラインスコアを同期しますか?",
-        "confirm_register": "A/Enter 同期",
-        "confirm_local": "B/Esc ローカルのみ",
-        "confirm_mark": "ゲストのスコアはローカルのみです。",
-        "language_hint": "Select/L 言語切替",
-        "score_title": "スコアボード",
-        "score_title_local": "冒険の記録",
-        "score_title_weekly": "今週の挑戦者",
-        "score_title_season": "今季のレジェンド",
-        "score_period_local": "ローカル",
-        "score_tab_weekly": "今週",
-        "score_tab_season": "今季",
-        "score_header": "   得点 名前",
-        "score_hint": "左右: 表示切替  Select/Tab: オンライン同期  B/Esc: 戻る",
-        "score_register_prompt": "オンライン同期で1日1回投稿できます。",
-        "score_register_hint": "A/Enter 同期  B/Esc ローカルのみ",
-        "score_register_mark": "ゲストのスコアはローカルのみです。",
-        "score_guest_result": "ランキング更新。ゲストモード。",
-        "period_week": "今週",
-        "period_season": "今季",
-        "local_only_hint": "ゲストのスコアは送信されません",
-        "posted": "投稿",
-        "post_after": "POST可能",
-        "register_title": "オンライン同期",
-        "register_prompt": "8文字の小文字IDで同期します。",
-        "register_cancel": "B/Esc キャンセル",
-        "register_local": "B/Escでゲストモードのまま。",
-        "register_hint": "A/Enter 決定  B/Esc ローカルのみ",
-        "register_cancel_hint": "A/Enter 決定  B/Esc キャンセル",
-        "local_confirm_title": "ローカル専用",
-        "local_confirm_prompt": "この名前をローカル専用で保存しますか?",
-        "local_confirm_ok": "A/Enter 保存",
-        "local_confirm_cancel": "B/Esc キャンセル",
-        "guest_confirm_title": "ゲストモード",
-        "guest_confirm_prompt": "ゲストモードに切り替えますか?",
-        "guest_confirm_ok": "A/Enter 切替",
-        "guest_confirm_cancel": "B/Esc キャンセル",
-        "language_title": "言語",
-        "language_prompt": "表示言語を選んでください。",
-        "language_select_hint": "A/Enter 決定  方向キー 選択",
-        "pin_title": "6桁PIN",
-        "pin_server": "PINはサーバに平文保存されます。",
-        "pin_reuse": "他の場所のパスワードを使わないでください。",
-        "pin_link_title": "PIN確認",
-        "pin_link_server": "この名前はサーバにあります。",
-        "pin_link_reuse": "本人ならPINを入力してください。",
-        "pin_hint": "A/Enter 決定  B/Esc 戻る",
-        "sync_title": "通信",
-        "sync_scores": "スコア同期中...",
-        "refresh_ranking": "ランキング更新中...",
-        "please_wait": "お待ちください。",
-        "checking user...": "ユーザを確認中...",
-        "registering user...": "同期ID確認中...",
-        "linking user...": "リンク通信中...",
-        "posting local scores...": "ローカルスコア送信中...",
-        "loading scoreboard...": "スコアボード読込中...",
-        "searching scoreboard...": "スコアボード検索中...",
-        "Local only.": "ローカルのみ。",
-        "Ranking refreshed. POST once per 24h.": "ランキング更新。POSTは24時間に1回。",
-        "Ranking refreshed. No local scores yet.": "ランキング更新。ローカルスコアなし。",
-        "Score posted. Ranking refreshed.": "スコア投稿。ランキング更新。",
-        "Refresh failed. POST once per 24h.": "更新失敗。POSTは24時間に1回。",
-        "Refresh failed. No local scores yet.": "更新失敗。ローカルスコアなし。",
-        "Authentication failed. Register again.": "認証失敗。同期IDを確認してください。",
-        "Score posted. Ranking refresh failed.": "スコア投稿。ランキング更新失敗。",
-        "That user name is already registered.": "その名前は登録済みです。",
-        "Could not check user. Try again.": "ユーザ確認に失敗しました。",
-        "Name exists. Enter its 6-digit PIN.": "登録済み名です。6桁PINを入力。",
-        "That name belongs to another player.": "その名前は別プレイヤーのものです。",
-        "Registration failed.": "同期設定失敗。",
-        "Enter a name.": "名前を入力してください。",
-        "Ranking refreshed. Guest mode.": "ランキング更新。ゲストモード。",
-    },
-}
+SCOREBOARD_PERIOD_ORDER = rogue_online_scoreboard.SCOREBOARD_PERIOD_ORDER
+ONLINE_UI_TEXT = rogue_online_text.ONLINE_UI_TEXT
 UI_TEXT_COL = 14
 UI_SUBTEXT_COL = 4
 UI_HILITE_COL = 11
@@ -557,100 +372,32 @@ UI_HEADING_SCREEN = "screen"
 UI_HEADING_PANEL = "panel"
 UI_HEADING_SECTION = "section"
 
-# ===========================================================
-#  Font
-# ===========================================================
-_pyxel_dir = os.path.dirname(pyxel.__file__)
-FONT_PATH = os.path.join(_pyxel_dir, "examples", "assets", "umplus_j10r.bdf")
-TITLE_BG_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background.png")
-TITLE_BG_NYANDOR_PATH = os.path.join(os.path.dirname(__file__), "assets", "images", "title_background_nyandor.png")
-TITLE_FADE_FRAMES = 156
-LOGO_BGM_DELAY_FRAMES = 78
-LOGO_FADE_FRAMES = 78
-LOGO_HOLD_FRAMES = 78
-LOGO_TOTAL_FRAMES = LOGO_BGM_DELAY_FRAMES + LOGO_FADE_FRAMES + LOGO_HOLD_FRAMES + LOGO_FADE_FRAMES
-TITLE_BGM_STOP_WAIT_FRAMES = 3
-_TITLE_BGM_CH0_BODY = '@ENV1{0,9,127,37,76,122,76,6,0} @VIB0 @GLI0 O4 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,37,76,38,76,6,0} O5 E16&16&16&16&16&16&16&16 @ENV1{0,9,127,33,82,6,0} O4 E16&16&16&16 O5 E16&16&16&16 @ENV1{0,9,127,23,95,6,0} O4 E16&16&16 O5 E16&16&16 @ENV1{0,9,127,12,110,6,0} D16&16 @ENV1{0,9,127,23,95,6,0} C+16&16&16 E16&16&16 @ENV1{0,9,127,12,110,6,0} E16&16 @ENV1{0,9,127,37,76,59,76,6,0} G16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,12,110,6,0} C16&16 C16&16 E16&16 O4 E16&16 O5 E16&16 @ENV1{0,9,127,37,76,80,76,6,0} C16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,9,127,23,95,6,0} D16&16&16 D+16&16&16 @ENV1{0,9,127,12,110,6,0} O4 B16&16 @ENV1{0,9,127,37,76,38,76,6,0} G+16&16&16&16&16&16&16&16 @ENV1{0,9,127,23,95,6,0} O5 D+16&16&16 O4 B16&16&16 @ENV1{0,9,127,12,110,6,0} O5 D+16&16 @ENV1{0,9,127,37,76,38,76,6,0} D+16&16&16&16&16&16&16&16'
-_TITLE_BGM_CH1_BODY = '@ENV1{0,12,127,12,89,144,89,6,0} @VIB1{37,12,25} @GLI0 O4 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 A+16&16&16&16&16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,60,89,6,0} O5 E16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,18,89,6,0} O4 E16&16&16&16 O5 E16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} O4 E16&16&16 O5 E16&16&16 @ENV1{0,12,127,9,99,6,0} D16&16 @ENV1{0,12,127,12,89,8,89,6,0} C+16&16&16 E16&16&16 @ENV1{0,12,127,9,99,6,0} E16&16 @ENV1{0,12,127,12,89,81,89,6,0} G16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,9,99,6,0} C16&16 C16&16 E16&16 O4 E16&16 O5 E16&16 @ENV1{0,12,127,12,89,102,89,6,0} C16&16&16&16&16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} D16&16&16 D+16&16&16 @ENV1{0,12,127,9,99,6,0} O4 B16&16 @ENV1{0,12,127,12,89,60,89,6,0} G+16&16&16&16&16&16&16&16 @ENV1{0,12,127,12,89,8,89,6,0} O5 D+16&16&16 O4 B16&16&16 @ENV1{0,12,127,9,99,6,0} O5 D+16&16 @ENV1{0,12,127,12,89,50,89,6,0} D+16&16&16&16&16&16&16'
-_TITLE_BGM_CH2_BODY = '@ENV1{127,23,127,6,0} @VIB1{37,12,25} @GLI0 O3 G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} G16&16 @ENV1{127,11,127,6,0} G G @ENV1{127,23,127,6,0} O4 C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C+16&16 @ENV1{127,11,127,6,0} C+ C+ @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} C16&16 @ENV1{127,11,127,6,0} C C @ENV1{127,23,127,6,0} O3 G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} G+16&16 @ENV1{127,11,127,6,0} G+ G+ @ENV1{127,23,127,6,0} O2 G+16&16 @ENV1{127,11,127,6,0} O3 G+ G+ @ENV1{127,23,127,6,0} O2 G+16&16 @ENV1{127,11,127,6,0} G+ G+'
+from pyxel_rogue.rogue_title import (
+    FONT_PATH,
+    LOGO_ACCENT_COL,
+    LOGO_BGM_DELAY_FRAMES,
+    LOGO_FADE_FRAMES,
+    LOGO_HOLD_FRAMES,
+    LOGO_TEXT_COL,
+    LOGO_TOTAL_FRAMES,
+    TITLE_BG_NYANDOR_PALETTE,
+    TITLE_BG_NYANDOR_PATH,
+    TITLE_BG_PALETTE,
+    TITLE_BG_PATH,
+    TITLE_BGM_MMLS,
+    TITLE_BGM_STOP_WAIT_FRAMES,
+    TITLE_FADE_FRAMES,
+    TITLE_LOGO_RIGHT_X,
+    TITLE_MENU_BORDER_COL,
+    TITLE_MENU_H,
+    TITLE_MENU_SELECTED_COL,
+    TITLE_MENU_TEXT_COL,
+    TITLE_MENU_W,
+    TITLE_MENU_X,
+    TITLE_MENU_Y,
+    TITLE_RESTORED_CURSOR_COL,
+)
 
-def _title_bgm_part(prefix: str, body: str) -> str:
-    return prefix + " " + body
-
-TITLE_BGM_MMLS = (
-    " ".join((
-        _title_bgm_part("K0 Q100 T92 L16 @0 V91", _TITLE_BGM_CH0_BODY),
-        _title_bgm_part("K0 Q100 T92 L16 @0 V91", _TITLE_BGM_CH0_BODY),
-        _title_bgm_part("K12 Q100 T92 L16 @0 V86", _TITLE_BGM_CH0_BODY),
-        _title_bgm_part("K0 Q100 T92 L16 @0 V91", _TITLE_BGM_CH0_BODY),
-    )),
-    " ".join((
-        _title_bgm_part("K0 Q100 T92 L16 R @2 V36", _TITLE_BGM_CH1_BODY),
-        _title_bgm_part("K0 Q100 T92 L16 R @2 V22", _TITLE_BGM_CH1_BODY),
-        _title_bgm_part("K12 Q100 T92 L16 R @2 V30", _TITLE_BGM_CH1_BODY),
-        _title_bgm_part("K0 Q100 T92 L16 R @2 V36", _TITLE_BGM_CH1_BODY),
-    )),
-    " ".join(_title_bgm_part("K0 Q100 T92 L16 @0 V109", _TITLE_BGM_CH2_BODY) for _ in range(4)),
-)
-TITLE_BG_EXTRA_PALETTE = (
-    0xF8EAA6, 0xEFDC99, 0xD39417, 0xB9933F, 0xCB8501, 0xC98201, 0x9C7A2D, 0x775F36,
-    0x5A5A57, 0x555553, 0x4E5357, 0x465624, 0x3B5800, 0x5D4623, 0x4C4B48, 0x454A4A,
-    0x42413D, 0x364817, 0x334A00, 0x373D41, 0x343B1E, 0x283D26, 0x2A3E01, 0x243424,
-    0x2B4200, 0x233700, 0x352918, 0x242A22, 0x1F2E11, 0x1F251D, 0x192B1B, 0x192B00,
-    0x182013, 0x112526, 0x122401, 0x101D0D, 0x0E1615, 0x0D1601, 0x0C0E09, 0x031B48,
-    0x021536, 0x011434, 0x011336, 0x01132E, 0x001234, 0x01122D, 0x001132, 0x000F30,
-    0x030D1C, 0x050D01, 0x0A0704, 0x060604, 0x050604, 0x040503, 0x030404, 0x030500,
-    0x030202, 0x020405, 0x020302, 0x020300, 0x020101, 0x010307, 0x010202, 0x010300,
-    0x010103, 0x010102, 0x010101, 0x010100, 0x010002, 0x010001, 0x010000, 0x00030A,
-    0x000102, 0x000002, 0x000301, 0x000101, 0x000001, 0x000300, 0x000100, 0x000000,
-)
-TITLE_BG_PALETTE = tuple(FLEXOKI_DARK_PALETTE) + tuple(FLEXOKI_DARK_PALETTE) + TITLE_BG_EXTRA_PALETTE
-TITLE_BG_NYANDOR_EXTRA_PALETTE = (
-    0xFEF4B1, 0xF2E3AA, 0xE6D69D, 0xD3CBB3, 0xD1C5A2, 0xC3B88E, 0xC89834, 0xA0966F,
-    0xCB8403, 0xCD8501, 0xC98301, 0xC98201, 0xCC8500, 0xC98200, 0xC68201, 0xC68001,
-    0xC37E01, 0x928054, 0xB8650E, 0x82622C, 0x6E6A58, 0x6B542C, 0x5B5C57, 0x575752,
-    0x545450, 0x51514F, 0x534F42, 0x4E504F, 0x485054, 0x40511E, 0x4A4D4D, 0x404C25,
-    0x494A49, 0x42494B, 0x434832, 0x2F4900, 0x7E3C12, 0x49391E, 0x414544, 0x403B2F,
-    0x394144, 0x383E38, 0x363937, 0x353228, 0x2D4017, 0x2C4101, 0x2D4400, 0x2B4100,
-    0x2A3F00, 0x2E383C, 0x2C3235, 0x293A03, 0x2D2D28, 0x21362F, 0x233602, 0x253A01,
-    0x213401, 0x253C00, 0x243900, 0x233500, 0x1E3400, 0x232E33, 0x162C40, 0x202E0B,
-    0x1A2C04, 0x1F3001, 0x1D2D01, 0x1B2D01, 0x172C00, 0x54220B, 0x362208, 0x2B2111,
-    0x21272A, 0x22241E, 0x211A0E, 0x1A272C, 0x1A2705, 0x192701, 0x1A201C, 0x1A160E,
-    0x152527, 0x152503, 0x152701, 0x152301, 0x151F1A, 0x142001, 0x151A16, 0x15130E,
-    0x0F212D, 0x0F1C23, 0x102006, 0x0E1B0A, 0x112401, 0x102101, 0x101F01, 0x101C01,
-    0x0D1B01, 0x0E171B, 0x0E1708, 0x0E1801, 0x0D1601, 0x0E1314, 0x0D1011, 0x0C1302,
-    0x0D1007, 0x062459, 0x042053, 0x031C49, 0x041A3D, 0x03173A, 0x011638, 0x001638,
-    0x081914, 0x041623, 0x011534, 0x001535, 0x011533, 0x071510, 0x011434, 0x011432,
-    0x001435, 0x001433, 0x001432, 0x011431, 0x071411, 0x011331, 0x01122E, 0x001333,
-    0x001331, 0x001230, 0x00122D, 0x01112C, 0x00112E, 0x000F2C, 0x041120, 0x020F22,
-    0x000F26, 0x091011, 0x061010, 0x091202, 0x090F02, 0x061002, 0x060E02, 0x120B04,
-    0x0B0A08, 0x080C08, 0x080806, 0x070C07, 0x070706, 0x060B0B, 0x060B02, 0x060706,
-    0x050A0A, 0x050707, 0x050A02, 0x050606, 0x050605, 0x050603, 0x050505, 0x04090A,
-    0x040902, 0x040606, 0x040605, 0x040603, 0x040506, 0x040505, 0x040504, 0x040503,
-    0x040405, 0x040404, 0x040402, 0x040302, 0x03090E, 0x030903, 0x030606, 0x030603,
-    0x030507, 0x030505, 0x030504, 0x030503, 0x030407, 0x030405, 0x030404, 0x030403,
-    0x030302, 0x010C20, 0x010911, 0x01060D, 0x010506, 0x020704, 0x020504, 0x010504,
-    0x020405, 0x020404, 0x010404, 0x020702, 0x020503, 0x010502, 0x020403, 0x020402,
-    0x010403, 0x010402, 0x010207, 0x010304, 0x010204, 0x020303, 0x010303, 0x010203,
-    0x000103, 0x020302, 0x010302, 0x010202, 0x000202, 0x000102, 0x020301, 0x010201,
-    0x000201, 0x010101, 0x000101, 0x000005, 0x000002, 0x000001, 0x010000, 0x000000,
-)
-TITLE_BG_NYANDOR_PALETTE = (
-    tuple(FLEXOKI_DARK_PALETTE)
-    + tuple(FLEXOKI_DARK_PALETTE)
-    + TITLE_BG_NYANDOR_EXTRA_PALETTE
-)
-LOGO_ACCENT_COL = 11
-LOGO_TEXT_COL = 14
-TITLE_MENU_Y = 158
-TITLE_MENU_W = 174
-TITLE_LOGO_RIGHT_X = 383
-TITLE_MENU_X = TITLE_LOGO_RIGHT_X - TITLE_MENU_W + 28
-TITLE_MENU_H = 84
-TITLE_MENU_SELECTED_COL = 15
-TITLE_MENU_TEXT_COL = 5
-TITLE_MENU_BORDER_COL = 13
-TITLE_RESTORED_CURSOR_COL = 12
 
 INV_MAX = 26
 DASH_INTERVAL = 1                # frames between dash steps
@@ -658,181 +405,6 @@ DEST_PLAYER = "player"
 DEST_GOLD = "gold"
 HELP_HEADER_COL = UI_SECTION_COL
 HELP_TEXT_COL = UI_TEXT_COL
-
-# ===========================================================
-#  Text catalog
-# ===========================================================
-class TextCatalog:
-    _catalogs = None
-    _terms = None
-    _missing_warned = set()
-    _message_aliases = {
-        "pixel.nyandor_cat_recovered": "pyxel.nyandor_cat_recovered",
-        "pixel.nyandor_vitory_line1": "ui.nyandor_victory_line_1",
-        "pixel.nyandor_vitory_line2": "ui.nyandor_victory_line_2",
-    }
-
-    @classmethod
-    def _load_catalogs(cls):
-        if cls._catalogs is not None:
-            return cls._catalogs
-        base = os.path.join(os.path.dirname(__file__), "assets", "messages")
-        catalogs = {}
-        try:
-            if sys.platform == "emscripten":
-                # Pyodide: open() won't find assets, fetch JSON directly from GitHub
-                import pyodide.http as _ph
-                _base = "https://raw.githubusercontent.com/hnsol/pyxel-rogue/master"
-                for lang in (LANG_EN, LANG_JA):
-                    resp = _ph.open_url(f"{_base}/assets/messages/{lang}.json")
-                    catalogs[lang] = json.load(resp)
-            else:
-                for lang in (LANG_EN, LANG_JA):
-                    path = os.path.join(base, f"{lang}.json")
-                    with open(path, encoding="utf-8") as f:
-                        catalogs[lang] = json.load(f)
-        except Exception:
-            from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
-            catalogs = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
-        cls._catalogs = catalogs
-        return cls._catalogs
-
-    @classmethod
-    def _load_terms(cls):
-        if cls._terms is not None:
-            return cls._terms
-        base = os.path.join(os.path.dirname(__file__), "assets", "terms")
-        terms = {}
-        try:
-            if sys.platform == "emscripten":
-                import pyodide.http as _ph
-
-                _base = "https://raw.githubusercontent.com/hnsol/pyxel-rogue/master"
-                for lang in (LANG_EN, LANG_JA):
-                    resp = _ph.open_url(f"{_base}/assets/terms/{lang}.json")
-                    terms[lang] = json.load(resp)
-            else:
-                for lang in (LANG_EN, LANG_JA):
-                    path = os.path.join(base, f"{lang}.json")
-                    with open(path, encoding="utf-8") as f:
-                        terms[lang] = json.load(f)
-        except Exception:
-            from pyxel_rogue.rogue_terms import EN_TERMS, JA_TERMS
-
-            terms = {LANG_EN: EN_TERMS, LANG_JA: JA_TERMS}
-        cls._terms = terms
-        return cls._terms
-
-    @classmethod
-    def _warn_missing(cls, key):
-        if key in cls._missing_warned:
-            return
-        cls._missing_warned.add(key)
-        print(f"[TextCatalog] missing message key: {key}", file=sys.stderr)
-
-    @staticmethod
-    def msg(lang, key, **kw):
-        key = TextCatalog._message_aliases.get(key, key)
-        catalogs = TextCatalog._load_catalogs()
-        lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
-        s = catalogs.get(lang, {}).get(key)
-        if s is None and lang != LANG_EN:
-            s = catalogs.get(LANG_EN, {}).get(key)
-        if s is None:
-            from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
-
-            builtins = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
-            s = builtins.get(lang, {}).get(key)
-            if s is None and lang != LANG_EN:
-                s = builtins.get(LANG_EN, {}).get(key)
-        if s is None:
-            TextCatalog._warn_missing(key)
-            s = f"[missing:{key}]"
-        return s.format(**kw) if kw else s
-
-    @staticmethod
-    def menu(lang, key):
-        msg_key = "menu." + key.lower().replace(" ", "_")
-        return TextCatalog.msg(lang, msg_key)
-
-    @staticmethod
-    def trap(lang, key):
-        msg_key = "trap." + key.lower().replace(" ", "_")
-        return TextCatalog.msg(lang, msg_key)
-
-    @staticmethod
-    def monster(lang, name):
-        return TextCatalog.term(lang, ("monster",), name)
-
-    @staticmethod
-    def hud_item_kind(lang, cat, name):
-        lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
-        if cat == CAT_WPN:
-            return TextCatalog.term(
-                lang, ("hud", "weapon"), name, TextCatalog.item_kind(lang, cat, name)
-            )
-        if cat == CAT_ARM:
-            return TextCatalog.term(
-                lang, ("hud", "armor"), name, TextCatalog.item_kind(lang, cat, name)
-            )
-        return TextCatalog.item_kind(lang, cat, name)
-
-    @staticmethod
-    def hud_label(lang, name):
-        return TextCatalog.term(lang, ("hud", "label"), name)
-
-    @staticmethod
-    def item_kind(lang, cat, name):
-        cat_key = {
-            CAT_POT: "potion",
-            CAT_SCR: "scroll",
-            CAT_FOOD: "food",
-            CAT_WPN: "weapon",
-            CAT_ARM: "armor",
-            CAT_RING: "ring",
-            CAT_STICK: "stick",
-            CAT_AMULET: "amulet",
-        }.get(cat)
-        return TextCatalog.term(lang, ("item", cat_key), name) if cat_key else name
-
-    @staticmethod
-    def potion_color(lang, color):
-        return TextCatalog.term(lang, ("potion_color",), color)
-
-    @staticmethod
-    def color(lang, name, form="noun"):
-        return TextCatalog.term(lang, ("color", form), name)
-
-    @staticmethod
-    def action(lang, name):
-        return TextCatalog.term(lang, ("action",), name)
-
-    @staticmethod
-    def bolt(lang, name):
-        return TextCatalog.term(lang, ("bolt",), name)
-
-    @staticmethod
-    def material(lang, cat, name):
-        return TextCatalog.term(lang, ("material", cat), name)
-
-    @staticmethod
-    def stick_type(lang, name):
-        return TextCatalog.term(lang, ("stick_type",), name)
-
-    @staticmethod
-    def term(lang, path, key, default=None):
-        terms = TextCatalog._load_terms()
-        lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
-        node = terms.get(lang, {})
-        for part in path:
-            node = node.get(part, {}) if isinstance(node, dict) else {}
-        value = node.get(key) if isinstance(node, dict) else None
-        if value is None and lang != LANG_EN:
-            node = terms.get(LANG_EN, {})
-            for part in path:
-                node = node.get(part, {}) if isinstance(node, dict) else {}
-            value = node.get(key) if isinstance(node, dict) else None
-        return value if value is not None else (key if default is None else default)
 
 # ===========================================================
 #  Dice
@@ -1021,26 +593,6 @@ BESTIARY = [
     MonsterSpec("Y","yeti",4,6,"1x6/1x6",50,10,"", carry=30),
     MonsterSpec("Z","zombie",2,8,"1x8",6,7,"mean"),
 ]
-MROLE = {
-    "A": MONSTER_AQUATIC, "B": MONSTER_BEAST, "C": MONSTER_BASIC, "D": MONSTER_DEADLY,
-    "E": MONSTER_BEAST, "F": MONSTER_AQUATIC, "G": MONSTER_UNDEAD, "H": MONSTER_BASIC,
-    "I": MONSTER_MAGIC, "J": MONSTER_DEADLY, "K": MONSTER_BEAST, "L": MONSTER_THIEF,
-    "M": MONSTER_DEADLY, "N": MONSTER_THIEF, "O": MONSTER_BASIC, "P": MONSTER_MAGIC,
-    "Q": MONSTER_BEAST, "R": MONSTER_DEADLY, "S": MONSTER_BEAST, "T": MONSTER_BEAST,
-    "U": MONSTER_MAGIC, "V": MONSTER_UNDEAD, "W": MONSTER_UNDEAD, "X": MONSTER_MIMIC,
-    "Y": MONSTER_BEAST, "Z": MONSTER_UNDEAD,
-}
-
-
-def palette_monster_color(palette_id, sym):
-    theme = palette_theme(palette_id)
-    if sym in theme.monster_overrides:
-        return theme.monster_overrides[sym]
-    return theme.monster_roles.get(MROLE.get(sym, MONSTER_BASIC), theme.roles[ROLE_TEXT])
-
-
-MCOL = {sym: palette_monster_color(DEFAULT_PALETTE, sym) for sym in MROLE}
-
 # 8-direction vectors
 DIR8 = {
     "N":(0,-1),"S":(0,1),"W":(-1,0),"E":(1,0),
@@ -1140,9 +692,6 @@ class Monster:
         s.pack=[]
     @property
     def alive(s): return s.hp>0
-
-def monster_hp(spec: object) -> int:
-    return max(1, roll_damage_expr(f"{spec.level}x8"))
 
 class Player:
     # Rogue 5.4.4 extern.c:e_levels[] with a leading level-1 sentinel for Pyxel indexing.
@@ -1708,94 +1257,6 @@ def start_inv():
     f=Item(CAT_FOOD,0)              # ration
     return rogue_init.initial_pack_order(f,a,w,b,ar),w,a
 
-def msg_toast_color(age, palette_id=DEFAULT_PALETTE):
-    if palette_id in (PALETTE_FLEXOKI_LIGHT, PALETTE_FLEXOKI_SYNTAX_LIGHT):
-        if age <= 0:
-            return UI_TEXT_COL
-        if age <= 1:
-            return UI_SUBTEXT_COL
-        if age <= 3:
-            return palette_role_color(palette_id, ROLE_MEMORY)
-        return 3
-    for max_age, color in MSG_TOAST_FADE_COLORS:
-        if age <= max_age:
-            return color
-    return MSG_TOAST_FADE_COLORS[-1][1]
-
-def _clamp_to_grid_index(value, edges):
-    for i in range(len(edges) - 1):
-        if value < edges[i + 1]:
-            return i
-    return len(edges) - 2
-
-def msg_toast_home_block(x, y):
-    col = _clamp_to_grid_index(max(0, min(MAP_W - 1, x)), MSG_TOAST_GRID_COL_EDGES)
-    row_y = max(0, min(PLAY_H - 1, y - PLAY_Y_MIN))
-    row = _clamp_to_grid_index(row_y, MSG_TOAST_GRID_ROW_EDGES)
-    return (col, row)
-
-def _sign(value):
-    return (value > 0) - (value < 0)
-
-def _valid_msg_toast_block(block):
-    col, row = block
-    return 0 <= col <= 2 and 0 <= row <= 2
-
-def _dominant_msg_toast_dir(dx, dy):
-    sx, sy = _sign(dx), _sign(dy)
-    if not sx and not sy:
-        return (0, 0)
-    if abs(dx) > abs(dy):
-        return (sx, 0)
-    if abs(dy) > abs(dx):
-        return (0, sy)
-    if sx:
-        return (sx, 0)
-    return (0, sy)
-
-def pick_msg_toast_block(home, last_intent_dir=(0, 0), avoid=()):
-    dx, dy = last_intent_dir
-    sx, sy = _dominant_msg_toast_dir(dx, dy)
-    if sx:
-        priority = (
-            (home[0] + sx, home[1]),
-            (home[0], home[1] + 1),
-            (home[0], home[1] - 1),
-        )
-    elif sy:
-        priority = (
-            (home[0], home[1] + sy),
-            (home[0] - 1, home[1]),
-            (home[0] + 1, home[1]),
-        )
-    else:
-        priority = (
-            (home[0], home[1] + 1),
-            (home[0], home[1] - 1),
-            (home[0] - 1, home[1]),
-            (home[0] + 1, home[1]),
-        )
-    avoid = set(avoid)
-    for block in priority:
-        if _valid_msg_toast_block(block) and block != home and block not in avoid:
-            return block
-    for row in range(3):
-        for col in range(3):
-            block = (col, row)
-            if block != home and block not in avoid:
-                return block
-    raise RuntimeError("no valid message toast block")
-
-def msg_toast_block_origin(block, rows=1):
-    col, row = block
-    start_col = MSG_TOAST_GRID_COL_EDGES[col]
-    start_row = MSG_TOAST_GRID_ROW_EDGES[row]
-    return (
-        ZV_X + start_col * TILE_W + FONT_ASCII_W,
-        ZV_Y + start_row * TILE_H + 2,
-    )
-
-
 # ===========================================================
 #  GAME
 # ===========================================================
@@ -1844,14 +1305,8 @@ class Game:
         self.online_return_state = ST_TITLE
         self.title_bg = None
         self.title_fade_frames = 0
-        self.b_prev = False
-        self.b_frames = 0
-        self.b_used = False
-        self.b_tap = False
-        self.back_prev = False
-        self.back_frames = 0
-        self.back_used = False
-        self.back_tap = False
+        self.b_button_state = rogue_input.TapButtonState()
+        self.back_button_state = rogue_input.TapButtonState()
         self.b_menu_guard = False
         self.st = ST_LOGO
         self._loading_phase = 0
@@ -2158,39 +1613,13 @@ class Game:
         return self.item_name(it, describe=False)
 
     def hud_equip_name(self,it):
-        lang = self.lang if self.lang in (LANG_EN, LANG_JA) else LANG_EN
-        if it.cat == CAT_WPN:
-            nm=TextCatalog.hud_item_kind(lang, CAT_WPN, it.data["name"])
-            prefix = f"{it.qty} " if it.stackable and it.qty>1 else ""
-            if not getattr(it, "known", True):
-                return f"{prefix}{nm}"
-            hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
-            dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
-            return f"{prefix}{hp},{dp} {nm}"
-        if it.cat == CAT_ARM:
-            nm=TextCatalog.hud_item_kind(lang, CAT_ARM, it.data["name"])
-            if not getattr(it, "known", True):
-                return nm
-            e=it.ench
-            return f"{'+' if e>=0 else ''}{e} {nm}"
-        return self.equip_name(it)
+        return rogue_hud.hud_equip_name(it, self.lang, self.equip_name)
 
     def hud_weapon_bonus(self, it):
-        if not it:
-            return "+0,+0"
-        if not getattr(it, "known", True):
-            return "?,?"
-        hp = f"{'+' if it.hit_plus>=0 else ''}{it.hit_plus}"
-        dp = f"{'+' if it.dam_plus>=0 else ''}{it.dam_plus}"
-        return f"{hp},{dp}"
+        return rogue_hud.hud_weapon_bonus(it)
 
     def hud_armor_bonus(self, it):
-        if not it:
-            return "+0"
-        if not getattr(it, "known", True):
-            return "?"
-        e = it.ench
-        return f"{'+' if e>=0 else ''}{e}"
+        return rogue_hud.hud_armor_bonus(it)
 
     def hud_equip_line(self):
         w = self.hud_weapon_empty_name()
@@ -2202,92 +1631,19 @@ class Game:
         return f"W {w} A {a}"
 
     def hud_weapon_empty_name(self):
-        return "素手" if self.lang == LANG_JA else "bare hands"
+        return rogue_hud.hud_weapon_empty_name(self.lang)
 
     def hud_armor_empty_name(self):
-        return "防具なし" if self.lang == LANG_JA else "no armor"
+        return rogue_hud.hud_armor_empty_name(self.lang)
 
     def hud_condition_labels(self):
-        if not self.difficulty_profile().show_status_hud:
-            return []
-        p = self.p
-        if self.lang == LANG_JA:
-            names = {
-                "hungry": "空腹",
-                "weak": "衰弱",
-                "faint": "失神",
-                "confuse": "混乱",
-                "blind": "盲目",
-                "haste": "加速",
-                "halu": "幻覚",
-                "levit": "浮遊",
-            }
-        else:
-            names = {
-                "hungry": "Hungry",
-                "weak": "Weak",
-                "faint": "Faint",
-                "confuse": "Confuse",
-                "blind": "Blind",
-                "haste": "Haste",
-                "halu": "Halu",
-                "levit": "Levit",
-            }
-        eff = []
-        if p.state == "hungry":
-            eff.append(names["hungry"])
-        elif p.state == "weak":
-            eff.append(names["weak"])
-        elif p.state == "faint":
-            eff.append(names["faint"])
-        if p.confused > 0:
-            eff.append(names["confuse"])
-        if p.blind > 0:
-            eff.append(names["blind"])
-        if p.haste > 0:
-            eff.append(names["haste"])
-        if p.hallucinating > 0:
-            eff.append(names["halu"])
-        if p.levitating > 0:
-            eff.append(names["levit"])
-        return eff
+        return rogue_hud.hud_condition_labels(self.p, self.lang, self.difficulty_profile().show_status_hud)
 
     def hud_condition_chips(self):
-        if not self.difficulty_profile().show_status_hud:
-            return []
-        p = self.p
-        chips = []
-        labels = self.hud_condition_labels()
-        offset = 0
-        if p.state == "hungry":
-            chips.append((labels[0], ROLE_STATUS_WARN))
-            offset = 1
-        elif p.state == "weak":
-            chips.append((labels[0], ROLE_STATUS_WARN))
-            offset = 1
-        elif p.state == "faint":
-            chips.append((labels[0], ROLE_STATUS_BAD))
-            offset = 1
-        rest = labels[offset:]
-        roles = []
-        if p.confused > 0:
-            roles.append(ROLE_STATUS_MIND)
-        if p.blind > 0:
-            roles.append(ROLE_STATUS_MIND)
-        if p.haste > 0:
-            roles.append(ROLE_STATUS_BUFF)
-        if p.hallucinating > 0:
-            roles.append(ROLE_STATUS_MIND)
-        if p.levitating > 0:
-            roles.append(ROLE_STATUS_BUFF)
-        chips.extend(zip(rest, roles))
-        return chips
+        return rogue_hud.hud_condition_chips(self.p, self.lang, self.difficulty_profile().show_status_hud)
 
     def hud_mode_chips(self):
-        return (
-            ("P", ROLE_FLAG_ON if self.auto_pickup else ROLE_FLAG_OFF),
-            ("X", ROLE_FLAG_ON if self.diag_assist else ROLE_FLAG_OFF),
-        )
+        return rogue_hud.hud_mode_chips(self.auto_pickup, self.diag_assist)
 
     def ui_role_color(self, role):
         return palette_role_color(self.ensure_settings().palette, role)
@@ -2339,29 +1695,15 @@ class Game:
         self.fight_dir = (0, 0)
         self.fight_target = None
         self.fight_max_hit = 0
-        self.last_repeat_command = None
-        self.last_repeat_dir = None
-        self.last_repeat_item = None
-        self.prev_repeat_command = None
-        self.prev_repeat_dir = None
-        self.prev_repeat_item = None
-        self.repeat_command_active = False
-        self.count_prefix_active = False
-        self.count_prefix_value = 0
-        self.count_repeat_command = None
-        self.count_repeat_remaining = 0
-        self.count_repeat_dir = None
+        self.repeat_state = rogue_input.RepeatState()
+        self.count_input_state = rogue_input.CountInputState()
+        self.dash_state = rogue_input.DashState()
         self.disc_scroll = 0
         self.turn_msg_start = 0
         self.throw_dir = None; self.zap_item = None; self.action_origin = ST_PLAY
         self.cam_x = self.cam_y = 0
-        self.dashing = False; self.dash_d = (0,0); self.dash_t = 0
-        self.dash_steps = 0
-        self.dash_restart_guard = False
-        self.b_prev = False; self.b_frames = 0
-        self.b_used = False; self.b_tap = False
-        self.back_prev = False; self.back_frames = 0
-        self.back_used = False; self.back_tap = False
+        self.b_button_state = rogue_input.TapButtonState()
+        self.back_button_state = rogue_input.TapButtonState()
         self.b_menu_guard = False
         self.diag_assist = False
         self.dir_pending = None
@@ -5902,17 +5244,17 @@ class Game:
         if not self.walkable(nx,ny) and not next_mon:
             nd=self.next_dash_dir(dx,dy)
             if not nd:
-                self.dashing=False; self.dash_restart_guard=True; return
+                self.dash_state.stop(); return
             self.dash_d=nd
             dx,dy=nd
         ox,oy=self.p.x,self.p.y
         moved=self.try_move(dx,dy)
         if not moved or (self.p.x,self.p.y)==(ox,oy) or self.st!=ST_PLAY or not self.p.alive:
-            self.dashing=False; self.dash_restart_guard=True; return
-        self.dash_steps+=1
-        self.dashing=not self.dash_should_stop_here(dx,dy)
+            self.dash_state.stop(); return
+        self.dash_steps += 1
+        self.dashing = not self.dash_should_stop_here(dx,dy)
         if not self.dashing:
-            self.dash_restart_guard=True
+            self.dash_restart_guard = True
 
     # ---------- Menu logic ----------
     def restorable_menu_actions(self):
@@ -6160,14 +5502,10 @@ class Game:
             return
         if self.dact=="Move":
             self.p.facing=(dx,dy)
-            if self.count_prefix_active:
-                count = self.count_prefix_value
-                self.count_prefix_active = False
-                self.count_prefix_value = 0
+            count = self.count_input_state.take_prefix()
+            if count is not None:
                 if count > 1:
-                    self.count_repeat_command = "move_on"
-                    self.count_repeat_remaining = count - 1
-                    self.count_repeat_dir = (dx, dy)
+                    self.count_input_state.start_repeat("move_on", count, (dx, dy))
                 else:
                     self.record_repeat_command("move_on")
                     self.remember_repeat_dir(dx,dy)
@@ -6240,37 +5578,225 @@ class Game:
             self.clear_fight_to_death()
         return moved
 
+    @property
+    def last_repeat_command(self):
+        return self.repeat_state.command
+
+    @last_repeat_command.setter
+    def last_repeat_command(self, value):
+        self.repeat_state.command = value
+
+    @property
+    def last_repeat_dir(self):
+        return self.repeat_state.direction
+
+    @last_repeat_dir.setter
+    def last_repeat_dir(self, value):
+        self.repeat_state.direction = value
+
+    @property
+    def last_repeat_item(self):
+        return self.repeat_state.item
+
+    @last_repeat_item.setter
+    def last_repeat_item(self, value):
+        self.repeat_state.item = value
+
+    @property
+    def prev_repeat_command(self):
+        return self.repeat_state.previous_command
+
+    @prev_repeat_command.setter
+    def prev_repeat_command(self, value):
+        self.repeat_state.previous_command = value
+
+    @property
+    def prev_repeat_dir(self):
+        return self.repeat_state.previous_dir
+
+    @prev_repeat_dir.setter
+    def prev_repeat_dir(self, value):
+        self.repeat_state.previous_dir = value
+
+    @property
+    def prev_repeat_item(self):
+        return self.repeat_state.previous_item
+
+    @prev_repeat_item.setter
+    def prev_repeat_item(self, value):
+        self.repeat_state.previous_item = value
+
+    @property
+    def repeat_command_active(self):
+        return self.repeat_state.active
+
+    @repeat_command_active.setter
+    def repeat_command_active(self, value):
+        self.repeat_state.active = value
+
+    @property
+    def count_prefix_active(self):
+        return self.count_input_state.prefix_active
+
+    @count_prefix_active.setter
+    def count_prefix_active(self, value):
+        self.count_input_state.prefix_active = value
+
+    @property
+    def count_prefix_value(self):
+        return self.count_input_state.prefix_value
+
+    @count_prefix_value.setter
+    def count_prefix_value(self, value):
+        self.count_input_state.prefix_value = value
+
+    @property
+    def count_repeat_command(self):
+        return self.count_input_state.repeat_command
+
+    @count_repeat_command.setter
+    def count_repeat_command(self, value):
+        self.count_input_state.repeat_command = value
+
+    @property
+    def count_repeat_remaining(self):
+        return self.count_input_state.repeat_remaining
+
+    @count_repeat_remaining.setter
+    def count_repeat_remaining(self, value):
+        self.count_input_state.repeat_remaining = value
+
+    @property
+    def count_repeat_dir(self):
+        return self.count_input_state.repeat_dir
+
+    @count_repeat_dir.setter
+    def count_repeat_dir(self, value):
+        self.count_input_state.repeat_dir = value
+
+    @property
+    def dashing(self):
+        return self.dash_state.active
+
+    @dashing.setter
+    def dashing(self, value):
+        self.dash_state.active = value
+
+    @property
+    def dash_d(self):
+        return self.dash_state.direction
+
+    @dash_d.setter
+    def dash_d(self, value):
+        self.dash_state.direction = value
+
+    @property
+    def dash_t(self):
+        return self.dash_state.timer
+
+    @dash_t.setter
+    def dash_t(self, value):
+        self.dash_state.timer = value
+
+    @property
+    def dash_steps(self):
+        return self.dash_state.steps
+
+    @dash_steps.setter
+    def dash_steps(self, value):
+        self.dash_state.steps = value
+
+    @property
+    def dash_restart_guard(self):
+        return self.dash_state.restart_guard
+
+    @dash_restart_guard.setter
+    def dash_restart_guard(self, value):
+        self.dash_state.restart_guard = value
+
+    @property
+    def b_prev(self):
+        return self.b_button_state.previous
+
+    @b_prev.setter
+    def b_prev(self, value):
+        self.b_button_state.previous = value
+
+    @property
+    def b_frames(self):
+        return self.b_button_state.frames
+
+    @b_frames.setter
+    def b_frames(self, value):
+        self.b_button_state.frames = value
+
+    @property
+    def b_used(self):
+        return self.b_button_state.used
+
+    @b_used.setter
+    def b_used(self, value):
+        self.b_button_state.used = value
+
+    @property
+    def b_tap(self):
+        return self.b_button_state.tap
+
+    @b_tap.setter
+    def b_tap(self, value):
+        self.b_button_state.tap = value
+
+    @property
+    def back_prev(self):
+        return self.back_button_state.previous
+
+    @back_prev.setter
+    def back_prev(self, value):
+        self.back_button_state.previous = value
+
+    @property
+    def back_frames(self):
+        return self.back_button_state.frames
+
+    @back_frames.setter
+    def back_frames(self, value):
+        self.back_button_state.frames = value
+
+    @property
+    def back_used(self):
+        return self.back_button_state.used
+
+    @back_used.setter
+    def back_used(self, value):
+        self.back_button_state.used = value
+
+    @property
+    def back_tap(self):
+        return self.back_button_state.tap
+
+    @back_tap.setter
+    def back_tap(self, value):
+        self.back_button_state.tap = value
+
     def record_repeat_command(self, command):
         # C: command.c saves last_comm/last_dir/last_pick before dispatch, except while again.
         if getattr(self, "repeat_command_active", False):
             return
-        if getattr(self, "count_prefix_active", False):
-            self.count_prefix_active = False
-            self.count_prefix_value = 0
-        self.prev_repeat_command = self.last_repeat_command
-        self.prev_repeat_dir = self.last_repeat_dir
-        self.prev_repeat_item = self.last_repeat_item
-        self.last_repeat_command = command
-        self.last_repeat_dir = None
-        self.last_repeat_item = None
+        self.count_input_state.take_prefix()
+        self.repeat_state.record(command)
 
     def reset_repeat_command(self):
         # C: pack.c:reset_last() restores the previous command when get_dir/get_item aborts.
-        self.last_repeat_command = self.prev_repeat_command
-        self.last_repeat_dir = self.prev_repeat_dir
-        self.last_repeat_item = self.prev_repeat_item
+        self.repeat_state.reset()
 
     def remember_repeat_dir(self, dx, dy):
-        if not getattr(self, "repeat_command_active", False):
-            self.last_repeat_dir = (dx, dy)
+        self.repeat_state.remember_dir((dx, dy))
 
     def remember_repeat_item(self, it):
-        if not getattr(self, "repeat_command_active", False):
-            self.last_repeat_item = it
+        self.repeat_state.remember_item(it)
 
     def clear_repeat_item_if_gone(self, it):
-        if getattr(self, "last_repeat_item", None) is it and it not in self.p.inv:
-            self.last_repeat_item = None
+        self.repeat_state.clear_item_if_gone(it, self.p.inv)
 
     def repeat_last_command(self):
         # C: command.c:'a' repeats last_comm with again=TRUE.
@@ -6397,14 +5923,49 @@ class Game:
     def kp(self,*ks): return any(k is not None and pyxel.btnp(k) for k in ks)
     def kh(self,*ks): return any(k is not None and pyxel.btn(k) for k in ks)
 
+    def direction_input_labels(self, check, include_vi=True, include_hjkl=True, include_gamepad=True):
+        labels = set()
+        groups = [
+            ("up", [pyxel.KEY_UP]),
+            ("down", [pyxel.KEY_DOWN]),
+            ("left", [pyxel.KEY_LEFT]),
+            ("right", [pyxel.KEY_RIGHT]),
+        ]
+        if include_hjkl:
+            groups[0][1].append(pyxel.KEY_K)
+            groups[1][1].append(pyxel.KEY_J)
+            groups[2][1].append(pyxel.KEY_H)
+            groups[3][1].append(pyxel.KEY_L)
+        if include_gamepad:
+            groups[0][1].append(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+            groups[1][1].append(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+            groups[2][1].append(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
+            groups[3][1].append(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        if include_vi:
+            groups.extend([
+                ("y", [pyxel.KEY_Y]),
+                ("u", [pyxel.KEY_U]),
+                ("b", [pyxel.KEY_B]),
+                ("n", [pyxel.KEY_N]),
+            ])
+        for label, keys in groups:
+            if check(*keys):
+                labels.add(label)
+        return labels
+
+    def held_direction_input_labels(self, **kwargs):
+        return self.direction_input_labels(self.kh, **kwargs)
+
+    def pressed_direction_input_labels(self, **kwargs):
+        return self.direction_input_labels(self.kp, **kwargs)
+
     def count_digit_press(self):
-        if self.shift_held() or self.ctrl_held():
-            return None
-        for digit in range(10):
+        pressed = set()
+        for digit in rogue_input.DIGITS:
             key = getattr(pyxel, f"KEY_{digit}", None)
             if key is not None and self.kp(key):
-                return digit
-        return None
+                pressed.add(digit)
+        return rogue_input.count_digit(pressed, self.shift_held(), self.ctrl_held())
 
     def countable_command(self, command):
         return command in ("search", "wait", "move")
@@ -6412,22 +5973,12 @@ class Game:
     def start_count_prefix(self, digit):
         # C: command.c digit prefix is read after look(TRUE), before dispatch.
         self.command_look()
-        if not self.count_prefix_active:
-            self.count_prefix_value = 0
-        self.count_prefix_active = True
-        self.count_prefix_value = min(255, self.count_prefix_value * 10 + digit)
+        self.count_input_state.start_prefix(digit)
 
     def record_counted_input_command(self, command, direction=None):
         # C: command.c decrements count before deciding whether last_comm is updated.
-        if self.count_prefix_active:
-            count = self.count_prefix_value
-            self.count_prefix_active = False
-            self.count_prefix_value = 0
-            if self.countable_command(command) and count > 1:
-                self.count_repeat_command = command
-                self.count_repeat_remaining = count - 1
-                self.count_repeat_dir = direction
-                return False
+        if not self.count_input_state.record_counted(command, self.countable_command(command), direction):
+            return False
         self.record_repeat_command(command)
         if command == "move" and direction is not None:
             self.remember_repeat_dir(*direction)
@@ -6465,38 +6016,35 @@ class Game:
             return True
         return False
 
+    def ensure_tap_button_states(self):
+        if not hasattr(self, "b_button_state"):
+            self.b_button_state = rogue_input.TapButtonState()
+        if not hasattr(self, "back_button_state"):
+            self.back_button_state = rogue_input.TapButtonState()
+
+    def ensure_dash_state(self):
+        if not hasattr(self, "dash_state"):
+            self.dash_state = rogue_input.DashState()
+
     def begin_input(self):
-        self.b_tap=False
-        self.back_tap=False
+        self.ensure_tap_button_states()
+        self.ensure_dash_state()
         self.diag_assist=self.start_held()
         b_now=self.kh(pyxel.GAMEPAD1_BUTTON_B)
         back_now=self.back_held()
-        if not self.dash_held():
-            self.dash_restart_guard=False
-        if b_now:
-            self.b_frames = getattr(self, "b_frames", 0)+1 if getattr(self, "b_prev", False) else 1
-        else:
-            if getattr(self, "b_prev", False) and not getattr(self, "b_used", False) and getattr(self, "b_frames", 0)<=B_TAP_FRAMES:
-                self.b_tap=True
-            self.b_frames=0; self.b_used=False
-        self.b_prev=b_now
+        self.dash_state.update_release(self.dash_held())
+        self.b_button_state.update(b_now, B_TAP_FRAMES)
         if b_now and (self.kh(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
                               pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
                               pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
                       or self.kh(pyxel.GAMEPAD1_BUTTON_A)):
-            self.b_used=True
-        if back_now:
-            self.back_frames = getattr(self, "back_frames", 0)+1 if getattr(self, "back_prev", False) else 1
-        else:
-            if getattr(self, "back_prev", False) and not getattr(self, "back_used", False) and getattr(self, "back_frames", 0)<=BACK_TAP_FRAMES:
-                self.back_tap=True
-            self.back_frames=0; self.back_used=False
-        self.back_prev=back_now
+            self.b_button_state.mark_used()
+        self.back_button_state.update(back_now, BACK_TAP_FRAMES)
         if back_now and self.kh(pyxel.KEY_RETURN, pyxel.KEY_ESCAPE,
                                 pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B):
-            self.back_used=True
+            self.back_button_state.mark_used()
         if back_now and self.dir_held_any():
-            self.back_used=True
+            self.back_button_state.mark_used()
 
     GP = pyxel.GAMEPAD1_BUTTON_DPAD_UP
     def _held_up(self): return self.kh(pyxel.KEY_UP, pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
@@ -6506,83 +6054,25 @@ class Game:
 
     def dir_press(self):
         """Return (dx,dy) for direction pressed this frame (btnp), or None."""
-        # Diagonal keys (vi: Y U B N)
-        if self.kp(pyxel.KEY_Y): self.dir_pending=None; return (-1,-1)
-        if self.kp(pyxel.KEY_U): self.dir_pending=None; return (1,-1)
-        if self.kp(pyxel.KEY_B): self.dir_pending=None; return (-1,1)
-        if self.kp(pyxel.KEY_N): self.dir_pending=None; return (1,1)
-        u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
-        diag_pressed = (
-            self.kp(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
-                    pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
-                    pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        direction, self.dir_pending = rogue_input.direction_press(
+            self.held_direction_input_labels(),
+            self.pressed_direction_input_labels(),
+            self.dir_pending,
+            self.diag_assist,
         )
-        if u and r and diag_pressed: self.dir_pending=None; return (1,-1)
-        if u and l and diag_pressed: self.dir_pending=None; return (-1,-1)
-        if d and r and diag_pressed: self.dir_pending=None; return (1,1)
-        if d and l and diag_pressed: self.dir_pending=None; return (-1,1)
-        if self.dir_pending is not None:
-            pdx,pdy = self.dir_pending
-            self.dir_pending = None
-            if pdy < 0 and u:
-                if r and not l: return (1,-1)
-                if l and not r: return (-1,-1)
-            elif pdy > 0 and d:
-                if r and not l: return (1,1)
-                if l and not r: return (-1,1)
-            elif pdx < 0 and l:
-                if u and not d: return (-1,-1)
-                if d and not u: return (-1,1)
-            elif pdx > 0 and r:
-                if u and not d: return (1,-1)
-                if d and not u: return (1,1)
-            return (pdx,pdy)
-        if self.diag_assist:
-            self.dir_pending=None
-            return None
-        # Cardinal
-        if self.kp(pyxel.KEY_UP,    pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP):
-            self.dir_pending=(0,-1); return None
-        if self.kp(pyxel.KEY_DOWN,  pyxel.KEY_J, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
-            self.dir_pending=(0,1); return None
-        if self.kp(pyxel.KEY_LEFT,  pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
-            self.dir_pending=(-1,0); return None
-        if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
-            self.dir_pending=(1,0); return None
-        return None
+        return direction
 
     def dir_prompt_press(self):
-        if self.kp(pyxel.KEY_Y): return (-1,-1)
-        if self.kp(pyxel.KEY_U): return (1,-1)
-        if self.kp(pyxel.KEY_B): return (-1,1)
-        if self.kp(pyxel.KEY_N): return (1,1)
-        u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
-        pressed=self.kp(pyxel.KEY_UP,pyxel.KEY_DOWN,pyxel.KEY_LEFT,pyxel.KEY_RIGHT,
-                        pyxel.KEY_H,pyxel.KEY_J,pyxel.KEY_K,pyxel.KEY_L,
-                        pyxel.GAMEPAD1_BUTTON_DPAD_UP,pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
-                        pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
-        if not pressed:
-            return None
-        dx = -1 if l and not r else 1 if r and not l else 0
-        dy = -1 if u and not d else 1 if d and not u else 0
-        return (dx,dy) if (dx or dy) else None
+        return rogue_input.prompt_direction(
+            self.held_direction_input_labels(),
+            self.pressed_direction_input_labels(),
+        )
 
     def held_dir(self):
-        if self.kh(pyxel.KEY_Y): return (-1,-1)
-        if self.kh(pyxel.KEY_U): return (1,-1)
-        if self.kh(pyxel.KEY_B): return (-1,1)
-        if self.kh(pyxel.KEY_N): return (1,1)
-        u=self._held_up(); d=self._held_dn(); l=self._held_lt(); r=self._held_rt()
-        dx = -1 if l and not r else 1 if r and not l else 0
-        dy = -1 if u and not d else 1 if d and not u else 0
-        if dx and dy:
-            return (dx,dy)
-        if self.diag_assist:
-            return None
-        return (dx,dy) if (dx or dy) else None
+        return rogue_input.held_direction(self.held_direction_input_labels(), self.diag_assist)
 
     def dir_held_any(self):
-        return self._held_up() or self._held_dn() or self._held_lt() or self._held_rt()
+        return rogue_input.any_direction_held(self.held_direction_input_labels(include_vi=False))
 
     def menu_vertical_press(self):
         if self.kp(pyxel.KEY_UP, pyxel.KEY_K, pyxel.GAMEPAD1_BUTTON_DPAD_UP): return -1
@@ -6724,22 +6214,14 @@ class Game:
             self.back_used=True; self.b_used=True
         return hit
     def select_dir_press(self):
-        if not self.back_held():
-            return None
-        u=self.kh(pyxel.KEY_UP, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
-        d=self.kh(pyxel.KEY_DOWN, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
-        l=self.kh(pyxel.KEY_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
-        r=self.kh(pyxel.KEY_RIGHT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
-        pressed=self.kp(pyxel.KEY_UP, pyxel.KEY_DOWN, pyxel.KEY_LEFT, pyxel.KEY_RIGHT,
-                        pyxel.GAMEPAD1_BUTTON_DPAD_UP, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
-                        pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
-        if not pressed:
-            return None
-        dx = -1 if l and not r else 1 if r and not l else 0
-        dy = -1 if u and not d else 1 if d and not u else 0
-        if dx or dy:
+        direction = rogue_input.select_direction(
+            self.held_direction_input_labels(include_vi=False, include_hjkl=False),
+            self.pressed_direction_input_labels(include_vi=False, include_hjkl=False),
+            self.back_held(),
+        )
+        if direction:
             self.back_used=True
-            return (dx,dy)
+            return direction
         return None
     def btn_r(self): return self.kp(pyxel.KEY_QUESTION)
     def btn_any_key(self):
@@ -6827,173 +6309,50 @@ class Game:
         self.request_title_new_game()
 
     def scoreboard_period_key(self, period, timestamp=None):
-        if period == SCOREBOARD_PERIOD_LOCAL:
-            return ""
-        keys = score_period_keys(timestamp)
-        if period == SCOREBOARD_PERIOD_SEASON:
-            return keys["period_season"]
-        return keys["period_week"]
+        return rogue_online_scoreboard.scoreboard_period_key(period, timestamp)
 
     def scoreboard_period_label(self, period, timestamp=None):
-        if period == SCOREBOARD_PERIOD_LOCAL:
-            return self.online_text("score_period_local")
-        key = self.scoreboard_period_key(period, timestamp)
-        return key
+        return rogue_online_scoreboard.scoreboard_period_label(period, self.lang, timestamp)
 
     def format_utc_minute(self, value):
-        text = str(value or "")
-        if not text:
-            return "-"
-        try:
-            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
-            return text
-        dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-        return f"UTC {dt:%Y-%m-%d %H:%M}"
+        return rogue_online_scoreboard.format_utc_minute(value)
 
     def format_utc_short_minute(self, value):
-        text = str(value or "")
-        if not text:
-            return "-"
-        try:
-            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
-            return text
-        dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-        return f"{dt:%m-%d %H:%M}"
+        return rogue_online_scoreboard.format_utc_short_minute(value)
 
     def scoreboard_period_end(self, period, now=None):
-        if period == SCOREBOARD_PERIOD_LOCAL:
-            return None
-        if now is None:
-            dt = datetime.now(timezone.utc)
-        elif isinstance(now, datetime):
-            dt = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
-        else:
-            text = str(now).replace("Z", "+00:00")
-            try:
-                dt = datetime.fromisoformat(text)
-            except ValueError:
-                dt = datetime.now(timezone.utc)
-            dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-        if period == SCOREBOARD_PERIOD_WEEKLY:
-            start = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-            return start + timedelta(days=7 - start.weekday())
-        y, m = dt.year, dt.month
-        if 3 <= m <= 5:
-            return datetime(y, 6, 1, tzinfo=timezone.utc)
-        if 6 <= m <= 8:
-            return datetime(y, 9, 1, tzinfo=timezone.utc)
-        if 9 <= m <= 11:
-            return datetime(y, 12, 1, tzinfo=timezone.utc)
-        return datetime(y + 1 if m == 12 else y, 3, 1, tzinfo=timezone.utc)
+        return rogue_online_scoreboard.scoreboard_period_end(period, now)
 
     def scoreboard_period_ends_line(self, period, now=None):
-        if period == SCOREBOARD_PERIOD_LOCAL:
-            return self.online_sync_hint_line()
-        if now is None:
-            dt = datetime.now(timezone.utc)
-        elif isinstance(now, datetime):
-            dt = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
-        else:
-            text = str(now).replace("Z", "+00:00")
-            try:
-                dt = datetime.fromisoformat(text)
-            except ValueError:
-                dt = datetime.now(timezone.utc)
-            dt = dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-        end = self.scoreboard_period_end(period, dt)
-        seconds = max(0, int((end - dt).total_seconds()))
-        days, rem = divmod(seconds, 86400)
-        hours, rem = divmod(rem, 3600)
-        minutes, seconds = divmod(rem, 60)
-        if period == SCOREBOARD_PERIOD_WEEKLY:
-            remain = f"{days}d {hours:02d}h {minutes:02d}m"
-            label = self.online_text("period_week")
-        else:
-            weeks, days = divmod(days, 7)
-            remain = f"{weeks}w {days}d {hours:02d}h {minutes:02d}m"
-            label = self.online_text("period_season")
-        display_end = end - timedelta(minutes=1)
-        if self.lang == LANG_JA:
-            return f"{label}の集計終了まで {remain} / UTC {display_end:%Y-%m-%d %H:%M}"
-        return f"{label} ends in {remain} at UTC {display_end:%Y-%m-%d %H:%M}"
+        return rogue_online_scoreboard.scoreboard_period_ends_line(
+            period,
+            self.lang,
+            now,
+            local_line=self.online_sync_hint_line(),
+        )
 
     def online_sync_hint_line(self):
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        if profile.get("local_only", True):
-            return self.online_text("local_only_hint")
-        last_sync = profile.get("last_sync_at", "")
-        if last_sync:
-            next_sync = profile.get("next_sync_at", "")
-            if next_sync:
-                return f"{self.online_text('posted')} UTC {self.format_utc_short_minute(last_sync)} / {self.online_text('post_after')} {self.format_utc_short_minute(next_sync)}"
-            return f"{self.online_text('posted')} {self.format_utc_minute(last_sync)}"
-        return ""
+        return rogue_online_scoreboard.online_sync_hint_line(profile, self.lang)
 
     def ensure_online_score_state(self):
-        if not hasattr(self, "online_score_cache"):
-            self.online_score_cache = {}
-        if not hasattr(self, "online_score_loaded"):
-            self.online_score_loaded = set()
-        if not hasattr(self, "online_rank_cache"):
-            self.online_rank_cache = {}
-        if not hasattr(self, "online_sync_pending"):
-            self.online_sync_pending = False
-        if not hasattr(self, "online_syncing"):
-            self.online_syncing = False
-        if not hasattr(self, "online_sync_wait"):
-            self.online_sync_wait = 0
-        if not hasattr(self, "online_sync_force"):
-            self.online_sync_force = False
-        if not hasattr(self, "online_sync_post_allowed"):
-            self.online_sync_post_allowed = True
-        if not hasattr(self, "online_sync_periods"):
-            self.online_sync_periods = []
-        if not hasattr(self, "online_sync_status"):
-            self.online_sync_status = ""
-        if not hasattr(self, "online_sync_result"):
-            self.online_sync_result = ""
-        if not hasattr(self, "online_score_load_result"):
-            self.online_score_load_result = ""
-        if not hasattr(self, "online_register_prompt"):
-            self.online_register_prompt = False
-        if not hasattr(self, "online_pending_action"):
-            self.online_pending_action = ""
-        if not hasattr(self, "online_pending_wait"):
-            self.online_pending_wait = 0
+        rogue_online_state.ensure_online_score_state(self)
 
     def online_text(self, key):
-        lang = self.lang if getattr(self, "lang", LANG_EN) in (LANG_EN, LANG_JA) else LANG_EN
-        table = ONLINE_UI_TEXT.get(lang, ONLINE_UI_TEXT[LANG_EN])
-        return table.get(key, ONLINE_UI_TEXT[LANG_EN].get(key, key))
+        return rogue_online_text.online_text(getattr(self, "lang", LANG_EN), key)
 
     def online_sync_due(self, profile):
-        next_sync = str(normalize_online_profile(profile).get("next_sync_at", ""))
-        if not next_sync:
-            return True
-        try:
-            due = datetime.fromisoformat(next_sync.replace("Z", "+00:00"))
-        except ValueError:
-            return True
-        if due.tzinfo is None:
-            due = due.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) >= due.astimezone(timezone.utc)
+        return rogue_online_state.online_sync_due(profile)
 
     def schedule_online_action(self, action):
-        self.ensure_online_score_state()
-        self.online_pending_action = action
-        self.online_pending_wait = 0
+        rogue_online_state.schedule_online_action_state(self, action)
 
     def run_pending_online_action(self):
-        self.ensure_online_score_state()
-        action = getattr(self, "online_pending_action", "")
+        action = rogue_online_state.pop_ready_online_action(self)
         if not action:
             return False
-        if getattr(self, "online_pending_wait", 0) > 0:
-            self.online_pending_wait -= 1
+        if action == "waiting":
             return True
-        self.online_pending_action = ""
         if action == "check_user":
             self.perform_online_user_check()
         elif action in ("register_user", "link_user"):
@@ -7003,27 +6362,14 @@ class Game:
     def request_online_period_scores(self, force=False):
         self.ensure_online_score_state()
         profile = normalize_online_profile(getattr(self, "online_profile", None))
-        self.online_sync_post_allowed = self.online_sync_due(profile)
-        periods = [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]
-        if force:
-            self.online_score_loaded.difference_update(periods)
-        self.online_sync_pending = True
-        self.online_syncing = True
-        self.online_sync_wait = 1
-        self.online_sync_force = bool(force)
-        self.online_sync_periods = periods
-        self.online_sync_status = "loading scoreboard..."
-        self.online_sync_result = ""
-        return True
+        return rogue_online_state.begin_online_period_score_request(
+            self,
+            post_allowed=self.online_sync_due(profile),
+            force=force,
+        )
 
     def cancel_online_sync(self):
-        self.ensure_online_score_state()
-        self.online_sync_pending = False
-        self.online_syncing = False
-        self.online_sync_wait = 0
-        self.online_sync_force = False
-        self.online_sync_post_allowed = True
-        self.online_sync_periods = []
+        rogue_online_state.cancel_online_sync_state(self)
 
     def submit_result_online_score(self):
         entry = getattr(self, "result_entry", None)
@@ -7204,7 +6550,6 @@ class Game:
             self.online_sync_result = ""
         self.online_return_state = ST_TITLE
         self.st = ST_ONLINE_SCORE
-        profile = normalize_online_profile(getattr(self, "online_profile", None))
         self.online_register_prompt = False
         return
 
@@ -7346,87 +6691,25 @@ class Game:
         return result
 
     def format_score_line_for_board(self, rank, entry, period):
-        row = dict(entry)
-        if row.get("result_flags") == "winner" and score_entry_is_nyandor(row):
-            score = int(row.get("score", 0))
-            name = str(row.get("player_name", "rogue"))
-            if self.lang == LANG_JA:
-                return f"{rank:2d} {score:5d} {name}: ニャンダーのねこを連れ帰りし者"
-            return f"{rank:2d} {score:5d} {name}: returned with the Nyandor cat."
-        if self.lang == LANG_JA:
-            return self.format_score_line_for_board_ja(rank, row)
-        return format_score_line(rank, row)
+        return rogue_online_scoreboard.format_score_line_for_board(rank, entry, self.lang)
 
     def format_score_line_for_board_ja(self, rank, entry):
-        score = int(entry.get("score", 0))
-        name = str(entry.get("player_name", "rogue"))
-        flags = str(entry.get("result_flags", ""))
-        level = int(entry.get("level", entry.get("depth", 0)) or 0)
-        if flags == "winner":
-            reason = "運命の洞窟より生きて帰りたる勇者"
-            return f"{rank:2d} {score:5d} {name}: {reason}"
-        elif flags == "quit":
-            reason = f"{level}階で中断"
-        elif flags == "killed_with_amulet":
-            killer = str(entry.get("killer", "")).strip() or "何者か"
-            reason = f"アミュレット所持中、{level}階で{killer}に倒された"
-        elif flags == "killed":
-            killer = str(entry.get("killer", "")).strip() or "何者か"
-            reason = f"{level}階で{killer}に倒された"
-        else:
-            reason = flags
-        return f"{rank:2d} {score:5d} {name}: {reason}。"
+        return rogue_online_scoreboard.format_score_line_for_board_ja(rank, entry)
 
     def is_current_result_score(self, entry):
-        current = getattr(self, "result_entry", None)
-        if not current:
-            return False
-        entry_id = str(entry.get("score_id", ""))
-        current_id = str(current.get("score_id", ""))
-        if entry_id and current_id:
-            return entry_id == current_id
-        return (
-            str(entry.get("timestamp", "")) == str(current.get("timestamp", ""))
-            and str(entry.get("player_name", "")).upper() == str(current.get("player_name", "")).upper()
-            and int(entry.get("score", 0)) == int(current.get("score", 0))
-        )
+        return rogue_online_scoreboard.is_current_result_score(entry, getattr(self, "result_entry", None))
 
     def mark_current_score_line(self, line):
-        return ">" + line[1:] if str(line).startswith(" ") else ">" + str(line)
+        return rogue_online_scoreboard.mark_current_score_line(line)
 
     def online_result_lines(self, message, limit=27):
-        text = self.online_text(str(message or "").strip())
-        if ". " in text:
-            head, tail = text.split(". ", 1)
-            head = f"{head}."
-            if len(head) <= limit and len(tail) <= limit:
-                return [head, tail]
-        if "。" in text:
-            head, tail = text.split("。", 1)
-            head = f"{head}。"
-            tail = tail.strip()
-            if tail:
-                tail = tail if tail.endswith("。") else f"{tail}。"
-            if tail and len(head) <= limit and len(tail) <= limit:
-                return [head, tail]
-        words = text.split()
-        if not words:
-            return []
-        lines = []
-        i = 0
-        while i < len(words) and len(lines) < 2:
-            line = words[i]
-            i += 1
-            while i < len(words) and len(line) + 1 + len(words[i]) <= limit:
-                line = f"{line} {words[i]}"
-                i += 1
-            lines.append(line[:limit])
-        return lines[:2]
+        return rogue_online_scoreboard.online_result_lines(message, self.lang, limit)
 
     def online_sync_box_lines(self):
-        if bool(getattr(self, "online_sync_post_allowed", True)):
-            return [self.online_text("sync_scores"), self.online_text("please_wait")]
-        return [self.online_text("refresh_ranking"), self.online_text("please_wait")]
+        return rogue_online_scoreboard.online_sync_box_lines(
+            getattr(self, "online_sync_post_allowed", True),
+            self.lang,
+        )
 
     def confirm_name_input(self):
         name = "".join(getattr(self, "name_chars", [])).strip()
@@ -7644,25 +6927,22 @@ class Game:
             self.enter_title_screen()
             return
         self.ensure_online_score_state()
-        if self.online_sync_pending:
-            if self.online_sync_wait > 0:
-                self.online_sync_wait -= 1
-                return
-            self.online_sync_pending = False
-            self.online_syncing = True
-            force = getattr(self, "online_sync_force", False)
-            self.online_sync_force = False
+        pending_sync = rogue_online_state.advance_online_pending_sync(self)
+        if pending_sync == "waiting":
+            return
+        if pending_sync == "ready":
             self.perform_online_scoreboard_sync()
-            self.online_sync_periods = []
-            self.online_syncing = False
+            rogue_online_state.finish_online_pending_sync(self)
             return
         if self.online_syncing:
             return
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.KEY_RIGHT, pyxel.KEY_L,
                    pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
-            periods = SCOREBOARD_PERIOD_ORDER
             d = -1 if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) else 1
-            self.online_period = periods[(periods.index(getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)) + d) % len(periods)]
+            self.online_period = rogue_online_scoreboard.cycle_scoreboard_period(
+                getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL),
+                d,
+            )
             return
         if pyxel.btnp(pyxel.KEY_R) or self.btn_back():
             profile = normalize_online_profile(getattr(self, "online_profile", None))
@@ -7769,11 +7049,9 @@ class Game:
         # Dash continuation
         if self.dashing:
             if not self.dash_held():
-                self.dashing=False; return
+                self.dash_state.stop(restart_guard=False); return
             self.b_used=True
-            self.dash_t+=1
-            if self.dash_t>=self.run_step_interval():
-                self.dash_t=0
+            if self.dash_state.tick(self.run_step_interval()):
                 self.dash_step()
             return
 
@@ -7867,13 +7145,9 @@ class Game:
             self.start_count_prefix(count_digit)
             return
         if self.key_lower(getattr(pyxel, "KEY_A", None)):
-            if self.count_prefix_active:
-                count = self.count_prefix_value
-                self.count_prefix_active = False
-                self.count_prefix_value = 0
-                if count > 1:
-                    self.count_repeat_command = "again"
-                    self.count_repeat_remaining = count - 1
+            count = self.count_input_state.take_prefix()
+            if count is not None and count > 1:
+                self.count_input_state.start_repeat("again", count)
             self.repeat_last_command()
             return
         if self.btn_wait():
@@ -7912,13 +7186,10 @@ class Game:
             return
 
         # Dash start: B/Shift held + direction
-        dash_guarded = getattr(self, "dash_restart_guard", False)
-        if self.dash_held() and (not dash_guarded or self.dash_restart_dir_press()):
+        if self.dash_state.can_start(self.dash_held(), self.dash_restart_dir_press()):
             d = self.held_dir()
             if d:
-                self.dashing=True; self.dash_d=d; self.dash_t=0
-                self.dash_steps=0
-                self.dash_restart_guard=False
+                self.dash_state.start(d)
                 self.b_used=True
                 self.dash_step()
                 return
@@ -8418,11 +7689,7 @@ class Game:
         self.txt(x, y, self.online_text("language_hint"), UI_HILITE_COL)
 
     def score_period_tab_label(self, period):
-        return {
-            SCOREBOARD_PERIOD_LOCAL: self.online_text("score_period_local"),
-            SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_tab_weekly"),
-            SCOREBOARD_PERIOD_SEASON: self.online_text("score_tab_season"),
-        }.get(period, self.scoreboard_period_label(period))
+        return rogue_online_scoreboard.score_period_tab_label(period, self.lang)
 
     def draw_score_period_tabs(self, x, y, active_period):
         parts = [("-- ", UI_SECTION_COL)]
@@ -8448,11 +7715,7 @@ class Game:
     def draw_online_score_screen(self):
         self.ensure_online_score_state()
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
-        title = {
-            SCOREBOARD_PERIOD_LOCAL: self.online_text("score_title_local"),
-            SCOREBOARD_PERIOD_WEEKLY: self.online_text("score_title_weekly"),
-            SCOREBOARD_PERIOD_SEASON: self.online_text("score_title_season"),
-        }.get(period, self.online_text("score_title_local"))
+        title = rogue_online_scoreboard.scoreboard_title(period, self.lang)
         bx, by, bw, bh = self.center_rect(380, 300)
         x = bx + 22
         bottom_y = by + bh - 56
@@ -8462,31 +7725,25 @@ class Game:
         scores = self.display_online_period_scores(period)
         self.txt(x, by + 66, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
         y = by + 80
-        player_name = str(self.current_score_player_name()).upper()[:16]
-        display_scores = scores[:10]
         local_best = None
-        for i, entry in enumerate(display_scores, start=1):
-            name = str(entry.get("player_name", "")).upper()[:16]
-            current_result = (
-                period == SCOREBOARD_PERIOD_LOCAL
-                and bool(getattr(self, "result_entry", None))
-                and self.is_current_result_score(entry)
-            )
-            col = SCOREBOARD_HILITE_COL if current_result or (period != SCOREBOARD_PERIOD_LOCAL and name == player_name) else SCOREBOARD_TEXT_COL
-            line = self.format_score_line_for_board(i, entry, period)
-            if current_result:
-                line = self.mark_current_score_line(line)
-            self.txt(x, y, line[:56], col)
+        for row in rogue_online_scoreboard.scoreboard_entry_rows(
+            scores,
+            period,
+            self.lang,
+            current_player_name=self.current_score_player_name(),
+            current_entry=getattr(self, "result_entry", None),
+        ):
+            col = SCOREBOARD_HILITE_COL if row.highlight else SCOREBOARD_TEXT_COL
+            self.txt(x, y, row.line[:56], col)
             y += 10
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON) and profile.get("local_only", True):
             local_best = self.guest_local_best_score_for_period(period)
-            if local_best:
+            local_best_row = rogue_online_scoreboard.score_guest_local_best_row(local_best, period, self.lang)
+            if local_best_row:
                 y += 10
-                line = self.format_score_line_for_board(0, local_best, period)
-                line = "--" + line[2:] if len(line) >= 2 else f"-- {line}"
                 if y + MSG_LINE_H * 2 <= bottom_y:
-                    self.txt(x, y, line[:56], SCOREBOARD_HILITE_COL)
+                    self.txt(x, y, local_best_row.line[:56], SCOREBOARD_HILITE_COL)
                 y += 10
         if not scores and not local_best:
             self.txt(x, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), SCOREBOARD_DIM_COL)

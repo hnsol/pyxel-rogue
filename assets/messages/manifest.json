@@ -3205,13 +3205,14 @@
     "origin": "msg()"
   },
   "__summary__": {
-    "en_key_count": 438,
-    "ja_key_count": 438,
+    "en_key_count": 519,
+    "ja_key_count": 519,
     "ja_missing_count": 0,
     "ja_missing_keys": [],
     "placeholder_vocabulary": [
       "action",
       "armor",
+      "cause",
       "color",
       "color2",
       "command",
@@ -3235,10 +3236,14 @@
       "max_hp_width",
       "max_strength",
       "monster",
+      "name",
+      "palette",
       "strength",
       "subject",
       "target",
       "trap",
+      "turn",
+      "user",
       "value",
       "value2",
       "version",
@@ -3259,5 +3264,379 @@
     "ja_status": "matched",
     "origin": "msg()",
     "ja_source": "mesg_J:271"
+  },
+  "info.settings": {
+    "source": "rogue.py:info UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "menu.quit": {
+    "source": "rogue.py:menu UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "misc.discoveries_hint": {
+    "source": "rogue.py:misc UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "misc.discoveries_title": {
+    "source": "rogue.py:misc UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "misc.nothing_discovered": {
+    "source": "rogue.py:misc UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "misc.what_to_call_it": {
+    "source": "rogue.py:misc UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "misc.yuk": {
+    "source": "rogue.py:misc UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "misc.yum": {
+    "source": "rogue.py:misc UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pixel.nyandor_cat_recovered": {
+    "source": "rogue.py:TextCatalog._legacy_key_aliases",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "legacy-alias"
+  },
+  "pixel.nyandor_vitory_line1": {
+    "source": "rogue.py:TextCatalog._legacy_key_aliases",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "legacy-alias"
+  },
+  "pixel.nyandor_vitory_line2": {
+    "source": "rogue.py:TextCatalog._legacy_key_aliases",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "legacy-alias"
+  },
+  "potions.this_potion_tastes_like_item_juice": {
+    "source": "potions.c:167",
+    "params": [
+      "item"
+    ],
+    "ja_status": "manual",
+    "origin": "msg()"
+  },
+  "pyxel.escaped_with_nyandor": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nothing_to_call": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nothing_to_eat": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nothing_to_quaff": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nothing_to_wear": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nothing_to_wield": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nothing_to_zap": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nyandor_cat_drop_blocked": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nyandor_cat_recovered": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "pyxel.nyandor_depth_limit": {
+    "source": "rogue.py:Pyxel runtime",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.auto_pickup": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.diagonal_assist": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.guide": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.language": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.off": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.on": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "settings.palette": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.death_cause": {
+    "source": "rogue.py:UI",
+    "params": [
+      "cause"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.death_epitaph": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.death_title": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.done": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.loading": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.name_entry": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.name_entry_label": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.name_entry_move_hint": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.name_entry_ok_hint": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.name_value": {
+    "source": "rogue.py:UI",
+    "params": [
+      "name"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.no_scores_yet": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.nyandor_victory_line_1": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.nyandor_victory_line_2": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.press_confirm_new_game": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.press_confirm_scores": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.quit_confirm_hint": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_depth": {
+    "source": "rogue.py:UI",
+    "params": [
+      "depth"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_exp": {
+    "source": "rogue.py:UI",
+    "params": [
+      "exp"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_gold": {
+    "source": "rogue.py:UI",
+    "params": [
+      "gold"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_level": {
+    "source": "rogue.py:UI",
+    "params": [
+      "level"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_quit": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_turn": {
+    "source": "rogue.py:UI",
+    "params": [
+      "turn"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.result_victory": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.score_header": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.status_normal": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.top_10": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.user_value": {
+    "source": "rogue.py:UI",
+    "params": [
+      "user"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.victory_line_1": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.victory_line_2": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "ui.you_quit_with_gold": {
+    "source": "rogue.py:UI",
+    "params": [
+      "gold"
+    ],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
   }
 }

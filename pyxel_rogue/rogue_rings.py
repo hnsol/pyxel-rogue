@@ -93,11 +93,6 @@ def make_ring(rng, cat="ring"):
     return RingItem(cat=cat, kind=kind, ench=ench, cursed=cursed)
 
 
-def init_stones(rng):
-    """Rogue 5.4.4 init.c:init_stones() selected stone names."""
-    return init_stones_and_worths(rng)[0]
-
-
 def init_stones_and_worths(rng):
     """Rogue 5.4.4 init.c:init_stones() stone names and mutated oi_worth."""
     used = [False] * len(STONES)
@@ -122,14 +117,6 @@ def is_ring(item, kind):
 def is_wearing(player, kind):
     """Return True if player is wearing a ring of the given kind in either hand."""
     return is_ring(player.ring_l, kind) or is_ring(player.ring_r, kind)
-
-
-def wearing_hands(player, kind):
-    """Yield LEFT and/or RIGHT for each hand wearing a ring of the given kind."""
-    if is_ring(player.ring_l, kind):
-        yield LEFT
-    if is_ring(player.ring_r, kind):
-        yield RIGHT
 
 
 def ring_num(item):

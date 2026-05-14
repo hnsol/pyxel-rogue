@@ -77,6 +77,9 @@ PYXEL_ROGUE_LANG=ja uv run --with pyxel pyxel run rogue.py
 開発者向けの簡易チェック:
 
 ```bash
+python3 -c "import ast; ast.parse(open('rogue.py').read()); print('OK')"
+python3 tools/check_project_rules.py
+uvx ruff check .
 python3 -m unittest
 PYXEL_ROGUE_LANG=ja python3 -m unittest
 ```

@@ -376,11 +376,6 @@ def sanitize_user_id(user_id: str) -> str:
     return out or "rogue54"
 
 
-def sanitize_display_name(display_name: str) -> str:
-    out = "".join(ch for ch in str(display_name).strip() if ch.isprintable())[:16].strip()
-    return out or "rogue54"
-
-
 def can_register_user_id(user_id: str) -> bool:
     return sanitize_user_id(user_id) not in RESERVED_USER_IDS
 
@@ -475,21 +470,6 @@ def save_local_only_profile(user_id: str, display_name: str | None = None) -> di
         "local_only": True,
         "profile_exists": True,
     })
-
-
-def load_player_name(default: str = "ROGUE") -> str:
-    try:
-        if sys.platform == "emscripten":
-            from js import localStorage
-
-            return sanitize_player_name(localStorage.getItem(PLAYER_NAME_STORAGE_KEY) or default)
-        if os.path.exists(PLAYER_NAME_FILE):
-            with open(PLAYER_NAME_FILE, encoding="utf-8") as f:
-                data = json.load(f)
-            return sanitize_player_name(data.get("player_name", default))
-    except Exception:
-        pass
-    return sanitize_player_name(default)
 
 
 def save_player_name(name: str) -> str:
@@ -734,26 +714,3 @@ def fetch_online_scores(
         return data if isinstance(data, list) else []
     except Exception:
         return None
-
-
-def fetch_online_rank(entry: dict[str, Any], period: str, url: str | None = None) -> int | None:
-    target = url if url is not None else ONLINE_SCORE_URL
-    if not target:
-        return None
-    entry = with_score_periods(entry)
-    key = str(entry.get(_period_field(period), ""))
-    try:
-        sep = "&" if "?" in target else "?"
-        query = urllib.parse.urlencode({
-            "action": "rank",
-            "period": period,
-            "key": key,
-            "player_name": str(entry.get("player_name", "")),
-            "score": int(entry.get("score", 0)),
-        })
-        data = _http_json(target + sep + query)
-        if isinstance(data, dict) and data.get("rank") is not None:
-            return int(data["rank"])
-    except Exception:
-        return None
-    return None

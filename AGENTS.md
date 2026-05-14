@@ -6,7 +6,16 @@
 - 実行対象: Python/Pyxel 本体に加えて Pyxel Web も視野に入れる
 - 想定環境: ブラウザ、デスクトップ、SteamDeck、中華ゲーム機など
 - 現行本体: `rogue.py`
-- タスク一覧は `docs/TODO.md`、設計判断の経緯は `docs/DESIGN.md` を参照
+- タスク一覧は `docs/TODO.md`、設計判断の経緯は `docs/DESIGN.md`、品質方針は `docs/dev/QUALITY_POLICY.md` を参照
+
+## 品質方針
+
+- Rogue 5.4.4 は挙動の底本であり、コード構造の模範ではない
+- 実装・構造・検証・文書は、現代的な Python プロジェクトとして美しく保つ
+- 目的は行数削減ではなく、40年後にも仕様・設計判断・検証方法を追えるリポジトリにすること
+- 分割は責務境界を明確にするために行う。小さすぎる抽出や wrapper 比較テストの増殖は避ける
+- 変更前に、目的が「美しい repo」にどう効くかを短く確認する
+- 詳細は `docs/dev/QUALITY_POLICY.md` に従う
 
 ## 最優先の原作参照ルール
 
@@ -26,6 +35,8 @@ pyxel run rogue.py
 
 ```bash
 python3 -c "import ast; ast.parse(open('rogue.py').read()); print('OK')"
+python3 tools/check_project_rules.py
+uvx ruff check .
 python3 -m unittest
 ```
 

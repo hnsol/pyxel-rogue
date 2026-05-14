@@ -495,6 +495,14 @@ Phase 4 の間は Rogue 5.4.4 忠実度を最優先にし、`core/`, `ui/`, `bac
 
 保存、オンラインスコアボード、タイトル画面、複数UIレイアウトは、ゲームメカニクスの外側に置く将来レイヤーとして扱う。これらはコア状態の読み書きや表示選択を行ってよいが、Rogue 5.4.4 準拠のターン処理や判定ロジックへ依存を逆流させない。
 
+## repo美化方針
+
+美しい repo は、Rogue 5.4.4 との対応、Pyxel への移植差分、ユーザーに見える文言、開発用生成物の関係が追える状態を指す。`rogue.py` は起動、統合、`Game` の状態遷移を担う入口として保ち、純ロジック、データテーブル、入力補助、描画補助、保存・通信、生成fallbackは責務ごとに `pyxel_rogue/` と `tools/` へ寄せる。
+
+repo美化は全面整形ではなく、触った範囲を少しずつ読みやすくする運用にする。不要コード、未使用helper、古いUI方針の残骸は候補を検出してから小分けに削除する。外部formatterやlintの導入は、巨大差分を避け、未使用import、未定義名、生成物同期など事故防止に効く範囲から始める。
+
+`tools/check_project_rules.py` は AGENTS.md / DESIGN.md のうち機械で守れる規約を担う。現時点では root 直下 helper module、`pyxel.text` 直呼び、message / terms JSON と Pyxel Web fallback module の同期、日英 terms の key 整合、`manifest.json` の完全性を確認する。未使用候補は通常チェックでは失敗扱いにせず、`--unused-report` で候補として出す。候補は反射的な呼び出しやテスト専用 helper の可能性を確認し、小分けに削除する。
+
 ## テスト方針
 
 最初の一手は「最小テスト → 最小翻訳層 → baseline 拡充」とする。翻訳層はリファクタリングなので、最低限のテストで import / 初期化 / ダンジョン到達性 / 初期装備を守り、その後に翻訳層込みの baseline を増やす。
@@ -504,6 +512,13 @@ Phase 4 の間は Rogue 5.4.4 忠実度を最優先にし、`core/`, `ui/`, `bac
 ```bash
 python3 -m unittest
 PYXEL_ROGUE_LANG=ja python3 -m unittest
+```
+
+repo規約は次で確認する。
+
+```bash
+python3 tools/check_project_rules.py
+uvx ruff check .
 ```
 
 baseline テストは「壊れてほしくない現状」を固定するためのもの。Rogue 5.4.4 と違う既知バグを正当化するためには使わない。忠実度修正では、Rogue 5.4.4 C ソースの該当関数・定数に基づく期待値テストを先に追加し、失敗を確認してから実装を直す。定数テーブルを触る変更では、代表値の監査テストを同じ変更に含め、参照した原作のファイル名・関数名・テーブル名をテスト名、コメント、または本文から追えるようにする。
