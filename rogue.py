@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260515_0055"
+UI_BUILD = "260515_0128"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6290,6 +6290,7 @@ class Game:
         self.persist_settings()
 
     def enter_difficulty_select(self):
+        self.stop_title_bgm()
         if variant_fixed_difficulty():
             self.difficulty = variant_fixed_difficulty()
             self.st = ST_NYANDOR_BRIEF
@@ -6794,6 +6795,7 @@ class Game:
         if d:
             self.title_cursor = (getattr(self, "title_cursor", 0) + d) % 3
         if self.btn_a() or self.btn_start_tap():
+            self.stop_title_bgm()
             if self.title_cursor == 0:
                 self.enter_difficulty_select()
             elif self.title_cursor == 1:

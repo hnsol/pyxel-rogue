@@ -386,8 +386,8 @@ class RogueBaselineTest(unittest.TestCase):
                 "Zap", "Throw", "Eat",
                 "Read", "Search", "Quaff",
                 "Wield", "Wear", "Put on",
-                "Take off", "Discoveries", "Trap",
-                "Drop", "Call", "Quit",
+                "Discoveries", "Take off", "Trap",
+                "Call", "Drop", "Quit",
             ],
         )
         self.assertEqual(
@@ -396,8 +396,8 @@ class RogueBaselineTest(unittest.TestCase):
                 ("Zap", "Throw", "Eat"),
                 ("Read", "Search", "Quaff"),
                 ("Wield", "Wear", "Put on"),
-                ("Take off", "Discoveries", "Trap"),
-                ("Drop", "Call", "Quit"),
+                ("Discoveries", "Take off", "Trap"),
+                ("Call", "Drop", "Quit"),
             ),
         )
         self.assertEqual(
@@ -15564,7 +15564,7 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
         self.assertEqual(game.st, rogue.ST_DIFFICULTY)
-        self.assertEqual(rogue.pyxel.stop_calls, [])
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
@@ -15580,6 +15580,30 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
 
         self.assertEqual(game.st, rogue.ST_PLAY)
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+
+    def test_title_choice_stops_bgm_for_non_game_options(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_TITLE
+        game.title_fade_frames = rogue.TITLE_FADE_FRAMES
+        game.title_bgm_started = True
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        rogue.pyxel.stop_calls.clear()
+
+        game.title_cursor = 1
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+
+        game.st = rogue.ST_TITLE
+        game.title_bgm_started = True
+        game.title_cursor = 2
+        rogue.pyxel.stop_calls.clear()
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
         self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
 
     def test_returning_to_title_does_not_restart_title_bgm(self):
