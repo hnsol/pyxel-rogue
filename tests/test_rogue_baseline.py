@@ -381,22 +381,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue.MENU_ACTIONS, rogue_ui.MENU_ACTIONS)
         self.assertEqual(rogue.AUX_ACTIONS, rogue_ui.AUX_ACTIONS)
         self.assertEqual(
+            [name for name, _cat in rogue.MENU_ACTIONS],
+            [
+                "Zap", "Throw", "Eat",
+                "Read", "Search", "Quaff",
+                "Wield", "Wear", "Put on",
+                "Take off", "Discoveries", "Trap",
+                "Drop", "Call", "Quit",
+            ],
+        )
+        self.assertEqual(
             rogue.PAD_ACTION_GRID,
             (
-                ("Zap", "Throw", "Put on"),
-                ("Read", "Eat", "Quaff"),
-                ("Wield", "Wear", "Take off"),
-                ("Call", "Discoveries", "Drop"),
-                ("Trap", "Search", "Quit"),
+                ("Zap", "Throw", "Eat"),
+                ("Read", "Search", "Quaff"),
+                ("Wield", "Wear", "Put on"),
+                ("Take off", "Discoveries", "Trap"),
+                ("Drop", "Call", "Quit"),
             ),
         )
         self.assertEqual(
             rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS),
-            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Eat"),
+            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Search"),
         )
         self.assertEqual(
             rogue_ui.pad_menu_move(rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS), -1, 0, rogue.MENU_ACTIONS),
             next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Read"),
+        )
+        self.assertEqual(
+            rogue_ui.pad_menu_move(rogue_ui.pad_menu_initial_index(rogue.MENU_ACTIONS), 1, 0, rogue.MENU_ACTIONS),
+            next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Quaff"),
         )
         self.assertEqual(rogue_ui.pack_grid_shape(26), (3, 9))
         self.assertEqual(rogue_ui.pack_grid_pos(0, 26), (0, 0))
@@ -15342,7 +15356,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.online_score_load_result = "Scoreboard cache updated."
         game.scoreboard_period_label = lambda period, timestamp=None: "2026-Spring"
         game.scoreboard_period_ends_line = lambda period: "Season ends in 1w at UTC 2026-05-31 23:59"
-        game.online_sync_hint_line = lambda: "Posted UTC 05-03 03:45 / POST after 05-04 03:45"
+        game.online_sync_hint_line = lambda: "Posted UTC 05-03 03:45 / POST after 05-03 04:45"
         game.load_online_period_scores = lambda *args, **kwargs: game.online_score_cache[rogue.SCOREBOARD_PERIOD_SEASON]
         drawn = []
         game._box = lambda *args: drawn.append(("box", args))
@@ -15464,7 +15478,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.scoreboard_period_label(rogue.SCOREBOARD_PERIOD_WEEKLY, "2026-04-30T20:47:15Z"), "2026-W18")
         self.assertEqual(game.scoreboard_period_label(rogue.SCOREBOARD_PERIOD_SEASON, "2026-04-30T20:47:15Z"), "2026-Spring")
-        self.assertEqual(game.online_sync_hint_line(), "Posted UTC 05-03 03:45 / POST after 05-04 03:45")
+        self.assertEqual(game.online_sync_hint_line(), "Posted UTC 05-03 03:45 / POST after 05-03 04:45")
 
     def test_online_sync_hint_line_omits_post_after_without_next_sync(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -17002,11 +17016,11 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.settings_cursor, 1)
 
-    def test_pad_action_menu_uses_radial_grid_with_eat_initial_cursor(self):
+    def test_pad_action_menu_uses_grid_with_search_initial_cursor(self):
         game = new_game(seed=471)
 
         game.open_menu()
-        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Eat")
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Search")
 
         rogue.pyxel.set_input(
             held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_LEFT},
@@ -17035,7 +17049,7 @@ class RogueBaselineTest(unittest.TestCase):
             pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
         )
         game.update()
-        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Take off")
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Put on")
 
     def test_pad_action_menu_can_open_call_discoveries_and_drop(self):
         game = new_game(seed=472)
@@ -17090,7 +17104,7 @@ class RogueBaselineTest(unittest.TestCase):
         game.menu_select()
         game.close_menu()
         game.open_menu()
-        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Eat")
+        self.assertEqual(rogue.MENU_ACTIONS[game.mcur][0], "Search")
         self.assertFalse(game.menu_cursor_restored)
 
     def test_discoveries_cancel_from_action_menu_returns_to_action_menu(self):

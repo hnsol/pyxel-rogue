@@ -42,32 +42,32 @@ B_TAP_FRAMES = 8
 BACK_TAP_FRAMES = 8
 
 MENU_ACTIONS = [
-    ("Quaff", CAT_POT),
-    ("Read", CAT_SCR),
+    ("Zap", CAT_STICK),
+    ("Throw", None),
     ("Eat", CAT_FOOD),
+    ("Read", CAT_SCR),
+    ("Search", None),
+    ("Quaff", CAT_POT),
     ("Wield", CAT_WPN),
     ("Wear", CAT_ARM),
     ("Put on", CAT_RING),
     ("Take off", None),
-    ("Zap", CAT_STICK),
-    ("Throw", None),
+    ("Discoveries", None),
+    ("Trap", None),
     ("Drop", None),
     ("Call", None),
-    ("Discoveries", None),
-    ("Search", None),
-    ("Trap", None),
     ("Quit", None),
 ]
 AUX_ACTIONS = []
 
 PAD_ACTION_GRID = (
-    ("Zap", "Throw", "Put on"),
-    ("Read", "Eat", "Quaff"),
-    ("Wield", "Wear", "Take off"),
-    ("Call", "Discoveries", "Drop"),
-    ("Trap", "Search", "Quit"),
+    ("Zap", "Throw", "Eat"),
+    ("Read", "Search", "Quaff"),
+    ("Wield", "Wear", "Put on"),
+    ("Take off", "Discoveries", "Trap"),
+    ("Drop", "Call", "Quit"),
 )
-PAD_ACTION_INITIAL = "Eat"
+PAD_ACTION_INITIAL = "Search"
 PACK_GRID_MAX_ROWS = 9
 
 

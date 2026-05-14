@@ -11,9 +11,11 @@ from pyxel_rogue.rogue_online_scoreboard import (
     is_current_result_score,
     mark_current_score_line,
     online_result_lines,
+    sync_post_after_display,
     online_sync_box_lines,
     online_sync_hint_line,
     score_guest_local_best_row,
+    score_killer_name,
     score_period_tab_label,
     scoreboard_entry_rows,
     scoreboard_title,
@@ -84,7 +86,17 @@ class OnlineScoreboardModuleTest(unittest.TestCase):
                 },
                 LANG_EN,
             ),
-            "Posted UTC 05-03 03:45 / POST after 05-04 03:45",
+            "Posted UTC 05-03 03:45 / POST after 05-03 04:45",
+        )
+
+    def test_sync_post_after_display_caps_stale_local_next_sync_to_current_policy(self):
+        self.assertEqual(
+            sync_post_after_display("2026-05-03T03:45:12Z", "2026-05-04T03:45:12Z"),
+            "2026-05-03T04:45:12Z",
+        )
+        self.assertEqual(
+            sync_post_after_display("2026-05-03T03:45:12Z", "2026-05-03T04:15:12Z"),
+            "2026-05-03T04:15:12Z",
         )
 
     def test_result_lines_split_translated_messages_for_scoreboard_box(self):
@@ -134,6 +146,20 @@ class OnlineScoreboardModuleTest(unittest.TestCase):
         nyandor_entry = {"score": 555, "player_name": "cat", "result_flags": "winner", "level": 5, "variant": "nyandor"}
         self.assertEqual(format_score_line_for_board(1, nyandor_entry, LANG_JA), " 1   555 cat: ニャンダーのねこを連れ帰りし者")
         self.assertEqual(format_score_line_for_board(1, nyandor_entry, LANG_EN), " 1   555 cat: returned with the Nyandor cat.")
+        self.assertEqual(
+            format_score_line_for_board(2, {"score": 222, "player_name": "bob", "result_flags": "killed", "level": 5, "killer": "orc"}, LANG_JA),
+            " 2   222 bob: 5階で欲ばり鬼に倒された。",
+        )
+        self.assertEqual(
+            format_score_line_for_board(3, {"score": 111, "player_name": "ann", "result_flags": "killed_with_amulet", "level": 7, "killer": "fire"}, LANG_JA),
+            " 3   111 ann: アミュレット所持中、7階で炎に倒された。",
+        )
+
+    def test_score_killer_name_translates_japanese_monsters_bolts_and_special_causes(self):
+        self.assertEqual(score_killer_name(LANG_JA, "hobgoblin"), "小鬼")
+        self.assertEqual(score_killer_name(LANG_JA, "fire"), "炎")
+        self.assertEqual(score_killer_name(LANG_JA, "starvation"), "飢え")
+        self.assertEqual(score_killer_name(LANG_EN, "orc"), "orc")
 
     def test_scoreboard_entry_rows_mark_current_local_and_remote_player_rows(self):
         scores = [

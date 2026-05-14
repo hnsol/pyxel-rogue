@@ -14,10 +14,12 @@ from pyxel_rogue.rogue_scores import (
     format_score_line,
     score_period_keys,
 )
+from pyxel_rogue.rogue_text import TextCatalog
 from pyxel_rogue.rogue_variant import score_entry_is_nyandor
 
 
 SCOREBOARD_PERIOD_ORDER = (SCOREBOARD_PERIOD_LOCAL, SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
+SYNC_COOLDOWN_HOURS = 1
 
 
 @dataclass(frozen=True)
@@ -102,6 +104,22 @@ def format_utc_short_minute(value):
     return f"{dt:%m-%d %H:%M}"
 
 
+def sync_post_after_display(last_sync, next_sync):
+    last_text = str(last_sync or "")
+    next_text = str(next_sync or "")
+    if not last_text or not next_text:
+        return next_text
+    try:
+        last = datetime.fromisoformat(last_text.replace("Z", "+00:00"))
+        next_dt = datetime.fromisoformat(next_text.replace("Z", "+00:00"))
+    except ValueError:
+        return next_text
+    last = last.astimezone(timezone.utc) if last.tzinfo else last.replace(tzinfo=timezone.utc)
+    next_dt = next_dt.astimezone(timezone.utc) if next_dt.tzinfo else next_dt.replace(tzinfo=timezone.utc)
+    policy_next = last + timedelta(hours=SYNC_COOLDOWN_HOURS)
+    return min(next_dt, policy_next).isoformat().replace("+00:00", "Z")
+
+
 def scoreboard_period_end(period, now=None):
     if period == SCOREBOARD_PERIOD_LOCAL:
         return None
@@ -148,6 +166,7 @@ def online_sync_hint_line(profile, lang):
     if last_sync:
         next_sync = profile.get("next_sync_at", "")
         if next_sync:
+            next_sync = sync_post_after_display(last_sync, next_sync)
             return (
                 f"{online_text(lang, 'posted')} UTC {format_utc_short_minute(last_sync)}"
                 f" / {online_text(lang, 'post_after')} {format_utc_short_minute(next_sync)}"
@@ -216,14 +235,34 @@ def format_score_line_for_board_ja(rank, entry):
     if flags == "quit":
         reason = f"{level}階で中断"
     elif flags == "killed_with_amulet":
-        killer = str(entry.get("killer", "")).strip() or "何者か"
+        killer = score_killer_name(LANG_JA, entry.get("killer", ""))
         reason = f"アミュレット所持中、{level}階で{killer}に倒された"
     elif flags == "killed":
-        killer = str(entry.get("killer", "")).strip() or "何者か"
+        killer = score_killer_name(LANG_JA, entry.get("killer", ""))
         reason = f"{level}階で{killer}に倒された"
     else:
         reason = flags
     return f"{rank:2d} {score:5d} {name}: {reason}。"
+
+
+def score_killer_name(lang, killer):
+    name = str(killer or "").strip()
+    if not name:
+        return "何者か" if lang == LANG_JA else ""
+    if lang != LANG_JA:
+        return name
+    special = {
+        "fire": "炎",
+        "starvation": "飢え",
+        "hypothermia": "寒さ",
+    }
+    if name in special:
+        return special[name]
+    translated = TextCatalog.monster(lang, name)
+    if translated != name:
+        return translated
+    translated = TextCatalog.bolt(lang, name)
+    return translated
 
 
 def is_current_result_score(entry, current):
