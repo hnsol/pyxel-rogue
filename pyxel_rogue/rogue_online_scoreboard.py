@@ -217,7 +217,7 @@ def format_score_line_for_board(rank, entry, lang):
         score = int(row.get("score", 0))
         name = str(row.get("player_name", "rogue"))
         if lang == LANG_JA:
-            return f"{rank:2d} {score:5d} {name}: ニャンダーのねこを連れ帰りし者"
+            return f"{rank:2d} {score:5d} {name}: ニャンダーのねこを連れ帰りし者。"
         return f"{rank:2d} {score:5d} {name}: returned with the Nyandor cat."
     if lang == LANG_JA:
         return format_score_line_for_board_ja(rank, row)

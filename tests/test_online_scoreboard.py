@@ -144,7 +144,7 @@ class OnlineScoreboardModuleTest(unittest.TestCase):
             " 1  9999 ace: 運命の洞窟より生きて帰りたる勇者",
         )
         nyandor_entry = {"score": 555, "player_name": "cat", "result_flags": "winner", "level": 5, "variant": "nyandor"}
-        self.assertEqual(format_score_line_for_board(1, nyandor_entry, LANG_JA), " 1   555 cat: ニャンダーのねこを連れ帰りし者")
+        self.assertEqual(format_score_line_for_board(1, nyandor_entry, LANG_JA), " 1   555 cat: ニャンダーのねこを連れ帰りし者。")
         self.assertEqual(format_score_line_for_board(1, nyandor_entry, LANG_EN), " 1   555 cat: returned with the Nyandor cat.")
         self.assertEqual(
             format_score_line_for_board(2, {"score": 222, "player_name": "bob", "result_flags": "killed", "level": 5, "killer": "orc"}, LANG_JA),

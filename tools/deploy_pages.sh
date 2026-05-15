@@ -60,11 +60,41 @@ fi
 if [[ -f "${ROOT_DIR}/web/announce.html" ]]; then
     cp "${ROOT_DIR}/web/announce.html" "${PAGES_DIR}/announce.html"
 fi
+if [[ -f "${ROOT_DIR}/web/announce.png" ]]; then
+    cp "${ROOT_DIR}/web/announce.png" "${PAGES_DIR}/announce.png"
+fi
+if [[ -f "${ROOT_DIR}/web/announce_origin.html" ]]; then
+    cp "${ROOT_DIR}/web/announce_origin.html" "${PAGES_DIR}/announce_origin.html"
+fi
+if [[ -f "${ROOT_DIR}/web/announce_origin.png" ]]; then
+    cp "${ROOT_DIR}/web/announce_origin.png" "${PAGES_DIR}/announce_origin.png"
+fi
+if [[ -f "${ROOT_DIR}/web/announce_origin_en.html" ]]; then
+    cp "${ROOT_DIR}/web/announce_origin_en.html" "${PAGES_DIR}/announce_origin_en.html"
+fi
+if [[ -f "${ROOT_DIR}/web/announce_origin_en.png" ]]; then
+    cp "${ROOT_DIR}/web/announce_origin_en.png" "${PAGES_DIR}/announce_origin_en.png"
+fi
 touch "${PAGES_DIR}/.nojekyll"
 
 git -C "${PAGES_DIR}" add index.html .nojekyll
 if [[ -f "${PAGES_DIR}/announce.html" ]]; then
     git -C "${PAGES_DIR}" add announce.html
+fi
+if [[ -f "${PAGES_DIR}/announce.png" ]]; then
+    git -C "${PAGES_DIR}" add announce.png
+fi
+if [[ -f "${PAGES_DIR}/announce_origin.html" ]]; then
+    git -C "${PAGES_DIR}" add announce_origin.html
+fi
+if [[ -f "${PAGES_DIR}/announce_origin.png" ]]; then
+    git -C "${PAGES_DIR}" add announce_origin.png
+fi
+if [[ -f "${PAGES_DIR}/announce_origin_en.html" ]]; then
+    git -C "${PAGES_DIR}" add announce_origin_en.html
+fi
+if [[ -f "${PAGES_DIR}/announce_origin_en.png" ]]; then
+    git -C "${PAGES_DIR}" add announce_origin_en.png
 fi
 if [[ -f "${PAGES_DIR}/pyxel-rogue.pyxapp" ]]; then
     git -C "${PAGES_DIR}" add -f pyxel-rogue.pyxapp

@@ -14902,7 +14902,7 @@ class RogueBaselineTest(unittest.TestCase):
         text = "\n".join(str(item) for item in drawn)
         self.assertIn(" 1  2159 fkfksan:", text)
         self.assertIn(" 2   599 palette:", text)
-        self.assertIn("--  2346 hmslmb: ニャンダーのねこを連れ帰りし者", text)
+        self.assertIn("--  2346 hmslmb: ニャンダーのねこを連れ帰りし者。", text)
         self.assertNotIn("guest:", text)
         self.assertNotIn(" 2  2346 hmslmb:", text)
 
@@ -17727,7 +17727,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.SCOREBOARD_PERIOD_LOCAL,
         )
 
-        self.assertEqual(ja_line, " 1   555 cat: ニャンダーのねこを連れ帰りし者")
+        self.assertEqual(ja_line, " 1   555 cat: ニャンダーのねこを連れ帰りし者。")
         self.assertEqual(en_line, " 1   555 cat: returned with the Nyandor cat.")
         self.assertNotIn("運命の洞窟", ja_line)
         self.assertNotIn("A total winner", en_line)
