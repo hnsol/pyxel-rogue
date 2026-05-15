@@ -429,9 +429,10 @@ def normalize_online_profile(profile: dict[str, Any] | None) -> dict[str, Any]:
     token = str(profile.get("server_token", "")) if has_v3_name else ""
     if not token and profile.get("server_token_obf"):
         token = deobfuscate_server_token(str(profile.get("server_token_obf", "")), user_name)
+    local_only = True if not token else bool(profile.get("local_only", False))
     return {
         "user_name": user_name,
-        "local_only": bool(profile.get("local_only", False if token else True)),
+        "local_only": local_only,
         "server_token": token,
         "last_sync_at": str(profile.get("last_sync_at", "")),
         "next_sync_at": str(profile.get("next_sync_at", "")),

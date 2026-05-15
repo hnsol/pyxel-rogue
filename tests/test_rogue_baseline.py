@@ -12995,6 +12995,19 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(rogue_scores.display_score_name(registered), "ace")
         self.assertEqual(rogue_scores.display_score_name(synced), "ace")
 
+    def test_online_profile_without_token_is_local_only_even_if_flag_says_online(self):
+        from pyxel_rogue import rogue_scores
+
+        profile = rogue_scores.normalize_online_profile({
+            "user_name": "ace",
+            "local_only": False,
+            "server_token": "",
+            "profile_exists": True,
+        })
+
+        self.assertTrue(profile["local_only"])
+        self.assertEqual(profile["server_token"], "")
+
     def test_daily_period_scores_are_no_longer_supported(self):
         from pyxel_rogue import rogue_scores
 
@@ -14071,6 +14084,31 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(saved[0]["server_token"], "srv-token")
         self.assertEqual(game.st, rogue.ST_TITLE)
         self.assertFalse(getattr(game, "online_sync_pending", False))
+
+    def test_online_pin_register_success_without_token_does_not_save_offline_profile_as_online(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_PIN
+        game.online_pending_user_name = "newuser"
+        game.online_password_mode = "register"
+        game.online_password_chars = list("123456")
+        old_register = rogue.register_online_user
+        old_save = rogue.save_online_profile
+        try:
+            rogue.register_online_user = lambda user_name, pin, **kwargs: {
+                "ok": True,
+                "user_name": user_name,
+                "server_token": "",
+            }
+            rogue.save_online_profile = lambda profile: self.fail("missing token must not be saved as online")
+
+            game.perform_online_password_submit("register_user")
+        finally:
+            rogue.register_online_user = old_register
+            rogue.save_online_profile = old_save
+
+        self.assertEqual(game.online_sync_result, "Registration failed.")
+        self.assertEqual(game.st, rogue.ST_ONLINE_PIN)
 
     def test_online_pin_link_failure_rejects_name(self):
         game = rogue.Game.__new__(rogue.Game)

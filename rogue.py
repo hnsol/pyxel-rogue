@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260515_0139"
+UI_BUILD = "260515_2321"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6504,6 +6504,9 @@ class Game:
                 self.online_sync_result = "Name exists. Enter its 6-digit PIN."
                 return
         if result.get("ok"):
+            if not result.get("server_token", ""):
+                self.online_sync_result = "Registration failed."
+                return
             self.online_profile = save_online_profile({
                 "user_name": result.get("user_name", user_name),
                 "local_only": False,
