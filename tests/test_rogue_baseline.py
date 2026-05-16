@@ -386,8 +386,9 @@ class RogueBaselineTest(unittest.TestCase):
                 "Zap", "Throw", "Eat",
                 "Read", "Search", "Quaff",
                 "Wield", "Wear", "Put on",
-                "Discoveries", "Take off", "Trap",
-                "Call", "Drop", "Quit",
+                "Discoveries", "Take off", "Remove ring",
+                "Trap", "Call", "Drop",
+                "Quit",
             ],
         )
         self.assertEqual(
@@ -396,8 +397,9 @@ class RogueBaselineTest(unittest.TestCase):
                 ("Zap", "Throw", "Eat"),
                 ("Read", "Search", "Quaff"),
                 ("Wield", "Wear", "Put on"),
-                ("Discoveries", "Take off", "Trap"),
-                ("Call", "Drop", "Quit"),
+                ("Discoveries", "Take off", "Remove ring"),
+                ("Call", "Drop", "Trap"),
+                ("Quit", None, None),
             ),
         )
         self.assertEqual(
@@ -17399,6 +17401,23 @@ class RogueBaselineTest(unittest.TestCase):
         game.update()
         self.assertEqual(game.cact, "Drop")
         self.assertEqual(game.st, rogue.ST_ITEM)
+
+    def test_pad_action_menu_can_open_remove_ring(self):
+        from pyxel_rogue import rogue_rings
+
+        game = new_game(seed=473)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_REGEN)
+        game.p.inv = [ring]
+        game.p.ring_l = ring
+
+        game.open_menu()
+        game.mcur = next(i for i, (name, _cat) in enumerate(rogue.MENU_ACTIONS) if name == "Remove ring")
+        rogue.pyxel.set_input(held={rogue.pyxel.GAMEPAD1_BUTTON_A}, pressed={rogue.pyxel.GAMEPAD1_BUTTON_A})
+        game.update()
+
+        self.assertEqual(game.cact, "Remove ring")
+        self.assertEqual(game.st, rogue.ST_ITEM)
+        self.assertEqual(game.fitems, [ring])
 
     def test_action_menu_restores_limited_previous_action_until_cursor_moves(self):
         game = new_game(seed=4721)

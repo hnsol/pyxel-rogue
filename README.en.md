@@ -102,7 +102,7 @@ Gamepad:
 - B hold + D-pad: Dash
 - A+B: Wait a turn
 - Select: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Select to close
-- Action menu: Search / Trap / Quit
+- Action menu: equipment, items, search, trap inspect, quit
 - Title screen: choose difficulty after selecting `ENTER DUNGEON`. Changes are saved.
 - Settings: Auto pickup / Language / Palette. Changes are saved.
 - Select+A: Quick throw (choose direction, then item)
@@ -142,7 +142,7 @@ Keyboard:
 - v: Version
 - ) / ] / = / @: Current weapon / armor / rings / status
 - q/r/e/z: Quaff / Read / Eat / Zap
-- w/W/T: Wield / Wear / Take off
+- w/W/T/P/R: Wield / Wear / Take off / Put on / Remove ring
 - Q: Quit
 
 Use Zap from the menu to choose a wand or staff, then choose a direction.

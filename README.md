@@ -116,7 +116,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Shift+方向: ダッシュ
 - Esc: メニュー / キャンセル
 - Tab: Info（Inventory / Log / Settings / Help）。Info中は左右でタブ切替、Tabで閉じる
-- Actionメニュー: Search / Trap / Quit
+- Actionメニュー: 装備・道具・探索・罠確認・終了
 - タイトル画面: `運命の洞窟に入る` 決定後に難易度を選択。変更は保存されます。
 - Settings: Auto pickup / Language / Palette。変更は保存されます。
 - Tab+Enter: quick throw
@@ -142,7 +142,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - v: Version
 - ) / ] / = / @: 現在装備 / よろい / 指輪 / ステータス
 - q/r/e/z: Quaff / Read / Eat / Zap
-- w/W/T: Wield / Wear / Take off
+- w/W/T/P/R: Wield / Wear / Take off / Put on / Remove ring
 - Q: Quit
 
 杖はメニューの Zap から選び、方向を指定して振ります。

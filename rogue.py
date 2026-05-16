@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260517_0000"
+UI_BUILD = "260517_0001"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -8287,6 +8287,7 @@ class Game:
             "Wield": "w",
             "Wear": "W",
             "Take off": "T",
+            "Remove ring": "R",
             "Drop": "d",
             "Call": "c",
             "Discoveries": "D",
@@ -8583,7 +8584,7 @@ class Game:
                 ("q Quaff", "r Read", "e Eat"),
                 ("z Zap", "P Put on", "o Options"),
                 ("Q Quit", "w Wield", "W Wear"),
-                ("T Take off", "", ""),
+                ("T Take off", "R Remove", ""),
             ]
         y=by+50
         line_h = FONT_LINE_H

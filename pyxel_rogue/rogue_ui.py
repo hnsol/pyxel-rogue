@@ -53,6 +53,7 @@ MENU_ACTIONS = [
     ("Put on", CAT_RING),
     ("Discoveries", None),
     ("Take off", None),
+    ("Remove ring", None),
     ("Trap", None),
     ("Call", None),
     ("Drop", None),
@@ -64,8 +65,9 @@ PAD_ACTION_GRID = (
     ("Zap", "Throw", "Eat"),
     ("Read", "Search", "Quaff"),
     ("Wield", "Wear", "Put on"),
-    ("Discoveries", "Take off", "Trap"),
-    ("Call", "Drop", "Quit"),
+    ("Discoveries", "Take off", "Remove ring"),
+    ("Call", "Drop", "Trap"),
+    ("Quit", None, None),
 )
 PAD_ACTION_INITIAL = "Search"
 PACK_GRID_MAX_ROWS = 9
