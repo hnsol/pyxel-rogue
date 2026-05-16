@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260515_2321"
+UI_BUILD = "260516_1845"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6532,7 +6532,7 @@ class Game:
         if not hasattr(self, "online_profile"):
             self.online_profile = load_online_profile()
         self.online_period = SCOREBOARD_PERIOD_LOCAL
-        local_entries = load_score_entries()
+        local_entries = self.local_entries_for_current_scoreboard_variant()
         self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10, difficulty=self.difficulty)
         guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
@@ -6562,7 +6562,7 @@ class Game:
         self.ensure_online_score_state()
         period = period or getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
         if period == SCOREBOARD_PERIOD_LOCAL:
-            scores = get_top_scores(load_score_entries(), limit=10, difficulty=self.difficulty)
+            scores = get_top_scores(self.local_entries_for_current_scoreboard_variant(), limit=10, difficulty=self.difficulty)
             self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = scores
             return scores
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -6604,6 +6604,13 @@ class Game:
             for entry in entries
         ]
 
+    def local_entries_for_current_scoreboard_variant(self):
+        score_variant = variant_scoreboard_key()
+        return [
+            entry for entry in load_score_entries()
+            if score_entry_is_nyandor(entry) == bool(score_variant)
+        ]
+
     def display_online_period_scores(self, period):
         scores = self.online_score_cache.get(period, [])
         if period == SCOREBOARD_PERIOD_LOCAL:
@@ -6619,7 +6626,7 @@ class Game:
         key = self.scoreboard_period_key(period)
         player_name = self.current_score_player_name().lower()
         local_entries = [
-            entry for entry in load_score_entries()
+            entry for entry in self.local_entries_for_current_scoreboard_variant()
             if str(entry.get("player_name", "")).lower() == player_name
         ]
         scores = get_period_scores(local_entries, period, key, limit=1, difficulty=self.difficulty)
@@ -6668,7 +6675,7 @@ class Game:
             return {"ok": True, "status": "guest_refresh", "posted_count": 0}
         self.online_sync_status = "posting local scores..."
         user_name = str(profile.get("user_name", "")).lower()
-        entries = local_best_sync_entries(load_score_entries(), player_name=user_name)
+        entries = local_best_sync_entries(self.local_entries_for_current_scoreboard_variant(), player_name=user_name)
         entries = [
             entry for entry in entries
             if str(entry.get("player_name", "")).lower() == user_name

@@ -14500,6 +14500,41 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.online_sync_result, "Ranking refreshed. No local scores yet.")
         self.assertEqual(loaded, [(rogue.SCOREBOARD_PERIOD_WEEKLY, True)])
 
+    def test_normal_online_score_sync_ignores_nyandor_local_scores_and_stays_online(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.online_sync_periods = [rogue.SCOREBOARD_PERIOD_WEEKLY]
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok"}
+        keys = rogue.score_period_keys()
+        loaded = []
+        old_sync = rogue.sync_online_scoreboard
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [
+                {
+                    "score": 999,
+                    "player_name": "ace",
+                    "variant": "nyandor",
+                    "period_week": keys["period_week"],
+                    "period_season": keys["period_season"],
+                }
+            ]
+            rogue.sync_online_scoreboard = lambda profile, entries, **kwargs: self.fail("normal sync must not post nyandor scores")
+            game.load_online_period_scores = lambda period, force=False: loaded.append((period, force)) or []
+
+            result = game.perform_online_scoreboard_sync()
+        finally:
+            rogue.sync_online_scoreboard = old_sync
+            rogue.load_score_entries = old_load
+
+        self.assertEqual(result["status"], "no_local_scores")
+        self.assertFalse(game.online_profile["local_only"])
+        self.assertEqual(game.online_profile["server_token"], "tok")
+        self.assertEqual(loaded, [(rogue.SCOREBOARD_PERIOD_WEEKLY, True)])
+
     def test_online_scoreboard_load_failure_does_not_overwrite_sync_success(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -14753,6 +14788,42 @@ class RogueBaselineTest(unittest.TestCase):
             [("SUN", 500), ("ACE", 450)],
         )
 
+    def test_enter_normal_online_scoreboard_keeps_nyandor_local_scores_out_of_cached_online_rows(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_DEAD
+        game.lang = rogue.LANG_EN
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        keys = rogue.score_period_keys()
+        remote = [
+            {"player_name": "DOT", "score": 400, "period_week": keys["period_week"], "period_season": keys["period_season"]}
+        ]
+        local = [
+            {"player_name": "ACE", "score": 950, "variant": "nyandor", "period_week": keys["period_week"], "period_season": keys["period_season"]}
+        ]
+        old_load_scores = rogue.load_score_entries
+        old_load_cache = getattr(rogue, "load_online_score_cache", None)
+        try:
+            rogue.load_score_entries = lambda: local
+            rogue.load_online_score_cache = lambda period, key: remote if period == rogue.SCOREBOARD_PERIOD_WEEKLY else []
+
+            game.enter_online_scoreboard(auto_sync=False)
+        finally:
+            rogue.load_score_entries = old_load_scores
+            if old_load_cache is None:
+                delattr(rogue, "load_online_score_cache")
+            else:
+                rogue.load_online_score_cache = old_load_cache
+
+        self.assertEqual(
+            [(e["player_name"], e["score"]) for e in game.online_score_cache[rogue.SCOREBOARD_PERIOD_WEEKLY]],
+            [("DOT", 400)],
+        )
+
     def test_online_score_draw_uses_rogue_score_lines_title_and_player_highlight(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -14923,7 +14994,9 @@ class RogueBaselineTest(unittest.TestCase):
         game.online_syncing = False
         game.online_rank_cache = {}
         old_load = rogue.load_score_entries
+        old_variant = rogue.GAME_VARIANT
         try:
+            rogue.GAME_VARIANT = rogue.VARIANT_NYANDOR
             rogue.load_score_entries = lambda: [
                 {"score": 2954, "player_name": "guest", "period_season": key, "result_flags": "winner", "level": 5},
                 {"score": 2346, "player_name": "hmslmb", "period_season": key, "result_flags": "winner", "level": 5, "variant": "nyandor"},
@@ -14935,6 +15008,7 @@ class RogueBaselineTest(unittest.TestCase):
 
             game.draw_online_score_screen()
         finally:
+            rogue.GAME_VARIANT = old_variant
             rogue.load_score_entries = old_load
 
         text = "\n".join(str(item) for item in drawn)

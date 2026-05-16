@@ -152,3 +152,23 @@
 - token が空なら `local_only=True` に正規化するテストを追加
 - 登録成功レスポンスに token が無い場合、オンライン profile として保存しないテストを追加
 - `rg "online_profile|local_only|server_token"` で profile 更新入口を確認
+
+## 2026-05-16 オンライン同期でvariant境界を混ぜた
+
+### 原因
+
+- ローカルスコア一覧を「同じユーザー名なら同期対象」と扱い、通常RogueとNyandorのvariant境界を同期前に絞らなかった
+- オンラインPOST、cachedオンライン表示、ローカルbest表示がそれぞれ別入口で `load_score_entries()` を直接読んでおり、1箇所の確認で全体が守られると思い込んだ
+- サーバ側の通常シートにNyandor由来らしい5F勝利行が混入していることを、実レスポンス確認まで見落とした
+
+### 再発防止
+
+- オンライン同期・ランキング表示でローカルスコアを混ぜる時は、ユーザー名より先にvariantで絞る
+- `load_score_entries()` をオンライン系で直接使う場合は、同期POST、ローカルtab、cached合成、local-best補助表示の全入口を確認する
+- variant混線の疑いがある時は、通常/派生variant両方の実サーバGETを確認し、dummyと実スコアの混在状態を見る
+
+### 今回の適用
+
+- 通常モード同期がNyandorローカルスコアをPOSTしない赤テストを追加
+- 通常モードのcachedオンライン表示へNyandorローカルスコアを混ぜない赤テストを追加
+- 通常/Nyandorの実サーバweekly GETでdummy行が返ることを確認
