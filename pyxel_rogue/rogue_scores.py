@@ -201,7 +201,10 @@ def with_score_periods(entry: dict[str, Any]) -> dict[str, Any]:
 def get_top_scores(entries: list[dict[str, Any]], limit: int = 10, difficulty: str | None = None) -> list[dict[str, Any]]:
     if difficulty is not None:
         diff = normalize_difficulty(difficulty)
-        entries = [entry for entry in entries if normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY))) == diff]
+        entries = [
+            entry for entry in entries
+            if entry.get("is_dummy") or normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY))) == diff
+        ]
     return sorted(entries, key=lambda entry: int(entry.get("score", 0)), reverse=True)[:limit]
 
 
@@ -216,7 +219,11 @@ def get_period_scores(entries: list[dict[str, Any]], period: str, key: str, limi
     best: dict[str, dict[str, Any]] = {}
     for raw in entries:
         entry = with_score_periods(raw)
-        if difficulty is not None and entry["difficulty"] != normalize_difficulty(difficulty):
+        if (
+            difficulty is not None
+            and not entry.get("is_dummy")
+            and entry["difficulty"] != normalize_difficulty(difficulty)
+        ):
             continue
         if str(entry.get(field, "")) != str(key):
             continue

@@ -9676,6 +9676,9 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.item_name(game.p.wpn), "+1,+1 mace (weapon in hand)")
         game.lang = rogue.LANG_JA
         self.assertEqual(game.item_name(game.p.wpn), "+1,+1 ほこ （使っている）")
+        spear = rogue.Item(rogue.CAT_WPN, 8, hit_plus=0, dam_plus=0)
+        self.assertEqual(ident.name(spear, rogue.LANG_JA), "+0,+0 槍")
+        self.assertEqual(rogue.TextCatalog.hud_item_kind(rogue.LANG_JA, rogue.CAT_WPN, "spear"), "槍")
 
     def test_melee_combat_messages_omit_damage_numbers_for_v5_style(self):
         game = new_game(seed=9)
@@ -13249,6 +13252,36 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(all(row["period_season"] == "2026-Spring" for row in rows))
         self.assertTrue(all(0 < int(row["score"]) < 1800 for row in rows))
         self.assertGreaterEqual(len(rogue_scores.DUMMY_PLAYER_NAMES), 80)
+
+    def test_online_dummy_scores_survive_non_normal_difficulty_filter(self):
+        from pyxel_rogue import rogue_scores
+
+        keys = rogue_scores.score_period_keys("2026-05-16T00:00:00Z")
+        rows = [
+            {
+                "player_name": "root",
+                "score": 942,
+                "is_dummy": True,
+                "period_week": keys["period_week"],
+                "period_season": keys["period_season"],
+            },
+            {
+                "player_name": "ace",
+                "score": 1200,
+                "difficulty": "normal",
+                "period_week": keys["period_week"],
+                "period_season": keys["period_season"],
+            },
+        ]
+
+        scores = rogue_scores.get_period_scores(
+            rows,
+            rogue_scores.SCOREBOARD_PERIOD_WEEKLY,
+            keys["period_week"],
+            difficulty="classic",
+        )
+
+        self.assertEqual([(entry["player_name"], entry["score"]) for entry in scores], [("root", 942)])
 
     def test_sync_missing_local_best_posts_when_online_lacks_it(self):
         from pyxel_rogue import rogue_scores

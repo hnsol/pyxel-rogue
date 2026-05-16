@@ -106,7 +106,7 @@ JA_TERMS = {
         "weapon": {
             "arrow": "矢", "dagger": "短剣", "dart": "投げ矢",
             "long sword": "長剣", "mace": "ほこ", "short bow": "弓",
-            "shuriken": "手裏剣", "spear": "ほこ", "two-handed sword": "両手剣",
+            "shuriken": "手裏剣", "spear": "槍", "two-handed sword": "両手剣",
         },
     },
     "item": {
@@ -161,7 +161,7 @@ JA_TERMS = {
         "weapon": {
             "arrow": "矢", "dagger": "短剣", "dart": "投げ矢",
             "long sword": "長い剣", "mace": "ほこ", "short bow": "弓",
-            "shuriken": "手裏剣", "spear": "ほこ", "two-handed sword": "大きな剣",
+            "shuriken": "手裏剣", "spear": "槍", "two-handed sword": "大きな剣",
         },
     },
     "monster": {
