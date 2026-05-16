@@ -13913,7 +13913,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.lang, rogue.LANG_JA)
 
-    def test_online_register_draws_previous_names_as_vertical_list(self):
+    def test_online_register_draws_previous_names_right_of_done_with_spacing(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings(language=rogue.LANG_EN)
         game.lang = rogue.LANG_EN
@@ -13930,9 +13930,17 @@ class RogueBaselineTest(unittest.TestCase):
 
         text = [call[2] for call in calls]
         self.assertIn("Previous Names", text)
+        self.assertIn("->", text)
         self.assertIn("  ace", text)
         self.assertIn("  bob", text)
         self.assertIn("> cat", text)
+        done = next(call for call in calls if call[2] == "END")
+        heading = next(call for call in calls if call[2] == "Previous Names")
+        last_name = next(call for call in calls if call[2] == "> cat")
+        hint = next(call for call in calls if call[2].startswith("A/Enter OK"))
+        self.assertGreater(heading[0], done[0])
+        self.assertEqual(heading[1], done[1])
+        self.assertGreaterEqual(hint[1] - last_name[1], 26)
 
     def test_online_registered_name_b_without_edit_cancels_to_title(self):
         game = rogue.Game.__new__(rogue.Game)

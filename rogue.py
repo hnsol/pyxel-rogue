@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260516_1917"
+UI_BUILD = "260516_1948"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -7870,21 +7870,23 @@ class Game:
         self.txt(base_x + 126, y, TextCatalog.msg(self.lang, "ui.done"), end_col)
         candidates = getattr(self, "online_name_candidates", [])[:3]
         if candidates:
-            self.txt(bx + 26, by + 104, self.online_text("register_previous_names"), UI_SECTION_COL)
+            candidate_x = base_x + 182
+            self.txt(base_x + 166, y, "->", UI_SUBTEXT_COL)
+            self.txt(candidate_x, y, self.online_text("register_previous_names"), UI_SECTION_COL)
             for i, name in enumerate(candidates):
                 selected = getattr(self, "name_pos", 0) == USER_NAME_MAX + 1 + i
                 self.txt(
-                    bx + 38,
-                    by + 120 + i * 12,
+                    candidate_x + 8,
+                    y + 16 + i * 12,
                     ("> " if selected else "  ") + name,
                     UI_SELECTED_COL if selected else UI_TEXT_COL,
                 )
-        self.txt(bx + 26, by + 158, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
-        self.draw_online_language_hint(bx + 26, by + 172)
+        self.txt(bx + 26, by + 170, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
+        self.draw_online_language_hint(bx + 26, by + 184)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
-            self.txt(bx + 26, by + 188, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
+            self.txt(bx + 26, by + 198, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(bx + 26, by + 188, self.online_sync_result[:48], UI_HILITE_COL)
+            self.txt(bx + 26, by + 198, self.online_sync_result[:48], UI_HILITE_COL)
 
     def draw_online_pin_screen(self):
         is_link = getattr(self, "online_password_mode", "register") == "link"
