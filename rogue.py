@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260516_2322"
+UI_BUILD = "260517_0000"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1711,6 +1711,7 @@ class Game:
         self.b_menu_guard = False
         self.diag_assist = False
         self.dir_pending = None
+        self.dir_press_locked = None
         self.throw_anim = None
         self.turn_after_throw_anim = False
         self.last_hp_seen = None
@@ -6056,11 +6057,12 @@ class Game:
 
     def dir_press(self):
         """Return (dx,dy) for direction pressed this frame (btnp), or None."""
-        direction, self.dir_pending = rogue_input.direction_press(
+        direction, self.dir_pending, self.dir_press_locked = rogue_input.direction_press_guarded(
             self.held_direction_input_labels(),
             self.pressed_direction_input_labels(),
             self.dir_pending,
             self.diag_assist,
+            getattr(self, "dir_press_locked", None),
         )
         return direction
 

@@ -16467,6 +16467,34 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual((game.p.x, game.p.y, game.turn), (px, py - 1, 1))
         self.assertIsNone(game.dir_pending)
 
+    def test_dpad_late_second_axis_does_not_split_into_cardinal_then_diagonal(self):
+        game = new_game(seed=362)
+        set_open_floor(game)
+        px, py = game.p.x, game.p.y
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+        )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px, py, 0))
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN},
+            pressed=set(),
+        )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px, py + 1, 1))
+
+        rogue.pyxel.set_input(
+            held={
+                rogue.pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+                rogue.pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,
+            },
+            pressed={rogue.pyxel.GAMEPAD1_BUTTON_DPAD_LEFT},
+        )
+        game.update()
+        self.assertEqual((game.p.x, game.p.y, game.turn), (px, py + 1, 1))
+
     def test_extra_gamepad_buttons_have_no_play_shortcuts(self):
         for button in (
             rogue.pyxel.GAMEPAD1_BUTTON_X,

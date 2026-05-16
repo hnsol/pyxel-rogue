@@ -23,6 +23,51 @@ class TestRogueInput(unittest.TestCase):
         self.assertEqual(direction, (1, 0))
         self.assertIsNone(pending)
 
+    def test_guarded_cardinal_lock_blocks_late_perpendicular_axis(self):
+        direction, pending, locked = rogue_input.direction_press_guarded(
+            held={"down"},
+            pressed={"down"},
+            pending=None,
+            diag_assist=False,
+            locked=None,
+        )
+        self.assertIsNone(direction)
+        self.assertEqual(pending, (0, 1))
+        self.assertIsNone(locked)
+
+        direction, pending, locked = rogue_input.direction_press_guarded(
+            held={"down"},
+            pressed=set(),
+            pending=pending,
+            diag_assist=False,
+            locked=locked,
+        )
+        self.assertEqual(direction, (0, 1))
+        self.assertIsNone(pending)
+        self.assertEqual(locked, (0, 1))
+
+        direction, pending, locked = rogue_input.direction_press_guarded(
+            held={"down", "left"},
+            pressed={"left"},
+            pending=pending,
+            diag_assist=False,
+            locked=locked,
+        )
+        self.assertIsNone(direction)
+        self.assertIsNone(pending)
+        self.assertEqual(locked, (0, 1))
+
+        direction, pending, locked = rogue_input.direction_press_guarded(
+            held={"left"},
+            pressed={"left"},
+            pending=pending,
+            diag_assist=False,
+            locked=locked,
+        )
+        self.assertIsNone(direction)
+        self.assertEqual(pending, (-1, 0))
+        self.assertIsNone(locked)
+
     def test_diagonal_assist_accepts_only_chorded_directions(self):
         direction, pending = rogue_input.direction_press(
             held={"start", "right"},

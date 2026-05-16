@@ -255,6 +255,38 @@ def direction_press(
     return None, None
 
 
+def _locked_axis_held(locked: Direction, held_set: set[str]) -> bool:
+    dx, dy = locked
+    if dx < 0:
+        return _any(held_set, LEFT)
+    if dx > 0:
+        return _any(held_set, RIGHT)
+    if dy < 0:
+        return _any(held_set, UP)
+    if dy > 0:
+        return _any(held_set, DOWN)
+    return False
+
+
+def direction_press_guarded(
+    held: Iterable[str],
+    pressed: Iterable[str],
+    pending: Direction | None,
+    diag_assist: bool,
+    locked: Direction | None,
+) -> tuple[Direction | None, Direction | None, Direction | None]:
+    held_set = _as_set(held)
+    if locked is not None:
+        if _locked_axis_held(locked, held_set):
+            return None, None, locked
+        locked = None
+
+    direction, pending = direction_press(held_set, pressed, pending, diag_assist)
+    if direction is not None and not (direction[0] and direction[1]) and _locked_axis_held(direction, held_set):
+        locked = direction
+    return direction, pending, locked
+
+
 def prompt_direction(held: Iterable[str], pressed: Iterable[str]) -> Direction | None:
     held_set = _as_set(held)
     pressed_set = _as_set(pressed)
