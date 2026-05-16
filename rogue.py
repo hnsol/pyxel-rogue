@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260517_0001"
+UI_BUILD = "260517_0121"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6570,6 +6570,7 @@ class Game:
             self.online_profile = load_online_profile()
         self.online_period = SCOREBOARD_PERIOD_LOCAL
         local_entries = self.local_entries_for_current_scoreboard_variant()
+        user_local_entries = self.current_user_local_score_entries()
         self.online_score_cache[SCOREBOARD_PERIOD_LOCAL] = get_top_scores(local_entries, limit=10, difficulty=self.difficulty)
         guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
@@ -6579,7 +6580,7 @@ class Game:
             cached = load_online_score_cache(period, key)
             if not cached:
                 continue
-            entries = cached if guest_mode else cached + local_entries
+            entries = cached if guest_mode else cached + user_local_entries
             self.online_score_cache[period] = get_period_scores(entries, period, key, limit=10, difficulty=self.difficulty)
             self.online_score_loaded.add(period)
         if getattr(self, "online_sync_result", "") in (
@@ -6648,12 +6649,22 @@ class Game:
             if score_entry_is_nyandor(entry) == bool(score_variant)
         ]
 
+    def current_user_local_score_entries(self):
+        player_name = self.current_score_player_name().lower()
+        return [
+            entry for entry in self.local_entries_for_current_scoreboard_variant()
+            if str(entry.get("player_name", "")).lower() == player_name
+        ]
+
     def display_online_period_scores(self, period):
         scores = self.online_score_cache.get(period, [])
         if period == SCOREBOARD_PERIOD_LOCAL:
             return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             key = self.scoreboard_period_key(period)
+            profile = normalize_online_profile(getattr(self, "online_profile", None))
+            if not profile.get("local_only", True):
+                scores = list(scores) + self.current_user_local_score_entries()
             return get_period_scores(self.online_dedicated_variant_entries(scores), period, key, limit=10, difficulty=self.difficulty)
         return scores
 
@@ -6661,11 +6672,7 @@ class Game:
         if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             return None
         key = self.scoreboard_period_key(period)
-        player_name = self.current_score_player_name().lower()
-        local_entries = [
-            entry for entry in self.local_entries_for_current_scoreboard_variant()
-            if str(entry.get("player_name", "")).lower() == player_name
-        ]
+        local_entries = self.current_user_local_score_entries()
         scores = get_period_scores(local_entries, period, key, limit=1, difficulty=self.difficulty)
         if not scores:
             return None

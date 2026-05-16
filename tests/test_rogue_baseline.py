@@ -15103,7 +15103,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(any(item[0] == "Refreshing ranking..." and item[1] == rogue.SCOREBOARD_HILITE_COL for item in drawn))
         self.assertTrue(any(item[0] == "Please wait." and item[1] == rogue.SCOREBOARD_HILITE_COL for item in drawn))
 
-    def test_online_score_draw_shows_current_local_best_below_remote_without_fetching(self):
+    def test_online_score_draw_ranks_current_local_best_with_remote_without_fetching(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.lang = rogue.LANG_EN
@@ -15137,11 +15137,47 @@ class RogueBaselineTest(unittest.TestCase):
 
         text = "\n".join(str(item) for item in drawn)
         self.assertIn(" 2   631 algol: killed on level 5 by an orc.", text)
-        self.assertIn(" 3   480 fortran: killed on level 3 by a hobgoblin.", text)
-        self.assertIn("--   624 rogue54b: quit on level 5.", text)
-        self.assertNotIn(" 3   624 rogue54b: quit on level 5.", text)
+        self.assertIn(" 3   624 rogue54b: quit on level 5.", text)
+        self.assertIn(" 4   480 fortran: killed on level 3 by a hobgoblin.", text)
+        self.assertNotIn("--   624 rogue54b: quit on level 5.", text)
 
-    def test_online_score_draw_keeps_guest_out_and_shows_current_user_local_below_top(self):
+    def test_online_score_draw_ranks_online_user_local_best_inside_remote_table(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.lang = rogue.LANG_JA
+        game.player_name = "hmslmb"
+        game.online_profile = {"user_name": "hmslmb", "local_only": False, "server_token": "tok", "profile_exists": True}
+        game.online_period = rogue.SCOREBOARD_PERIOD_WEEKLY
+        key = rogue.score_period_keys()["period_week"]
+        game.online_score_cache = {
+            rogue.SCOREBOARD_PERIOD_WEEKLY: [
+                {"score": 942, "player_name": "root", "period_week": key, "result_flags": "killed", "level": 10, "killer": "yeti"},
+                {"score": 842, "player_name": "sudo", "period_week": key, "result_flags": "killed", "level": 11, "killer": "wraith"},
+            ]
+        }
+        game.online_score_loaded = {rogue.SCOREBOARD_PERIOD_WEEKLY}
+        game.online_syncing = False
+        game.online_rank_cache = {}
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: [
+                {"score": 1233, "player_name": "hmslmb", "period_week": key, "result_flags": "killed", "level": 8, "killer": "bat"}
+            ]
+            game.load_online_period_scores = lambda *args, **kwargs: self.fail("draw must not fetch")
+            drawn = []
+            game._box = lambda *args: None
+            game.txt = lambda x, y, s, c: drawn.append((str(s), c, x, y))
+
+            game.draw_online_score_screen()
+        finally:
+            rogue.load_score_entries = old_load
+
+        text = "\n".join(str(item) for item in drawn)
+        self.assertIn(" 1  1233 hmslmb: 8階で大こうもりに倒された。", text)
+        self.assertIn(" 2   942 root: 10階で雪男に倒された。", text)
+        self.assertNotIn("--  1233 hmslmb", text)
+
+    def test_online_score_draw_keeps_guest_out_and_ranks_current_user_local_best(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
         game.lang = rogue.LANG_JA
@@ -15177,11 +15213,11 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.load_score_entries = old_load
 
         text = "\n".join(str(item) for item in drawn)
-        self.assertIn(" 1  2159 fkfksan:", text)
-        self.assertIn(" 2   599 palette:", text)
-        self.assertIn("--  2346 hmslmb: ニャンダーのねこを連れ帰りし者。", text)
+        self.assertIn(" 1  2346 hmslmb: ニャンダーのねこを連れ帰りし者。", text)
+        self.assertIn(" 2  2159 fkfksan:", text)
+        self.assertIn(" 3   599 palette:", text)
         self.assertNotIn("guest:", text)
-        self.assertNotIn(" 2  2346 hmslmb:", text)
+        self.assertNotIn("--  2346 hmslmb:", text)
 
     def test_guest_online_score_draw_shows_local_best_below_remote_top_ten(self):
         game = rogue.Game.__new__(rogue.Game)
