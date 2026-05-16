@@ -29,6 +29,7 @@ git push -u origin master
 
 - `Home.md`: 入口
 - `_Sidebar.md`: GitHub Wiki のサイドバー
+- `Game-Guide-*.md`: ゲーム本体のテーブルから生成する攻略情報
 - 接尾辞なしの各ページ: 日英の言語選択
 - `*-ja.md`: 日本語本文
 - `*-en.md`: 英語本文
@@ -47,6 +48,18 @@ git push -u origin master
 `Playable-Critical-Edition.md` は、冗談を本文へ混ぜない。学術文体を真剣に維持し、その過剰な真剣さを面白さにする。
 
 `Descend-Again.md` は別ページに分離し、キャッチコピー、宣伝文句、勢いのある比喩を許可する。
+
+## 攻略ページ生成
+
+攻略ページは本体 repo で生成する。
+
+```bash
+python3 tools/generate_wiki.py
+```
+
+出力先は `wiki/`。`wiki/` が GitHub Wiki repo として clone 済みなら、その作業ツリーに `Game-Guide-ja.md` / `Game-Guide-en.md` / `Home.md` / `_Sidebar.md` が書き出される。未作成の場合も、同じパスにファイルを生成する。
+
+モンスター出現率は Rogue 5.4.4 `randmonster()` 相当の理論値で計算する。モンテカルロ実行は使わない。
 
 ## Proximity Message Log
 
