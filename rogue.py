@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260516_2005"
+UI_BUILD = "260516_2322"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1010,6 +1010,8 @@ class DGen:
         max_y=r.h-1
         max_x=r.w-1
         start_y=(RNG.rnd(r.h)//2)*2
+        if r.y == PLAY_Y_MIN and r.h % 2 == 0:
+            start_y = min(max_y, start_y + 1)
         start_x=(RNG.rnd(r.w)//2)*2
 
         def put(oy,ox):

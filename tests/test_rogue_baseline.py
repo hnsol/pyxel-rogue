@@ -593,6 +593,23 @@ class RogueBaselineTest(unittest.TestCase):
             for x, y in game.traps:
                 self.assert_in_rogue_544_play_area(x, y)
 
+    def test_top_row_maze_reaches_lower_connection_side(self):
+        # Rogue 5.4.4 rooms.c:do_maze() must leave F_PASS candidates for passages.c:conn().
+        room = rogue.Room(0, 1, 25, 6, {rogue.ROOM_MAZE})
+        tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+
+        rogue.DGen._maze_room(tm, room, depth=8, hidden_tiles={})
+
+        self.assertTrue(any(tm[6][x] == rogue.T_CORR for x in range(1, 24)))
+
+    def test_seed_one_repeated_stairs_do_not_freeze_in_top_row_maze(self):
+        game = new_game(seed=1)
+        for _ in range(10):
+            game.tm[game.p.y][game.p.x] = rogue.T_STAIR
+            game.use_stairs()
+
+        self.assertEqual(game.p.depth, 11)
+
     def test_rogue544_new_level_places_traps_stairs_then_hero_after_objects(self):
         # Rogue 5.4.4 new_level.c:new_level() runs do_rooms(), do_passages(), put_things(), traps, stairs, then hero.
         game = new_game(seed=35)
