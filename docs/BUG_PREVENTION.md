@@ -152,6 +152,7 @@
 - token が空なら `local_only=True` に正規化するテストを追加
 - 登録成功レスポンスに token が無い場合、オンライン profile として保存しないテストを追加
 - `rg "online_profile|local_only|server_token"` で profile 更新入口を確認
+- `local_only=True` の profile 名を `guest` に正規化し、登録画面キャンセルや local-only 確定で非guest名を保存しないテストを追加
 
 ## 2026-05-16 オンライン同期でvariant境界を混ぜた
 

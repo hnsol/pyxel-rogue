@@ -287,7 +287,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260516_1845"
+UI_BUILD = "260516_1858"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6421,8 +6421,7 @@ class Game:
         self.st = ST_ONLINE_PIN
 
     def save_local_only_online_profile(self):
-        user_name = sanitize_user_id("".join(getattr(self, "name_chars", [])) or self.current_user_id())
-        self.online_profile = save_local_only_profile(user_name)
+        self.online_profile = save_local_only_profile("guest")
         self.player_name = self.online_profile["user_name"]
         self.online_register_prompt = False
         if getattr(self, "online_register_return_state", ST_TITLE) == ST_ONLINE_SCORE:
@@ -6452,7 +6451,16 @@ class Game:
     def cancel_or_confirm_local_only_name(self):
         profile = normalize_online_profile(getattr(self, "online_profile", None))
         if profile.get("local_only", True):
-            self.save_local_only_online_profile()
+            self.online_profile = {
+                "user_name": "guest",
+                "local_only": True,
+                "server_token": "",
+                "last_sync_at": "",
+                "next_sync_at": "",
+                "profile_exists": True,
+            }
+            self.player_name = "guest"
+            self.enter_title_screen(skip_fade=True)
         elif self.online_register_name_changed():
             self.st = ST_ONLINE_LOCAL_CONFIRM
         else:
@@ -7860,7 +7868,6 @@ class Game:
         title_key = "guest_confirm_title" if guest_switch else "local_confirm_title"
         bx, by, bw, bh = self.center_rect(356, 130)
         self._box(bx, by, bw, bh, self.ui_heading(self.online_text(title_key), UI_HEADING_PANEL))
-        name = sanitize_user_id("".join(getattr(self, "name_chars", [])))
         if guest_switch:
             self.txt(bx + 26, by + 26, self.online_text("guest_confirm_prompt"), UI_TEXT_COL)
             self.txt(bx + 26, by + 46, TextCatalog.msg(self.lang, "ui.name_value", name="guest"), UI_HILITE_COL)
@@ -7868,7 +7875,7 @@ class Game:
             self.txt(bx + 26, by + 92, self.online_text("guest_confirm_cancel"), UI_SUBTEXT_COL)
         else:
             self.txt(bx + 26, by + 26, self.online_text("local_confirm_prompt"), UI_TEXT_COL)
-            self.txt(bx + 26, by + 46, TextCatalog.msg(self.lang, "ui.name_value", name=f"{name}*"), UI_HILITE_COL)
+            self.txt(bx + 26, by + 46, TextCatalog.msg(self.lang, "ui.name_value", name="guest"), UI_HILITE_COL)
             self.txt(bx + 26, by + 74, self.online_text("local_confirm_ok"), UI_SUBTEXT_COL)
             self.txt(bx + 26, by + 92, self.online_text("local_confirm_cancel"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(bx + 26, by + 110)

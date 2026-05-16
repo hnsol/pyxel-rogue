@@ -12959,7 +12959,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(rogue_scores.sanitize_user_id("Rogue-54!xxxx"), "rogue54x")
         self.assertEqual(rogue_scores.sanitize_user_id("!!!"), "rogue54")
-        self.assertEqual(rogue_scores.display_score_name({"user_name": "rogue54"}), "rogue54")
+        self.assertEqual(rogue_scores.display_score_name({"user_name": "rogue54"}), "guest")
 
     def test_online_profile_v3_uses_user_name_and_ignores_old_profile_keys(self):
         from pyxel_rogue import rogue_scores
@@ -12991,7 +12991,7 @@ class RogueBaselineTest(unittest.TestCase):
             "profile_exists": True,
         })
 
-        self.assertEqual(rogue_scores.display_score_name(local), "ace")
+        self.assertEqual(rogue_scores.display_score_name(local), "guest")
         self.assertEqual(rogue_scores.display_score_name(registered), "ace")
         self.assertEqual(rogue_scores.display_score_name(synced), "ace")
 
@@ -13006,6 +13006,7 @@ class RogueBaselineTest(unittest.TestCase):
         })
 
         self.assertTrue(profile["local_only"])
+        self.assertEqual(profile["user_name"], "guest")
         self.assertEqual(profile["server_token"], "")
 
     def test_daily_period_scores_are_no_longer_supported(self):
@@ -13691,6 +13692,33 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
         self.assertEqual("".join(game.name_chars).strip(), "")
 
+    def test_guest_online_register_cancel_keeps_guest_without_saving_typed_name(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_register_return_state = rogue.ST_TITLE
+        game.name_chars = list("newname")
+        game.name_pos = 0
+        saved = []
+        old_save = rogue.save_local_only_profile
+        try:
+            rogue.save_local_only_profile = lambda user_name: saved.append(user_name) or {
+                "user_name": user_name,
+                "local_only": True,
+                "profile_exists": True,
+            }
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+            game.update()
+        finally:
+            rogue.save_local_only_profile = old_save
+
+        self.assertEqual(saved, [])
+        self.assertEqual(game.st, rogue.ST_TITLE)
+        self.assertEqual(game.online_profile["user_name"], "guest")
+        self.assertTrue(game.online_profile["local_only"])
+
     def test_title_draws_guest_mode_and_signup_menu(self):
         game = rogue.Game.__new__(rogue.Game)
         game.settings = rogue.Settings()
@@ -13924,8 +13952,8 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.save_local_only_profile = old_save
 
-        self.assertEqual(saved, ["newname"])
-        self.assertEqual(game.online_profile["user_name"], "newname")
+        self.assertEqual(saved, ["guest"])
+        self.assertEqual(game.online_profile["user_name"], "guest")
         self.assertTrue(game.online_profile["local_only"])
         self.assertEqual(game.st, rogue.ST_TITLE)
 
@@ -13957,8 +13985,8 @@ class RogueBaselineTest(unittest.TestCase):
         finally:
             rogue.save_local_only_profile = old_save
 
-        self.assertEqual(saved, ["newname"])
-        self.assertEqual(game.online_profile["user_name"], "newname")
+        self.assertEqual(saved, ["guest"])
+        self.assertEqual(game.online_profile["user_name"], "guest")
         self.assertTrue(game.online_profile["local_only"])
         self.assertEqual(game.st, rogue.ST_ONLINE_SCORE)
 
@@ -14207,7 +14235,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("Select/L Change Language（言語切替）", text)
         self.assertIn("A/Enter OK  B/Esc LOCAL ONLY", text)
         self.assertIn("A/Enter OK  B/Esc BACK", text)
-        self.assertIn("A/Enter save", text)
+        self.assertIn("A/Enter switch", text)
         self.assertNotIn("A NEXT/END", text)
         self.assertNotIn("UP/DOWN CHANGE", text)
         self.assertNotIn("LEFT/RIGHT MOVE", text)

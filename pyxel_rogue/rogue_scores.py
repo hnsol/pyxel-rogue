@@ -430,6 +430,8 @@ def normalize_online_profile(profile: dict[str, Any] | None) -> dict[str, Any]:
     if not token and profile.get("server_token_obf"):
         token = deobfuscate_server_token(str(profile.get("server_token_obf", "")), user_name)
     local_only = True if not token else bool(profile.get("local_only", False))
+    if local_only:
+        user_name = "guest"
     return {
         "user_name": user_name,
         "local_only": local_only,
