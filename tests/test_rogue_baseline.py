@@ -13221,6 +13221,23 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual([(e["player_name"], e["score"]) for e in weekly], [("ace", 20)])
 
+    def test_local_score_player_name_candidates_skip_guest_and_keep_recent_unique_names(self):
+        from pyxel_rogue import rogue_scores
+
+        entries = [
+            {"player_name": "guest", "timestamp": "2026-05-01T00:00:00Z", "score": 100},
+            {"player_name": "ace", "timestamp": "2026-05-02T00:00:00Z", "score": 200},
+            {"player_name": "bob", "timestamp": "2026-05-03T00:00:00Z", "score": 300},
+            {"player_name": "cy", "timestamp": "2026-05-04T00:00:00Z", "score": 350},
+            {"player_name": "dee", "timestamp": "2026-05-05T00:00:00Z", "score": 360},
+            {"player_name": "ACE", "timestamp": "2026-05-04T00:00:00Z", "score": 400},
+            {"player_name": "rodney", "timestamp": "2026-05-06T00:00:00Z", "score": 500},
+        ]
+
+        names = rogue_scores.local_score_player_name_candidates(entries)
+
+        self.assertEqual(names, ["dee", "ace", "cy"])
+
     def test_dummy_scores_are_sheet_rows_with_consistent_periods(self):
         from pyxel_rogue import rogue_scores
 
@@ -13856,6 +13873,66 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.lang, rogue.LANG_JA)
         self.assertEqual(game.name_pos, 0)
         self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
+
+    def test_online_register_can_choose_previous_name_candidate_with_dpad(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_name_candidates = ["ace", "bob"]
+        game.name_chars = []
+        game.name_pos = rogue.USER_NAME_MAX
+        game.online_pending_action = ""
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertEqual(game.name_pos, rogue.USER_NAME_MAX + 1)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
+        game.update()
+        self.assertEqual(game.name_pos, rogue.USER_NAME_MAX + 2)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual("".join(game.name_chars), "bob")
+        self.assertEqual(game.name_pos, rogue.USER_NAME_MAX)
+
+    def test_online_register_select_toggles_language_even_with_previous_names(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.st = rogue.ST_ONLINE_REGISTER
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_name_candidates = ["ace"]
+        game.name_chars = []
+        game.name_pos = 0
+        game.online_pending_action = ""
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_TAB}, pressed={rogue.pyxel.KEY_TAB})
+        game.update()
+
+        self.assertEqual(game.lang, rogue.LANG_JA)
+
+    def test_online_register_draws_previous_names_as_vertical_list(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_EN)
+        game.lang = rogue.LANG_EN
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.online_name_candidates = ["ace", "bob", "cat"]
+        game.name_chars = []
+        game.name_pos = rogue.USER_NAME_MAX + 3
+        game.online_pending_action = ""
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        game._box = lambda *args: None
+
+        game.draw_online_register_screen()
+
+        text = [call[2] for call in calls]
+        self.assertIn("Previous Names", text)
+        self.assertIn("  ace", text)
+        self.assertIn("  bob", text)
+        self.assertIn("> cat", text)
 
     def test_online_registered_name_b_without_edit_cancels_to_title(self):
         game = rogue.Game.__new__(rogue.Game)

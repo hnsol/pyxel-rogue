@@ -204,6 +204,7 @@ from pyxel_rogue.rogue_scores import (
     load_online_profile,
     load_score_entries,
     local_best_sync_entries,
+    local_score_player_name_candidates,
     normalize_online_profile,
     record_guest_scoreboard_sync,
     register_online_user,
@@ -287,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260516_1858"
+UI_BUILD = "260516_1917"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1301,6 +1302,7 @@ class Game:
         self.online_password_chars = []
         self.online_pending_user_name = ""
         self.online_original_user_name = ""
+        self.online_name_candidates = []
         self.online_password_mode = "register"
         self.online_return_state = ST_TITLE
         self.title_bg = None
@@ -6388,6 +6390,7 @@ class Game:
         user_name = "" if reset_to_default or profile.get("local_only", True) else profile.get("user_name", "")
         self.online_pending_user_name = user_name
         self.online_original_user_name = user_name
+        self.online_name_candidates = local_score_player_name_candidates(load_score_entries(), limit=3)
         self.name_chars = list(user_name[:USER_NAME_MAX])
         self.name_pos = min(len(self.name_chars), USER_NAME_MAX - 1)
         self.online_sync_result = ""
@@ -6465,6 +6468,28 @@ class Game:
             self.st = ST_ONLINE_LOCAL_CONFIRM
         else:
             self.enter_title_screen()
+
+    def online_name_candidate_count(self):
+        return len(getattr(self, "online_name_candidates", [])[:3])
+
+    def online_name_candidate_index(self):
+        pos = getattr(self, "name_pos", 0)
+        if pos <= USER_NAME_MAX:
+            return -1
+        idx = pos - USER_NAME_MAX - 1
+        if idx >= self.online_name_candidate_count():
+            return -1
+        return idx
+
+    def apply_online_name_candidate(self):
+        idx = self.online_name_candidate_index()
+        if idx < 0:
+            return False
+        name = self.online_name_candidates[idx]
+        self.name_chars = list(name[:USER_NAME_MAX])
+        self.name_pos = USER_NAME_MAX
+        self.online_sync_result = ""
+        return True
 
     def upd_online_local_confirm(self):
         if self.online_language_toggle_pressed():
@@ -6903,14 +6928,21 @@ class Game:
             self.cancel_or_confirm_local_only_name()
             return
         if self.btn_start_tap():
+            if self.apply_online_name_candidate():
+                return
             self.confirm_online_user_id()
             return
         if self.kp(pyxel.KEY_LEFT, pyxel.KEY_H, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
             self.name_pos = max(0, getattr(self, "name_pos", 0) - 1)
         if self.kp(pyxel.KEY_RIGHT, pyxel.KEY_L, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
-            self.name_pos = min(USER_NAME_MAX, getattr(self, "name_pos", 0) + 1)
+            max_pos = USER_NAME_MAX + self.online_name_candidate_count()
+            self.name_pos = min(max_pos, getattr(self, "name_pos", 0) + 1)
         d = self.menu_vertical_press()
-        if d:
+        if d and self.online_name_candidate_index() >= 0:
+            idx = max(0, min(self.online_name_candidate_count() - 1, self.online_name_candidate_index() + d))
+            self.name_pos = USER_NAME_MAX + 1 + idx
+            return
+        if d and getattr(self, "name_pos", 0) < USER_NAME_MAX:
             chars = getattr(self, "name_chars", [])
             pos = min(getattr(self, "name_pos", 0), USER_NAME_MAX - 1)
             while len(chars) <= pos:
@@ -6919,6 +6951,8 @@ class Game:
             chars[pos] = NAME_ALPHABET[(idx - d) % len(NAME_ALPHABET)]
             self.name_chars = chars[:USER_NAME_MAX]
         if self.btn_a():
+            if self.apply_online_name_candidate():
+                return
             if getattr(self, "name_pos", 0) >= USER_NAME_MAX:
                 self.confirm_online_user_id()
             else:
@@ -7834,6 +7868,17 @@ class Game:
             self.txt(base_x + i * 14, y, ch if ch != " " else "_", col)
         end_col = UI_SELECTED_COL if getattr(self, "name_pos", 0) >= USER_NAME_MAX else UI_TEXT_COL
         self.txt(base_x + 126, y, TextCatalog.msg(self.lang, "ui.done"), end_col)
+        candidates = getattr(self, "online_name_candidates", [])[:3]
+        if candidates:
+            self.txt(bx + 26, by + 104, self.online_text("register_previous_names"), UI_SECTION_COL)
+            for i, name in enumerate(candidates):
+                selected = getattr(self, "name_pos", 0) == USER_NAME_MAX + 1 + i
+                self.txt(
+                    bx + 38,
+                    by + 120 + i * 12,
+                    ("> " if selected else "  ") + name,
+                    UI_SELECTED_COL if selected else UI_TEXT_COL,
+                )
         self.txt(bx + 26, by + 158, self.online_text("register_hint" if local_hint else "register_cancel_hint"), UI_SUBTEXT_COL)
         self.draw_online_language_hint(bx + 26, by + 172)
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):

@@ -231,6 +231,30 @@ def get_period_scores(entries: list[dict[str, Any]], period: str, key: str, limi
     return get_top_scores(list(best.values()), limit=limit)
 
 
+def _candidate_timestamp_value(entry: dict[str, Any]) -> datetime:
+    try:
+        dt = datetime.fromisoformat(str(entry.get("timestamp", "")).replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def local_score_player_name_candidates(entries: list[dict[str, Any]], limit: int = 3) -> list[str]:
+    latest: dict[str, datetime] = {}
+    for entry in entries:
+        name = sanitize_player_name(str(entry.get("player_name", "")))
+        if name in RESERVED_USER_IDS:
+            continue
+        timestamp = _candidate_timestamp_value(entry)
+        if name not in latest or timestamp > latest[name]:
+            latest[name] = timestamp
+    return [
+        name for name, _timestamp in sorted(latest.items(), key=lambda item: item[1], reverse=True)[:max(0, int(limit))]
+    ]
+
+
 def build_dummy_score_rows(timestamp: str, count: int = 24, seed: int | None = None) -> list[dict[str, Any]]:
     rng = random.Random(seed if seed is not None else timestamp)
     names = DUMMY_PLAYER_NAMES[:]
