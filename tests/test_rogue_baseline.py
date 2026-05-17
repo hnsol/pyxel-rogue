@@ -1,5 +1,7 @@
+import ast
 import importlib
 import hashlib
+import json
 import os
 import random
 import subprocess
@@ -6761,17 +6763,78 @@ class RogueBaselineTest(unittest.TestCase):
             "その方向には怪物がいない",
         )
 
-    def test_text_catalog_falls_back_to_english_for_missing_ja_key(self):
+    def test_message_catalog_has_complete_japanese_keys(self):
+        catalogs = rogue.TextCatalog._load_catalogs()
+
+        self.assertEqual(set(catalogs[rogue.LANG_EN]), set(catalogs[rogue.LANG_JA]))
+
+    def test_embedded_message_catalogs_match_json_assets(self):
+        from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
+
+        with open(os.path.join(ROOT, "assets", "messages", "en.json"), encoding="utf-8") as f:
+            self.assertEqual(EN_MESSAGES, json.load(f))
+        with open(os.path.join(ROOT, "assets", "messages", "ja.json"), encoding="utf-8") as f:
+            self.assertEqual(JA_MESSAGES, json.load(f))
+
+    def test_literal_message_keys_used_by_game_exist_in_both_catalogs(self):
+        catalogs = rogue.TextCatalog._load_catalogs()
+        source_paths = [rogue.__file__]
+        source_dir = os.path.join(ROOT, "pyxel_rogue")
+        source_paths += [
+            os.path.join(source_dir, name)
+            for name in os.listdir(source_dir)
+            if name.endswith(".py")
+        ]
+        keys = set()
+        for path in source_paths:
+            with open(path, encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                if isinstance(func, ast.Attribute) and func.attr == "msg":
+                    if isinstance(func.value, ast.Name) and func.value.id == "TextCatalog":
+                        if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+                            keys.add(node.args[1].value)
+                    elif node.args and isinstance(node.args[0], ast.Constant):
+                        keys.add(node.args[0].value)
+                elif isinstance(func, ast.Attribute) and func.attr in ("menu", "trap"):
+                    if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+                        prefix = func.attr + "."
+                        keys.add(prefix + node.args[1].value.lower().replace(" ", "_"))
+
+        missing = {
+            lang: sorted(key for key in keys if key not in catalogs[lang])
+            for lang in (rogue.LANG_EN, rogue.LANG_JA)
+        }
+        self.assertEqual(missing, {rogue.LANG_EN: [], rogue.LANG_JA: []})
+
+    def test_text_catalog_uses_builtin_japanese_before_external_english(self):
         catalogs = rogue.TextCatalog._load_catalogs()
         ja_catalog = catalogs[rogue.LANG_JA]
         original = ja_catalog.pop("command.no_monster_there")
         try:
             self.assertEqual(
                 rogue.TextCatalog.msg(rogue.LANG_JA, "command.no_monster_there"),
-                "no monster there",
+                "その方向には怪物がいない",
             )
         finally:
             ja_catalog["command.no_monster_there"] = original
+
+    def test_text_catalog_falls_back_to_english_when_no_japanese_exists(self):
+        old_catalogs = rogue.TextCatalog._catalogs
+        try:
+            rogue.TextCatalog._catalogs = {
+                rogue.LANG_EN: {"external.only": "External only"},
+                rogue.LANG_JA: {},
+            }
+            self.assertEqual(
+                rogue.TextCatalog.msg(rogue.LANG_JA, "external.only"),
+                "External only",
+            )
+        finally:
+            rogue.TextCatalog._catalogs = old_catalogs
 
     def test_text_catalog_falls_back_when_json_assets_are_missing(self):
         import builtins
@@ -6873,6 +6936,14 @@ class RogueBaselineTest(unittest.TestCase):
             set(rogue.rogue_sticks.METALS + rogue.rogue_sticks.WOODS),
         )
 
+    def test_embedded_terms_catalogs_match_json_assets(self):
+        from pyxel_rogue.rogue_terms import EN_TERMS, JA_TERMS
+
+        with open(os.path.join(ROOT, "assets", "terms", "en.json"), encoding="utf-8") as f:
+            self.assertEqual(EN_TERMS, json.load(f))
+        with open(os.path.join(ROOT, "assets", "terms", "ja.json"), encoding="utf-8") as f:
+            self.assertEqual(JA_TERMS, json.load(f))
+
     def test_terms_catalog_falls_back_when_json_assets_are_missing(self):
         import builtins
 
@@ -6894,6 +6965,18 @@ class RogueBaselineTest(unittest.TestCase):
             builtins.open = original_open
             rogue.__file__ = original_file
             rogue.TextCatalog._terms = original_terms
+
+    def test_terms_catalog_uses_builtin_japanese_before_external_english(self):
+        terms = rogue.TextCatalog._load_terms()
+        ja_weapons = terms[rogue.LANG_JA]["item"]["weapon"]
+        original = ja_weapons.pop("two-handed sword")
+        try:
+            self.assertEqual(
+                rogue.TextCatalog.item_kind(rogue.LANG_JA, rogue.CAT_WPN, "two-handed sword"),
+                "大きな剣",
+            )
+        finally:
+            ja_weapons["two-handed sword"] = original
 
     def test_module_loads_and_new_game_emits_rogue_544_start_message(self):
         game = new_game(seed=7)
@@ -6996,6 +7079,18 @@ class RogueBaselineTest(unittest.TestCase):
         game = new_game(seed=8)
         food = rogue.Item(rogue.CAT_FOOD, 0, qty=2)
         self.assertEqual(game.item_name(food), "2 food rations")
+
+        potion = rogue.Item(rogue.CAT_POT, 0, qty=2)
+        game.ident.pcol[potion.kind] = "red"
+        self.assertEqual(game.item_name(potion), "2 red potions")
+        game.ident.pk[potion.kind] = True
+        self.assertEqual(game.item_name(potion), "2 potions of confusion")
+
+        scroll = rogue.Item(rogue.CAT_SCR, 0, qty=2)
+        game.ident.snam[scroll.kind] = ((0,),)
+        self.assertEqual(game.item_name(scroll), "2 scrolls [a]")
+        game.ident.sk[scroll.kind] = True
+        self.assertEqual(game.item_name(scroll), "2 scrolls of monster confusion")
 
         armor = rogue.Item(rogue.CAT_ARM, 1, ench=1)
         self.assertEqual(game.item_name(armor), "+1 ring mail [protection 4]")
@@ -7607,6 +7702,23 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIs(game.p.ring_r, right)
         self.assertEqual(game.turn, turn + 1)
         self.assertIn("That's already in use", game.msgs)
+
+    def test_rogue_544_put_on_current_ring_uses_localized_is_current_message(self):
+        # Rogue 5.4.4 rings.c:ring_on() reaches misc.c:is_current() for an equipped ring.
+        from pyxel_rogue import rogue_rings
+
+        game = new_game(seed=50431, lang=rogue.LANG_JA)
+        ring = rogue.Item(rogue.CAT_RING, rogue_rings.R_PROTECT)
+        game.p.inv.append(ring)
+        game.p.ring_l = ring
+        game.cact = "Put on"
+        game.fitems = [ring]
+        game.icur = 0
+
+        game.item_confirm()
+
+        self.assertIn("それはもう使っている", game.msgs)
+        self.assertNotIn("That's already in use", game.msgs)
 
     def test_rogue_544_put_on_third_ring_spends_turn(self):
         # Rogue 5.4.4 rings.c:ring_on() "wearing two" path does not clear after.
@@ -11846,6 +11958,20 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertLessEqual(boxes[-1][1] + boxes[-1][3], rogue.SCR_H)
         self.assertTrue(any("Left/Right: Tabs" in s and "Select/B: Close" in s for _x, _y, s, _c in calls))
 
+    def test_inventory_wraps_to_two_columns_before_guide_overlap(self):
+        game = new_game(seed=37121)
+        game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(19)]
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        game.draw_inventory()
+
+        inv_lines = [c for c in calls if len(c[2]) >= 3 and c[2][1:3] == ") "]
+        guide = next(c for c in calls if "Select/B" in c[2])
+        self.assertEqual(len({x for x, _y, _s, _c in inv_lines}), 2)
+        for _x, y, _s, _c in inv_lines:
+            self.assertLessEqual(y + rogue.MSG_LINE_H, guide[1])
+
     def test_inventory_stays_one_column_for_ten_items(self):
         game = new_game(seed=3713)
         game.p.inv = [rogue.Item(rogue.CAT_FOOD, 0) for _ in range(10)]
@@ -13845,6 +13971,74 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_ONLINE_REGISTER)
         self.assertEqual(game.online_sync_result, "Enter a name.")
+
+    def test_online_register_result_draws_localized_status_text(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.lang = rogue.LANG_JA
+        game.online_profile = {"user_name": "guest", "local_only": True, "profile_exists": True}
+        game.name_chars = []
+        game.name_pos = 0
+        game.online_name_candidates = []
+        game.online_sync_status = ""
+        game.online_pending_action = ""
+        game.online_sync_result = "Enter a name."
+        calls = []
+        game._box = lambda *args: None
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_online_register_screen()
+
+        self.assertIn("名前を入力してください。", calls)
+        self.assertNotIn("Enter a name.", calls)
+
+    def test_online_pin_result_draws_localized_status_text(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings(language=rogue.LANG_JA)
+        game.lang = rogue.LANG_JA
+        game.st = rogue.ST_ONLINE_PIN
+        game.online_pending_user_name = "taken"
+        game.online_password_mode = "register"
+        game.online_password_chars = list("123456")
+        game.name_pos = 0
+        game.online_sync_status = ""
+        game.online_pending_action = ""
+        game.online_sync_result = "Registration failed."
+        calls = []
+        game._box = lambda *args: None
+        game.txt = lambda x, y, s, c: calls.append(str(s))
+
+        game.draw_online_pin_screen()
+
+        self.assertIn("同期設定失敗。", calls)
+        self.assertNotIn("Registration failed.", calls)
+
+    def test_online_sync_status_literals_have_localized_catalog_entries(self):
+        from pyxel_rogue import rogue_online_state
+
+        keys = set()
+        for path in (rogue.__file__, rogue_online_state.__file__):
+            with open(path, encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+                    continue
+                if not isinstance(node.value.value, str) or not node.value.value:
+                    continue
+                for target in node.targets:
+                    if isinstance(target, ast.Attribute) and target.attr in ("online_sync_result", "online_sync_status"):
+                        keys.add(node.value.value)
+
+        for lang in (rogue.LANG_EN, rogue.LANG_JA):
+            with self.subTest(lang=lang):
+                missing = sorted(key for key in keys if key not in rogue.ONLINE_UI_TEXT[lang])
+                self.assertEqual(missing, [])
+
+    def test_online_ui_text_has_complete_japanese_keys(self):
+        self.assertEqual(
+            set(rogue.ONLINE_UI_TEXT[rogue.LANG_EN]),
+            set(rogue.ONLINE_UI_TEXT[rogue.LANG_JA]),
+        )
 
     def test_online_register_rejects_guest_name_without_server_check(self):
         game = rogue.Game.__new__(rogue.Game)

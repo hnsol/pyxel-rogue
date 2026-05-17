@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260517_1411"
+UI_BUILD = "260518_0009"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -794,25 +794,29 @@ class IdentTable:
     def name(s,it,lang=None):
         lang = s.lang if lang is None else lang
         if it.cat==CAT_POT:
+            count_prefix = f"{it.qty} " if it.qty > 1 else ""
+            type_name = "potions" if it.qty > 1 else "potion"
             if s.pk[it.kind] or s.easy_type_known:
                 nm=TextCatalog.item_kind(lang, CAT_POT, POTIONS[it.kind]["name"])
-                return f"potion of {nm}" if lang==LANG_EN else f"{nm}水薬"
+                return f"{count_prefix}{type_name} of {nm}" if lang==LANG_EN else f"{count_prefix}{nm}水薬"
             if s.pg[it.kind] is not None:
                 g=s.pg[it.kind]
                 col=s.pcol[it.kind]
-                return f"potion called {g}({col})" if lang==LANG_EN else f"{TextCatalog.potion_color(lang,col)}水薬（{g}）"
+                return f"{count_prefix}{type_name} called {g}({col})" if lang==LANG_EN else f"{count_prefix}{TextCatalog.potion_color(lang,col)}水薬（{g}）"
             col=s.pcol[it.kind]
-            return f"{col} potion" if lang==LANG_EN else f"{TextCatalog.potion_color(lang,col)}水薬"
+            return f"{count_prefix}{col} {type_name}" if lang==LANG_EN else f"{count_prefix}{TextCatalog.potion_color(lang,col)}水薬"
         if it.cat==CAT_SCR:
+            count_prefix = f"{it.qty} " if it.qty > 1 else ""
+            type_name = "scrolls" if it.qty > 1 else "scroll"
             if s.sk[it.kind] or s.easy_type_known:
                 nm=TextCatalog.item_kind(lang, CAT_SCR, s.scrolls[it.kind]["name"])
-                return f"scroll of {nm}" if lang==LANG_EN else f"{nm}巻き物"
+                return f"{count_prefix}{type_name} of {nm}" if lang==LANG_EN else f"{count_prefix}{nm}巻き物"
             if s.sg[it.kind] is not None:
                 g=s.sg[it.kind]
-                return f"scroll called {g}" if lang==LANG_EN else f"巻き物（{g}）"
+                return f"{count_prefix}{type_name} called {g}" if lang==LANG_EN else f"{count_prefix}巻き物（{g}）"
             syllables = SCR_SYLS_JA if lang == LANG_JA else SCR_SYLS
             title = rogue_init.render_scroll_title(s.snam[it.kind], syllables)
-            return f"scroll [{title}]" if lang==LANG_EN else f"巻き物 [{title}]"
+            return f"{count_prefix}{type_name} [{title}]" if lang==LANG_EN else f"{count_prefix}巻き物 [{title}]"
         if it.cat==CAT_FOOD:
             nm=TextCatalog.item_kind(lang, CAT_FOOD, it.data["name"])
             if it.qty>1 and lang==LANG_EN and not nm.endswith("s"):
@@ -4245,10 +4249,14 @@ class Game:
             self.msg("weapons.you_cant_wield_armor")
             return False
         if result == "current":
-            self.msg_text("That's already in use")
+            self.msg_text(self.is_current_message())
             return False
         self.p.wpn=it; self.msg("pyxel.wield_item", item=self.ident.name(it))
         return True
+
+    def is_current_message(self):
+        # Rogue 5.4.4 misc.c:is_current() emits addmsg("That's already ") + msg("in use").
+        return TextCatalog.msg(self.lang, "misc.that_s_already") + TextCatalog.msg(self.lang, "misc.in_use")
 
     def consume_pack_item(self,it):
         # C: pack.c:leave_pack(obj, FALSE, FALSE).
@@ -4290,7 +4298,7 @@ class Game:
             self.msg("rings.it_would_be_difficult_to_wrap_that_around_a_finger")
             return True
         if result == "current":
-            self.msg_text("That's already in use")
+            self.msg_text(self.is_current_message())
             return True
         if result == "full":
             self.msg("pyxel.already_ring_each_hand")
@@ -8026,7 +8034,7 @@ class Game:
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
             self.txt(bx + 26, by + 198, self.online_text(self.online_sync_status)[:48], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(bx + 26, by + 198, self.online_sync_result[:48], UI_HILITE_COL)
+            self.txt(bx + 26, by + 198, self.online_text(self.online_sync_result)[:48], UI_HILITE_COL)
 
     def draw_online_pin_screen(self):
         is_link = getattr(self, "online_password_mode", "register") == "link"
@@ -8048,7 +8056,7 @@ class Game:
         if getattr(self, "online_sync_status", "") and getattr(self, "online_pending_action", ""):
             self.txt(bx + 24, by + 196, self.online_text(self.online_sync_status)[:46], UI_HILITE_COL)
         if getattr(self, "online_sync_result", ""):
-            self.txt(bx + 24, by + 196, self.online_sync_result[:46], UI_HILITE_COL)
+            self.txt(bx + 24, by + 196, self.online_text(self.online_sync_result)[:46], UI_HILITE_COL)
 
     def draw_online_local_confirm_screen(self):
         guest_switch = getattr(self, "online_local_confirm_mode", "") == "guest_switch"
@@ -8508,7 +8516,7 @@ class Game:
 
     def draw_inventory(self):
         bx, by, bw, bh = self.info_window_rect()
-        max_rows = max(1, (bh - 34) // 11)
+        max_rows = self.inventory_pack_max_rows()
         cols, _rows = pack_grid_shape(len(self.p.inv), max_rows)
         cell_w = max(220, SCR_W - 24) if cols <= 1 else max(220, (SCR_W - 24) // cols)
         self._box(bx, by, bw, bh, self.ui_heading(self.info_title_label(), UI_HEADING_SCREEN))
@@ -8523,6 +8531,9 @@ class Game:
             max_rows=max_rows,
         )
         self.txt(bx + 8, by + bh - 16, self.info_guide_label(), UI_SUBTEXT_COL)
+
+    def inventory_pack_max_rows(self):
+        return 18
 
     def info_window_rect(self):
         return (20, 20, SCR_W - 40, SCR_H - 40)

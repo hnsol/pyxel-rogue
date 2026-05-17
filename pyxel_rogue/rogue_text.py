@@ -98,15 +98,18 @@ class TextCatalog:
         catalogs = TextCatalog._load_catalogs()
         lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
         s = catalogs.get(lang, {}).get(key)
-        if s is None and lang != LANG_EN:
-            s = catalogs.get(LANG_EN, {}).get(key)
         if s is None:
             from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
 
             builtins = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
             s = builtins.get(lang, {}).get(key)
-            if s is None and lang != LANG_EN:
-                s = builtins.get(LANG_EN, {}).get(key)
+        if s is None and lang != LANG_EN:
+            s = catalogs.get(LANG_EN, {}).get(key)
+        if s is None and lang != LANG_EN:
+            from pyxel_rogue.rogue_message_catalogs import EN_MESSAGES, JA_MESSAGES
+
+            builtins = {LANG_EN: EN_MESSAGES, LANG_JA: JA_MESSAGES}
+            s = builtins.get(LANG_EN, {}).get(key)
         if s is None:
             TextCatalog._warn_missing(key)
             s = f"[missing:{key}]"
@@ -185,13 +188,24 @@ class TextCatalog:
     def term(lang, path, key, default=None):
         terms = TextCatalog._load_terms()
         lang = lang if lang in (LANG_EN, LANG_JA) else LANG_EN
-        node = terms.get(lang, {})
-        for part in path:
-            node = node.get(part, {}) if isinstance(node, dict) else {}
-        value = node.get(key) if isinstance(node, dict) else None
-        if value is None and lang != LANG_EN:
-            node = terms.get(LANG_EN, {})
+
+        def find(table, table_lang):
+            node = table.get(table_lang, {})
             for part in path:
                 node = node.get(part, {}) if isinstance(node, dict) else {}
-            value = node.get(key) if isinstance(node, dict) else None
+            return node.get(key) if isinstance(node, dict) else None
+
+        value = find(terms, lang)
+        if value is None:
+            from pyxel_rogue.rogue_terms import EN_TERMS, JA_TERMS
+
+            builtins = {LANG_EN: EN_TERMS, LANG_JA: JA_TERMS}
+            value = find(builtins, lang)
+        if value is None and lang != LANG_EN:
+            value = find(terms, LANG_EN)
+        if value is None and lang != LANG_EN:
+            from pyxel_rogue.rogue_terms import EN_TERMS, JA_TERMS
+
+            builtins = {LANG_EN: EN_TERMS, LANG_JA: JA_TERMS}
+            value = find(builtins, LANG_EN)
         return value if value is not None else (key if default is None else default)

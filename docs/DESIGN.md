@@ -229,7 +229,7 @@ Info 画面は `Inventory / Log / Settings / Help` のタブ構成にする。Se
 
 ゲームパッドとキーボードで別UIを作らない。`t` と `Select+A` は同じ quick throw インタフェースに入り、入口だけが異なる。方向待ち、アイテム選択、キャンセル、ログ、ターン消費は共通処理にする。他の Rogue command キーも、可能な限りゲームパッド向け command window と同じ状態へ接続する。
 
-Item picker と Inventory は同じ pack grid 表示に寄せる。pack は現行通り `p.inv` の順番を pack letter `a-z` とし、Rogue 5.4.4 `pack.c:add_pack()` に近いカテゴリ寄せ挿入を保つ。表示だけを2〜3列グリッドに折り返し、カテゴリ選択の2段階UIは作らない。キーボードでは `a-z` の直選択を維持し、ゲームパッドでは上下左右で移動できるようにする。
+Item picker と Inventory は同じ pack grid 表示に寄せる。pack は現行通り `p.inv` の順番を pack letter `a-z` とし、Rogue 5.4.4 `pack.c:add_pack()` に近いカテゴリ寄せ挿入を保つ。表示だけを2〜3列グリッドに折り返し、カテゴリ選択の2段階UIは作らない。Inventory は操作ガイド領域を予約し、19件前後で2列化する。キーボードでは `a-z` の直選択を維持し、ゲームパッドでは上下左右で移動できるようにする。
 
 Item picker の初期カーソルはコマンドごとに前回使用した `Item` object identity を記憶する。前回 object がまだ pack 内にあれば、その現在位置へカーソルを置く。消費や drop で object が pack から消えていれば `a` に戻す。letter や表示名では判定しない。鑑定や命名で表示名が変わっても同じ object なら継続し、別アイテムへ勝手に近寄せないことで誤爆を避ける。
 
