@@ -30,6 +30,6 @@ tmp/
 # Local GitHub wiki checkout
 /wiki/
 
-# Local Rogue 5.4.4 reference source
-vendor/rogue544/
+# Local reference sources
+vendor/
 .worktrees/

@@ -544,7 +544,7 @@
 - [x] カメラ追従開始位置の調整
 - [ ] 複数 BDF フォント選択 + レイアウト自動再計算
 - [x] 日本語/英語切替の入口（`PYXEL_ROGUE_LANG=ja`、代表文言・用語）
-- [x] Rogue2.Official `mesg_J` / `mesg_E` / `COPYING` を参考データとして `vendor/rogue2_official_messages/` に保持
+- [x] Rogue2.Official `mesg_J` / `mesg_E` / `COPYING` をローカル参考データとして `vendor/rogue2_official_messages/` に配置
 - [x] HUD短縮名を `TextCatalog.hud_item_kind()` 経由にする
 - [x] 日本語/英語切替（ゲームログ / Settings / 罠名を JSON カタログ化、umplus_j10r は CJK 対応済み）
 - [ ] HUD / Inventory / Help / Death の文言辞書化
