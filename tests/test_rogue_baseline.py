@@ -45,6 +45,10 @@ def install_pyxel_mock():
     pyxel.rect = lambda *a, **kw: pyxel.rect_calls.append((a, kw))
     pyxel.rectb_calls = []
     pyxel.rectb = lambda *a, **kw: pyxel.rectb_calls.append((a, kw))
+    pyxel.line_calls = []
+    pyxel.line = lambda *a, **kw: pyxel.line_calls.append((a, kw))
+    pyxel.camera_calls = []
+    pyxel.camera = lambda *a, **kw: pyxel.camera_calls.append((a, kw))
     pyxel.blt_calls = []
     pyxel.blt = lambda *a, **kw: pyxel.blt_calls.append((a, kw))
     pyxel.dither_calls = []
@@ -12683,10 +12687,10 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_dead()
 
         self.assertEqual(boxes[0][4], "=== 安らかに眠れ ===")
-        bx, _by, bw, _bh, _title = boxes[0]
-        center_x = bx + bw // 2
+        bx, _by, _bw, _bh, _title = boxes[0]
+        center_x = bx + 300 // 2
         shell_chars = set(" _/\\|*()")
-        shell = [call for call in calls if call[2] and set(call[2]) <= shell_chars]
+        shell = [call for call in calls if call[0] < bx + 300 and call[2] and set(call[2]) <= shell_chars]
         self.assertTrue(shell)
         shell_x = {x for x, _y, _s, _c in shell}
         self.assertEqual(len(shell_x), 1)
@@ -15546,7 +15550,6 @@ class RogueBaselineTest(unittest.TestCase):
             game.draw_online_pin_screen,
             game.draw_online_local_confirm_screen,
             game.draw_score_screen,
-            game.draw_dead,
             game.draw_win,
             game.draw_quit_confirm,
             game.draw_quit,
@@ -15562,6 +15565,11 @@ class RogueBaselineTest(unittest.TestCase):
                 x, y, w, h, _title = boxes[0]
                 self.assertEqual(x, (rogue.SCR_W - w) // 2)
                 self.assertEqual(y, (rogue.SCR_H - h) // 2)
+        boxes = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda *args: None
+        game.draw_dead()
+        self.assertEqual(boxes[0][:4], (4, rogue.ZV_Y, rogue.SCR_W - 8, rogue.SCR_H - rogue.ZV_Y - 32))
 
     def test_enter_online_scoreboard_clears_stale_no_local_scores_when_local_score_exists(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -16449,6 +16457,8 @@ class RogueBaselineTest(unittest.TestCase):
         for state in (rogue.ST_DEAD, rogue.ST_WIN, rogue.ST_QUIT):
             game = new_game(seed=35)
             game.st = state
+            if state == rogue.ST_DEAD:
+                game.death_intro_done = True
 
             rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
             game.update()
@@ -18016,6 +18026,273 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn(("Name", rogue.UI_SECTION_COL), calls)
         self.assertTrue(any(s.startswith("---") and c == rogue.UI_SECTION_COL for s, c in calls))
         self.assertTrue(any("D-pad/Arrows" in s and c == rogue.UI_SUBTEXT_COL for s, c in calls))
+
+    def test_death_snapshot_minimap_keeps_only_visible_information(self):
+        game = new_game(seed=473445)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.visible = {(10, 10), (11, 10), (9, 10)}
+        game.explored = set(game.visible)
+        visible_food = rogue.Item(rogue.CAT_FOOD, 0)
+        visible_food.x, visible_food.y = 11, 10
+        hidden_scroll = rogue.Item(rogue.CAT_SCR, 0)
+        hidden_scroll.x, hidden_scroll.y = 10, 11
+        game.gitems = [visible_food, hidden_scroll]
+        visible_monster = rogue.Monster(9, 10, "G", "goblin", 1, 1, 10, "1d2", 1, "")
+        hidden_monster = rogue.Monster(10, 9, "B", "bat", 1, 1, 10, "1d2", 1, "")
+        game.mons = [visible_monster, hidden_monster]
+
+        game.capture_death_snapshot()
+
+        rows = ["".join(ch for ch, _col in row) for row in game.death_minimap_tiles]
+        self.assertEqual(rows[3][10], "@")
+        self.assertEqual(rows[3][11], ":")
+        self.assertEqual(rows[3][9], "G")
+        self.assertEqual(rows[4][10], " ")
+        self.assertEqual(rows[2][10], " ")
+
+    def test_dead_screen_draws_context_panel_with_recent_logs(self):
+        game = new_game(seed=473446)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+        game.visible = {(10, 10)}
+        game.msgs = ["first", "second", "third", "fourth", "fifth", "you died... [A/Start] to restart"]
+        game.msg_turns = [1, 2, 3, 4, 5, 6]
+        game.options["tombstone"] = True
+        game.capture_death_snapshot()
+        game.death_intro_done = True
+        game.death_intro_done_frame = game.death_frame
+        old_frame = rogue.pyxel.frame_count
+        rogue.pyxel.frame_count = game.death_frame + rogue.DEATH_LOG_FRAMES_PER_TURN * 5
+        rogue.pyxel.line_calls.clear()
+        calls = []
+        boxes = []
+        game._box = lambda x, y, w, h, title="": boxes.append((x, y, w, h, title))
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+
+        try:
+            game.draw_dead()
+
+            self.assertEqual(boxes[0][:4], (4, 24, rogue.SCR_W - 8, 264))
+            self.assertTrue(any(call[2] == "@" for call in calls))
+            self.assertTrue(any(call[2] == "-- Last Stand --" for call in calls))
+            scoreboard = next(call for call in calls if "Scoreboard" in call[2])
+            self.assertEqual(scoreboard[1], 270)
+            top = next(call for call in calls if "__________" in call[2])
+            self.assertGreaterEqual(top[1], 70)
+            self.assertTrue(any("You died..." in call[2] for call in calls))
+            self.assertFalse(any("A/Start" in call[2] for call in calls if "died" in call[2]))
+            self.assertTrue(all(args[0] == args[2] for args, _kw in rogue.pyxel.line_calls))
+        finally:
+            rogue.pyxel.frame_count = old_frame
+
+    def test_death_log_ages_and_retires_like_message_toast(self):
+        game = new_game(seed=473447)
+        set_open_floor(game)
+        game.msgs = ["A", "B", "C"]
+        game.msg_turns = [1, 2, 3]
+        game.death_frame = 100
+        game.death_intro_done = True
+        game.death_intro_done_frame = 100
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        old_frame = rogue.pyxel.frame_count
+
+        try:
+            rogue.pyxel.frame_count = 100
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual([(s, c) for _x, _y, s, c in calls], [("A", rogue.msg_toast_color(0, game.settings.palette))])
+            self.assertEqual([y for _x, y, _s, _c in calls], [120])
+
+            calls.clear()
+            rogue.pyxel.frame_count = 100 + rogue.DEATH_LOG_FRAMES_PER_TURN * 2
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual(
+                [(s, c) for _x, _y, s, c in calls],
+                [
+                    ("A", rogue.msg_toast_color(2, game.settings.palette)),
+                    ("B", rogue.msg_toast_color(1, game.settings.palette)),
+                    ("C", rogue.msg_toast_color(0, game.settings.palette)),
+                ],
+            )
+            self.assertEqual([y for _x, y, _s, _c in calls], [120, 120 + rogue.MSG_LINE_H, 120 + 2 * rogue.MSG_LINE_H])
+
+            calls.clear()
+            rogue.pyxel.frame_count = 100 + rogue.DEATH_LOG_FRAMES_PER_TURN * (rogue.MSG_TOAST_DIM_TURNS + 1)
+            game.draw_death_log(300, 120, 180)
+            retired = [(y, s, c) for _x, y, s, c in calls]
+            self.assertEqual([s for _y, s, _c in retired], ["B", "C"])
+            self.assertEqual([y for y, _s, _c in retired], [120 + rogue.MSG_LINE_H, 120 + 2 * rogue.MSG_LINE_H])
+
+            calls.clear()
+            rogue.pyxel.frame_count = 100 + game.death_log_cycle_frames(3)
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual([(s, c) for _x, _y, s, c in calls], [("A", rogue.msg_toast_color(0, game.settings.palette))])
+        finally:
+            rogue.pyxel.frame_count = old_frame
+
+    def test_death_log_wraps_and_keeps_recent_seven_rows(self):
+        game = new_game(seed=473451)
+        long = "abcdefghijklmnopqrstuvwxyz"
+        game.msgs = ["one", "two", "three", "four", "five", long]
+        game.msg_turns = [1, 2, 3, 4, 5, 6]
+        game.death_frame = 100
+        game.death_intro_done = True
+        game.death_intro_done_frame = 100
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        old_frame = rogue.pyxel.frame_count
+
+        try:
+            rogue.pyxel.frame_count = 100 + rogue.DEATH_LOG_FRAMES_PER_TURN * 5
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual(
+                [s for _x, _y, s, _c in calls],
+                ["One", "Two", "Three", "Four", "Five", "Abcdefghijklmnopqrstuvw", "xyz"],
+            )
+            self.assertEqual(
+                [y for _x, y, _s, _c in calls],
+                [120 + i * rogue.MSG_LINE_H for i in range(7)],
+            )
+
+            calls.clear()
+            game.msgs = ["zero", "one", "two", "three", "four", "five", long]
+            game.msg_turns = list(range(7))
+            rogue.pyxel.frame_count = 100 + rogue.DEATH_LOG_FRAMES_PER_TURN * 6
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual(
+                [s for _x, _y, s, _c in calls],
+                ["One", "Two", "Three", "Four", "Five", "Abcdefghijklmnopqrstuvw", "xyz"],
+            )
+            self.assertEqual(
+                [y for _x, y, _s, _c in calls],
+                [120 + i * rogue.MSG_LINE_H for i in range(7)],
+            )
+        finally:
+            rogue.pyxel.frame_count = old_frame
+
+    def test_death_minimap_uses_wide_last_view(self):
+        game = new_game(seed=473448)
+        set_open_floor(game)
+        game.p.x, game.p.y = 10, 10
+
+        game.capture_death_snapshot()
+
+        self.assertEqual(len(game.death_minimap_tiles), 7)
+        self.assertEqual(len(game.death_minimap_tiles[0]), 21)
+
+    def test_death_context_heading_is_localized_last_stand(self):
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_EN, "ui.death_context"), "Last Stand")
+        self.assertEqual(rogue.TextCatalog.msg(rogue.LANG_JA, "ui.death_context"), "最期の勇姿")
+
+    def test_death_log_animation_uses_fast_turn_pacing(self):
+        self.assertEqual(rogue.DEATH_LOG_FRAMES_PER_TURN, 30)
+        self.assertEqual(rogue.DEATH_LOG_RESTART_FRAMES, 45)
+
+    def test_death_log_waits_until_fade_in_finishes(self):
+        game = new_game(seed=473453)
+        game.st = rogue.ST_DEAD
+        game.msgs = ["A", "B", "C"]
+        game.death_frame = 100
+        game.death_intro_done = False
+        calls = []
+        game.txt = lambda x, y, s, c: calls.append((x, y, str(s), c))
+        old_frame = rogue.pyxel.frame_count
+
+        try:
+            rogue.pyxel.frame_count = 100 + rogue.DEATH_RIP_START_FRAMES + rogue.DEATH_FADE_IN_FRAMES - 1
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual([s for _x, _y, s, _c in calls], ["A"])
+
+            calls.clear()
+            rogue.pyxel.frame_count = 100 + rogue.DEATH_INTRO_FRAMES + rogue.DEATH_LOG_FRAMES_PER_TURN
+            game.draw_death_log(300, 120, 180)
+            self.assertEqual([s for _x, _y, s, _c in calls], ["A", "B"])
+        finally:
+            rogue.pyxel.frame_count = old_frame
+
+    def test_death_transition_locks_input_then_skips_only_to_rip(self):
+        self.assertEqual(rogue.DEATH_SHAKE_FRAMES, 10)
+        self.assertEqual(rogue.DEATH_HITSTOP_FRAMES, 20)
+        self.assertEqual(rogue.DEATH_FADE_OUT_FRAMES, 30)
+        self.assertEqual(rogue.DEATH_FADE_IN_FRAMES, 40)
+        self.assertEqual(rogue.DEATH_INPUT_LOCK_FRAMES, 30)
+        game = new_game(seed=473449)
+        game.st = rogue.ST_DEAD
+        game.death_frame = 100
+        game.death_intro_done = False
+        entered = []
+        game.enter_online_scoreboard = lambda: entered.append("score")
+        old_frame = rogue.pyxel.frame_count
+
+        try:
+            rogue.pyxel.frame_count = 129
+            rogue.pyxel.set_input(pressed=(rogue.pyxel.KEY_RETURN,))
+            game.update()
+            self.assertFalse(game.death_intro_done)
+            self.assertEqual(entered, [])
+
+            rogue.pyxel.frame_count = 131
+            rogue.pyxel.set_input(pressed=(rogue.pyxel.KEY_RETURN,))
+            game.update()
+            self.assertTrue(game.death_intro_done)
+            self.assertEqual(entered, [])
+
+            rogue.pyxel.set_input(pressed=(rogue.pyxel.KEY_RETURN,))
+            game.update()
+            self.assertEqual(entered, ["score"])
+        finally:
+            rogue.pyxel.frame_count = old_frame
+            rogue.pyxel.set_input()
+
+    def test_death_transition_accepts_input_during_fade_in(self):
+        game = new_game(seed=473452)
+        game.st = rogue.ST_DEAD
+        game.death_frame = 100
+        game.death_intro_done = False
+        entered = []
+        game.enter_online_scoreboard = lambda: entered.append("score")
+        old_frame = rogue.pyxel.frame_count
+
+        try:
+            rogue.pyxel.frame_count = 161
+            rogue.pyxel.set_input(pressed=(rogue.pyxel.KEY_RETURN,))
+            game.update()
+            self.assertTrue(game.death_intro_done)
+            self.assertEqual(entered, [])
+        finally:
+            rogue.pyxel.frame_count = old_frame
+            rogue.pyxel.set_input()
+
+    def test_death_transition_dithers_and_shakes(self):
+        game = new_game(seed=473450)
+        game.st = rogue.ST_DEAD
+        game.death_frame = 100
+        game.death_intro_done = False
+        game.font = rogue.pyxel.Font()
+        old_frame = rogue.pyxel.frame_count
+        rogue.pyxel.dither_calls.clear()
+        rogue.pyxel.camera_calls.clear()
+
+        try:
+            rogue.pyxel.frame_count = 105
+            game.draw()
+            self.assertTrue(rogue.pyxel.camera_calls)
+            rogue.pyxel.camera_calls.clear()
+
+            rogue.pyxel.frame_count = 115
+            game.draw()
+            self.assertFalse(rogue.pyxel.camera_calls)
+
+            rogue.pyxel.frame_count = 125
+            game.draw()
+            self.assertFalse(rogue.pyxel.dither_calls)
+
+            rogue.pyxel.frame_count = 135
+            game.draw()
+            self.assertTrue(rogue.pyxel.dither_calls)
+        finally:
+            rogue.pyxel.frame_count = old_frame
 
     def test_scoreboard_surfaces_current_difficulty_label(self):
         game = new_game(seed=473443, difficulty="classic")

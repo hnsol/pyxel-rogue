@@ -3449,6 +3449,12 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "ui.death_context": {
+    "source": "rogue.py:UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "ui.death_epitaph": {
     "source": "rogue.py:UI",
     "params": [],

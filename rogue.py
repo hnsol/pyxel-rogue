@@ -288,7 +288,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260517_0121"
+UI_BUILD = "260517_1411"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -341,6 +341,17 @@ def score_entry_is_nyandor(entry):
 
 MSG_TOAST_INTENT_HISTORY = 4
 MSG_TOAST_ROW_RETIRE_FRAMES = 20
+DEATH_MINIMAP_W = 21
+DEATH_MINIMAP_H = 7
+DEATH_SHAKE_FRAMES = 10
+DEATH_HITSTOP_FRAMES = 20
+DEATH_FADE_OUT_FRAMES = 30
+DEATH_FADE_IN_FRAMES = 40
+DEATH_INPUT_LOCK_FRAMES = DEATH_SHAKE_FRAMES + DEATH_HITSTOP_FRAMES
+DEATH_RIP_START_FRAMES = DEATH_INPUT_LOCK_FRAMES + DEATH_FADE_OUT_FRAMES
+DEATH_INTRO_FRAMES = DEATH_RIP_START_FRAMES + DEATH_FADE_IN_FRAMES
+DEATH_LOG_FRAMES_PER_TURN = 30
+DEATH_LOG_RESTART_FRAMES = 45
 MSG_KINSOKU_LINE_START = "、。！？"
 HP_LOW_FRAME_ROLES = (
     ROLE_HP_LOW_FRAME_DIM,
@@ -1967,7 +1978,84 @@ class Game:
         elif outcome == "quit":
             self.st = ST_QUIT
         else:
+            self.capture_death_snapshot()
             self.st = ST_DEAD
+
+    def capture_death_snapshot(self):
+        self.death_frame = getattr(pyxel, "frame_count", 0)
+        self.death_intro_done = False
+        self.death_minimap_tiles = self.death_minimap_snapshot(DEATH_MINIMAP_W, DEATH_MINIMAP_H)
+
+    def death_intro_elapsed(self):
+        if getattr(self, "death_intro_done", False):
+            return DEATH_INTRO_FRAMES
+        return max(0, getattr(pyxel, "frame_count", 0) - getattr(self, "death_frame", 0))
+
+    def death_intro_accepts_input(self):
+        return self.death_intro_elapsed() >= DEATH_INPUT_LOCK_FRAMES
+
+    def death_intro_finished(self):
+        return getattr(self, "death_intro_done", False) or self.death_intro_elapsed() >= DEATH_INTRO_FRAMES
+
+    def finish_death_intro(self):
+        if not getattr(self, "death_intro_done", False):
+            now = getattr(pyxel, "frame_count", 0)
+            natural_start = getattr(self, "death_frame", now) + DEATH_INTRO_FRAMES
+            self.death_intro_done_frame = natural_start if now >= natural_start else now
+        self.death_intro_done = True
+
+    def death_log_elapsed(self):
+        if getattr(self, "death_intro_done", False):
+            start_frame = getattr(self, "death_intro_done_frame", None)
+            if start_frame is None:
+                return max(0, getattr(pyxel, "frame_count", 0) - getattr(self, "death_frame", 0) - DEATH_INTRO_FRAMES)
+            return max(0, getattr(pyxel, "frame_count", 0) - start_frame)
+        return max(0, getattr(pyxel, "frame_count", 0) - getattr(self, "death_frame", 0) - DEATH_INTRO_FRAMES)
+
+    def death_minimap_snapshot(self, width, height):
+        half_w = width // 2
+        half_h = height // 2
+        start_dx = -half_w + (0 if width % 2 else 1)
+        return [
+            [self.death_minimap_cell(self.p.x + dx, self.p.y + dy) for dx in range(start_dx, start_dx + width)]
+            for dy in range(-half_h, half_h + 1)
+        ]
+
+    def death_minimap_cell(self, mx, my):
+        if not in_map(mx, my):
+            return (" ", 0)
+        if (mx, my) == (self.p.x, self.p.y):
+            return ("@", UI_TEXT_COL)
+        if self.p.blind > 0:
+            return (" ", 0)
+        vis = (mx, my) in self.visible
+        exp = (mx, my) in self.explored
+        if vis:
+            mo = self.mon_at(mx, my)
+            if mo and (self.can_see_monster(mo) or self.can_detect_monsters()):
+                sym = self.visible_monster_sym(mo) if self.can_see_monster(mo) else self.detected_monster_sym(mo)
+                return (sym, self.monster_color(mo.sym))
+            gi = self.gi_at(mx, my)
+            if gi:
+                return (self.visible_item_sym(gi), self.item_color(gi.cat))
+            tile = self.tm[my][mx]
+            return (self.visible_tile_sym(mx, my, tile), self.visible_tile_color(tile))
+        if exp:
+            tile = self.tm[my][mx]
+            ch, _col = TILE_CH.get(tile, (" ", 0))
+            if ch != " " and self.should_draw_memory_tile(mx, my, tile):
+                col = self.memory_tile_color(tile)
+            else:
+                ch, col = " ", 0
+            gi = self.gi_at(mx, my)
+            if gi:
+                return (gi.sym, self.item_color(gi.cat))
+            return (ch, col)
+        if self.can_detect_monsters():
+            mo = self.mon_at(mx, my)
+            if mo:
+                return (self.detected_monster_sym(mo), self.monster_color(mo.sym))
+        return (" ", 0)
 
     def death_display_gold(self):
         # C: rip.c:death() reduces purse before tombstone() and score().
@@ -7074,6 +7162,11 @@ class Game:
                     self.end_turn()
             return
         if self.st==ST_DEAD:
+            if not self.death_intro_finished():
+                if self.death_intro_accepts_input() and (self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R)):
+                    self.finish_death_intro()
+                return
+            self.finish_death_intro()
             if self.btn_a() or self.btn_start_tap() or pyxel.btnp(pyxel.KEY_R): self.enter_online_scoreboard()
             return
         if self.st==ST_WIN:
@@ -7606,12 +7699,48 @@ class Game:
             msg = TextCatalog.msg(self.lang, "ui.loading")
             self.txt(SCR_W // 2 - 30, SCR_H // 2, msg, 10)
             return
+        if self.st == ST_DEAD:
+            self.draw_death_transition()
+            return
         self.draw_title()
         self.draw_zoom()
         self.draw_stat()
         self.draw_msgs()
         # Overlays
         self.draw_overlays()
+
+    def draw_death_transition(self):
+        elapsed = self.death_intro_elapsed()
+        if elapsed < DEATH_RIP_START_FRAMES:
+            if elapsed < DEATH_SHAKE_FRAMES:
+                shake = max(0, DEATH_SHAKE_FRAMES - elapsed)
+            else:
+                shake = 0
+            if shake:
+                ox = (-1 if elapsed % 2 else 1) * min(2, shake)
+                oy = 1 if elapsed % 3 == 0 else 0
+                pyxel.camera(ox, oy)
+            self.draw_title()
+            self.draw_zoom()
+            self.draw_stat()
+            self.draw_msgs()
+            if shake:
+                pyxel.camera()
+            fade = max(0, elapsed - DEATH_INPUT_LOCK_FRAMES)
+            if fade > 0:
+                pyxel.dither(min(1.0, fade / DEATH_FADE_OUT_FRAMES))
+                pyxel.rect(0, 0, SCR_W, SCR_H, 0)
+                pyxel.dither(1.0)
+            return
+        self.draw_title()
+        self.draw_zoom()
+        self.draw_stat()
+        self.draw_dead()
+        if not self.death_intro_finished():
+            fade_in = elapsed - DEATH_RIP_START_FRAMES
+            pyxel.dither(max(0.0, 1.0 - fade_in / DEATH_FADE_IN_FRAMES))
+            pyxel.rect(0, 0, SCR_W, SCR_H, 0)
+            pyxel.dither(1.0)
 
     def draw_logo_screen(self):
         self.apply_title_palette()
@@ -8643,37 +8772,105 @@ class Game:
             self.txt(bx + 12, y, TextCatalog.msg(self.lang, "ui.no_scores_yet"), UI_TEXT_COL)
         self.txt(bx + 12, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_new_game"), UI_HILITE_COL)
 
-    def draw_dead(self):
-        if not self.options.get("tombstone", True):
-            bx,by,bw,bh = self.center_rect(270, 190)
-            self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.death_title"), UI_HEADING_SCREEN))
-            p=self.p; x=bx+18; y=by+24
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.death_epitaph"),UI_TEXT_COL); y+=22
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.death_cause", cause=self.death_cause or 'died'),UI_TEXT_COL); y+=18
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth),UI_TEXT_COL); y+=14
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_level", level=p.level),UI_TEXT_COL); y+=14
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_gold", gold=self.death_display_gold()),UI_HILITE_COL); y+=14
-            next_exp=p.EXP_T[min(p.level,len(p.EXP_T)-1)]
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_exp", exp=f"{p.exp}/{next_exp}"),UI_TEXT_COL); y+=14
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn),UI_TEXT_COL); y+=24
-            self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
-            return
-        bw, bh = 340, min(292, SCR_H - 8)
-        bx, by, bw, bh = self.center_rect(bw, bh)
-        self._box(bx,by,bw,bh,self.ui_heading(TextCatalog.msg(self.lang, "ui.death_title"), UI_HEADING_SCREEN))
-        x=bx+18
-        killer=self.death_killer_name()
-        name=self.options.get("name","rogue")
-        year=time.localtime().tm_year
+    def draw_death_summary(self, bx, by):
+        p = self.p
+        x = bx + 18
+        y = by + 34
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.death_epitaph"), UI_TEXT_COL); y += 22
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.death_cause", cause=self.death_cause or "died"), UI_TEXT_COL); y += 18
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.result_depth", depth=p.depth), UI_TEXT_COL); y += 14
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.result_level", level=p.level), UI_TEXT_COL); y += 14
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.result_gold", gold=self.death_display_gold()), UI_HILITE_COL); y += 14
+        next_exp = p.EXP_T[min(p.level, len(p.EXP_T) - 1)]
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.result_exp", exp=f"{p.exp}/{next_exp}"), UI_TEXT_COL); y += 14
+        self.txt(x, y, TextCatalog.msg(self.lang, "ui.result_turn", turn=self.turn), UI_TEXT_COL)
+
+    def draw_death_tombstone(self, bx, by, bw):
+        x = bx + 18
+        killer = self.death_killer_name()
+        name = self.options.get("name", "rogue")
+        year = time.localtime().tm_year
         if self.lang == LANG_JA:
-            y = self.draw_japanese_tombstone(bx, by, bw, name, self.death_display_gold(), killer, year)
+            return self.draw_japanese_tombstone(bx, by, bw, name, self.death_display_gold(), killer, year)
+        y = by + 24
+        for line in self.tombstone_lines(name, self.death_display_gold(), killer, year):
+            self.txt(x, y, line, UI_TEXT_COL)
+            y += 10
+        return y + 10
+
+    def draw_death_minimap(self, x, y):
+        rows = getattr(self, "death_minimap_tiles", None)
+        if rows is None:
+            rows = self.death_minimap_snapshot(DEATH_MINIMAP_W, DEATH_MINIMAP_H)
+        for row_i, row in enumerate(rows):
+            for col_i, (ch, col) in enumerate(row):
+                if ch != " ":
+                    self.txt(x + col_i * TILE_W + 1, y + row_i * TILE_H + 1, ch, col)
+
+    def death_log_cycle_frames(self, row_count):
+        if row_count <= 0:
+            return 1
+        turns = row_count + MSG_TOAST_DIM_TURNS + 1
+        return turns * DEATH_LOG_FRAMES_PER_TURN + DEATH_LOG_RESTART_FRAMES
+
+    def animated_death_log_rows(self, messages):
+        count = len(messages)
+        if count == 0:
+            return []
+        elapsed = self.death_log_elapsed()
+        phase = elapsed % self.death_log_cycle_frames(count)
+        active_span = (count + MSG_TOAST_DIM_TURNS + 1) * DEATH_LOG_FRAMES_PER_TURN
+        if phase >= active_span:
+            return []
+        virtual_turn = phase // DEATH_LOG_FRAMES_PER_TURN
+        all_rows = []
+        palette = self.ensure_settings().palette
+        for i, msg in enumerate(messages):
+            if i > virtual_turn:
+                continue
+            age = virtual_turn - i
+            for part in self.wrap_msg_toast_text(self.death_log_message_display_text(msg)):
+                col = msg_toast_color(age, palette) if age <= MSG_TOAST_DIM_TURNS else None
+                all_rows.append((part, col))
+        window_start = max(0, len(all_rows) - MSG_TOAST_LINES)
+        rows = []
+        for slot, (part, col) in enumerate(all_rows[window_start:]):
+            if col is not None:
+                rows.append((slot, part, col))
+        return rows
+
+    def draw_death_log(self, x, y, w):
+        rows = self.animated_death_log_rows(self.msgs[-MSG_TOAST_LINES:])
+        for slot, text, col in rows:
+            self.txt(x + FONT_ASCII_W, y + slot * MSG_LINE_H, text, col)
+
+    def death_log_message_display_text(self, msg):
+        text = self.message_display_text(msg)
+        for marker in (" [A/Start]", "[A/Start]"):
+            if marker in text:
+                text = text.split(marker, 1)[0].rstrip()
+        return text
+
+    def draw_death_context_panel(self, x, y, w):
+        map_y = y
+        self.txt(x, map_y, f"-- {TextCatalog.msg(self.lang, 'ui.death_context')} --", UI_SECTION_COL)
+        map_y += 18
+        self.draw_death_minimap(x + FONT_ASCII_W, map_y)
+        log_y = map_y + DEATH_MINIMAP_H * TILE_H + 18
+        self.draw_death_log(x, log_y, w)
+
+    def draw_dead(self):
+        bx, by, bw, bh = 4, ZV_Y, SCR_W - 8, SCR_H - ZV_Y - 32
+        div_x = min(bx + 300, bx + bw - 170)
+        self._box(bx, by, bw, bh, self.ui_heading(TextCatalog.msg(self.lang, "ui.death_title"), UI_HEADING_SCREEN))
+        pyxel.line(div_x, by + 14, div_x, by + bh - 12, UI_SECTION_COL)
+        if self.options.get("tombstone", True):
+            self.draw_death_tombstone(bx, by + 24, div_x - bx)
         else:
-            y=by+24
-            rip=self.tombstone_lines(name, self.death_display_gold(), killer, year)
-            for ln in rip:
-                self.txt(x,y,ln,UI_TEXT_COL); y+=10
-            y+=10
-        self.txt(x,y,TextCatalog.msg(self.lang, "ui.press_confirm_scores"),UI_HILITE_COL)
+            self.draw_death_summary(bx, by)
+        self.txt(bx + 18, by + bh - 18, TextCatalog.msg(self.lang, "ui.press_confirm_scores"), UI_HILITE_COL)
+        right_x = div_x + 10
+        self.draw_death_context_panel(right_x, by + 24, bx + bw - right_x - 10)
 
     def draw_win(self):
         bx,by,bw,bh = self.center_rect(334, 176)
