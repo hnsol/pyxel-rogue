@@ -38,3 +38,9 @@ class RogueRng:
 
     def sample(self, seq: Sequence[T], k: int) -> list[T]:
         return self.backend.sample(seq, k)
+
+    def getstate(self) -> Any:
+        return self.backend.getstate()
+
+    def setstate(self, state: Any) -> None:
+        self.backend.setstate(state)

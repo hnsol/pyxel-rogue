@@ -274,7 +274,10 @@ class DaemonList:
 class DelayedActionTable:
     """Shared daemon.c d_list backing both daemons and fuses."""
 
-    def __init__(self) -> None:
-        self._slots: list[dict] = []
+    def __init__(self, slots: list[dict] | None = None) -> None:
+        self._slots: list[dict] = [] if slots is None else slots
         self.fuses = FuseList(self._slots)
         self.daemons = DaemonList(self._slots)
+
+    def to_list(self) -> list[dict]:
+        return [dict(slot) for slot in self._slots]

@@ -3441,6 +3441,36 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "settings.save_and_quit": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "save.confirm_title": {
+    "source": "rogue.py:save confirm UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "save.confirm_body": {
+    "source": "rogue.py:save confirm UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "save.confirm_hint": {
+    "source": "rogue.py:save confirm UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
+  "save.failed": {
+    "source": "rogue.py:save confirm UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "ui.death_cause": {
     "source": "rogue.py:UI",
     "params": [

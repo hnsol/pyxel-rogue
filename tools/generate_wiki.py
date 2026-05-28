@@ -680,7 +680,7 @@ def beginner_guide_svg(lang: str) -> str:
         '<rect x="54" y="54" width="1332" height="572" rx="12" fill="none" stroke="#2c2922" stroke-width="3"/>',
         '<line x1="84" y1="132" x2="1356" y2="132" stroke="#2c2922" stroke-width="4"/>',
         f'<text x="84" y="105" font-family="serif" font-size="46" fill="#27241e">{html.escape(title)}</text>',
-        f'<text x="1356" y="103" text-anchor="end" font-family="serif" font-size="24" font-style="italic" fill="#a23631">Rogue V5</text>',
+        '<text x="1356" y="103" text-anchor="end" font-family="serif" font-size="24" font-style="italic" fill="#a23631">Rogue V5</text>',
         f'<text x="84" y="162" font-family="sans-serif" font-size="20" fill="#777065">{html.escape(subtitle)}</text>',
     ]
     card_w, gap = 408, 26

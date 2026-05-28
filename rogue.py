@@ -41,6 +41,7 @@ from pyxel_rogue import rogue_input
 from pyxel_rogue import rogue_online_scoreboard
 from pyxel_rogue import rogue_online_state
 from pyxel_rogue import rogue_online_text
+from pyxel_rogue import rogue_save
 from pyxel_rogue import rogue_variant
 from pyxel_rogue.rogue_combat_text import (
     MONSTER_HIT_MESSAGE_KEYS,
@@ -281,6 +282,7 @@ from pyxel_rogue.rogue_ui import (
     ST_QUIT,
     ST_QUIT_CONFIRM,
     ST_READY,
+    ST_SAVE_CONFIRM,
     ST_SCORE,
     ST_SETTINGS,
     ST_TITLE,
@@ -288,7 +290,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260518_0009"
+UI_BUILD = "260529_0635"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1298,6 +1300,7 @@ class Game:
         self.online_profile = self.startup_online_profile()
         self.player_name = self.online_profile.get("user_name", "guest")
         self.title_cursor = 0
+        self.save_confirm_return_state = ST_PLAY
         self.name_chars = list(self.player_name[:8])
         self.name_pos = min(len(self.name_chars), 7)
         self.name_pick = 0
@@ -1332,6 +1335,7 @@ class Game:
         self.title_bgm_loaded = False
         self.title_bgm_started = False
         self.title_bgm_stop_wait = 0
+        self.title_save_error = ""
 
     def startup_online_profile(self):
         profile = normalize_online_profile(load_online_profile())
@@ -1693,6 +1697,7 @@ class Game:
         self.gitems = []; self.mons = []; self.turn = 0
         self.traps = {}; self.hidden_tiles = {}
         self.st = ST_PLAY; self.mcur = 0; self.icur = 0; self.acur = 0
+        self.save_confirm_return_state = ST_PLAY
         self.settings_cursor = 0
         self.cact = None; self.dact = None; self.fitems = []
         self.last_item_by_action = {}
@@ -1761,6 +1766,372 @@ class Game:
         self.wander_timer = self.fuses.remaining("swander")
         self.msg("pyxel.welcome_to_dungeons", name=self.player_name)
         self.turn_msg_start = len(self.msgs)
+
+    def _json_rng_state(self):
+        return self._json_value(RNG.getstate())
+
+    def _restore_rng_state(self, state):
+        if state is not None:
+            RNG.setstate(self._tuple_value(state))
+
+    def _json_value(self, value):
+        if isinstance(value, tuple):
+            return [self._json_value(v) for v in value]
+        if isinstance(value, list):
+            return [self._json_value(v) for v in value]
+        if isinstance(value, set):
+            return [self._json_value(v) for v in sorted(value)]
+        if isinstance(value, dict):
+            return {str(k): self._json_value(v) for k, v in value.items()}
+        return value
+
+    def _tuple_value(self, value):
+        if isinstance(value, list):
+            return tuple(self._tuple_value(v) for v in value)
+        return value
+
+    def _coord_key(self, coord):
+        x, y = coord
+        return f"{int(x)},{int(y)}"
+
+    def _coord_from_key(self, key):
+        x, y = str(key).split(",", 1)
+        return int(x), int(y)
+
+    def _item_state(self, item):
+        return {
+            "uid": item.uid,
+            "cat": item.cat,
+            "kind": item.kind,
+            "ench": item.ench,
+            "cursed": item.cursed,
+            "qty": item.qty,
+            "hit_plus": item.hit_plus,
+            "dam_plus": item.dam_plus,
+            "charges": item.charges,
+            "group": item.group,
+            "o_flags": sorted(item.o_flags),
+            "o_label": item.o_label,
+            "x": item.x,
+            "y": item.y,
+            "picked_up": item.picked_up,
+            "protected": item.protected,
+            "variant_item": item.variant_item,
+        }
+
+    def _item_from_state(self, data):
+        item = Item(
+            data["cat"],
+            data["kind"],
+            ench=data.get("ench", 0),
+            cursed=data.get("cursed", False),
+            qty=data.get("qty", 1),
+            hit_plus=data.get("hit_plus", 0),
+            dam_plus=data.get("dam_plus", 0),
+            charges=data.get("charges", 0),
+            known=False,
+            group=data.get("group", 0),
+        )
+        item.uid = int(data["uid"])
+        item.o_flags = set(data.get("o_flags", []))
+        item.o_label = data.get("o_label")
+        item.x = int(data.get("x", 0))
+        item.y = int(data.get("y", 0))
+        item.picked_up = bool(data.get("picked_up", False))
+        item.protected = bool(data.get("protected", False))
+        item.variant_item = data.get("variant_item")
+        Item._nid = max(Item._nid, item.uid + 1)
+        return item
+
+    def _room_state(self, room):
+        return {
+            "x": room.x,
+            "y": room.y,
+            "w": room.w,
+            "h": room.h,
+            "flags": sorted(room.flags),
+            "exits": [list(p) for p in getattr(room, "exits", [])],
+        }
+
+    def _room_from_state(self, data):
+        room = Room(data["x"], data["y"], data["w"], data["h"], set(data.get("flags", [])))
+        room.exits = [tuple(p) for p in data.get("exits", [])]
+        return room
+
+    def _monster_state(self, monster):
+        return {
+            "x": monster.x,
+            "y": monster.y,
+            "sym": monster.sym,
+            "name": monster.name,
+            "hp": monster.hp,
+            "max_hp": monster.max_hp,
+            "level": monster.level,
+            "armor": monster.armor,
+            "damage_expr": monster.damage_expr,
+            "exp": monster.exp,
+            "strength": monster.strength,
+            "flags": sorted(monster.flags),
+            "held": monster.held,
+            "scared": monster.scared,
+            "confused": monster.confused,
+            "running": monster.running,
+            "dest": list(monster.dest) if isinstance(monster.dest, tuple) else monster.dest,
+            "turn": monster.turn,
+            "mean": monster.mean,
+            "target": monster.target,
+            "found": monster.found,
+            "vf_hit": monster.vf_hit,
+            "disguise": monster.disguise,
+            "pack": [self._item_state(item) for item in monster.pack],
+        }
+
+    def _monster_from_state(self, data):
+        monster = Monster(
+            data["x"],
+            data["y"],
+            data["sym"],
+            data["name"],
+            data["max_hp"],
+            data["level"],
+            data["armor"],
+            data["damage_expr"],
+            data["exp"],
+            "",
+        )
+        monster.hp = data["hp"]
+        monster.flags = set(data.get("flags", []))
+        monster.strength = data.get("strength", 10)
+        monster.held = data.get("held", 0)
+        monster.scared = data.get("scared", 0)
+        monster.confused = data.get("confused", 0)
+        monster.running = data.get("running", False)
+        dest = data.get("dest", DEST_PLAYER)
+        monster.dest = tuple(dest) if isinstance(dest, list) else dest
+        monster.turn = data.get("turn", True)
+        monster.mean = data.get("mean", rogue_monsters.is_mean(monster.flags))
+        monster.target = data.get("target", False)
+        monster.found = data.get("found", False)
+        monster.vf_hit = data.get("vf_hit", 0)
+        monster.disguise = data.get("disguise", monster.sym)
+        monster.pack = [self._item_from_state(item) for item in data.get("pack", [])]
+        return monster
+
+    def _player_state(self):
+        p = self.p
+        return {
+            "x": p.x,
+            "y": p.y,
+            "hp": p.hp,
+            "max_hp": p.max_hp,
+            "st": p.st,
+            "max_st": p.max_st,
+            "level": p.level,
+            "exp": p.exp,
+            "gold": p.gold,
+            "depth": p.depth,
+            "food": p.food,
+            "state": p.state,
+            "ac": p.ac,
+            "confused": p.confused,
+            "blind": p.blind,
+            "haste": p.haste,
+            "see_invisible": p.see_invisible,
+            "hallucinating": p.hallucinating,
+            "levitating": p.levitating,
+            "see_monsters": p.see_monsters,
+            "no_command": p.no_command,
+            "no_move": p.no_move,
+            "quiet": p.quiet,
+            "facing": list(p.facing),
+            "can_confuse_monster": p.can_confuse_monster,
+            "has_amulet": p.has_amulet,
+            "inv": [self._item_state(item) for item in p.inv],
+            "wpn": None if p.wpn is None else p.wpn.uid,
+            "arm": None if p.arm is None else p.arm.uid,
+            "ring_l": None if p.ring_l is None else p.ring_l.uid,
+            "ring_r": None if p.ring_r is None else p.ring_r.uid,
+        }
+
+    def _restore_player(self, data):
+        p = Player()
+        for key in (
+            "x", "y", "hp", "max_hp", "st", "max_st", "level", "exp", "gold", "depth",
+            "food", "state", "ac", "confused", "blind", "haste", "see_invisible",
+            "hallucinating", "levitating", "see_monsters", "no_command", "no_move",
+            "quiet", "can_confuse_monster", "has_amulet",
+        ):
+            setattr(p, key, data.get(key, getattr(p, key)))
+        p.facing = tuple(data.get("facing", p.facing))
+        p.inv = [self._item_from_state(item) for item in data.get("inv", [])]
+        by_uid = {item.uid: item for item in p.inv}
+        p.wpn = by_uid.get(data.get("wpn"))
+        p.arm = by_uid.get(data.get("arm"))
+        p.ring_l = by_uid.get(data.get("ring_l"))
+        p.ring_r = by_uid.get(data.get("ring_r"))
+        p.recalc_ac()
+        return p
+
+    def _ident_state(self):
+        ident = self.ident
+        return {
+            "easy_type_known": ident.easy_type_known,
+            "pcol": ident.pcol,
+            "snam": ident.snam,
+            "pk": ident.pk,
+            "sk": ident.sk,
+            "pg": ident.pg,
+            "sg": ident.sg,
+            "pf": ident.pf,
+            "sf": ident.sf,
+            "rstones": ident.rstones,
+            "rworth": ident.rworth,
+            "rk": ident.rk,
+            "rg": ident.rg,
+            "rf": ident.rf,
+            "wtypes": ident.wtypes,
+            "wmades": ident.wmades,
+            "wk": ident.wk,
+            "wg": ident.wg,
+            "wf": ident.wf,
+        }
+
+    def _restore_ident(self, data):
+        ident = IdentTable(self.lang, self.scrolls)
+        for key, value in data.items():
+            if hasattr(ident, key):
+                setattr(ident, key, value)
+        ident.lang = self.lang
+        ident.scrolls = self.scrolls
+        return ident
+
+    def save_state(self):
+        return {
+            "format": "pyxel-rogue-save-v1",
+            "ui_build": UI_BUILD,
+            "lang": self.lang,
+            "difficulty": self.difficulty,
+            "rng_state": self._json_rng_state(),
+            "scrolls": self.scrolls,
+            "ident": self._ident_state(),
+            "player": self._player_state(),
+            "tm": self.tm,
+            "rooms": [self._room_state(room) for room in self.rooms],
+            "gitems": [self._item_state(item) for item in self.gitems],
+            "mons": [self._monster_state(monster) for monster in self.mons],
+            "traps": {self._coord_key(k): v for k, v in self.traps.items()},
+            "hidden_tiles": {self._coord_key(k): v for k, v in self.hidden_tiles.items()},
+            "explored": [list(p) for p in sorted(self.explored)],
+            "visible": [list(p) for p in sorted(self.visible)],
+            "msgs": list(self.msgs),
+            "msg_turns": list(self.msg_turns),
+            "turn": self.turn,
+            "max_depth": self.max_depth,
+            "no_food": self.no_food,
+            "seen_stairs": self.seen_stairs,
+            "wander_timer": self.wander_timer,
+            "wander_between": self.wander_between,
+            "delayed_actions": self.delayed_actions.to_list(),
+            "haste_half_turn": self.haste_half_turn,
+            "haste_no_command_half_turn": self.haste_no_command_half_turn,
+            "death_cause": self.death_cause,
+            "player_name": self.player_name,
+            "options": dict(self.options),
+        }
+
+    def restore_state(self, data):
+        if data.get("format") != "pyxel-rogue-save-v1":
+            raise rogue_save.SaveError("unsupported save data")
+        existing = self.ensure_settings()
+        self.settings = Settings(
+            language=data.get("lang", existing.language),
+            auto_pickup=existing.auto_pickup,
+            palette=existing.palette,
+            show_run_steps=existing.show_run_steps,
+            difficulty=data.get("difficulty", existing.difficulty),
+        )
+        self.scrolls = data.get("scrolls") or rogue_scrolls.active_scrolls(SCROLLS, self.difficulty)
+        self.ident = self._restore_ident(data.get("ident", {}))
+        self.p = self._restore_player(data["player"])
+        self.tm = [list(row) for row in data["tm"]]
+        self.rooms = [self._room_from_state(room) for room in data.get("rooms", [])]
+        self.gitems = [self._item_from_state(item) for item in data.get("gitems", [])]
+        self.mons = [self._monster_from_state(monster) for monster in data.get("mons", [])]
+        self.traps = {self._coord_from_key(k): v for k, v in data.get("traps", {}).items()}
+        self.hidden_tiles = {self._coord_from_key(k): v for k, v in data.get("hidden_tiles", {}).items()}
+        self.explored = {tuple(p) for p in data.get("explored", [])}
+        self.visible = {tuple(p) for p in data.get("visible", [])}
+        self.msgs = list(data.get("msgs", []))
+        self.msg_turns = list(data.get("msg_turns", []))
+        self.turn = int(data.get("turn", 0))
+        self.max_depth = int(data.get("max_depth", self.p.depth))
+        self.no_food = int(data.get("no_food", 0))
+        self.seen_stairs = bool(data.get("seen_stairs", False))
+        self.wander_timer = int(data.get("wander_timer", 0))
+        self.wander_between = int(data.get("wander_between", 0))
+        self.delayed_actions = rogue_daemons.DelayedActionTable([dict(slot) for slot in data.get("delayed_actions", [])])
+        self.fuses = self.delayed_actions.fuses
+        self.daemons = self.delayed_actions.daemons
+        self.haste_half_turn = bool(data.get("haste_half_turn", False))
+        self.haste_no_command_half_turn = bool(data.get("haste_no_command_half_turn", False))
+        self.death_cause = data.get("death_cause", "")
+        self.player_name = data.get("player_name", self.current_player_name())
+        self.options = dict(data.get("options", {"tombstone": True, "name": self.player_name}))
+        self.st = ST_PLAY
+        self.save_confirm_return_state = ST_PLAY
+        self.mcur = self.icur = self.acur = 0
+        self.cact = None
+        self.dact = None
+        self.fitems = []
+        self.last_item_by_action = {}
+        self.item_cursor_restored = False
+        self.last_menu_action = None
+        self.menu_cursor_restored = False
+        self.message_ack_pending = False
+        self.msg_toast_block = None
+        self.msg_toast_rows = 0
+        self.log_scroll = 0
+        self.last_intent_dir = (0, 0)
+        self.msg_toast_intent_history = []
+        self.msg_toast_reposition_needed = True
+        self.call_input = ""
+        self.call_preset_idx = 0
+        self.call_item = None
+        self.identify_symbol_pending = False
+        self.fight_kamikaze_pending = False
+        self.fight_to_death = False
+        self.fight_kamikaze = False
+        self.fight_dir = (0, 0)
+        self.fight_target = None
+        self.fight_max_hit = 0
+        self.repeat_state = rogue_input.RepeatState()
+        self.count_input_state = rogue_input.CountInputState()
+        self.dash_state = rogue_input.DashState()
+        self.disc_scroll = 0
+        self.turn_msg_start = len(self.msgs)
+        self.throw_dir = None
+        self.zap_item = None
+        self.action_origin = ST_PLAY
+        self.cam_x = self.cam_y = 0
+        self.b_button_state = rogue_input.TapButtonState()
+        self.back_button_state = rogue_input.TapButtonState()
+        self.b_menu_guard = False
+        self.diag_assist = False
+        self.dir_pending = None
+        self.dir_press_locked = None
+        self.throw_anim = None
+        self.turn_after_throw_anim = False
+        self.last_hp_seen = None
+        self.hp_damage_from = None
+        self.hp_damage_turn = None
+        self.result_scores = []
+        self.result_entry = None
+        self.result_online_submitted = False
+        self.result_outcome = None
+        self.clear_hallucination_visuals()
+        self._restore_rng_state(data.get("rng_state"))
+        self._center_cam()
+        self.update_fov()
 
     def difficulty_profile(self):
         return difficulty_profile(self.difficulty)
@@ -4880,6 +5251,12 @@ class Game:
         self.st = ST_QUIT_CONFIRM
         self.command_look_done = False
 
+    def save_command(self):
+        self.command_look()
+        self.save_confirm_return_state = ST_PLAY
+        self.st = ST_SAVE_CONFIRM
+        self.command_look_done = False
+
     def repeat_message_command(self):
         # C: command.c:command() CTRL('P') dispatches msg(huh), the previous message.
         last = self.msgs[-1] if self.msgs else ""
@@ -6380,6 +6757,43 @@ class Game:
         self.new_game()
         self.st = ST_PLAY
 
+    def title_menu_items(self):
+        items = []
+        if rogue_save.exists():
+            items.append("continue")
+        items.extend(["dungeon", "scoreboard", "online"])
+        return items
+
+    def title_menu_label(self, item):
+        online = self.is_online_mode()
+        if getattr(self, "lang", LANG_EN) == LANG_JA:
+            labels = {
+                "continue": "つづきから",
+                "dungeon": "運命の洞窟に入る",
+                "scoreboard": "スコアボード",
+                "online": "ゲストモード" if online else "オンラインモード",
+            }
+        else:
+            labels = {
+                "continue": "CONTINUE",
+                "dungeon": "ENTER DUNGEON",
+                "scoreboard": "SCOREBOARD",
+                "online": "GUEST MODE" if online else "ONLINE MODE",
+            }
+        return labels[item]
+
+    def load_saved_game_from_title(self):
+        try:
+            data = rogue_save.load()
+            self.restore_state(data)
+            rogue_save.delete()
+            self.stop_title_bgm()
+            self.apply_palette()
+            self.title_save_error = ""
+        except Exception:
+            self.title_save_error = "ロードに失敗しました" if self.lang == LANG_JA else "Could not restore save"
+            self.enter_title_screen(skip_fade=True)
+
     def request_title_new_game(self):
         if getattr(self, "title_bgm_stop_wait", 0) > 0:
             return
@@ -6942,13 +7356,18 @@ class Game:
             else:
                 self.title_fade_frames = min(TITLE_FADE_FRAMES, getattr(self, "title_fade_frames", 0) + 1)
         d = self.menu_vertical_press()
+        items = self.title_menu_items()
         if d:
-            self.title_cursor = (getattr(self, "title_cursor", 0) + d) % 3
+            self.title_cursor = (getattr(self, "title_cursor", 0) + d) % len(items)
         if self.btn_a() or self.btn_start_tap():
+            action = items[getattr(self, "title_cursor", 0) % len(items)]
+            if action == "continue":
+                self.load_saved_game_from_title()
+                return
             self.stop_title_bgm()
-            if self.title_cursor == 0:
+            if action == "dungeon":
                 self.enter_difficulty_select()
-            elif self.title_cursor == 1:
+            elif action == "scoreboard":
                 self.enter_online_scoreboard()
             elif self.is_online_mode():
                 self.enter_guest_mode_confirm()
@@ -7211,6 +7630,8 @@ class Game:
             self.upd_log()
         elif self.st==ST_SETTINGS:
             self.upd_settings()
+        elif self.st==ST_SAVE_CONFIRM:
+            self.upd_save_confirm()
         elif self.st==ST_HELP:
             self.upd_help()
 
@@ -7301,6 +7722,8 @@ class Game:
         if self.key_upper(getattr(pyxel, "KEY_Q", None)):
             self.record_repeat_command("quit")
             self.quit_command(); return
+        if self.key_upper(getattr(pyxel, "KEY_S", None)):
+            self.save_command(); return
         if self.key_upper(getattr(pyxel, "KEY_0", None)):
             self.record_repeat_command("current_weapon")
             self.current_item_command(self.p.wpn, "wielding", None, "手に持っている")
@@ -7593,7 +8016,7 @@ class Game:
         self.upd_info_common()
 
     def settings_rows(self):
-        return ("Auto pickup", "Language", "Palette")
+        return ("Auto pickup", "Language", "Palette", "Save and quit")
 
     def settings_row_index(self, name):
         return self.settings_rows().index(name)
@@ -7619,12 +8042,19 @@ class Game:
             settings.palette = PALETTE_IDS[(i + delta) % len(PALETTE_IDS)]
             self.apply_palette()
             self.persist_settings()
+        elif row == "Save and quit":
+            self.save_confirm_return_state = ST_SETTINGS
+            self.st = ST_SAVE_CONFIRM
 
     def upd_settings(self):
         if getattr(self, "settings_focus", "row") == "value" and self.btn_overlay_cancel():
             self.settings_focus = "row"
             return
         if self.btn_a():
+            if self.settings_rows()[getattr(self, "settings_cursor", 0)] == "Save and quit":
+                self.save_confirm_return_state = ST_SETTINGS
+                self.st = ST_SAVE_CONFIRM
+                return
             self.settings_focus = "row" if getattr(self, "settings_focus", "row") == "value" else "value"
             return
         dy = self.menu_vertical_press()
@@ -7636,6 +8066,24 @@ class Game:
             self.change_setting(dx)
             return
         self.upd_info_common(allow_horizontal=getattr(self, "settings_focus", "row") == "row")
+
+    def save_and_quit(self):
+        rogue_save.save(self.save_state())
+        if sys.platform != "emscripten" and hasattr(pyxel, "quit"):
+            pyxel.quit()
+            return
+        self.enter_title_screen(skip_fade=True)
+
+    def upd_save_confirm(self):
+        if self.btn_overlay_cancel():
+            self.st = getattr(self, "save_confirm_return_state", ST_SETTINGS)
+            return
+        if self.btn_a() or self.btn_start_tap():
+            try:
+                self.save_and_quit()
+            except Exception:
+                self.msg("save.failed")
+                self.st = getattr(self, "save_confirm_return_state", ST_SETTINGS)
 
     def upd_aux(self):
         dy=self.menu_vertical_press()
@@ -7800,29 +8248,31 @@ class Game:
                 col = TITLE_MENU_SELECTED_COL if i == 0 else TITLE_MENU_TEXT_COL
                 self.txt_centered(TITLE_LOGO_RIGHT_X // 2 + 34, title_y + i * 12, line, col)
         online = self.is_online_mode()
+        menu_items = self.title_menu_items()
         if getattr(self, "lang", LANG_EN) == LANG_JA:
-            items = ["運命の洞窟に入る", "スコアボード", "ゲストモード" if online else "オンラインモード"]
             mode_line = "モード: オンライン" if online else "モード: ゲスト"
             user_prefix = "ユーザ"
         else:
-            items = ["ENTER DUNGEON", "SCOREBOARD", "GUEST MODE" if online else "ONLINE MODE"]
             mode_line = "MODE: ONLINE" if online else "MODE: GUEST"
             user_prefix = "USER"
+        items = [self.title_menu_label(item) for item in menu_items]
         x = TITLE_MENU_X
-        panel_h = TITLE_MENU_H + (28 if online else 16)
+        panel_h = TITLE_MENU_H + (28 if online else 16) + max(0, len(items) - 3) * 24
         y = min(TITLE_MENU_Y, SCR_H - panel_h + 10)
         pyxel.dither(0.8)
         pyxel.rect(x - 28, y - 10, TITLE_MENU_W, panel_h, 0)
         pyxel.dither(1.0)
         pyxel.rectb(x - 28, y - 10, TITLE_MENU_W, panel_h, TITLE_MENU_BORDER_COL)
-        cur = getattr(self, "title_cursor", 0)
+        cur = getattr(self, "title_cursor", 0) % len(items)
         for i, item in enumerate(items):
             self.txt(x - 15, y + i * 24, ">" if i == cur else " ", TITLE_MENU_SELECTED_COL)
             self.txt(x, y + i * 24, item, TITLE_MENU_SELECTED_COL if i == cur else TITLE_MENU_TEXT_COL)
-        status_y = y + 70
+        status_y = y + len(items) * 24 - 2
         self.txt(x, status_y, mode_line, TITLE_MENU_SELECTED_COL)
         if online:
             self.txt(x, status_y + 12, f"{user_prefix}: {self.current_user_id()}", TITLE_MENU_SELECTED_COL)
+        if getattr(self, "title_save_error", ""):
+            self.txt(x, y + panel_h - 12, self.title_save_error, TITLE_MENU_SELECTED_COL)
 
     def draw_difficulty_select_screen(self):
         self.apply_title_palette()
@@ -8387,6 +8837,9 @@ class Game:
             self.draw_log()
         elif self.st==ST_SETTINGS:
             self.draw_settings()
+        elif self.st==ST_SAVE_CONFIRM:
+            self.draw_settings()
+            self.draw_save_confirm()
         elif self.st==ST_HELP:
             self.draw_help()
         elif self.st==ST_DEAD:
@@ -8618,12 +9071,22 @@ class Game:
             value = self.setting_value_label(row)
             self.txt(bx + 8, y + i * 14, pre, col)
             self.txt(bx + 22, y + i * 14, label, col)
+            if not value:
+                continue
             value_col = UI_HILITE_COL if selected else UI_SUBTEXT_COL
             if selected and focus_value:
                 self.txt(value_x - 14, y + i * 14, "<", UI_SUBTEXT_COL)
                 self.txt(value_x + max(34, self.ui_text_width(value)) + 8, y + i * 14, ">", UI_SUBTEXT_COL)
             self.txt(value_x, y + i * 14, value, value_col)
         self.txt(bx + 8, by + bh - 16, self.info_guide_label("Settings"), UI_SUBTEXT_COL)
+
+    def draw_save_confirm(self):
+        title = TextCatalog.msg(self.lang, "save.confirm_title")
+        line = TextCatalog.msg(self.lang, "save.confirm_body")
+        bx, by, bw, bh = self.center_rect(236, 58)
+        self._box(bx, by, bw, bh, self.ui_heading(title, UI_HEADING_PANEL))
+        self.txt(bx + 8, by + 22, line, UI_TEXT_COL)
+        self.txt(bx + 8, by + 40, TextCatalog.msg(self.lang, "save.confirm_hint"), UI_SUBTEXT_COL)
 
     def pack_grid_max_rows(self, items):
         return 13 if len(items) > 18 else PACK_GRID_MAX_ROWS

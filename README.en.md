@@ -103,8 +103,8 @@ Gamepad:
 - A+B: Wait a turn
 - Select: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Select to close
 - Action menu: equipment, items, search, trap inspect, quit
-- Title screen: choose difficulty after selecting `ENTER DUNGEON`. Changes are saved.
-- Settings: Auto pickup / Language / Palette. Changes are saved.
+- Title screen: choose `CONTINUE` when a save exists. Choose difficulty after selecting `ENTER DUNGEON`. Changes are saved.
+- Settings: Auto pickup / Language / Palette / Save and quit. Settings and suspend saves are saved.
 - Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles
 - Select+D-pad: Inspect a discovered trap
@@ -162,6 +162,7 @@ Implemented overview:
 - Tombstone death screen
 - Victory score adds sold pack worth following Rogue 5.4.4 `total_winner()`
 - Startup logo, first-run language selection, title screen with BGM, default Guest mode, and Online / Guest Mode switching
+- One-slot suspend save following the original Rogue style. Saving exits the run, and a successful restore consumes the save.
 - Local score saving, Weekly / Season online scoreboard viewing, optional online-ID score sync, and anonymous Guest sync metrics
 - Gamepad-oriented A/B/Start/Select + D-pad controls
 - JSON message/term catalogs for English/Japanese text switching, plus logic test foundation

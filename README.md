@@ -117,8 +117,8 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Esc: メニュー / キャンセル
 - Tab: Info（Inventory / Log / Settings / Help）。Info中は左右でタブ切替、Tabで閉じる
 - Actionメニュー: 装備・道具・探索・罠確認・終了
-- タイトル画面: `運命の洞窟に入る` 決定後に難易度を選択。変更は保存されます。
-- Settings: Auto pickup / Language / Palette。変更は保存されます。
+- タイトル画面: 保存済みなら `つづきから` で再開。`運命の洞窟に入る` 決定後に難易度を選択。変更は保存されます。
+- Settings: Auto pickup / Language / Palette / Save and quit。設定変更と中断セーブは保存されます。
 - Tab+Enter: quick throw
 - Tab+Esc: 周囲8マスsearch
 - Tab+方向: 発見済み罠の種類確認
@@ -162,6 +162,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 墓石つき死亡画面
 - Rogue 5.4.4 `total_winner()` 準拠の勝利時所持品売却スコア
 - 起動ロゴ、初回言語選択、BGMつきタイトル画面、Guest初期起動、Online / Guest Mode 切替
+- 原作寄せの1スロット中断セーブ。保存後は終了し、ロード成功後にセーブを消費します。
 - ローカルスコア保存、Weekly / Season オンラインスコアボード閲覧、オンラインIDでの任意スコア同期、Guest同期回数の匿名計測
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
 - JSONメッセージ/用語カタログによる日英切替基盤、ロジックテスト基盤

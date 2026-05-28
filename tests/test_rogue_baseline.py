@@ -10818,6 +10818,141 @@ class RogueBaselineTest(unittest.TestCase):
             else:
                 rogue.pyxel.colors = old_colors
 
+    def test_save_state_round_trips_core_rogue_state_and_deletes_on_load(self):
+        game = new_game(seed=245, lang=rogue.LANG_JA)
+        game.p.hp = 7
+        game.p.gold = 321
+        game.p.confused = 3
+        game.turn = 42
+        game.msg_text("before save")
+        game.fuses.fuse("unconfuse", 3, rogue.rogue_daemons.AFTER)
+        potion = rogue.Item(rogue.CAT_POT, 0, known=False)
+        potion.o_label = "heal?"
+        game.p.add_item(potion)
+        game.ident.pg[0] = "heal?"
+        game.ident.pk[1] = True
+        game.hidden_tiles[(game.p.x + 1, game.p.y)] = rogue.T_DOOR
+        game.traps[(game.p.x, game.p.y + 1)] = 2
+
+        snapshot = game.save_state()
+        restored = rogue.Game.__new__(rogue.Game)
+        restored.settings = rogue.Settings(language=rogue.LANG_EN)
+        restored.restore_state(snapshot)
+
+        self.assertEqual(restored.lang, rogue.LANG_JA)
+        self.assertEqual(restored.p.hp, 7)
+        self.assertEqual(restored.p.gold, 321)
+        self.assertEqual(restored.p.confused, 3)
+        self.assertEqual(restored.turn, 42)
+        self.assertIn("before save", restored.msgs)
+        self.assertEqual(restored.fuses.remaining("unconfuse"), 3)
+        self.assertEqual(restored.ident.pg[0], "heal?")
+        self.assertTrue(restored.ident.pk[1])
+        self.assertEqual(restored.hidden_tiles[(restored.p.x + 1, restored.p.y)], rogue.T_DOOR)
+        self.assertEqual(restored.traps[(restored.p.x, restored.p.y + 1)], 2)
+        restored_potion = next(i for i in restored.p.inv if i.cat == rogue.CAT_POT and i.kind == 0)
+        self.assertEqual(restored_potion.o_label, "heal?")
+        self.assertIs(restored.ident.scrolls, restored.scrolls)
+
+    def test_title_continue_loads_and_consumes_save_slot(self):
+        game = new_game(seed=246)
+        game.p.hp = 5
+        snapshot = game.save_state()
+        calls = []
+        old_exists = rogue.rogue_save.exists
+        old_load = rogue.rogue_save.load
+        old_delete = rogue.rogue_save.delete
+        try:
+            rogue.rogue_save.exists = lambda: True
+            rogue.rogue_save.load = lambda: snapshot
+            rogue.rogue_save.delete = lambda: calls.append("delete")
+            title = rogue.Game.__new__(rogue.Game)
+            title.settings = rogue.Settings()
+            title.init_frontend_state()
+            title.st = rogue.ST_TITLE
+            title.title_cursor = 0
+            title.title_bgm_stop_wait = 0
+            title.title_fade_frames = rogue.TITLE_FADE_FRAMES
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            title.update()
+
+            self.assertEqual(title.st, rogue.ST_PLAY)
+            self.assertEqual(title.p.hp, 5)
+            self.assertEqual(calls, ["delete"])
+        finally:
+            rogue.rogue_save.exists = old_exists
+            rogue.rogue_save.load = old_load
+            rogue.rogue_save.delete = old_delete
+
+    def test_settings_save_and_quit_writes_save_state_after_confirmation(self):
+        game = new_game(seed=247)
+        saved = []
+        old_save = rogue.rogue_save.save
+        try:
+            rogue.rogue_save.save = lambda data: saved.append(data)
+            game.open_settings()
+            game.settings_cursor = game.settings_row_index("Save and quit")
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+            self.assertEqual(game.st, rogue.ST_SAVE_CONFIRM)
+            self.assertEqual(saved, [])
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+            game.update()
+            self.assertEqual(saved[0]["format"], "pyxel-rogue-save-v1")
+            self.assertEqual(saved[0]["player"]["hp"], game.p.hp)
+        finally:
+            rogue.rogue_save.save = old_save
+
+    def test_uppercase_s_opens_save_confirm_and_cancel_returns_to_play(self):
+        game = new_game(seed=248)
+        before = (game.turn, game.p.hp, game.p.x, game.p.y)
+
+        rogue.pyxel.set_input(
+            held={rogue.pyxel.KEY_SHIFT, rogue.pyxel.KEY_S},
+            pressed={rogue.pyxel.KEY_S},
+        )
+        game.update()
+        self.assertEqual(game.st, rogue.ST_SAVE_CONFIRM)
+        self.assertEqual(before, (game.turn, game.p.hp, game.p.x, game.p.y))
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_PLAY)
+
+    def test_settings_save_confirm_cancel_returns_to_settings(self):
+        game = new_game(seed=249)
+        game.open_settings()
+        game.settings_cursor = game.settings_row_index("Save and quit")
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_SAVE_CONFIRM)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_ESCAPE}, pressed={rogue.pyxel.KEY_ESCAPE})
+        game.update()
+        self.assertEqual(game.st, rogue.ST_SETTINGS)
+
+    def test_save_and_settings_guides_pair_gamepad_and_keyboard_inputs(self):
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_EN, "save.confirm_hint"),
+            "A/Enter: Save  B/Esc: Cancel",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_JA, "save.confirm_hint"),
+            "A/Enter: 保存  B/Esc: キャンセル",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_EN, "settings.guide"),
+            "Up/Down: Select  A/Enter: Edit  Left/Right: Tabs  B/Esc: Close",
+        )
+        self.assertEqual(
+            rogue.TextCatalog.msg(rogue.LANG_JA, "settings.guide"),
+            "上下: 選択  A/Enter: 変更  左右: タブ  B/Esc: 閉じる",
+        )
+
     def test_palette_options_use_flexoki_dark_default_order(self):
         self.assertEqual(
             rogue.PALETTE_IDS,
