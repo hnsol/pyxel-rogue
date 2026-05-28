@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rogue V5 on Pyxel Keyboard Commands</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #111318;
+    --panel: #191d24;
+    --line: #343b49;
+    --text: #e8edf5;
+    --muted: #9aa6b8;
+    --key: #f0c674;
+    --ok: #73daca;
+    --partial: #b6a0ff;
+    --todo: #f7768e;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 32px 16px 48px;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    letter-spacing: 0;
+  }
+  .lead {
+    margin: 0 0 20px;
+    color: var(--muted);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 10px;
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+  }
+  .dot.partial { background: var(--partial); }
+  .dot.todo { background: var(--todo); }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+  }
+  th, td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    background: #202633;
+    color: #ffffff;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  tr:last-child td {
+    border-bottom: 0;
+  }
+  tr.group td {
+    background: #141922;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  code, kbd {
+    display: inline-block;
+    margin: 1px 2px 1px 0;
+    border: 1px solid #4a5262;
+    border-bottom-color: #242a35;
+    border-radius: 5px;
+    padding: 1px 6px;
+    background: #0f131a;
+    color: var(--key);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .92em;
+    white-space: nowrap;
+  }
+  .state {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .state.ok { color: var(--ok); }
+  .state.partial { color: var(--partial); }
+  .state.todo { color: var(--todo); }
+  .note {
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rogue V5 on Pyxel Keyboard Commands</h1>
+  <p class="lead">Rogue 5.4.4 の原作キー、Rogue V5 on Pyxel の現在実装、ゲームパッド操作の対応表。</p>
+
+  <div class="legend" aria-label="legend">
+    <span class="tag"><span class="dot"></span>実装済</span>
+    <span class="tag"><span class="dot partial"></span>差分あり</span>
+    <span class="tag"><span class="dot todo"></span>未実装</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>分類</th>
+          <th>原作キー</th>
+          <th>Rogue 5.4.4</th>
+          <th>Rogue V5 on Pyxel 現状</th>
+          <th>Gamepad対応</th>
+          <th>状態</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="group"><td colspan="6">Move</td></tr>
+        <tr><td>移動</td><td><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> / 矢印</td><td>上下左右移動</td><td>実装済</td><td>D-pad</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>斜め</td><td><kbd>y</kbd><kbd>u</kbd><kbd>b</kbd><kbd>n</kbd></td><td>斜め移動</td><td>実装済</td><td>D-pad同時押し / Start補助</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Run</td><td><kbd>H</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>B</kbd><kbd>N</kbd></td><td>指定方向へ走る</td><td>Shift+方向でDash</td><td>B長押し+D-pad</td><td><span class="state partial">差分あり</span></td></tr>
+        <tr><td>通路Run</td><td><kbd>Ctrl</kbd>+方向</td><td>通路で曲がりも追うRun</td><td>Dashで近似</td><td>B長押し+D-pad</td><td><span class="state partial">差分あり</span></td></tr>
+
+        <tr class="group"><td colspan="6">Basic Actions</td></tr>
+        <tr><td>休む</td><td><kbd>.</kbd></td><td>1ターン待機</td><td>実装済</td><td>A+B</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>拾う</td><td><kbd>,</kbd></td><td>足元のものを拾う</td><td>実装済</td><td>A</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>階段</td><td><kbd>&gt;</kbd> / <kbd>&lt;</kbd></td><td>降りる / 登る</td><td>実装済</td><td>A</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>決定</td><td>-</td><td>原作なし</td><td>Enterで決定 / 拾う / 階段</td><td>A</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Info</td><td>-</td><td>原作なし</td><td>TabでInfo</td><td>Select</td><td><span class="state ok">実装済</span></td></tr>
+
+        <tr class="group"><td colspan="6">Explore / Combat</td></tr>
+        <tr><td>探索</td><td><kbd>s</kbd></td><td>周囲をsearch</td><td>実装済</td><td>Select+B / Menu Search</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>罠確認</td><td><kbd>^</kbd> + 方向</td><td>発見済み罠の種類確認</td><td>実装済</td><td>Select+D-pad / Menu Trap</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>投げる</td><td><kbd>t</kbd> + 方向</td><td>投擲</td><td>実装済</td><td>Select+A / Menu Throw</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Zap</td><td><kbd>z</kbd> + 方向</td><td>wand/staff使用</td><td>実装済</td><td>Menu Zap</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Fight</td><td><kbd>f</kbd> / <kbd>F</kbd></td><td>戦闘継続 / 死ぬまで戦闘</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Move onto</td><td><kbd>m</kbd></td><td>拾わずに移動</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+
+        <tr class="group"><td colspan="6">Items</td></tr>
+        <tr><td>消耗品</td><td><kbd>q</kbd><kbd>r</kbd><kbd>e</kbd></td><td>飲む / 読む / 食べる</td><td>実装済</td><td>Menu</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>装備</td><td><kbd>w</kbd><kbd>W</kbd><kbd>T</kbd><kbd>P</kbd><kbd>R</kbd></td><td>武器 / 鎧 / 鎧を脱ぐ / 指輪 / 指輪を外す</td><td>実装済</td><td>Menu</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>捨てる</td><td><kbd>d</kbd></td><td>アイテムを落とす</td><td>実装済</td><td>Menu Drop</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>命名</td><td><kbd>c</kbd></td><td>call命名</td><td>実装済</td><td>Menu Call</td><td><span class="state ok">実装済</span></td></tr>
+
+        <tr class="group"><td colspan="6">Info</td></tr>
+        <tr><td>一覧</td><td><kbd>i</kbd></td><td>Inventory</td><td>実装済</td><td>Select</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>単品一覧</td><td><kbd>I</kbd></td><td>Selective inventory</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>発見済み</td><td><kbd>D</kbd></td><td>Discoveries</td><td>実装済</td><td>Menu Discoveries</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Help</td><td><kbd>?</kbd></td><td>Help</td><td>実装済</td><td>Info Help</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>記号識別</td><td><kbd>/</kbd></td><td>画面記号の説明</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>装備表示</td><td><kbd>)</kbd><kbd>]</kbd><kbd>=</kbd><kbd>@</kbd></td><td>武器 / 鎧 / 指輪 / status</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>メッセージ</td><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>前メッセージ再表示</td><td>実装済</td><td>Log</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>再描画</td><td><kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>画面再描画</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Version</td><td><kbd>v</kbd></td><td>version表示</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+
+        <tr class="group"><td colspan="6">Meta / Special</td></tr>
+        <tr><td>Options</td><td><kbd>o</kbd></td><td>options</td><td>Settingsを開く</td><td>Info Settings</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Quit</td><td><kbd>Q</kbd></td><td>終了</td><td>実装済</td><td>Menu Quit</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Again</td><td><kbd>a</kbd></td><td>直前コマンド再実行</td><td>実装済</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Count</td><td><kbd>0</kbd>-<kbd>9</kbd></td><td>回数prefix</td><td>search / 待機 / 移動 / move_on / again対応</td><td>なし</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Cancel</td><td><kbd>Esc</kbd></td><td>キャンセル</td><td>実装済</td><td>B</td><td><span class="state ok">実装済</span></td></tr>
+        <tr><td>Legal no-op</td><td><kbd>Space</kbd></td><td>合法な非コマンド</td><td>斜め補助に割当</td><td>Start</td><td><span class="state partial">差分あり</span></td></tr>
+        <tr><td>Save</td><td><kbd>S</kbd></td><td>ゲーム保存</td><td>未実装</td><td>なし</td><td><span class="state todo">未実装</span></td></tr>
+        <tr><td>Shell</td><td><kbd>!</kbd></td><td>shellへ抜ける</td><td>未実装</td><td>なし</td><td><span class="state todo">未実装</span></td></tr>
+        <tr><td>Wizard</td><td><kbd>+</kbd> / Ctrl系</td><td>Wizard/debugコマンド</td><td>未実装</td><td>なし</td><td><span class="state todo">未実装</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">参照: Rogue 5.4.4 <code>command.c</code> / 付属マニュアル、Rogue V5 on Pyxel <code>rogue.py</code> / 操作ドキュメント。</p>
+</main>
+</body>
+</html>

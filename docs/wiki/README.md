@@ -30,6 +30,7 @@ git push -u origin master
 - `Home.md`: 入口
 - `_Sidebar.md`: GitHub Wiki のサイドバー
 - `Game-Guide-*.md`: ゲーム本体のテーブルから生成する攻略情報
+- `Keyboard-Commands-*.md`: Rogue 5.4.4 / Rogue V5 on Pyxel / gamepad の操作対応表
 - 接尾辞なしの各ページ: 日英の言語選択
 - `*-ja.md`: 日本語本文
 - `*-en.md`: 英語本文
