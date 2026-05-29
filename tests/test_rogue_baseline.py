@@ -16070,7 +16070,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("得点 名前", text)
         self.assertIn("ace: 3階で中断。", text)
         self.assertIn("ゲストのスコアは送信されません", text)
-        self.assertIn("左右: 表示切替  Select/Tab: オンライン同期  B/Esc: 戻る", text)
+        self.assertIn("左右: 期間  上下: 難易度  Select/Tab: 同期  B/Esc: 戻る", text)
         self.assertIn("オンライン同期で1時間に1回投稿できます。", text)
         self.assertIn("ランキング更新。", text)
         self.assertIn("POSTは1時間に1回。", text)
@@ -18633,6 +18633,38 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertIn(("Classic", rogue.UI_SUBTEXT_COL), calls)
         self.assertNotIn(("Normal", rogue.UI_SUBTEXT_COL), calls)
+
+    def test_title_scoreboard_difficulty_filter_changes_without_play_setting(self):
+        game = new_game(seed=473444, difficulty="easy")
+        entries = [
+            {"score": 10, "player_name": "easy", "difficulty": "easy"},
+            {"score": 20, "player_name": "norm", "difficulty": "normal"},
+        ]
+        old_load = rogue.load_score_entries
+        try:
+            rogue.load_score_entries = lambda: list(entries)
+            game.enter_online_scoreboard()
+            self.assertEqual(game.difficulty, "easy")
+            self.assertEqual(game.scoreboard_difficulty(), "easy")
+            self.assertEqual(game.display_online_period_scores(rogue.SCOREBOARD_PERIOD_LOCAL)[0]["player_name"], "easy")
+
+            rogue.pyxel.set_input(held={rogue.pyxel.KEY_DOWN}, pressed={rogue.pyxel.KEY_DOWN})
+            game.update()
+
+            self.assertEqual(game.difficulty, "easy")
+            self.assertEqual(game.scoreboard_difficulty(), "normal")
+            self.assertEqual(game.display_online_period_scores(rogue.SCOREBOARD_PERIOD_LOCAL)[0]["player_name"], "norm")
+        finally:
+            rogue.load_score_entries = old_load
+
+    def test_result_scoreboard_opens_on_result_difficulty(self):
+        game = new_game(seed=473445, difficulty="classic")
+        game.scoreboard_difficulty_id = "easy"
+        game.result_entry = {"difficulty": "classic"}
+
+        game.enter_result_scoreboard()
+
+        self.assertEqual(game.scoreboard_difficulty(), "classic")
 
     def test_result_screens_use_semantic_colors_and_localized_titles(self):
         game = new_game(seed=473441)

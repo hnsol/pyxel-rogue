@@ -11,6 +11,7 @@ ONLINE_SCORE_SYNC_PERIODS = (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON)
 
 ONLINE_SCORE_STATE_DEFAULTS = {
     "online_score_cache": {},
+    "online_score_raw_cache": {},
     "online_score_loaded": set(),
     "online_rank_cache": {},
     "online_sync_pending": False,

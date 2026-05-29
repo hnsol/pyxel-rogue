@@ -104,6 +104,7 @@ Gamepad:
 - Select: Info (Inventory / Log / Settings / Help); press left/right in Info to switch tabs; press Select to close
 - Action menu: equipment, items, search, trap inspect, quit
 - Title screen: choose `CONTINUE` when a save exists. Choose difficulty after selecting `ENTER DUNGEON`. Changes are saved.
+- Scoreboard: left/right changes Local / This Week / Season, up/down changes the difficulty filter.
 - Settings: Auto pickup / Language / Palette / Save and quit. Settings and suspend saves are saved.
 - Select+A: Quick throw (choose direction, then item)
 - Select+B: Search around all 8 neighboring tiles

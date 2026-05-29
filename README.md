@@ -118,6 +118,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Tab: Info（Inventory / Log / Settings / Help）。Info中は左右でタブ切替、Tabで閉じる
 - Actionメニュー: 装備・道具・探索・罠確認・終了
 - タイトル画面: 保存済みなら `つづきから` で再開。`運命の洞窟に入る` 決定後に難易度を選択。変更は保存されます。
+- スコアボード: 左右で Local / 今週 / 今季、上下で表示難易度を切り替えます。
 - Settings: Auto pickup / Language / Palette / Save and quit。設定変更と中断セーブは保存されます。
 - Tab+Enter: quick throw
 - Tab+Esc: 周囲8マスsearch
