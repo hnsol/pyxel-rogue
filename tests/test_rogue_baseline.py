@@ -15955,8 +15955,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.draw_online_score_screen()
 
         result_lines = [item for item in drawn if len(item) == 4 and item[1] == rogue.SCOREBOARD_HILITE_COL]
-        bx = (rogue.SCR_W - 380) // 2
-        right = bx + 380 - 10
+        bx = (rogue.SCR_W - 416) // 2
+        right = bx + 416 - 10
         first_x = max(bx + 16, right - game.ui_text_width("Ranking refreshed."))
         second_x = max(bx + 16, right - game.ui_text_width("POST once per hour."))
         self.assertIn(("Ranking refreshed.", rogue.SCOREBOARD_HILITE_COL, first_x, 22), result_lines)
@@ -16060,7 +16060,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         x, y, w, h, title = boxes[0]
         self.assertEqual(title, "=== Scoreboard ===")
-        self.assertEqual((x, y, w, h), ((rogue.SCR_W - 380) // 2, (rogue.SCR_H - 300) // 2, 380, 300))
+        self.assertEqual((x, y, w, h), ((rogue.SCR_W - 416) // 2, (rogue.SCR_H - 300) // 2, 416, 300))
 
     def test_screen_frame_windows_are_centered(self):
         game = new_game(seed=6120)
@@ -16184,15 +16184,16 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        bx = (rogue.SCR_W - 380) // 2
+        bx = (rogue.SCR_W - 416) // 2
         x = bx + 22
-        self.assertIn(("-- ", rogue.UI_SECTION_COL, x, 38), drawn)
-        self.assertIn(("Local", rogue.UI_TEXT_COL, x + game.ui_text_width("-- "), 38), drawn)
-        self.assertIn(("This Week", rogue.UI_TEXT_COL, x + game.ui_text_width("-- Local | "), 38), drawn)
-        self.assertIn(("Season", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Local | This Week | "), 38), drawn)
-        self.assertIn(("Normal", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Easy | "), 52), drawn)
+        self.assertIn(("Normal", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Easy | "), 38), drawn)
+        self.assertIn(("Local", rogue.UI_TEXT_COL, x + game.ui_text_width("-- "), 52), drawn)
+        self.assertIn(("This Week", rogue.UI_TEXT_COL, x + game.ui_text_width("-- Local | "), 52), drawn)
+        self.assertIn(("Season", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Local | This Week | "), 52), drawn)
         self.assertIn(("Season Legends", rogue.UI_SECTION_COL, x, 66), drawn)
         self.assertIn(("2026-Spring", rogue.UI_SUBTEXT_COL, x + game.ui_text_width("Season Legends "), 66), drawn)
+        hint = next(item for item in drawn if len(item) == 4 and item[0].endswith("B/Esc: Back"))
+        self.assertLessEqual(hint[2] + game.ui_text_width(hint[0]), bx + 416 - 16)
 
     def test_online_scoreboard_japanese_tabs_title_order_and_bottom_info_are_dim(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -16221,12 +16222,12 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.draw_online_score_screen()
 
-        bx = (rogue.SCR_W - 380) // 2
+        bx = (rogue.SCR_W - 416) // 2
         x = bx + 22
-        self.assertIn(("ローカル", rogue.UI_TEXT_COL, x + game.ui_text_width("-- "), 38), drawn)
-        self.assertIn(("今週", rogue.UI_TEXT_COL, x + game.ui_text_width("-- ローカル | "), 38), drawn)
-        self.assertIn(("今季", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- ローカル | 今週 | "), 38), drawn)
-        self.assertIn(("Normal", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Easy | "), 52), drawn)
+        self.assertIn(("Normal", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- Easy | "), 38), drawn)
+        self.assertIn(("ローカル", rogue.UI_TEXT_COL, x + game.ui_text_width("-- "), 52), drawn)
+        self.assertIn(("今週", rogue.UI_TEXT_COL, x + game.ui_text_width("-- ローカル | "), 52), drawn)
+        self.assertIn(("今季", rogue.UI_SELECTED_COL, x + game.ui_text_width("-- ローカル | 今週 | "), 52), drawn)
         title = ("今季のレジェンド", rogue.UI_SECTION_COL, x, 66)
         period = ("2026-Spring", rogue.UI_SUBTEXT_COL, x + game.ui_text_width("今季のレジェンド "), 66)
         self.assertIn(title, drawn)
@@ -16242,6 +16243,9 @@ class RogueBaselineTest(unittest.TestCase):
         ]
         self.assertTrue(bottom)
         self.assertTrue(all(item[1] == rogue.SCOREBOARD_DIM_COL for item in bottom))
+        bx, bw = (rogue.SCR_W - 416) // 2, 416
+        for text, _c, x, _y in bottom:
+            self.assertLessEqual(x + game.ui_text_width(text), bx + bw - 16)
         score_rows = [item for item in drawn if len(item) == 4 and item[0][:2].strip().isdigit()]
         self.assertLess(max(y for _s, _c, _x, y in score_rows), min(item[3] for item in bottom) - rogue.MSG_LINE_H)
 
@@ -16269,7 +16273,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.GAME_VARIANT = old_variant
 
         self.assertFalse(any(len(item) == 4 and item[0] == "Easy" for item in drawn))
-        self.assertIn(("My Rogue Chronicle", rogue.UI_SECTION_COL, 88, 52), drawn)
+        self.assertIn(("My Rogue Chronicle", rogue.UI_SECTION_COL, 70, 52), drawn)
 
     def test_online_scoreboard_uses_current_language_after_registration_toggle(self):
         game = rogue.Game.__new__(rogue.Game)

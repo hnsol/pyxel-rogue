@@ -290,7 +290,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260530_0003"
+UI_BUILD = "260530_0004"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -8555,15 +8555,17 @@ class Game:
         self.ensure_online_score_state()
         period = getattr(self, "online_period", SCOREBOARD_PERIOD_LOCAL)
         title = rogue_online_scoreboard.scoreboard_title(period, self.lang)
-        bx, by, bw, bh = self.center_rect(380, 300)
+        bx, by, bw, bh = self.center_rect(416, 300)
         x = bx + 22
         bottom_y = by + bh - 56
         self._box(bx, by, bw, bh, self.ui_heading(self.online_text("score_title"), UI_HEADING_SCREEN))
-        self.draw_score_period_tabs(x, by + 28, period)
-        content_y = by + 42
         if not variant_fixed_difficulty():
-            self.draw_score_difficulty_tabs(x, content_y, self.scoreboard_difficulty())
-            content_y += 14
+            self.draw_score_difficulty_tabs(x, by + 28, self.scoreboard_difficulty())
+            self.draw_score_period_tabs(x, by + 42, period)
+            content_y = by + 56
+        else:
+            self.draw_score_period_tabs(x, by + 28, period)
+            content_y = by + 42
         self.draw_score_title_line(x, content_y, title, period)
         content_y += 24
         scores = self.display_online_period_scores(period)
@@ -8602,7 +8604,7 @@ class Game:
         if getattr(self, "online_sync_result", ""):
             for i, msg in enumerate(self.online_result_lines(self.online_sync_result)):
                 self.txt(max(bx + 16, bx + bw - 10 - self.ui_text_width(msg)), by + 12 + i * 12, msg, SCOREBOARD_HILITE_COL)
-        self.txt(bx + 16, bottom_y + 28, self.online_text("score_hint"), SCOREBOARD_DIM_COL)
+        self.txt(bx + 16, bottom_y + 28, self.ellipsize_to_width(self.online_text("score_hint"), bw - 32), SCOREBOARD_DIM_COL)
         if getattr(self, "online_syncing", False):
             ox, oy = bx + (bw - 268) // 2, by + (bh - 82) // 2
             self._box(ox, oy, 268, 82, self.ui_heading(self.online_text("sync_title"), UI_HEADING_PANEL))
