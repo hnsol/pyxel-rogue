@@ -12,7 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any
 
-from pyxel_rogue.rogue_difficulty import DEFAULT_DIFFICULTY, normalize as normalize_difficulty
+from pyxel_rogue.rogue_difficulty import DIFFICULTY_ORDER, DEFAULT_DIFFICULTY, normalize as normalize_difficulty
 
 SCORE_STORAGE_KEY = "pyxel-rogue-scores-v2"
 PLAYER_NAME_STORAGE_KEY = "pyxel-rogue-player-name-v2"
@@ -203,7 +203,7 @@ def get_top_scores(entries: list[dict[str, Any]], limit: int = 10, difficulty: s
         diff = normalize_difficulty(difficulty)
         entries = [
             entry for entry in entries
-            if entry.get("is_dummy") or normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY))) == diff
+            if normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY))) == diff
         ]
     return sorted(entries, key=lambda entry: int(entry.get("score", 0)), reverse=True)[:limit]
 
@@ -221,7 +221,6 @@ def get_period_scores(entries: list[dict[str, Any]], period: str, key: str, limi
         entry = with_score_periods(raw)
         if (
             difficulty is not None
-            and not entry.get("is_dummy")
             and entry["difficulty"] != normalize_difficulty(difficulty)
         ):
             continue
@@ -323,19 +322,29 @@ def local_best_sync_entries(
         ]
     out = []
     seen_ids = set()
+    normalized_entries = [with_score_periods(entry) for entry in entries]
+    entry_difficulties = {
+        normalize_difficulty(str(entry.get("difficulty", DEFAULT_DIFFICULTY)))
+        for entry in normalized_entries
+    }
+    ordered_difficulties = [
+        difficulty for difficulty in DIFFICULTY_ORDER
+        if difficulty in entry_difficulties
+    ] + sorted(entry_difficulties.difference(DIFFICULTY_ORDER))
     for period, key in (
         (SCOREBOARD_PERIOD_WEEKLY, keys["period_week"]),
         (SCOREBOARD_PERIOD_SEASON, keys["period_season"]),
     ):
-        best = get_period_scores(entries, period, key, limit=1)
-        if not best:
-            continue
-        entry = with_score_periods(best[0])
-        entry_id = str(entry.get("score_id", ""))
-        if entry_id and entry_id in seen_ids:
-            continue
-        seen_ids.add(entry_id)
-        out.append(entry)
+        for difficulty in ordered_difficulties:
+            best = get_period_scores(normalized_entries, period, key, limit=1, difficulty=difficulty)
+            if not best:
+                continue
+            entry = with_score_periods(best[0])
+            entry_id = str(entry.get("score_id", ""))
+            if entry_id and entry_id in seen_ids:
+                continue
+            seen_ids.add(entry_id)
+            out.append(entry)
     return out
 
 
@@ -582,25 +591,48 @@ def _write_online_score_cache(data: dict[str, Any]) -> None:
         return
 
 
-def load_online_score_cache(period: str, key: str) -> list[dict[str, Any]]:
+def _online_score_cache_bucket(variant: str | None = None, difficulty: str | None = None) -> str:
+    v = "nyandor" if str(variant or "").lower() == "nyandor" else "rogue"
+    d = normalize_difficulty(str(difficulty or DEFAULT_DIFFICULTY))
+    return f"{v}:{d}"
+
+
+def load_online_score_cache(
+    period: str,
+    key: str,
+    variant: str | None = None,
+    difficulty: str | None = None,
+) -> list[dict[str, Any]]:
     if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
         return []
     record = _read_online_score_cache().get(period, {})
+    if isinstance(record, dict) and "key" not in record:
+        record = record.get(_online_score_cache_bucket(variant, difficulty), {})
     if not isinstance(record, dict) or str(record.get("key", "")) != str(key):
         return []
     scores = record.get("scores", [])
     return scores if isinstance(scores, list) else []
 
 
-def save_online_score_cache(period: str, key: str, scores: list[dict[str, Any]]) -> None:
+def save_online_score_cache(
+    period: str,
+    key: str,
+    scores: list[dict[str, Any]],
+    variant: str | None = None,
+    difficulty: str | None = None,
+) -> None:
     if period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
         return
     data = _read_online_score_cache()
-    data[period] = {
+    period_record = data.get(period, {})
+    if not isinstance(period_record, dict) or "key" in period_record:
+        period_record = {}
+    period_record[_online_score_cache_bucket(variant, difficulty)] = {
         "key": str(key),
         "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "scores": [with_score_periods(score) for score in scores[:10]],
     }
+    data[period] = period_record
     _write_online_score_cache(data)
 
 
@@ -753,6 +785,7 @@ def fetch_online_scores(
     url: str | None = None,
     timestamp: str | None = None,
     variant: str | None = None,
+    difficulty: str | None = None,
 ) -> list[dict[str, Any]] | None:
     if period == SCOREBOARD_PERIOD_LOCAL or period not in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
         return []
@@ -765,6 +798,8 @@ def fetch_online_scores(
         params = {"period": period, "key": key}
         if variant:
             params["variant"] = str(variant)
+        if difficulty:
+            params["difficulty"] = normalize_difficulty(str(difficulty))
         query = urllib.parse.urlencode(params)
         data = _http_json(target + sep + query)
         if isinstance(data, dict):

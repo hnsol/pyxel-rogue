@@ -290,7 +290,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260529_0644"
+UI_BUILD = "260530_0003"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -6876,6 +6876,40 @@ class Game:
         index = DIFFICULTY_ORDER.index(current) if current in DIFFICULTY_ORDER else DIFFICULTY_ORDER.index(DIFF_NORMAL)
         self.set_scoreboard_difficulty(DIFFICULTY_ORDER[(index + delta) % len(DIFFICULTY_ORDER)])
 
+    def online_score_cache_variant(self):
+        return variant_scoreboard_key() or VARIANT_ROGUE
+
+    def online_score_loaded_key(self, period, timestamp=None):
+        key = "" if period == SCOREBOARD_PERIOD_LOCAL else self.scoreboard_period_key(period, timestamp)
+        return (
+            period,
+            key,
+            self.online_score_cache_variant(),
+            self.scoreboard_difficulty(),
+        )
+
+    def online_score_is_loaded(self, period, timestamp=None):
+        loaded = getattr(self, "online_score_loaded", set())
+        return self.online_score_loaded_key(period, timestamp) in loaded or period in loaded
+
+    def online_score_memory_key(self, period, timestamp=None):
+        if period == SCOREBOARD_PERIOD_LOCAL:
+            return SCOREBOARD_PERIOD_LOCAL
+        return self.online_score_loaded_key(period, timestamp)
+
+    def cached_online_scores(self, cache, period, default=None):
+        memory_key = self.online_score_memory_key(period)
+        if memory_key in cache:
+            return cache[memory_key]
+        return cache.get(period, [] if default is None else default)
+
+    def store_online_score_cache(self, period, raw_entries, scores, timestamp=None):
+        memory_key = self.online_score_memory_key(period, timestamp)
+        self.online_score_raw_cache[memory_key] = raw_entries
+        self.online_score_cache[memory_key] = scores
+        self.online_score_raw_cache[period] = raw_entries
+        self.online_score_cache[period] = scores
+
     def ensure_online_score_state(self):
         rogue_online_state.ensure_online_score_state(self)
 
@@ -7116,22 +7150,28 @@ class Game:
         )
         guest_mode = normalize_online_profile(getattr(self, "online_profile", None)).get("local_only", True)
         for period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
-            if period in self.online_score_loaded:
+            loaded_key = self.online_score_loaded_key(period)
+            if self.online_score_is_loaded(period):
                 continue
             key = self.scoreboard_period_key(period)
-            cached = load_online_score_cache(period, key)
+            cached = load_online_score_cache(
+                period,
+                key,
+                variant=self.online_score_cache_variant(),
+                difficulty=self.scoreboard_difficulty(),
+            )
             if not cached:
                 continue
-            self.online_score_raw_cache[period] = cached
             entries = cached if guest_mode else cached + user_local_entries
-            self.online_score_cache[period] = get_period_scores(
+            scores = get_period_scores(
                 entries,
                 period,
                 key,
                 limit=10,
                 difficulty=self.scoreboard_difficulty(),
             )
-            self.online_score_loaded.add(period)
+            self.store_online_score_cache(period, cached, scores)
+            self.online_score_loaded.add(loaded_key)
         if getattr(self, "online_sync_result", "") in (
             "No local scores yet.",
             "Ranking updated. No local scores yet.",
@@ -7165,35 +7205,50 @@ class Game:
             return scores
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         score_variant = variant_scoreboard_key()
-        if score_variant:
-            online = fetch_online_scores(period, timestamp=now, variant=score_variant)
-        else:
-            online = fetch_online_scores(period, timestamp=now)
         key = self.scoreboard_period_key(period, now)
+        online = fetch_online_scores(
+            period,
+            timestamp=now,
+            variant=score_variant or None,
+            difficulty=self.scoreboard_difficulty(),
+        )
         if online is None:
             self.online_score_load_result = "failed"
-            online = load_online_score_cache(period, key)
+            online = load_online_score_cache(
+                period,
+                key,
+                variant=self.online_score_cache_variant(),
+                difficulty=self.scoreboard_difficulty(),
+            )
             online = self.online_dedicated_variant_entries(online)
-            self.online_score_raw_cache[period] = online or []
             scores = []
             if online:
                 scores = get_period_scores(online, period, key, limit=10, difficulty=self.scoreboard_difficulty())
         elif online:
             online = self.online_dedicated_variant_entries(online)
-            save_online_score_cache(period, key, online)
-            self.online_score_raw_cache[period] = online
+            save_online_score_cache(
+                period,
+                key,
+                online,
+                variant=self.online_score_cache_variant(),
+                difficulty=self.scoreboard_difficulty(),
+            )
             scores = get_period_scores(online, period, key, limit=10, difficulty=self.scoreboard_difficulty())
         else:
             self.online_score_load_result = ""
-            online = load_online_score_cache(period, key)
+            online = load_online_score_cache(
+                period,
+                key,
+                variant=self.online_score_cache_variant(),
+                difficulty=self.scoreboard_difficulty(),
+            )
             online = self.online_dedicated_variant_entries(online)
-            self.online_score_raw_cache[period] = online or []
             scores = []
             if online:
                 scores = get_period_scores(online, period, key, limit=10, difficulty=self.scoreboard_difficulty())
         self.online_scores = scores
-        self.online_score_cache[period] = scores
-        self.online_score_loaded.add(period)
+        self.store_online_score_cache(period, online or [], scores, now)
+        self.online_score_loaded.add(self.online_score_loaded_key(period, now))
         return scores
 
     def online_dedicated_variant_entries(self, entries):
@@ -7220,13 +7275,32 @@ class Game:
         ]
 
     def display_online_period_scores(self, period):
-        scores = self.online_score_cache.get(period, [])
+        scores = self.cached_online_scores(self.online_score_cache, period)
         if period == SCOREBOARD_PERIOD_LOCAL:
             return self.load_online_period_scores(SCOREBOARD_PERIOD_LOCAL)
         if period in (SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON):
             key = self.scoreboard_period_key(period)
+            loaded_key = self.online_score_loaded_key(period)
+            if not self.online_score_is_loaded(period):
+                cached = load_online_score_cache(
+                    period,
+                    key,
+                    variant=self.online_score_cache_variant(),
+                    difficulty=self.scoreboard_difficulty(),
+                )
+                if cached:
+                    cached = self.online_dedicated_variant_entries(cached)
+                    scores = get_period_scores(
+                        cached,
+                        period,
+                        key,
+                        limit=10,
+                        difficulty=self.scoreboard_difficulty(),
+                    )
+                    self.store_online_score_cache(period, cached, scores)
+                    self.online_score_loaded.add(loaded_key)
             profile = normalize_online_profile(getattr(self, "online_profile", None))
-            scores = self.online_score_raw_cache.get(period, scores)
+            scores = self.cached_online_scores(self.online_score_raw_cache, period, scores)
             if not profile.get("local_only", True):
                 scores = list(scores) + self.current_user_local_score_entries()
             return get_period_scores(
@@ -7261,15 +7335,25 @@ class Game:
 
     def refresh_online_scoreboard_periods(self):
         ok = True
-        for period in getattr(self, "online_sync_periods", []) or [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]:
-            try:
-                self.load_online_period_scores(period, force=True)
-                if getattr(self, "online_score_load_result", "") == "failed":
-                    ok = False
+        periods = getattr(self, "online_sync_periods", []) or [SCOREBOARD_PERIOD_WEEKLY, SCOREBOARD_PERIOD_SEASON]
+        original_difficulty = self.scoreboard_difficulty()
+        difficulties = [variant_fixed_difficulty()] if variant_fixed_difficulty() else list(DIFFICULTY_ORDER)
+        try:
+            for period in periods:
+                for difficulty in difficulties:
+                    self.set_scoreboard_difficulty(difficulty)
+                    try:
+                        self.load_online_period_scores(period, force=True)
+                        if getattr(self, "online_score_load_result", "") == "failed":
+                            ok = False
+                            break
+                    except Exception:
+                        ok = False
+                        break
+                if not ok:
                     break
-            except Exception:
-                ok = False
-                break
+        finally:
+            self.set_scoreboard_difficulty(original_difficulty)
         self.online_score_load_result = ""
         return ok
 
@@ -8447,6 +8531,18 @@ class Game:
             self.txt(x, y, text, col)
             x += self.ui_text_width(text)
 
+    def draw_score_difficulty_tabs(self, x, y, active_difficulty):
+        parts = [("-- ", UI_SECTION_COL)]
+        for i, diff_id in enumerate(DIFFICULTY_ORDER):
+            if i:
+                parts.append((" | ", UI_TEXT_COL))
+            col = UI_SELECTED_COL if diff_id == active_difficulty else UI_TEXT_COL
+            parts.append((difficulty_profile(diff_id).label, col))
+        parts.append((" --", UI_SECTION_COL))
+        for text, col in parts:
+            self.txt(x, y, text, col)
+            x += self.ui_text_width(text)
+
     def draw_score_title_line(self, x, y, title, period):
         self.txt(x, y, title, UI_SECTION_COL)
         x += self.ui_text_width(f"{title} ")
@@ -8464,10 +8560,15 @@ class Game:
         bottom_y = by + bh - 56
         self._box(bx, by, bw, bh, self.ui_heading(self.online_text("score_title"), UI_HEADING_SCREEN))
         self.draw_score_period_tabs(x, by + 28, period)
-        self.draw_score_title_line(x, by + 42, title, period)
+        content_y = by + 42
+        if not variant_fixed_difficulty():
+            self.draw_score_difficulty_tabs(x, content_y, self.scoreboard_difficulty())
+            content_y += 14
+        self.draw_score_title_line(x, content_y, title, period)
+        content_y += 24
         scores = self.display_online_period_scores(period)
-        self.txt(x, by + 66, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
-        y = by + 80
+        self.txt(x, content_y, self.online_text("score_header"), SCOREBOARD_TEXT_COL)
+        y = content_y + 14
         local_best = None
         for row in rogue_online_scoreboard.scoreboard_entry_rows(
             scores,

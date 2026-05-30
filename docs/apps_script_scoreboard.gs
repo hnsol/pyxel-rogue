@@ -7,6 +7,8 @@ const DUMMY_BACKFILL_COUNT = 1;
 const SCORE_VARIANT_ROGUE = "rogue";
 const SCORE_VARIANT_NYANDOR = "nyandor";
 const NYANDOR_DUMMY_MAX_DEPTH = 5;
+const SCORE_DIFFICULTIES = ["easy", "normal", "classic", "strict"];
+const SCORE_DEFAULT_DIFFICULTY = "normal";
 const USER_NAME_MAX = 8;
 const SYNC_COOLDOWN_HOURS = 1;
 const USER_PASSWORD_FAIL_LIMIT = 5;
@@ -116,27 +118,28 @@ const DUMMY_NAMES = [
 
 function doGet(e) {
   if ((e.parameter.action || "") === "seedDummy")
-    return json({ rows: seedDummy(e.parameter.variant) });
+    return json({ rows: seedDummy(e.parameter.variant, e.parameter.difficulty) });
   if ((e.parameter.action || "") === "rank")
     return json({ rank: scoreRank(e.parameter) });
   const period = (e.parameter.period || "weekly").toLowerCase();
   const key = e.parameter.key || currentPeriods()[periodField(period)];
   const variant = scoreVariant(e.parameter.variant);
+  const difficulty = cleanDifficulty(e.parameter.difficulty);
   const ctx = scoreContext(variant);
   if (period === "weekly") {
-    ensureDummyRows(period, key, DUMMY_TARGET_COUNT, ctx, variant);
+    ensureDummyRowsForDifficulties(period, key, DUMMY_TARGET_COUNT, ctx, variant);
   }
   if (period === "season") {
-    ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, variant);
-    ensureHistoricalWeeklyRows(new Date(), key, ctx, variant);
+    ensureDummyRowsForDifficulties("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, variant);
+    ensureHistoricalWeeklyRowsForDifficulties(new Date(), key, ctx, variant);
   }
   flushScoreRows(ctx);
-  return json({ scores: topScores(period, key, ctx, variant) });
+  return json({ scores: topScores(period, key, ctx, variant, difficulty) });
 }
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents || "{}");
-  if (body.action === "seedDummy") return json({ rows: seedDummy(body.variant) });
+  if (body.action === "seedDummy") return json({ rows: seedDummy(body.variant, body.difficulty) });
   if (body.action === "checkUser") return json(checkUser(body));
   if (body.action === "registerUser") return json(registerUser(body));
   if (body.action === "linkUser") return json(linkUser(body));
@@ -351,9 +354,11 @@ function sheet(variant) {
       "client_build",
       "is_dummy",
       "score_id",
+      "difficulty",
     ]);
   } else {
     ensureScoreIdColumn(sh);
+    ensureDifficultyColumn(sh);
   }
   return sh;
 }
@@ -404,6 +409,7 @@ function appendScore(entry, variant) {
     String(entry.client_build || ""),
     Boolean(entry.is_dummy),
     scoreId,
+    cleanDifficulty(entry.difficulty),
   ]);
   return true;
 }
@@ -413,6 +419,14 @@ function ensureScoreIdColumn(sh) {
   const header = sh.getRange(1, 1, 1, lastCol).getValues()[0];
   if (header.indexOf("score_id") === -1) {
     sh.getRange(1, lastCol + 1).setValue("score_id");
+  }
+}
+
+function ensureDifficultyColumn(sh) {
+  const lastCol = sh.getLastColumn();
+  const header = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (header.indexOf("difficulty") === -1) {
+    sh.getRange(1, lastCol + 1).setValue("difficulty");
   }
 }
 
@@ -434,6 +448,7 @@ function scoreIdFor(entry, timestamp, name) {
     Math.max(0, parseInt(entry.depth || entry.level || 0, 10)),
     String(entry.result_flags || ""),
     String(entry.killer || ""),
+    cleanDifficulty(entry.difficulty),
   ].join("|");
 }
 
@@ -442,10 +457,21 @@ function scoreVariant(value) {
   return text === SCORE_VARIANT_NYANDOR ? SCORE_VARIANT_NYANDOR : SCORE_VARIANT_ROGUE;
 }
 
-function dummyScoreIdPrefix(period, key, variant) {
+function cleanDifficulty(value) {
+  const text = String(value || SCORE_DEFAULT_DIFFICULTY).toLowerCase();
+  return SCORE_DIFFICULTIES.indexOf(text) === -1 ? SCORE_DEFAULT_DIFFICULTY : text;
+}
+
+function scoreDummyDifficulties(variant) {
+  return scoreVariant(variant) === SCORE_VARIANT_NYANDOR
+    ? [SCORE_DEFAULT_DIFFICULTY]
+    : SCORE_DIFFICULTIES;
+}
+
+function dummyScoreIdPrefix(period, key, variant, difficulty) {
   const v = scoreVariant(variant);
   const head = v === SCORE_VARIANT_NYANDOR ? "dummy-nyandor" : "dummy";
-  return head + "-" + period + "-" + key + "-";
+  return head + "-" + cleanDifficulty(difficulty) + "-" + period + "-" + key + "-";
 }
 
 function dummyClientBuild(variant) {
@@ -467,15 +493,17 @@ function includeRowForVariant(row, idx, variant) {
   return rowDummyVariant(row, idx) === scoreVariant(variant);
 }
 
-function topScores(period, key, ctx, variant) {
+function topScores(period, key, ctx, variant, difficulty) {
   const context = ctx || scoreContext(variant);
   const data = rowsForContext(context);
   const idx = context.idx;
   const field = periodField(period);
   const v = scoreVariant(variant);
+  const d = cleanDifficulty(difficulty);
   const best = {};
   data.forEach((row) => {
     if (!includeRowForVariant(row, idx, v)) return;
+    if (cleanDifficulty(idx.difficulty === undefined ? "" : row[idx.difficulty]) !== d) return;
     if (periodCellValue(row[idx[field]], field) !== String(key)) return;
     const name = cleanName(row[idx.player_name]);
     const score = parseInt(row[idx.score] || 0, 10);
@@ -493,6 +521,7 @@ function topScores(period, key, ctx, variant) {
         client_build: row[idx.client_build],
         is_dummy: row[idx.is_dummy] === true,
         score_id: idx.score_id === undefined ? "" : row[idx.score_id],
+        difficulty: d,
       };
     }
   });
@@ -505,7 +534,7 @@ function scoreRank(params) {
   const period = (params.period || "weekly").toLowerCase();
   const key = params.key || currentPeriods()[periodField(period)];
   const score = Math.max(0, parseInt(params.score || 0, 10));
-  const scores = allScores(period, key, null, params.variant);
+  const scores = allScores(period, key, null, params.variant, params.difficulty);
   let rank = 1;
   scores.forEach((row) => {
     if (row.score > score) rank++;
@@ -513,15 +542,17 @@ function scoreRank(params) {
   return rank;
 }
 
-function allScores(period, key, ctx, variant) {
+function allScores(period, key, ctx, variant, difficulty) {
   const context = ctx || scoreContext(variant);
   const data = rowsForContext(context);
   const idx = context.idx;
   const field = periodField(period);
   const v = scoreVariant(variant);
+  const d = cleanDifficulty(difficulty);
   const best = {};
   data.forEach((row) => {
     if (!includeRowForVariant(row, idx, v)) return;
+    if (cleanDifficulty(idx.difficulty === undefined ? "" : row[idx.difficulty]) !== d) return;
     if (periodCellValue(row[idx[field]], field) !== String(key)) return;
     const name = cleanName(row[idx.player_name]);
     const score = parseInt(row[idx.score] || 0, 10);
@@ -543,25 +574,32 @@ function periodCellValue(value, field) {
   return String(value || "");
 }
 
-function seedDummy(variant) {
+function seedDummy(variant, difficulty) {
   const ctx = scoreContext(variant);
-  const rows = ensureScoreboardDummyContext(ctx, scoreVariant(variant));
+  const v = scoreVariant(variant);
+  const difficulties = difficulty ? [cleanDifficulty(difficulty)] : scoreDummyDifficulties(v);
+  let rows = 0;
+  difficulties.forEach((d) => {
+    rows += ensureScoreboardDummyContext(ctx, v, d);
+  });
   flushScoreRows(ctx);
   return rows;
 }
 
-function ensureScoreboardDummyContext(ctx, variant) {
+function ensureScoreboardDummyContext(ctx, variant, difficulty) {
   const now = new Date();
   const v = scoreVariant(variant);
+  const d = cleanDifficulty(difficulty);
   let rows = 0;
-  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, v);
-  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx, v);
+  rows += ensureDummyRows("weekly", currentPeriods().period_week, DUMMY_TARGET_COUNT, ctx, v, d);
+  rows += ensureHistoricalWeeklyRows(now, currentPeriods().period_season, ctx, v, d);
   return rows;
 }
 
-function ensureHistoricalWeeklyRows(now, seasonKey, ctx, variant) {
+function ensureHistoricalWeeklyRows(now, seasonKey, ctx, variant, difficulty) {
   const base = now || new Date();
   const v = scoreVariant(variant);
+  const d = cleanDifficulty(difficulty);
   let rows = 0;
   for (let i = 1; i <= DUMMY_PAST_WEEKS; i++) {
     const p = periodsFor(addUtcDays(base, historicalWeeklyDayOffset(i)));
@@ -572,6 +610,7 @@ function ensureHistoricalWeeklyRows(now, seasonKey, ctx, variant) {
       DUMMY_BACKFILL_COUNT,
       ctx,
       v,
+      d,
     );
   }
   return rows;
@@ -581,27 +620,44 @@ function historicalWeeklyDayOffset(i) {
   return -(2 + (i - 1) * 7);
 }
 
-function ensureDummyRows(period, key, targetCount, ctx, variant) {
-  return ensureDummyRowsForPeriod(period, key, targetCount, false, ctx, scoreVariant(variant));
+function ensureDummyRowsForDifficulties(period, key, targetCount, ctx, variant) {
+  let rows = 0;
+  scoreDummyDifficulties(variant).forEach((d) => {
+    rows += ensureDummyRows(period, key, targetCount, ctx, variant, d);
+  });
+  return rows;
 }
 
-function ensureSeededDummyRows(period, key, targetCount, ctx, variant) {
-  return ensureDummyRowsForPeriod(period, key, targetCount, true, ctx, scoreVariant(variant));
+function ensureHistoricalWeeklyRowsForDifficulties(now, seasonKey, ctx, variant) {
+  let rows = 0;
+  scoreDummyDifficulties(variant).forEach((d) => {
+    rows += ensureHistoricalWeeklyRows(now, seasonKey, ctx, variant, d);
+  });
+  return rows;
 }
 
-function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx, variant) {
+function ensureDummyRows(period, key, targetCount, ctx, variant, difficulty) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, false, ctx, scoreVariant(variant), cleanDifficulty(difficulty));
+}
+
+function ensureSeededDummyRows(period, key, targetCount, ctx, variant, difficulty) {
+  return ensureDummyRowsForPeriod(period, key, targetCount, true, ctx, scoreVariant(variant), cleanDifficulty(difficulty));
+}
+
+function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx, variant, difficulty) {
   const context = ctx || scoreContext(variant);
   const v = scoreVariant(variant);
-  const scores = topScores(period, key, context, v);
+  const d = cleanDifficulty(difficulty);
+  const scores = topScores(period, key, context, v, d);
   const used = new Set(scores.map((r) => cleanName(r.player_name)));
-  const seeded = seededDummyNames(period, key, context, v);
+  const seeded = seededDummyNames(period, key, context, v, d);
   seeded.forEach((name) => used.add(cleanName(name)));
   const visibleOrSeeded = countSeededOnly
     ? seeded.size
     : Math.max(scores.length, seeded.size);
   const needed = Math.max(0, targetCount - visibleOrSeeded);
   if (needed === 0) return 0;
-  const offset = dummyNameOffset(period, key, v);
+  const offset = dummyNameOffset(period, key, v, d);
   let rows = 0;
   for (let i = 0; i < DUMMY_NAMES.length && rows < needed; i++) {
     const name = DUMMY_NAMES[(offset + i) % DUMMY_NAMES.length];
@@ -614,13 +670,14 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx
       p.period_week,
       p.period_season,
       clean,
-      dummyScore(period, key, i, targetCount, v),
-      dummyDepth(period, key, i, v),
+      dummyScore(period, key, i, targetCount, v, d),
+      dummyDepth(period, key, i, v, d),
       "killed",
-      dummyKiller(period, key, i, v),
+      dummyKiller(period, key, i, v, d),
       dummyClientBuild(v),
       true,
-      dummyScoreIdPrefix(period, key, v) + clean,
+      dummyScoreIdPrefix(period, key, v, d) + clean,
+      d,
     ]);
     used.add(clean);
     rows++;
@@ -629,11 +686,11 @@ function ensureDummyRowsForPeriod(period, key, targetCount, countSeededOnly, ctx
   return rows;
 }
 
-function seededDummyNames(period, key, ctx, variant) {
+function seededDummyNames(period, key, ctx, variant, difficulty) {
   const context = ctx || scoreContext(variant);
   const data = rowsForContext(context);
   const idx = context.idx;
-  const prefix = dummyScoreIdPrefix(period, key, variant);
+  const prefix = dummyScoreIdPrefix(period, key, variant, difficulty);
   const names = new Set();
   data.forEach((row) => {
     if (String(row[idx.score_id] || "").indexOf(prefix) === 0) {
@@ -643,32 +700,33 @@ function seededDummyNames(period, key, ctx, variant) {
   return names;
 }
 
-function dummyNameOffset(period, key, variant) {
-  return hashString(scoreVariant(variant) + ":" + period + ":" + key) % DUMMY_NAMES.length;
+function dummyNameOffset(period, key, variant, difficulty) {
+  return hashString(scoreVariant(variant) + ":" + cleanDifficulty(difficulty) + ":" + period + ":" + key) % DUMMY_NAMES.length;
 }
 
-function dummyValue(period, key, offset, salt, max, variant) {
-  return hashString([scoreVariant(variant), period, key, offset, salt].join(":")) % max;
+function dummyValue(period, key, offset, salt, max, variant, difficulty) {
+  return hashString([scoreVariant(variant), cleanDifficulty(difficulty), period, key, offset, salt].join(":")) % max;
 }
 
-function dummyScore(period, key, offset, targetCount, variant) {
+function dummyScore(period, key, offset, targetCount, variant, difficulty) {
   const v = scoreVariant(variant);
-  const depth = dummyDepth(period, key, offset, v);
+  const d = cleanDifficulty(difficulty);
+  const depth = dummyDepth(period, key, offset, v, d);
   if (v === SCORE_VARIANT_NYANDOR) {
-    return depth * 90 + dummyValue(period, key, offset, "score", 181, v);
+    return depth * 90 + dummyValue(period, key, offset, "score", 181, v, d);
   }
-  return depth * 70 + dummyValue(period, key, offset, "score", 351);
+  return depth * 70 + dummyValue(period, key, offset, "score", 351, v, d);
 }
 
-function dummyDepth(period, key, offset, variant) {
+function dummyDepth(period, key, offset, variant, difficulty) {
   const maxDepth = scoreVariant(variant) === SCORE_VARIANT_NYANDOR ? NYANDOR_DUMMY_MAX_DEPTH : 16;
-  return 1 + dummyValue(period, key, offset, "depth", maxDepth, variant);
+  return 1 + dummyValue(period, key, offset, "depth", maxDepth, variant, difficulty);
 }
 
-function dummyKiller(period, key, offset, variant) {
-  const depth = dummyDepth(period, key, offset, variant);
+function dummyKiller(period, key, offset, variant, difficulty) {
+  const depth = dummyDepth(period, key, offset, variant, difficulty);
   const killers = dummyKillersForDepth(depth);
-  return killers[dummyValue(period, key, offset, "killer", killers.length, variant)];
+  return killers[dummyValue(period, key, offset, "killer", killers.length, variant, difficulty)];
 }
 
 function dummyKillersForDepth(depth) {
