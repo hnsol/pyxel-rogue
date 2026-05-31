@@ -15,14 +15,20 @@ class BgmFloorProfile:
     base: int
 
 
-FLOOR_PROFILES = (
-    (1, 4, BgmFloorProfile(8, 9)),
-    (5, 9, BgmFloorProfile(9, 9)),
-    (10, 14, BgmFloorProfile(10, 10)),
-    (15, 19, BgmFloorProfile(11, 11)),
-    (20, 24, BgmFloorProfile(12, 11)),
-    (25, 25, BgmFloorProfile(12, 12)),
-    (26, 999, BgmFloorProfile(10, 12)),
+@dataclass(frozen=True)
+class BgmFloorBand:
+    lo: int
+    hi: int
+    profiles: tuple[BgmFloorProfile, ...]
+
+
+FLOOR_PROFILE_BANDS = (
+    (1, 4, (BgmFloorProfile(8, 9), BgmFloorProfile(9, 9), BgmFloorProfile(11, 9))),
+    (5, 9, (BgmFloorProfile(8, 10), BgmFloorProfile(9, 10), BgmFloorProfile(11, 10))),
+    (10, 14, (BgmFloorProfile(9, 10), BgmFloorProfile(10, 10), BgmFloorProfile(11, 11))),
+    (15, 19, (BgmFloorProfile(10, 11), BgmFloorProfile(11, 11), BgmFloorProfile(12, 11))),
+    (20, 24, (BgmFloorProfile(10, 11), BgmFloorProfile(12, 11), BgmFloorProfile(12, 12))),
+    (25, 999, (BgmFloorProfile(10, 12),)),
 )
 
 DANGER_PARAMS = {
@@ -33,12 +39,21 @@ DANGER_PARAMS = {
 }
 
 
-def floor_profile(depth: int) -> BgmFloorProfile:
+def floor_band(depth: int) -> tuple[int, BgmFloorBand]:
     depth = max(1, int(depth))
-    for lo, hi, profile in FLOOR_PROFILES:
+    for idx, (lo, hi, profiles) in enumerate(FLOOR_PROFILE_BANDS):
         if lo <= depth <= hi:
-            return profile
-    return FLOOR_PROFILES[-1][2]
+            return idx, BgmFloorBand(lo, hi, profiles)
+    lo, hi, profiles = FLOOR_PROFILE_BANDS[-1]
+    return len(FLOOR_PROFILE_BANDS) - 1, BgmFloorBand(lo, hi, profiles)
+
+
+def floor_profile_candidates(depth: int) -> tuple[BgmFloorProfile, ...]:
+    return floor_band(depth)[1].profiles
+
+
+def floor_profile(depth: int) -> BgmFloorProfile:
+    return floor_profile_candidates(depth)[0]
 
 
 def danger_state(hp: int, max_hp: int, hunger_state: str) -> int:
@@ -51,8 +66,8 @@ def danger_state(hp: int, max_hp: int, hunger_state: str) -> int:
     return (2, 2, 3, 3)[hunger]
 
 
-def exploration_params(depth: int, hp: int, max_hp: int, hunger_state: str) -> dict:
-    profile = floor_profile(depth)
+def exploration_params(depth: int, hp: int, max_hp: int, hunger_state: str, profile: BgmFloorProfile | None = None) -> dict:
+    profile = profile or floor_profile(depth)
     params = dict(DANGER_PARAMS[danger_state(hp, max_hp, hunger_state)])
     params.update({"chord": profile.chord, "base": profile.base})
     return params
@@ -78,6 +93,10 @@ class DungeonBgmController:
         self.seed = int(time.time_ns() if seed is None else seed)
         self.first_channel = first_channel
         self.first_sound = first_sound
+        self.profile_rng = random.Random(self._seed_for(("floor-profile",)))
+        self.band_profiles = {}
+        self.last_band_id = None
+        self.last_band_profile = None
         self.cache = {}
         self.current_key = None
         self.last_exploration_params = None
@@ -87,9 +106,23 @@ class DungeonBgmController:
             self.stop()
             return
         depth_key = max(1, int(depth))
-        params = exploration_params(depth, hp, max_hp, hunger_state)
+        profile = self._profile_for_depth(depth_key)
+        params = exploration_params(depth, hp, max_hp, hunger_state, profile=profile)
         self.last_exploration_params = dict(params)
         self._play_key(("explore", depth_key, self._params_key(params)), params)
+
+    def _profile_for_depth(self, depth: int) -> BgmFloorProfile:
+        band_id, band = floor_band(depth)
+        profile = self.band_profiles.get(band_id)
+        if profile is None:
+            candidates = band.profiles
+            if self.last_band_profile in candidates and len(candidates) > 1:
+                candidates = tuple(profile for profile in candidates if profile != self.last_band_profile)
+            profile = candidates[self.profile_rng.randrange(len(candidates))]
+            self.band_profiles[band_id] = profile
+        self.last_band_id = band_id
+        self.last_band_profile = profile
+        return profile
 
     def play_result(self, enabled: bool = True) -> None:
         if not enabled:

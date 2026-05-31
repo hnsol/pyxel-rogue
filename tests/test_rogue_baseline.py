@@ -170,16 +170,109 @@ def set_two_room_floor(game):
 
 
 class TestDungeonBgm(unittest.TestCase):
-    def test_dungeon_bgm_floor_profiles_follow_depth_policy(self):
+    def test_dungeon_bgm_floor_profile_candidates_follow_depth_policy(self):
         from pyxel_rogue import rogue_bgm
 
-        self.assertEqual(rogue_bgm.floor_profile(1), rogue_bgm.BgmFloorProfile(8, 9))
-        self.assertEqual(rogue_bgm.floor_profile(5), rogue_bgm.BgmFloorProfile(9, 9))
-        self.assertEqual(rogue_bgm.floor_profile(10), rogue_bgm.BgmFloorProfile(10, 10))
-        self.assertEqual(rogue_bgm.floor_profile(15), rogue_bgm.BgmFloorProfile(11, 11))
-        self.assertEqual(rogue_bgm.floor_profile(20), rogue_bgm.BgmFloorProfile(12, 11))
-        self.assertEqual(rogue_bgm.floor_profile(25), rogue_bgm.BgmFloorProfile(12, 12))
-        self.assertEqual(rogue_bgm.floor_profile(26), rogue_bgm.BgmFloorProfile(10, 12))
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(1),
+            (
+                rogue_bgm.BgmFloorProfile(8, 9),
+                rogue_bgm.BgmFloorProfile(9, 9),
+                rogue_bgm.BgmFloorProfile(11, 9),
+            ),
+        )
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(5),
+            (
+                rogue_bgm.BgmFloorProfile(8, 10),
+                rogue_bgm.BgmFloorProfile(9, 10),
+                rogue_bgm.BgmFloorProfile(11, 10),
+            ),
+        )
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(10),
+            (
+                rogue_bgm.BgmFloorProfile(9, 10),
+                rogue_bgm.BgmFloorProfile(10, 10),
+                rogue_bgm.BgmFloorProfile(11, 11),
+            ),
+        )
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(15),
+            (
+                rogue_bgm.BgmFloorProfile(10, 11),
+                rogue_bgm.BgmFloorProfile(11, 11),
+                rogue_bgm.BgmFloorProfile(12, 11),
+            ),
+        )
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(20),
+            (
+                rogue_bgm.BgmFloorProfile(10, 11),
+                rogue_bgm.BgmFloorProfile(12, 11),
+                rogue_bgm.BgmFloorProfile(12, 12),
+            ),
+        )
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(25),
+            (rogue_bgm.BgmFloorProfile(10, 12),),
+        )
+        self.assertEqual(
+            rogue_bgm.floor_profile_candidates(26),
+            (rogue_bgm.BgmFloorProfile(10, 12),),
+        )
+
+    def test_dungeon_bgm_controller_keeps_same_profile_inside_floor_band(self):
+        from pyxel_rogue import rogue_bgm
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [["c", "s", "7", "n", 1], None, None, None]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        controller = rogue_bgm.DungeonBgmController(sys.modules["pyxel"], generator_factory=FakeGenerator, seed=123)
+
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        first_profile = controller.last_exploration_params["chord"], controller.last_exploration_params["base"]
+        controller.play_exploration(depth=4, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        fourth_profile = controller.last_exploration_params["chord"], controller.last_exploration_params["base"]
+
+        self.assertEqual(first_profile, fourth_profile)
+
+    def test_dungeon_bgm_controller_avoids_previous_profile_when_floor_band_changes(self):
+        from pyxel_rogue import rogue_bgm
+
+        class PickFirstRandom:
+            def randrange(self, stop):
+                self.stop = stop
+                return 0
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [["c", "s", "7", "n", 1], None, None, None]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        controller = rogue_bgm.DungeonBgmController(sys.modules["pyxel"], generator_factory=FakeGenerator, seed=123)
+        controller.profile_rng = PickFirstRandom()
+        controller.band_profiles[2] = rogue_bgm.BgmFloorProfile(11, 11)
+        controller.last_band_id = 2
+        controller.last_band_profile = rogue_bgm.BgmFloorProfile(11, 11)
+
+        controller.play_exploration(depth=15, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+
+        self.assertEqual((controller.last_exploration_params["chord"], controller.last_exploration_params["base"]), (10, 11))
 
     def test_dungeon_bgm_danger_state_combines_hp_and_hunger(self):
         from pyxel_rogue import rogue_bgm
@@ -196,7 +289,13 @@ class TestDungeonBgm(unittest.TestCase):
         from pyxel_rogue import rogue_bgm
 
         self.assertEqual(
-            rogue_bgm.exploration_params(depth=20, hp=2, max_hp=12, hunger_state="weak"),
+            rogue_bgm.exploration_params(
+                depth=20,
+                hp=2,
+                max_hp=12,
+                hunger_state="weak",
+                profile=rogue_bgm.BgmFloorProfile(12, 11),
+            ),
             {
                 "speed": 240,
                 "instrumentation": 0,
@@ -210,7 +309,13 @@ class TestDungeonBgm(unittest.TestCase):
         from pyxel_rogue import rogue_bgm
 
         params = rogue_bgm.result_params(
-            rogue_bgm.exploration_params(depth=26, hp=12, max_hp=12, hunger_state="normal")
+            rogue_bgm.exploration_params(
+                depth=25,
+                hp=12,
+                max_hp=12,
+                hunger_state="normal",
+                profile=rogue_bgm.BgmFloorProfile(10, 12),
+            )
         )
 
         self.assertEqual(params["speed"], 360)
@@ -332,7 +437,7 @@ class TestDungeonBgm(unittest.TestCase):
         controller.play_result(enabled=True)
 
         self.assertEqual(created[-1].parm["speed"], 360)
-        self.assertEqual(created[-1].parm["chord"], 12)
+        self.assertEqual(created[-1].parm["chord"], 10)
         self.assertEqual(created[-1].parm["base"], 12)
 
     def test_dungeon_bgm_controller_result_restarts_from_head(self):
