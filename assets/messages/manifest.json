@@ -3411,6 +3411,12 @@
     "ja_status": "manual",
     "origin": "pyxel-rogue"
   },
+  "settings.dungeon_bgm": {
+    "source": "rogue.py:settings UI",
+    "params": [],
+    "ja_status": "manual",
+    "origin": "pyxel-rogue"
+  },
   "settings.guide": {
     "source": "rogue.py:settings UI",
     "params": [],

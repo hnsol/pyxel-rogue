@@ -547,10 +547,10 @@
 - [x] 日本語/英語切替（ゲームログ / Settings / 罠名を JSON カタログ化、umplus_j10r は CJK 対応済み）
 - [ ] HUD / Inventory / Help / Death の文言辞書化
 - [x] Phase 4 追加文言（指輪 / 杖 / 罠 / Amulet / 勝利 / search結果）を新規直書きせず `TextCatalog` 経由にする
-- [ ] BGM 導入方式検討
-  - `8bit-bgm-generator` 調査
-  - `pyxel-hadegame` の `pyxelhg/bgm/bgm_generator.py` 確認
-  - Pyxel Webでも破綻しない鳴らし方を検証
+- [x] BGM 導入方式検討
+  - [x] `8bit-bgm-generator` 調査
+  - [x] 実行時生成 + `階番号 × S` キャッシュ方式で導入
+  - [x] Pyxel Web 向けに生成データを `assets/bgm_data/` へ分離
 - [x] メッセージ履歴画面（Select -> Inventory -> 右 -> Log、直近100件、ターン非消費）
 - [x] 投擲アイテムの飛翔アニメーション
 - [ ] ダメージフラッシュ等のアニメーション
@@ -564,7 +564,7 @@
   - [ ] マップ全画面オーバーレイ（明示操作時のみ、`self.vis` 準拠で探索済みのみ表示、ターン消費なし）
     - [ ] 入力割当決定（Select長押し / 新規 chord / トグル のいずれか。B長押し+D-padはダッシュで使用中、Start長押しは禁止）
     - [ ] 未探索セルの扱い決定（完全非表示 / 輪郭のみ薄く）
-  - [ ] 8bit BGM Generator 導入方針確定（階層ごと固定シード or 毎回ランダム。上記 `BGM 導入方式検討` と合わせて進める）
+  - [x] 8bit BGM Generator 導入方針確定（実行時生成、階番号/状態ごとに同一プレイ中キャッシュ）
 
 ## Phase 6: バージョン選択（優先度: 低）
 

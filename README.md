@@ -163,6 +163,7 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - 墓石つき死亡画面
 - Rogue 5.4.4 `total_winner()` 準拠の勝利時所持品売却スコア
 - 起動ロゴ、初回言語選択、BGMつきタイトル画面、Guest初期起動、Online / Guest Mode 切替
+- フロア深度とHP/空腹状態に応じたダンジョン内BGM、死亡/結果BGM
 - 原作寄せの1スロット中断セーブ。保存後は終了し、ロード成功後にセーブを消費します。
 - ローカルスコア保存、Weekly / Season オンラインスコアボード閲覧、オンラインIDでの任意スコア同期、Guest同期回数の匿名計測
 - ゲームパッド向け A/B/Start/Select + D-pad 操作
@@ -177,7 +178,6 @@ git clone https://github.com/Davidslv/rogue.git vendor/rogue544
 - Rogue 5.4.4 期待値テスト拡充
 - HUD / Inventory / Help / Death の文言辞書化
 - 可変レイアウト、フォント選択
-- ダンジョン内BGM
 - ハイスコア全履歴
 - リプレイ
 

@@ -523,5 +523,6 @@
   "misc.what_to_call_it": "What do you want to call it? ",
   "misc.discoveries_title": "Discoveries",
   "misc.nothing_discovered": "(nothing discovered)",
-  "misc.discoveries_hint": "[↑↓ scroll / A or Esc to close]"
+  "misc.discoveries_hint": "[↑↓ scroll / A or Esc to close]",
+  "settings.dungeon_bgm": "Dungeon BGM"
 }

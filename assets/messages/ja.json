@@ -523,5 +523,6 @@
   "misc.what_to_call_it": "名前をつける：",
   "misc.discoveries_title": "発見リスト",
   "misc.nothing_discovered": "（未発見）",
-  "misc.discoveries_hint": "[↑↓スクロール / A または Esc で閉じる]"
+  "misc.discoveries_hint": "[↑↓スクロール / A または Esc で閉じる]",
+  "settings.dungeon_bgm": "ダンジョンBGM"
 }

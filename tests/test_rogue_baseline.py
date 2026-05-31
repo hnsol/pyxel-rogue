@@ -99,9 +99,13 @@ def install_pyxel_mock():
     class MockSound:
         def __init__(self):
             self.mml_calls = []
+            self.set_calls = []
 
         def mml(self, code=None):
             self.mml_calls.append(code)
+
+        def set(self, *args):
+            self.set_calls.append(args)
 
     pyxel.sounds = [MockSound() for _ in range(64)]
 
@@ -163,6 +167,325 @@ def set_two_room_floor(game):
     game.p.x, game.p.y = 3, 4
     game.visible = set()
     return room_a, room_b
+
+
+class TestDungeonBgm(unittest.TestCase):
+    def test_dungeon_bgm_floor_profiles_follow_depth_policy(self):
+        from pyxel_rogue import rogue_bgm
+
+        self.assertEqual(rogue_bgm.floor_profile(1), rogue_bgm.BgmFloorProfile(8, 9))
+        self.assertEqual(rogue_bgm.floor_profile(5), rogue_bgm.BgmFloorProfile(9, 9))
+        self.assertEqual(rogue_bgm.floor_profile(10), rogue_bgm.BgmFloorProfile(10, 10))
+        self.assertEqual(rogue_bgm.floor_profile(15), rogue_bgm.BgmFloorProfile(11, 11))
+        self.assertEqual(rogue_bgm.floor_profile(20), rogue_bgm.BgmFloorProfile(12, 11))
+        self.assertEqual(rogue_bgm.floor_profile(25), rogue_bgm.BgmFloorProfile(12, 12))
+        self.assertEqual(rogue_bgm.floor_profile(26), rogue_bgm.BgmFloorProfile(10, 12))
+
+    def test_dungeon_bgm_danger_state_combines_hp_and_hunger(self):
+        from pyxel_rogue import rogue_bgm
+
+        self.assertEqual(rogue_bgm.danger_state(7, 12, "normal"), 0)
+        self.assertEqual(rogue_bgm.danger_state(6, 12, "hungry"), 1)
+        self.assertEqual(rogue_bgm.danger_state(6, 12, "weak"), 2)
+        self.assertEqual(rogue_bgm.danger_state(6, 12, "faint"), 3)
+        self.assertEqual(rogue_bgm.danger_state(4, 12, "normal"), 1)
+        self.assertEqual(rogue_bgm.danger_state(2, 12, "hungry"), 2)
+        self.assertEqual(rogue_bgm.danger_state(2, 12, "weak"), 3)
+
+    def test_dungeon_bgm_params_follow_policy_tables(self):
+        from pyxel_rogue import rogue_bgm
+
+        self.assertEqual(
+            rogue_bgm.exploration_params(depth=20, hp=2, max_hp=12, hunger_state="weak"),
+            {
+                "speed": 240,
+                "instrumentation": 0,
+                "melo_density": 4,
+                "chord": 12,
+                "base": 11,
+            },
+        )
+
+    def test_result_bgm_uses_previous_profile_with_speed_360(self):
+        from pyxel_rogue import rogue_bgm
+
+        params = rogue_bgm.result_params(
+            rogue_bgm.exploration_params(depth=26, hp=12, max_hp=12, hunger_state="normal")
+        )
+
+        self.assertEqual(params["speed"], 360)
+        self.assertEqual(params["chord"], 10)
+        self.assertEqual(params["base"], 12)
+
+    def test_dungeon_bgm_controller_caches_same_key(self):
+        from pyxel_rogue import rogue_bgm
+
+        created = []
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.rng = rng
+                self.parm = {}
+                self.music = [[f"c{len(created)}", "s", "7", "n", 1], None, None, None]
+                created.append(self)
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        pyxel = sys.modules["pyxel"]
+        pyxel.play_calls.clear()
+        controller = rogue_bgm.DungeonBgmController(pyxel, generator_factory=FakeGenerator, seed=123)
+
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+
+        self.assertEqual(len(created), 1)
+        self.assertEqual(len(pyxel.play_calls), 1)
+
+    def test_dungeon_bgm_controller_regenerates_on_floor_change(self):
+        from pyxel_rogue import rogue_bgm
+
+        created = []
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [[f"c{len(created)}", "s", "7", "n", 1], None, None, None]
+                created.append(self)
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        pyxel = sys.modules["pyxel"]
+        pyxel.play_calls.clear()
+        controller = rogue_bgm.DungeonBgmController(pyxel, generator_factory=FakeGenerator, seed=123)
+
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        controller.play_exploration(depth=2, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+
+        self.assertEqual(len(created), 2)
+        self.assertEqual(len(pyxel.play_calls), 2)
+
+    def test_dungeon_bgm_controller_uses_sound_slots_separate_from_title_bgm(self):
+        from pyxel_rogue import rogue_bgm
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [
+                    ["c", "s", "7", "n", 1],
+                    ["d", "s", "7", "n", 1],
+                    ["e", "s", "7", "n", 1],
+                    ["f", "s", "7", "n", 1],
+                ]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        pyxel = sys.modules["pyxel"]
+        pyxel.play_calls.clear()
+        for sound in pyxel.sounds:
+            sound.set_calls.clear()
+        controller = rogue_bgm.DungeonBgmController(pyxel, generator_factory=FakeGenerator, seed=123)
+
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+
+        self.assertEqual(pyxel.sounds[0].set_calls, [])
+        self.assertEqual(pyxel.sounds[1].set_calls, [])
+        self.assertEqual(pyxel.sounds[2].set_calls, [])
+        self.assertEqual(pyxel.sounds[4].set_calls, [("c", "s", "7", "n", 1)])
+        self.assertEqual(pyxel.play_calls[:4], [
+            ((0, 4), {"loop": True}),
+            ((1, 5), {"loop": True}),
+            ((2, 6), {"loop": True}),
+            ((3, 7), {"loop": True}),
+        ])
+
+    def test_dungeon_bgm_controller_result_uses_speed_360(self):
+        from pyxel_rogue import rogue_bgm
+
+        created = []
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [["c", "s", "7", "n", 1], None, None, None]
+                created.append(self)
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        controller = rogue_bgm.DungeonBgmController(sys.modules["pyxel"], generator_factory=FakeGenerator, seed=123)
+        controller.play_exploration(depth=25, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        controller.play_result(enabled=True)
+
+        self.assertEqual(created[-1].parm["speed"], 360)
+        self.assertEqual(created[-1].parm["chord"], 12)
+        self.assertEqual(created[-1].parm["base"], 12)
+
+    def test_dungeon_bgm_controller_result_restarts_from_head(self):
+        from pyxel_rogue import rogue_bgm
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [["c", "s", "7", "n", 1], None, None, None]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        pyxel = sys.modules["pyxel"]
+        pyxel.play_calls.clear()
+        controller = rogue_bgm.DungeonBgmController(pyxel, generator_factory=FakeGenerator, seed=123)
+
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        controller.play_result(enabled=True)
+
+        self.assertEqual(pyxel.play_calls, [
+            ((0, 4), {"loop": True}),
+            ((0, 4), {"loop": True}),
+        ])
+
+    def test_dungeon_bgm_controller_does_not_consume_game_random(self):
+        from pyxel_rogue import rogue_bgm
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.rng = rng
+                self.parm = {}
+                self.music = [["c", "s", "7", "n", 1], None, None, None]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                self.rng.random()
+
+        random.seed(4401)
+        expected_next = random.Random(4401).random()
+        controller = rogue_bgm.DungeonBgmController(sys.modules["pyxel"], generator_factory=FakeGenerator, seed=123)
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+
+        self.assertEqual(random.random(), expected_next)
+
+    def test_settings_persist_dungeon_bgm_flag(self):
+        from pyxel_rogue import rogue_lang
+
+        settings = rogue_lang.settings_from_dict({"dungeon_bgm": False})
+
+        self.assertFalse(settings.dungeon_bgm)
+        self.assertFalse(rogue_lang.settings_to_dict(settings)["dungeon_bgm"])
+
+    def test_new_game_starts_dungeon_bgm_when_enabled(self):
+        calls = []
+
+        class FakeController:
+            def __init__(self, pyxel_module, seed=None):
+                self.pyxel_module = pyxel_module
+                self.seed = seed
+
+            def play_exploration(self, **kwargs):
+                calls.append(("explore", kwargs))
+
+            def play_result(self, enabled=True):
+                calls.append(("result", enabled))
+
+            def stop(self):
+                calls.append(("stop", None))
+
+        old = getattr(rogue, "DungeonBgmController", None)
+        rogue.DungeonBgmController = FakeController
+        try:
+            game = new_game(seed=7101)
+        finally:
+            if old is None:
+                delattr(rogue, "DungeonBgmController")
+            else:
+                rogue.DungeonBgmController = old
+
+        self.assertTrue(game.settings.dungeon_bgm)
+        self.assertEqual(calls[0][0], "explore")
+        self.assertEqual(calls[0][1]["depth"], 1)
+        self.assertTrue(calls[0][1]["enabled"])
+
+    def test_dungeon_bgm_off_stops_dungeon_bgm_without_affecting_title_bgm(self):
+        calls = []
+
+        class FakeController:
+            def __init__(self, pyxel_module, seed=None):
+                pass
+
+            def play_exploration(self, **kwargs):
+                calls.append(("explore", kwargs))
+
+            def play_result(self, enabled=True):
+                calls.append(("result", enabled))
+
+            def stop(self):
+                calls.append(("stop", None))
+
+        old = getattr(rogue, "DungeonBgmController", None)
+        rogue.DungeonBgmController = FakeController
+        try:
+            game = rogue.Game.__new__(rogue.Game)
+            game.settings = rogue.Settings(dungeon_bgm=False)
+            game.lang = rogue.LANG_EN
+            game.new_game()
+        finally:
+            if old is None:
+                delattr(rogue, "DungeonBgmController")
+            else:
+                rogue.DungeonBgmController = old
+
+        self.assertIn(("stop", None), calls)
+        self.assertEqual([name for name, _ in calls if name == "explore"], [])
+        self.assertFalse(game.settings.dungeon_bgm)
+        self.assertFalse(getattr(game, "title_bgm_started", False))
+
+    def test_enter_result_state_switches_to_result_bgm(self):
+        calls = []
+
+        class FakeController:
+            def __init__(self, pyxel_module, seed=None):
+                pass
+
+            def play_exploration(self, **kwargs):
+                calls.append(("explore", kwargs))
+
+            def play_result(self, enabled=True):
+                calls.append(("result", enabled))
+
+            def stop(self):
+                calls.append(("stop", None))
+
+        old = getattr(rogue, "DungeonBgmController", None)
+        rogue.DungeonBgmController = FakeController
+        try:
+            game = new_game(seed=7102)
+            calls.clear()
+            game.enter_result_state("quit")
+        finally:
+            if old is None:
+                delattr(rogue, "DungeonBgmController")
+            else:
+                rogue.DungeonBgmController = old
+
+        self.assertEqual(calls, [("result", True)])
 
 
 class TestDifficultyProfiles(unittest.TestCase):
@@ -16452,13 +16775,15 @@ class RogueBaselineTest(unittest.TestCase):
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
         self.assertEqual(game.st, rogue.ST_DIFFICULTY)
-        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+        self.assertEqual(rogue.pyxel.stop_calls, [])
+        self.assertTrue(game.title_bgm_started)
 
         rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
         game.update()
 
         self.assertEqual(game.st, rogue.ST_DIFFICULTY)
         self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+        self.assertFalse(game.title_bgm_started)
         self.assertEqual(len(rogue.pyxel.play_calls), 3)
         for _ in range(rogue.TITLE_BGM_STOP_WAIT_FRAMES - 1):
             rogue.pyxel.set_input()
@@ -16469,6 +16794,29 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertEqual(game.st, rogue.ST_PLAY)
         self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+
+    def test_difficulty_select_cursor_keeps_bgm_and_choice_stops_bgm(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_DIFFICULTY
+        game.difficulty = rogue.DIFF_NORMAL
+        game.difficulty_cursor = rogue.DIFFICULTY_ORDER.index(rogue.DIFF_NORMAL)
+        game.difficulty_cursor_restored = True
+        game.title_bgm_started = True
+        game.title_bgm_stop_wait = 0
+        rogue.pyxel.stop_calls.clear()
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
+        game.update()
+        self.assertEqual(rogue.pyxel.stop_calls, [])
+        self.assertTrue(game.title_bgm_started)
+
+        rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
+        game.update()
+
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+        self.assertFalse(game.title_bgm_started)
+        self.assertEqual(game.title_bgm_stop_wait, rogue.TITLE_BGM_STOP_WAIT_FRAMES)
 
     def test_title_choice_stops_bgm_for_non_game_options(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -16637,6 +16985,7 @@ class RogueBaselineTest(unittest.TestCase):
             game.txt = lambda x, y, s, c: calls.append(str(s))
             game.draw_title_screen()
             self.assertNotIn("DIFFICULTY: Normal", calls)
+            rogue.pyxel.stop_calls.clear()
 
             rogue.pyxel.set_input(held={rogue.pyxel.KEY_RIGHT}, pressed={rogue.pyxel.KEY_RIGHT})
             game.update()
@@ -16646,6 +16995,7 @@ class RogueBaselineTest(unittest.TestCase):
             rogue.pyxel.set_input(held={rogue.pyxel.KEY_RETURN}, pressed={rogue.pyxel.KEY_RETURN})
             game.update()
             self.assertEqual(game.st, rogue.ST_DIFFICULTY)
+            self.assertEqual(rogue.pyxel.stop_calls, [])
 
             calls.clear()
             boxes = []

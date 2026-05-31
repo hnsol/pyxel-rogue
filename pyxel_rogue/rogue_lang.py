@@ -25,6 +25,7 @@ class Settings:
     palette: str = DEFAULT_PALETTE
     show_run_steps: bool = True
     difficulty: str = DEFAULT_DIFFICULTY
+    dungeon_bgm: bool = True
 
     def __post_init__(self):
         if self.language not in (LANG_EN, LANG_JA):
@@ -34,6 +35,7 @@ class Settings:
         self.auto_pickup = bool(self.auto_pickup)
         self.show_run_steps = bool(self.show_run_steps)
         self.difficulty = normalize_difficulty(self.difficulty)
+        self.dungeon_bgm = bool(self.dungeon_bgm)
 
 
 def settings_to_dict(settings):
@@ -44,6 +46,7 @@ def settings_to_dict(settings):
         "palette": settings.palette,
         "show_run_steps": bool(settings.show_run_steps),
         "difficulty": settings.difficulty,
+        "dungeon_bgm": bool(settings.dungeon_bgm),
     }
 
 
@@ -55,6 +58,7 @@ def settings_from_dict(data):
         palette=str(data.get("palette", DEFAULT_PALETTE)),
         show_run_steps=bool(data.get("show_run_steps", True)),
         difficulty=str(data.get("difficulty", DEFAULT_DIFFICULTY)),
+        dungeon_bgm=bool(data.get("dungeon_bgm", True)),
     )
 
 

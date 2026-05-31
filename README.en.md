@@ -163,6 +163,7 @@ Implemented overview:
 - Tombstone death screen
 - Victory score adds sold pack worth following Rogue 5.4.4 `total_winner()`
 - Startup logo, first-run language selection, title screen with BGM, default Guest mode, and Online / Guest Mode switching
+- In-dungeon BGM selected by floor depth and HP/hunger state, plus death/result BGM
 - One-slot suspend save following the original Rogue style. Saving exits the run, and a successful restore consumes the save.
 - Local score saving, Weekly / Season online scoreboard viewing, optional online-ID score sync, and anonymous Guest sync metrics
 - Gamepad-oriented A/B/Start/Select + D-pad controls
@@ -177,7 +178,6 @@ See [TODO.md](docs/TODO.md) for the detailed implementation status.
 - More Rogue 5.4.4 expectation tests
 - HUD / Inventory / Help / Death text catalog coverage
 - Responsive layout and font selection
-- In-dungeon BGM
 - Full score history
 - Replay support
 

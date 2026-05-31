@@ -49,6 +49,7 @@ from pyxel_rogue.rogue_combat_text import (
     PLAYER_HIT_MESSAGE_KEYS,
     PLAYER_MISS_MESSAGE_KEYS,
 )
+from pyxel_rogue.rogue_bgm import DungeonBgmController
 from pyxel_rogue.rogue_items import (
     CAT_AMULET,
     CAT_ARM,
@@ -290,7 +291,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260530_0004"
+UI_BUILD = "260601_0001"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1372,6 +1373,33 @@ class Game:
             pyxel.stop(ch)
         self.title_bgm_started = False
 
+    def init_dungeon_bgm(self):
+        self.dungeon_bgm = DungeonBgmController(pyxel)
+
+    def dungeon_bgm_enabled(self):
+        return bool(self.ensure_settings().dungeon_bgm)
+
+    def update_dungeon_bgm(self):
+        if not hasattr(self, "dungeon_bgm"):
+            self.init_dungeon_bgm()
+        if not self.dungeon_bgm_enabled():
+            self.dungeon_bgm.stop()
+            return
+        if getattr(self, "st", None) != ST_PLAY or not hasattr(self, "p"):
+            return
+        self.dungeon_bgm.play_exploration(
+            depth=self.p.depth,
+            hp=self.p.hp,
+            max_hp=self.p.max_hp,
+            hunger_state=self.p.state,
+            enabled=True,
+        )
+
+    def play_result_bgm(self):
+        if not hasattr(self, "dungeon_bgm"):
+            return
+        self.dungeon_bgm.play_result(enabled=self.dungeon_bgm_enabled())
+
     def load_title_background(self):
         self.title_bg = None
         try:
@@ -1755,6 +1783,7 @@ class Game:
         self.daemons = self.delayed_actions.daemons
         self.daemons.start("runners", rogue_daemons.AFTER)
         self.daemons.start("doctor", rogue_daemons.AFTER)
+        self.init_dungeon_bgm()
         self.haste_half_turn = False
         self.haste_no_command_half_turn = False
         self.result_scores = []
@@ -2050,6 +2079,7 @@ class Game:
             palette=existing.palette,
             show_run_steps=existing.show_run_steps,
             difficulty=data.get("difficulty", existing.difficulty),
+            dungeon_bgm=existing.dungeon_bgm,
         )
         self.scrolls = data.get("scrolls") or rogue_scrolls.active_scrolls(SCROLLS, self.difficulty)
         self.ident = self._restore_ident(data.get("ident", {}))
@@ -2133,6 +2163,8 @@ class Game:
         self._restore_rng_state(data.get("rng_state"))
         self._center_cam()
         self.update_fov()
+        self.init_dungeon_bgm()
+        self.update_dungeon_bgm()
 
     def difficulty_profile(self):
         return difficulty_profile(self.difficulty)
@@ -2356,6 +2388,7 @@ class Game:
         else:
             self.capture_death_snapshot()
             self.st = ST_DEAD
+        self.play_result_bgm()
 
     def capture_death_snapshot(self):
         self.death_frame = getattr(pyxel, "frame_count", 0)
@@ -2458,6 +2491,12 @@ class Game:
         self.auto_pickup = not self.auto_pickup
         self.persist_settings()
 
+    def toggle_dungeon_bgm(self):
+        settings = self.ensure_settings()
+        settings.dungeon_bgm = not settings.dungeon_bgm
+        self.persist_settings()
+        self.update_dungeon_bgm()
+
     @property
     def difficulty(self):
         fixed = variant_fixed_difficulty()
@@ -2524,6 +2563,8 @@ class Game:
         if self.p.hallucinating > 0:
             self.run_visuals()
         self.expire_visible_msg_toast()
+        if hasattr(self, "dungeon_bgm"):
+            self.update_dungeon_bgm()
 
     def usable_rooms(self):
         return [room for room in self.rooms if room.usable] or self.rooms
@@ -5478,6 +5519,8 @@ class Game:
         if not self.p.alive:
             if not self.death_cause: self.death_cause="died"
             self.msg_important("pyxel.died_restart"); self.enter_result_state("killed")
+        if self.st == ST_PLAY:
+            self.update_dungeon_bgm()
         self.turn_msg_start = len(self.msgs)
 
     def decrement_no_command(self):
@@ -6786,9 +6829,9 @@ class Game:
     def load_saved_game_from_title(self):
         try:
             data = rogue_save.load()
+            self.stop_title_bgm()
             self.restore_state(data)
             rogue_save.delete()
-            self.stop_title_bgm()
             self.apply_palette()
             self.title_save_error = ""
         except Exception:
@@ -6807,7 +6850,6 @@ class Game:
         self.persist_settings()
 
     def enter_difficulty_select(self):
-        self.stop_title_bgm()
         if variant_fixed_difficulty():
             self.difficulty = variant_fixed_difficulty()
             self.st = ST_NYANDOR_BRIEF
@@ -7508,14 +7550,16 @@ class Game:
             if action == "continue":
                 self.load_saved_game_from_title()
                 return
-            self.stop_title_bgm()
             if action == "dungeon":
                 self.enter_difficulty_select()
             elif action == "scoreboard":
+                self.stop_title_bgm()
                 self.enter_online_scoreboard()
             elif self.is_online_mode():
+                self.stop_title_bgm()
                 self.enter_guest_mode_confirm()
             else:
+                self.stop_title_bgm()
                 self.enter_online_register(reset_to_default=True)
 
     def upd_difficulty_select(self):
@@ -8164,7 +8208,7 @@ class Game:
         self.upd_info_common()
 
     def settings_rows(self):
-        return ("Auto pickup", "Language", "Palette", "Save and quit")
+        return ("Auto pickup", "Dungeon BGM", "Language", "Palette", "Save and quit")
 
     def settings_row_index(self, name):
         return self.settings_rows().index(name)
@@ -8172,6 +8216,8 @@ class Game:
     def setting_value_label(self, name):
         if name == "Auto pickup":
             return TextCatalog.msg(self.lang, "settings.on" if self.auto_pickup else "settings.off")
+        if name == "Dungeon BGM":
+            return TextCatalog.msg(self.lang, "settings.on" if self.ensure_settings().dungeon_bgm else "settings.off")
         if name == "Language":
             return "日本語" if self.lang == LANG_JA else "English"
         if name == "Palette":
@@ -8182,6 +8228,8 @@ class Game:
         row = self.settings_rows()[getattr(self, "settings_cursor", 0)]
         if row == "Auto pickup":
             self.toggle_auto_pickup()
+        elif row == "Dungeon BGM":
+            self.toggle_dungeon_bgm()
         elif row == "Language":
             self.set_lang(LANG_JA if self.lang == LANG_EN else LANG_EN, persist=True)
         elif row == "Palette":
