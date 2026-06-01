@@ -231,6 +231,8 @@
 
 - 迷路部屋の階段を `F_PASS` 相当として扱うhelperを追加
 - 迷路階段が隣接視界に入り、通常部屋階段は通路属性を得ない回帰テストを追加
+- `rg "T_CORR|F_PASS|PASSAGE|passage"` で類似箇所を確認し、`look(TRUE)` の怪物起床、AI部屋判定、passage component、杖 drain、dash turn に同じ `F_PASS` helper を適用した
+- 迷路階段と、怪物がアイテムを拾った後の迷路床が `F_PASS` を失わないことを回帰テストで固定した
 
 ## 2026-05-17 方向入力を押下フレームだけで見た
 

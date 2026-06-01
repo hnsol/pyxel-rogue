@@ -292,7 +292,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260601_1754"
+UI_BUILD = "260601_1810"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -3006,12 +3006,14 @@ class Game:
         # C: move.c:turn_ok()
         return in_play_area(x,y) and self.tm[y][x] in WALKABLE
     def tile_has_pass_flag(self,x,y):
-        # Rogue 5.4.4 stores terrain char and F_PASS separately; stairs in maze
-        # cells keep F_PASS after chat(stairs)=STAIRS in new_level.c:new_level().
+        # Rogue 5.4.4 stores terrain char and F_PASS separately. Maze cells can
+        # keep F_PASS even when p_ch becomes STAIRS or restored FLOOR.
         if not in_play_area(x,y):
             return False
         tile = self.tm[y][x]
-        return tile == T_CORR or (tile == T_STAIR and getattr(self.room_at(x,y), "is_maze", False))
+        return tile == T_CORR or (
+            tile in (T_FLOOR, T_STAIR) and getattr(self.room_containing(x,y), "is_maze", False)
+        )
     def diag_ok(self,sx,sy,ex,ey):
         # C: chase.c:diag_ok()
         return (
@@ -3036,7 +3038,7 @@ class Game:
         # C: passages.c:numpass() numbers F_PASS cells and door/secret-door exits.
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return False
-        if self.is_maze_passage_floor(x, y):
+        if self.tile_has_pass_flag(x, y):
             return True
         return rogue_passages.is_number_cell(
             self.tm[y][x], self.hidden_tiles.get((x,y)), T_CORR, T_DOOR
@@ -3063,7 +3065,7 @@ class Game:
         if not (0<=x<MAP_W and 0<=y<MAP_H):
             return None
         tile=self.tm[y][x]
-        if tile==T_CORR or self.is_maze_passage_floor(x, y) or (actor and tile==T_DOOR):
+        if self.tile_has_pass_flag(x, y) or (actor and tile==T_DOOR):
             return self.passage_component(x,y) or "corridor"
         if tile==T_DOOR:
             return self.room_near_door(x,y) or "corridor"
@@ -3488,11 +3490,8 @@ class Game:
             return False
         hero_tile = self.tm[self.p.y][self.p.x]
 
-        def pass_flag(cx, cy, ctile):
-            return ctile == T_CORR or self.is_maze_passage_floor(cx, cy)
-
-        cell_pass = pass_flag(x, y, tile)
-        hero_pass = pass_flag(self.p.x, self.p.y, hero_tile)
+        cell_pass = self.tile_has_pass_flag(x, y)
+        hero_pass = self.tile_has_pass_flag(self.p.x, self.p.y)
         if hero_tile != T_DOOR and tile != T_DOOR and cell_pass != hero_pass:
             return False
         if (cell_pass or tile == T_DOOR) and (hero_pass or hero_tile == T_DOOR):
@@ -5730,7 +5729,7 @@ class Game:
 
     # ---------- Dash ----------
     def dash_turn_ok(self,x,y):
-        return 0<=x<MAP_W and 0<=y<MAP_H and self.tm[y][x] in (T_CORR,T_DOOR)
+        return 0<=x<MAP_W and 0<=y<MAP_H and (self.tm[y][x] == T_DOOR or self.tile_has_pass_flag(x,y))
 
     def dash_door_stop(self,dx,dy):
         if self.dash_steps<1 or not self.room_at(self.p.x,self.p.y):
@@ -5832,7 +5831,7 @@ class Game:
         if self.gi_at(px,py): return True
         if self.dash_look_stop(dx,dy): return True
         if self.dash_door_stop(dx,dy): return True
-        if tile!=T_CORR: return False
+        if not self.tile_has_pass_flag(px,py): return False
         if dx and dy: return False
         fwd=self.dash_turn_ok(px+dx,py+dy)
         if dx:

@@ -2021,6 +2021,29 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(same.hp, 4)
         self.assertEqual(other.hp, 10)
 
+    def test_rogue_544_zap_drain_on_maze_stairs_uses_passage_room(self):
+        # Rogue 5.4.4 sticks.c:drain() uses proom from roomin(); maze STAIRS
+        # still have F_PASS, so the same passage is targeted.
+        from pyxel_rogue import rogue_sticks
+
+        game = new_game(seed=2101)
+        room = rogue.Room(25, 17, 24, 6, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in range(31, 36):
+            game.tm[20][x] = rogue.T_CORR
+        game.p.x, game.p.y = 32, 20
+        game.tm[20][32] = rogue.T_STAIR
+        monster = monster_at(35, 20, hp=10)
+        game.mons = [monster]
+        game.p.hp = 12
+        stick = rogue.Item(rogue.CAT_STICK, rogue_sticks.WS_DRAIN, charges=1)
+
+        game.zap_stick(stick, 1, 0)
+
+        self.assertEqual(game.p.hp, 6)
+        self.assertEqual(monster.hp, 4)
+
     def test_rogue_544_zap_drain_on_door_targets_room_and_passage(self):
         # Rogue 5.4.4 sticks.c:drain() uses proom plus corp when hero stands on DOOR.
         from pyxel_rogue import rogue_sticks
@@ -5536,6 +5559,37 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertEqual(game.tm[7][8], rogue.T_FLOOR)
         self.assertEqual(monster.dest, (9, 7))
         self.assertEqual(game.room_for_ai(monster.x, monster.y), game.room_for_ai(second.x, second.y))
+
+    def test_rogue_544_maze_stairs_keep_passage_identity_for_ai(self):
+        # Rogue 5.4.4 stores STAIRS in p_ch without clearing F_PASS.
+        game = new_game(seed=51021)
+        room = rogue.Room(5, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        for x in range(6, 11):
+            game.tm[8][x] = rogue.T_CORR
+        game.tm[8][8] = rogue.T_STAIR
+
+        self.assertEqual(game.room_for_ai(8, 8), game.room_for_ai(10, 8))
+        self.assertIn((10, 8), game.passage_component(8, 8)[1])
+
+    def test_rogue_544_restored_maze_floor_remains_dash_turn_candidate(self):
+        # Rogue 5.4.4 move.c:turn_ok() uses F_REAL|F_PASS, not just p_ch.
+        game = new_game(seed=51022)
+        room = rogue.Room(5, 5, 7, 7, flags={rogue.ROOM_MAZE})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 8, 8
+        game.tm[8][8] = rogue.T_FLOOR
+        game.tm[8][9] = rogue.T_CORR
+        game.tm[9][8] = rogue.T_CORR
+        game.dash_steps = 2
+        game.gitems = []
+        game.mons = []
+
+        self.assertTrue(game.tile_has_pass_flag(8, 8))
+        self.assertTrue(game.dash_turn_ok(8, 8))
+        self.assertTrue(game.dash_should_stop_here(1, 0))
 
     def test_rogue_544_do_chase_keeps_running_after_collecting_item_when_new_dest_differs(self):
         # Rogue 5.4.4 chase.c:do_chase() stops only if relocate() leaves the monster on the new t_dest.
@@ -10860,6 +10914,27 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.tile_has_pass_flag(32, 20))
         self.assertIn((32, 20), game.visible)
         self.assertIn((32, 20), game.explored)
+
+    def test_rogue_544_command_look_wakes_monster_on_maze_stairs(self):
+        # Rogue 5.4.4 misc.c:look(TRUE) uses F_PASS for the 3x3 wake scan.
+        game = new_game(seed=1421)
+        maze = rogue.Room(25, 17, 24, 6, flags={rogue.ROOM_MAZE})
+        game.rooms = [maze]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 31, 20
+        game.tm[20][31] = rogue.T_CORR
+        game.tm[20][32] = rogue.T_STAIR
+        monster = monster_at(32, 20, hp=10, armor=100, exp=5, flags="mean")
+        game.mons = [monster]
+
+        old_rnd = rogue.RNG.rnd
+        try:
+            rogue.RNG.rnd = lambda n: 1
+            game.command_look()
+        finally:
+            rogue.RNG.rnd = old_rnd
+
+        self.assertTrue(monster.running)
 
     def test_rogue_544_room_stairs_do_not_gain_passage_visibility(self):
         game = new_game(seed=143)
