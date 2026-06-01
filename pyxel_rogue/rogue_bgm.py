@@ -87,12 +87,14 @@ class DungeonBgmController:
         seed: int | None = None,
         first_channel: int = 0,
         first_sound: int = 4,
+        sfx_active=None,
     ):
         self.pyxel = pyxel_module
         self.generator_factory = generator_factory
         self.seed = int(time.time_ns() if seed is None else seed)
         self.first_channel = first_channel
         self.first_sound = first_sound
+        self.sfx_active = sfx_active or (lambda: False)
         self.profile_rng = random.Random(self._seed_for(("floor-profile",)))
         self.band_profiles = {}
         self.last_band_id = None
@@ -133,8 +135,27 @@ class DungeonBgmController:
 
     def stop(self) -> None:
         for ch in range(4):
-            self.pyxel.stop(self.first_channel + ch)
+            channel = self.first_channel + ch
+            if channel == 3 and self.sfx_active():
+                continue
+            self.pyxel.stop(channel)
         self.current_key = None
+
+    def resume_ch(self, ch: int) -> None:
+        if self.current_key is None:
+            return
+        offset = ch - self.first_channel
+        if not 0 <= offset < 4:
+            return
+        music = self.cache.get(self.current_key)
+        if music is None or offset >= len(music):
+            return
+        sound = music[offset]
+        if not sound:
+            return
+        slot = self.first_sound + offset
+        self.pyxel.sounds[slot].set(*sound)
+        self.pyxel.play(ch, slot, loop=True)
 
     def _play_key(self, key, params) -> None:
         if key == self.current_key:
@@ -156,6 +177,8 @@ class DungeonBgmController:
         self.stop()
         for ch, sound in enumerate(music[:4]):
             channel = self.first_channel + ch
+            if channel == 3 and self.sfx_active():
+                continue
             slot = self.first_sound + ch
             if sound:
                 self.pyxel.sounds[slot].set(*sound)

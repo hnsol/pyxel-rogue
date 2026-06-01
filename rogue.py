@@ -38,6 +38,7 @@ from pyxel_rogue import rogue_passages
 from pyxel_rogue import rogue_weapons
 from pyxel_rogue import rogue_hud
 from pyxel_rogue import rogue_input
+from pyxel_rogue import rogue_sfx
 from pyxel_rogue import rogue_online_scoreboard
 from pyxel_rogue import rogue_online_state
 from pyxel_rogue import rogue_online_text
@@ -291,7 +292,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260601_0003"
+UI_BUILD = "260601_1134"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1291,6 +1292,7 @@ class Game:
         pyxel.init(SCR_W, SCR_H, title=variant_window_title(), fps=30, quit_key=pyxel.KEY_NONE)
         self.apply_palette()
         self.font = pyxel.Font(FONT_PATH)
+        self.init_sfx()
         self.init_frontend_state()
         self.setup_title_bgm()
         self.start_title_bgm()
@@ -1373,8 +1375,20 @@ class Game:
             pyxel.stop(ch)
         self.title_bgm_started = False
 
+    def init_sfx(self):
+        path = os.path.join(os.path.dirname(__file__), "assets", "rpg-sepack.pyxres")
+        enabled = rogue_sfx.load_se_pack(pyxel, path)
+        self.sfx = rogue_sfx.SfxController(pyxel, enabled=enabled)
+
+    def request_sfx(self, slot):
+        if hasattr(self, "sfx"):
+            self.sfx.request(slot)
+
     def init_dungeon_bgm(self):
-        self.dungeon_bgm = DungeonBgmController(pyxel)
+        if not hasattr(self, "sfx"):
+            self.init_sfx()
+        self.dungeon_bgm = DungeonBgmController(pyxel, sfx_active=self.sfx.is_active)
+        self.sfx.bgm = self.dungeon_bgm
 
     def dungeon_bgm_enabled(self):
         return bool(self.ensure_settings().dungeon_bgm)
@@ -2523,7 +2537,10 @@ class Game:
     def descend(self):
         # C: new_level.c:new_level() clears ISHELD before generating the level.
         self.p.held_by = None
+        old_depth = self.p.depth
         self.p.depth += 1
+        if old_depth > 0:
+            self.request_sfx(rogue_sfx.SFX_STAIRS)
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         def populate_room(tm, rooms, room):
@@ -3306,6 +3323,8 @@ class Game:
             m.pack.append(gold)
         if self.p.lvlup():
             self.msg_important("misc.welcome_to_level_level", level=self.p.level)
+            self.request_sfx(rogue_sfx.SFX_HEAL_LARGE)
+        self.request_sfx(rogue_sfx.SFX_KILL)
         self.remove_monster(m, was_kill=True)
         return mn
 
@@ -3321,6 +3340,7 @@ class Game:
         if hit:
             m.hp-=dmg
             self.msg_text(self.player_hit_message(mn))
+            self.request_sfx(rogue_sfx.SFX_HIT_PLAYER)
             self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
             if confused_by_hit:
                 m.confused=1
@@ -3333,6 +3353,7 @@ class Game:
             return True
         else:
             self.msg_text(self.player_miss_message(mn))
+            self.request_sfx(rogue_sfx.SFX_HIT_MISS)
             return False
 
     def reveal_xeroc_for_attack(self,m,thrown=False):
@@ -3499,6 +3520,7 @@ class Game:
                 self.p.hp-=dmg
             if rogue_fight.monster_attack_message_allowed(m.sym):
                 self.msg_text(self.monster_hit_message(mn))
+            self.request_sfx(rogue_sfx.SFX_HIT_MONSTER)
             if self.p.hp<=0:
                 if not self.death_cause:
                     self.death_cause=f"killed by a {m.name}"
@@ -3793,6 +3815,7 @@ class Game:
         if it is self.p.wpn:
             self.p.wpn = None
         self.consume_pack_item(it)
+        self.request_sfx(rogue_sfx.SFX_SPELL_USE)
         p=self.p; nm=POTIONS[it.kind]["name"]
         if nm=="healing":
             self.ident.pk[it.kind]=True
@@ -3800,6 +3823,7 @@ class Game:
             p.hp,p.max_hp=rogue_potions.healing_hp(p.hp,p.max_hp,h)
             self.sight()
             self.msg("potions.you_begin_to_feel_better")
+            self.request_sfx(rogue_sfx.SFX_HEAL_SMALL)
         elif nm=="extra healing":
             self.ident.pk[it.kind]=True
             h=RNG.roll(p.level,8)
@@ -3807,6 +3831,7 @@ class Game:
             self.sight()
             self.come_down()
             self.msg("potions.you_begin_to_feel_much_better")
+            self.request_sfx(rogue_sfx.SFX_HEAL_SMALL)
         elif nm=="poison":
             self.ident.pk[it.kind]=True
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
@@ -3885,6 +3910,7 @@ class Game:
             self.msg("potions.you_suddenly_feel_much_more_skillful")
             if p.lvlup():
                 self.msg_important("misc.welcome_to_level_level", level=p.level)
+                self.request_sfx(rogue_sfx.SFX_HEAL_LARGE)
         elif nm=="monster detection":
             if p.see_monsters > 0:
                 self.fuses.fuse("turn_see", HUHDURATION, rogue_daemons.AFTER)
@@ -4191,6 +4217,7 @@ class Game:
         if it is p.wpn:
             p.wpn = None
         self.consume_pack_item(it)
+        self.request_sfx(rogue_sfx.SFX_SPELL_USE)
         nm=self.scrolls[it.kind]["name"]; self.ident.sk[it.kind]=nm not in ("monster confusion","scare monster","food detection","teleportation","enchant weapon","create monster","remove curse","aggravate monsters","protect armor","hold monster","enchant armor")
         if nm=="monster confusion":
             rogue_scrolls.monster_confusion(p)
@@ -4570,6 +4597,7 @@ class Game:
             self.msg("sticks.nothing_happens")
             return True
         kind=it.kind
+        self.request_sfx(rogue_sfx.SFX_WAND_ZAP)
         if kind == rogue_sticks.WS_LIGHT:
             self.ident.wk[kind]=True
             room=self.room_at(self.p.x,self.p.y) or self.room_containing(self.p.x,self.p.y)
@@ -4593,6 +4621,10 @@ class Game:
                 self.msg("sticks.the_missle_vanishes_with_a_puff_of_smoke")
         elif kind in (rogue_sticks.WS_ELECT, rogue_sticks.WS_FIRE, rogue_sticks.WS_COLD):
             self.ident.wk[kind]=True
+            if kind == rogue_sticks.WS_ELECT:
+                self.request_sfx(rogue_sfx.SFX_ELECTRIC)
+            elif kind == rogue_sticks.WS_COLD:
+                self.request_sfx(rogue_sfx.SFX_ICE)
             self.fire_bolt(dx,dy,self.bolt_name(kind))
         else:
             target=self.first_zap_target(dx,dy)
@@ -4656,6 +4688,7 @@ class Game:
             it is self.p.wpn,
         )
         if result == "cursed":
+            self.request_sfx(rogue_sfx.SFX_ERROR)
             self.msg("things.you_cant_it_appears_to_be_cursed")
             return True
         if result == "armor":
@@ -4737,15 +4770,16 @@ class Game:
     def takeoff(self,it):
         # C: armor.c:take_off()
         if it is self.p.arm:
-            if it.cursed: self.msg("pyxel.its_cursed"); return
+            if it.cursed: self.request_sfx(rogue_sfx.SFX_ERROR); self.msg("pyxel.its_cursed"); return
             self.waste_time()
             self.p.arm=None; self.p.recalc_ac()
         elif it is self.p.wpn:
-            if it.cursed: self.msg("pyxel.its_cursed"); return
+            if it.cursed: self.request_sfx(rogue_sfx.SFX_ERROR); self.msg("pyxel.its_cursed"); return
             self.p.wpn=None
         elif it is self.p.ring_l or it is self.p.ring_r:
             result = rogue_rings.ring_off_result(True, it.cursed)
             if result == "cursed":
+                self.request_sfx(rogue_sfx.SFX_ERROR)
                 self.msg("pyxel.cant_appears_cursed")
                 return True
             if not self.remove_ring_item(it):
@@ -4767,6 +4801,7 @@ class Game:
             self.msg("things.there_is_something_there_already")
             return False
         if (it is self.p.wpn or it is self.p.arm or it is self.p.ring_l or it is self.p.ring_r) and it.cursed:
+            self.request_sfx(rogue_sfx.SFX_ERROR)
             self.msg("things.you_cant_it_appears_to_be_cursed"); return True
         if it is self.p.arm:
             self.waste_time()
@@ -5035,11 +5070,13 @@ class Game:
         if pos is not None:
             self.p.x,self.p.y=pos
             self.update_fov(); self._center_cam()
+            self.request_sfx(rogue_sfx.SFX_WARP)
             self.finish_teleport()
 
     def trigger_trap(self, x, y, arrow_origin=None):
         # C: move.c:be_trapped()
         self.reveal_trap_at(x,y)
+        self.request_sfx(rogue_sfx.SFX_TRAP)
         kind=self.traps.get((x,y),0)
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
         self.clear_running_count()
@@ -5333,6 +5370,7 @@ class Game:
 
     def illegal_command(self, command):
         self.command_look()
+        self.request_sfx(rogue_sfx.SFX_ERROR)
         self.msg("command.illegal_command_command", command=command)
         self.command_look_done = False
 
@@ -5429,6 +5467,7 @@ class Game:
             return False
         if gi.cat==CAT_GOLD:
             p.gold+=gi.qty; self.gitems.remove(gi); self.msg("pyxel.gold_pieces", gold=gi.qty)
+            self.request_sfx(rogue_sfx.SFX_PICKUP)
             return True
         if self.is_scare_monster(gi):
             scare_result=rogue_pack.scare_scroll_pickup_result(gi.picked_up)
@@ -5448,6 +5487,7 @@ class Game:
                 self.msg("pyxel.nyandor_cat_recovered")
             else:
                 self.msg("pyxel.pick_up_item", item=self.ident.name(gi))
+            self.request_sfx(rogue_sfx.SFX_PICKUP)
             return True
         gi.picked_up = was_picked_up
         self.msg_important("pyxel.pack_too_full")
@@ -5788,6 +5828,7 @@ class Game:
         return None
 
     def open_menu(self):
+        self.request_sfx(rogue_sfx.SFX_SELECT_HIGH)
         restored = getattr(self, "last_menu_action", None)
         restored_index = self.action_index_by_name(restored) if restored in self.restorable_menu_actions() else None
         self.st=ST_MENU
@@ -5803,6 +5844,7 @@ class Game:
         self.menu_cursor_restored=False
 
     def menu_select(self):
+        self.request_sfx(rogue_sfx.SFX_SELECT_HIGH)
         aname, _cat = MENU_ACTIONS[self.mcur]
         self.last_menu_action = aname if aname in self.restorable_menu_actions() else None
         if aname=="Discoveries":
@@ -6650,8 +6692,10 @@ class Game:
                 return ch, self.p.inv[idx] if idx < len(self.p.inv) else None
         return None
     def invalid_pack_letter(self, ch):
+        self.request_sfx(rogue_sfx.SFX_ERROR)
         self.msg("pack.item_is_not_a_valid_item", item=ch)
     def invalid_picky_inventory_letter(self, ch):
+        self.request_sfx(rogue_sfx.SFX_ERROR)
         self.msg("pack.item_not_in_pack", item=ch)
     def cancel_item_prompt(self):
         # Rogue 5.4.4 pack.c:get_item() ESC aborts the command with after=FALSE.
@@ -7747,6 +7791,8 @@ class Game:
 
     # ---------- Update ----------
     def update(self):
+        if hasattr(self, "sfx"):
+            self.sfx.update()
         if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NYANDOR_BRIEF, ST_NYANDOR_GUIDE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()
@@ -8014,11 +8060,13 @@ class Game:
         if dx:
             self.mcur=pad_menu_move(self.mcur,dx,0,MENU_ACTIONS)
             self.menu_cursor_restored=False
+            self.request_sfx(rogue_sfx.SFX_SELECT_LOW)
             return
         dy=self.menu_vertical_press()
         if dy:
             self.mcur=pad_menu_move(self.mcur,0,dy,MENU_ACTIONS)
             self.menu_cursor_restored=False
+            self.request_sfx(rogue_sfx.SFX_SELECT_LOW)
             return
         if self.btn_a(): self.menu_select(); return
         if self.btn_overlay_cancel(): self.close_menu(); return
@@ -8037,9 +8085,9 @@ class Game:
             return
         dx=self.menu_horizontal_press()
         if dx and self.fitems:
-            self.icur=pack_grid_move(self.icur,dx,0,len(self.fitems), self.pack_grid_max_rows(self.fitems)); self.item_cursor_restored=False; return
+            self.icur=pack_grid_move(self.icur,dx,0,len(self.fitems), self.pack_grid_max_rows(self.fitems)); self.item_cursor_restored=False; self.request_sfx(rogue_sfx.SFX_SELECT_LOW); return
         dy=self.menu_vertical_press()
-        if dy and self.fitems: self.icur=pack_grid_move(self.icur,0,dy,len(self.fitems), self.pack_grid_max_rows(self.fitems)); self.item_cursor_restored=False; return
+        if dy and self.fitems: self.icur=pack_grid_move(self.icur,0,dy,len(self.fitems), self.pack_grid_max_rows(self.fitems)); self.item_cursor_restored=False; self.request_sfx(rogue_sfx.SFX_SELECT_LOW); return
         if self.btn_a(): self.item_confirm(); return
         if self.btn_overlay_cancel():
             self.cancel_item_prompt()
@@ -8256,9 +8304,11 @@ class Game:
         dy = self.menu_vertical_press()
         if dy and getattr(self, "settings_focus", "row") == "row":
             self.settings_cursor = (getattr(self, "settings_cursor", 0) + dy) % len(self.settings_rows())
+            self.request_sfx(rogue_sfx.SFX_SELECT_LOW)
             return
         dx = self.menu_horizontal_press()
         if dx and getattr(self, "settings_focus", "row") == "value":
+            self.request_sfx(rogue_sfx.SFX_SELECT_HIGH)
             self.change_setting(dx)
             return
         self.upd_info_common(allow_horizontal=getattr(self, "settings_focus", "row") == "row")

@@ -60,6 +60,9 @@ def install_pyxel_mock():
     pyxel.stop_calls = []
     pyxel.play = lambda *a, **kw: pyxel.play_calls.append((a, kw))
     pyxel.stop = lambda *a, **kw: pyxel.stop_calls.append((a, kw))
+    pyxel.play_pos = lambda ch: None
+    pyxel.load_calls = []
+    pyxel.load = lambda *a, **kw: pyxel.load_calls.append((a, kw))
     pyxel.__file__ = os.path.join(os.getcwd(), "pyxel", "__init__.py")
     for i, key in enumerate([
         "KEY_NONE", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
@@ -100,12 +103,19 @@ def install_pyxel_mock():
         def __init__(self):
             self.mml_calls = []
             self.set_calls = []
+            self.notes = ""
+            self.tones = ""
+            self.volumes = ""
+            self.effects = ""
+            self.speed = 0
 
         def mml(self, code=None):
             self.mml_calls.append(code)
 
         def set(self, *args):
             self.set_calls.append(args)
+            if len(args) == 5:
+                self.notes, self.tones, self.volumes, self.effects, self.speed = args
 
     pyxel.sounds = [MockSound() for _ in range(64)]
 
@@ -415,6 +425,79 @@ class TestDungeonBgm(unittest.TestCase):
             ((3, 7), {"loop": True}),
         ])
 
+    def test_dungeon_bgm_controller_leaves_ch3_untouched_while_sfx_active(self):
+        from pyxel_rogue import rogue_bgm
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [
+                    ["c", "s", "7", "n", 1],
+                    ["d", "s", "7", "n", 1],
+                    ["e", "s", "7", "n", 1],
+                    ["f", "s", "7", "n", 1],
+                ]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        pyxel = sys.modules["pyxel"]
+        pyxel.play_calls.clear()
+        pyxel.stop_calls.clear()
+        for sound in pyxel.sounds:
+            sound.set_calls.clear()
+        controller = rogue_bgm.DungeonBgmController(
+            pyxel,
+            generator_factory=FakeGenerator,
+            seed=123,
+            sfx_active=lambda: True,
+        )
+
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+
+        self.assertEqual([call for call in pyxel.stop_calls if call[0] == (3,)], [])
+        self.assertEqual([call for call in pyxel.play_calls if call[0][0] == 3], [])
+        self.assertEqual(pyxel.sounds[7].set_calls, [])
+
+    def test_dungeon_bgm_controller_resumes_ch3_to_current_key_after_sfx(self):
+        from pyxel_rogue import rogue_bgm
+
+        class FakeGenerator:
+            def __init__(self, rng):
+                self.parm = {}
+                self.music = [
+                    ["c", "s", "7", "n", 1],
+                    ["d", "s", "7", "n", 1],
+                    ["e", "s", "7", "n", 1],
+                    ["f", "s", "7", "n", 1],
+                ]
+
+            def set_parm(self, params):
+                self.parm.update(params)
+
+            def generate_music(self):
+                pass
+
+        pyxel = sys.modules["pyxel"]
+        pyxel.play_calls.clear()
+        active = True
+        controller = rogue_bgm.DungeonBgmController(
+            pyxel,
+            generator_factory=FakeGenerator,
+            seed=123,
+            sfx_active=lambda: active,
+        )
+        controller.play_exploration(depth=1, hp=12, max_hp=12, hunger_state="normal", enabled=True)
+        pyxel.play_calls.clear()
+        active = False
+
+        controller.resume_ch(3)
+
+        self.assertEqual(pyxel.play_calls, [((3, 7), {"loop": True})])
+
     def test_dungeon_bgm_controller_result_uses_speed_360(self):
         from pyxel_rogue import rogue_bgm
 
@@ -500,9 +583,10 @@ class TestDungeonBgm(unittest.TestCase):
         calls = []
 
         class FakeController:
-            def __init__(self, pyxel_module, seed=None):
+            def __init__(self, pyxel_module, seed=None, sfx_active=None):
                 self.pyxel_module = pyxel_module
                 self.seed = seed
+                self.sfx_active = sfx_active
 
             def play_exploration(self, **kwargs):
                 calls.append(("explore", kwargs))
@@ -528,11 +612,47 @@ class TestDungeonBgm(unittest.TestCase):
         self.assertEqual(calls[0][1]["depth"], 1)
         self.assertTrue(calls[0][1]["enabled"])
 
+    def test_new_game_wires_sfx_to_dungeon_bgm(self):
+        created = []
+
+        class FakeController:
+            def __init__(self, pyxel_module, seed=None, sfx_active=None):
+                self.pyxel_module = pyxel_module
+                self.seed = seed
+                self.sfx_active = sfx_active
+                created.append(self)
+
+            def play_exploration(self, **kwargs):
+                pass
+
+            def play_result(self, enabled=True):
+                pass
+
+            def stop(self):
+                pass
+
+            def resume_ch(self, ch):
+                pass
+
+        old = getattr(rogue, "DungeonBgmController", None)
+        rogue.DungeonBgmController = FakeController
+        try:
+            game = new_game(seed=7104)
+        finally:
+            if old is None:
+                delattr(rogue, "DungeonBgmController")
+            else:
+                rogue.DungeonBgmController = old
+
+        self.assertIs(game.sfx.bgm, created[-1])
+        self.assertIs(created[-1].sfx_active.__self__, game.sfx)
+        self.assertIs(created[-1].sfx_active.__func__, game.sfx.is_active.__func__)
+
     def test_dungeon_bgm_off_stops_dungeon_bgm_without_affecting_title_bgm(self):
         calls = []
 
         class FakeController:
-            def __init__(self, pyxel_module, seed=None):
+            def __init__(self, pyxel_module, seed=None, sfx_active=None):
                 pass
 
             def play_exploration(self, **kwargs):
@@ -566,7 +686,7 @@ class TestDungeonBgm(unittest.TestCase):
         calls = []
 
         class FakeController:
-            def __init__(self, pyxel_module, seed=None):
+            def __init__(self, pyxel_module, seed=None, sfx_active=None):
                 pass
 
             def play_exploration(self, **kwargs):
