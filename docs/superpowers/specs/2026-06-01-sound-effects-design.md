@@ -88,7 +88,7 @@ If later we want layered SFX, add a second SE channel after verifying BGM qualit
 | `SFX_SELECT_LOW` | 4 | SE04 | Menu cursor move |
 | `SFX_SELECT_HIGH` | 5 | SE05 | Menu confirm |
 | `SFX_PICKUP` | 6 | SE06 | Item / gold pickup |
-| `SFX_ERROR` | 7 | SE07 | Invalid action / cursed item / bad yellow warning |
+| `SFX_ERROR` | 7 | SE07 | Invalid action / cursed item / light bad yellow warning |
 | `SFX_STAIRS` | 8 | SE08 | Stairs |
 | `SFX_WARP` | 10 | SE10 | Teleport |
 | `SFX_TRAP` | 12 | SE12 | Trap |
@@ -112,6 +112,7 @@ If later we want layered SFX, add a second SE channel after verifying BGM qualit
 | `SFX_DEATH_ECHO_1` | 34 | SE18 copy | Death echo, about 65% volume |
 | `SFX_DEATH_ECHO_2` | 35 | SE18 copy | Death echo, about 35% volume |
 | `SFX_HIT_MISS` | 36 | custom | Attack / throw miss, short "churun" phrase |
+| `SFX_ALARM` | 37 | SE13 first 24 steps | Heavy bad yellow warning |
 
 ## Integration Scope
 
@@ -126,8 +127,9 @@ Initial call sites:
 | Result | death | `DEATH_SFX_SEQUENCE` = SE18 + 65% echo + 35% echo |
 | Exploration | stairs | `SFX_STAIRS` |
 | Exploration | secret door found | `SFX_SECRET_DOOR` = SE32 |
-| Exploration | harmful trap / teleport | `SFX_ERROR` / `SFX_WARP` |
-| Status | hunger warning / strength loss / armor weaken | `SFX_ERROR` |
+| Exploration | harmful trap / teleport | `SFX_ALARM` / `SFX_WARP` |
+| Status | hunger warning | `SFX_ERROR` |
+| Status | strength loss / poison / armor weaken | `SFX_ALARM` |
 | Exploration | pickup | `SFX_PICKUP` = SE06 |
 | Items | potion / scroll | `SFX_SPELL_USE` |
 | Items | healing potion | `SFX_HEAL_SMALL` |

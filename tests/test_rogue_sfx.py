@@ -169,6 +169,8 @@ class TestSfxController(unittest.TestCase):
         self.assertEqual(rogue_sfx.DEATH_SFX_SEQUENCE, (18, 34, 35))
         self.assertEqual(rogue_sfx.SFX_THROW, 19)
         self.assertEqual(rogue_sfx.SFX_THROW_HIT, 20)
+        self.assertEqual(rogue_sfx.SFX_ALARM_SOURCE, 13)
+        self.assertEqual(rogue_sfx.SFX_ALARM, 37)
 
     def test_miss_sound_uses_short_present_churun_phrase(self):
         from pyxel_rogue.rogue_sfx import build_miss_sound
@@ -195,6 +197,21 @@ class TestSfxController(unittest.TestCase):
 
         self.assertEqual(px.sounds[34].set_calls, [("cde", "nnn", "543", "fff", 4)])
         self.assertEqual(px.sounds[35].set_calls, [("cde", "nnn", "222", "fff", 4)])
+
+    def test_alarm_sound_uses_first_24_steps_of_se13(self):
+        from pyxel_rogue.rogue_sfx import build_alarm_sound
+
+        px = FakePyxel()
+        px.sounds[13] = FakeSound(list(range(30)), [2] * 30, [7] * 30, [1] * 30, 2)
+        px.sounds[37] = FakeSound([], [], [], [], 0)
+
+        build_alarm_sound(px)
+
+        self.assertEqual(px.sounds[37].notes, list(range(24)))
+        self.assertEqual(px.sounds[37].tones, [2] * 24)
+        self.assertEqual(px.sounds[37].volumes, [7] * 24)
+        self.assertEqual(px.sounds[37].effects, [1] * 24)
+        self.assertEqual(px.sounds[37].speed, 2)
 
     def test_copy_sound_uses_pyxel_set_api(self):
         from pyxel_rogue.rogue_sfx import copy_sound
@@ -250,6 +267,7 @@ class TestRogueSfxCallSites(unittest.TestCase):
             "self.request_sfx(rogue_sfx.SFX_SECRET_DOOR)",
             "self.play_death_sfx()",
             "self.msg_bad(",
+            "self.msg_alarm(",
             "self.request_sfx(rogue_sfx.SFX_SPELL_USE)",
             "self.request_sfx(rogue_sfx.SFX_HEAL_SMALL)",
             "self.request_sfx(rogue_sfx.SFX_WAND_ZAP)",

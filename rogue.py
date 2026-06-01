@@ -292,7 +292,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260601_1522"
+UI_BUILD = "260601_1528"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -3182,6 +3182,10 @@ class Game:
         self.request_sfx(rogue_sfx.SFX_ERROR)
         self.msg_important(t, **kw)
 
+    def msg_alarm(self,t,**kw):
+        self.request_sfx(rogue_sfx.SFX_ALARM)
+        self.msg_important(t, **kw)
+
     def combat_monster_name(self,m,upper=False, article_for_something=False):
         def random_monster_name():
             spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
@@ -3584,7 +3588,7 @@ class Game:
                     )
                     poison_msg = rogue_fight.poison_bite_message_key(poison_result, terse=False)
                     if poison_msg:
-                        self.msg_bad(poison_msg)
+                        self.msg_alarm(poison_msg)
                 if rogue_monsters.has_special(m, "drain_level") and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,
@@ -3598,7 +3602,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg_bad("fight.you_suddenly_feel_weaker")
+                    self.msg_alarm("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "drain") and rogue_fight.drain_hits("V", rnd):
                     self.p.hp, self.p.max_hp, died = rogue_fight.max_hp_drain(
                         self.p.hp, self.p.max_hp, lambda: roll("1d3")
@@ -3607,7 +3611,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg_bad("fight.you_suddenly_feel_weaker")
+                    self.msg_alarm("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "freeze"):
                     self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
                         self.p.no_command, BORE_LEVEL, rnd
@@ -3872,7 +3876,7 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg_bad("potions.you_feel_very_sick_now")
+                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg_alarm("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st,p.max_st=rogue_potions.gain_strength(p.st,p.max_st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
@@ -5116,25 +5120,25 @@ class Game:
     def trigger_trap(self, x, y, arrow_origin=None):
         # C: move.c:be_trapped()
         self.reveal_trap_at(x,y)
-        self.request_sfx(rogue_sfx.SFX_ERROR)
+        self.request_sfx(rogue_sfx.SFX_ALARM)
         kind=self.traps.get((x,y),0)
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
         self.clear_running_count()
         if name=="trap door":
-            self.msg_bad("move.you_fell_into_a_trap")
+            self.msg_alarm("move.you_fell_into_a_trap")
             self.descend(play_stairs_sfx=False)
         elif name=="bear trap":
             self.p.no_move=rogue_move.bear_trap_no_move(self.p.no_move, BEARTIME)
-            self.msg_bad("move.you_are_caught_in_a_bear_trap")
+            self.msg_alarm("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
             self.p.no_command=rogue_move.sleep_trap_no_command(self.p.no_command, SLEEPTIME)
-            self.msg_bad("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
+            self.msg_alarm("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):
                 self.p.hp-=roll("1d6")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="an arrow killed you"
-                    self.msg_bad("move.an_arrow_killed_you")
+                    self.msg_alarm("move.an_arrow_killed_you")
                     self.clamp_player_hp()
                 else:
                     self.msg("move.oh_no_an_arrow_shot_you")
@@ -5148,7 +5152,7 @@ class Game:
                 self.p.hp-=roll("1d4")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="a poisoned dart killed you"
-                    self.msg_bad("move.a_poisoned_dart_killed_you")
+                    self.msg_alarm("move.a_poisoned_dart_killed_you")
                     self.clamp_player_hp()
                     return
                 poison_saved = self.save_vs_poison()
@@ -5160,7 +5164,7 @@ class Game:
                 if poison_saved or rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR):
                     self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
                 else:
-                    self.msg_bad("move.a_small_dart_just_hit_you_in_the_shoulder")
+                    self.msg_alarm("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
                 self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")
         elif name=="rust trap":
@@ -5180,14 +5184,14 @@ class Game:
         )
         if result == "vanish":
             if important:
-                self.msg_bad("move.the_rust_vanishes_instantly")
+                self.msg_alarm("move.the_rust_vanishes_instantly")
             else:
                 self.msg("move.the_rust_vanishes_instantly")
             return
         arm.ench-=1
         self.p.recalc_ac()
         if important:
-            self.msg_bad("move.your_armor_weakens")
+            self.msg_alarm("move.your_armor_weakens")
         else:
             self.msg("move.your_armor_weakens")
 

@@ -14,6 +14,7 @@ SFX_ERROR = 7
 SFX_STAIRS = 8
 SFX_WARP = 10
 SFX_TRAP = 12
+SFX_ALARM_SOURCE = 13
 SFX_HIT_1 = 14
 SFX_HIT_2 = 15
 SFX_HIT_3 = 16
@@ -35,6 +36,7 @@ SFX_HEAL_LARGE = 33
 SFX_DEATH_ECHO_1 = 34
 SFX_DEATH_ECHO_2 = 35
 SFX_HIT_MISS = 36
+SFX_ALARM = 37
 
 HIT_SFX = (SFX_HIT_1, SFX_HIT_3, SFX_HIT_4)
 DEATH_SFX_SEQUENCE = (SFX_DEATH, SFX_DEATH_ECHO_1, SFX_DEATH_ECHO_2)
@@ -42,6 +44,7 @@ DEATH_SFX_SEQUENCE = (SFX_DEATH, SFX_DEATH_ECHO_1, SFX_DEATH_ECHO_2)
 SFX_PRIORITY = {
     SFX_HEAL_LARGE: 90,
     SFX_HEAL_SMALL: 90,
+    SFX_ALARM: 85,
     SFX_TRAP: 80,
     SFX_WARP: 80,
     SFX_EXPLODE: 80,
@@ -164,12 +167,31 @@ def build_miss_sound(pyxel_module) -> None:
     dst.speed = 1
 
 
+def build_alarm_sound(pyxel_module) -> None:
+    src = pyxel_module.sounds[SFX_ALARM_SOURCE]
+    dst = pyxel_module.sounds[SFX_ALARM]
+    notes = _first_steps(_sound_field(src, "notes"), 24)
+    tones = _first_steps(_sound_field(src, "tones"), 24)
+    volumes = _first_steps(_sound_field(src, "volumes"), 24)
+    effects = _first_steps(_sound_field(src, "effects"), 24)
+    speed = _sound_field(src, "speed")
+    if isinstance(notes, str):
+        dst.set(notes, tones, volumes, effects, speed)
+        return
+    dst.notes[:] = list(notes)
+    dst.tones[:] = list(tones)
+    dst.volumes[:] = list(volumes)
+    dst.effects[:] = list(effects)
+    dst.speed = speed
+
+
 def load_se_pack(pyxel_module, path: str) -> bool:
     if not os.path.exists(path):
         return False
     pyxel_module.load(path, exclude_images=True, exclude_tilemaps=True, exclude_musics=True)
     build_death_echo_sounds(pyxel_module)
     build_miss_sound(pyxel_module)
+    build_alarm_sound(pyxel_module)
     return True
 
 

@@ -7070,7 +7070,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.ident.pk[poison])
         self.assertIn("you feel very sick now", game.msgs)
         self.assertNotIn("You feel sick. (Str -2)", game.msgs)
-        self.assertIn(rogue.rogue_sfx.SFX_ERROR, requested)
+        self.assertIn(rogue.rogue_sfx.SFX_ALARM, requested)
 
     def test_rogue_544_poison_potion_strength_loss_uses_rnd_3_plus_one(self):
         # Rogue 5.4.4 potions.c:P_POISON calls chg_str(-(rnd(3) + 1)).
@@ -23647,7 +23647,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertGreater(game.p.no_command, 0)
         self.assertTrue(game.message_ack_pending)
 
-    def test_trap_door_uses_error_sfx_not_stairs_sfx(self):
+    def test_trap_door_uses_alarm_sfx_not_stairs_sfx(self):
         game = new_game(seed=612)
         set_open_floor(game)
         x, y = game.p.x + 1, game.p.y
@@ -23660,7 +23660,7 @@ class RogueBaselineTest(unittest.TestCase):
 
         game.trigger_trap(x, y)
 
-        self.assertIn(rogue.rogue_sfx.SFX_ERROR, requested)
+        self.assertIn(rogue.rogue_sfx.SFX_ALARM, requested)
         self.assertNotIn(rogue.rogue_sfx.SFX_STAIRS, [slot for slot, _ in immediate])
 
     def test_rogue_544_bear_trap_adds_bear_time(self):
