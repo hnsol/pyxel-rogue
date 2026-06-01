@@ -10844,6 +10844,37 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertNotIn((10, 9), game.visible)
         self.assertNotIn((11, 9), game.visible)
 
+    def test_rogue_544_maze_stairs_keep_passage_visibility(self):
+        # Rogue 5.4.4 new_level.c:new_level() changes p_ch to STAIRS without
+        # clearing rooms.c:do_maze()/passages.c F_PASS.
+        game = new_game(seed=142)
+        maze = rogue.Room(25, 17, 24, 6, flags={rogue.ROOM_MAZE})
+        game.rooms = [maze]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 31, 20
+        game.tm[20][31] = rogue.T_CORR
+        game.tm[20][32] = rogue.T_STAIR
+
+        game.update_fov()
+
+        self.assertTrue(game.tile_has_pass_flag(32, 20))
+        self.assertIn((32, 20), game.visible)
+        self.assertIn((32, 20), game.explored)
+
+    def test_rogue_544_room_stairs_do_not_gain_passage_visibility(self):
+        game = new_game(seed=143)
+        room = rogue.Room(25, 17, 24, 6, flags={rogue.ROOM_DARK})
+        game.rooms = [room]
+        game.tm = [[rogue.T_VOID for _ in range(rogue.MAP_W)] for _ in range(rogue.MAP_H)]
+        game.p.x, game.p.y = 31, 20
+        game.tm[20][31] = rogue.T_CORR
+        game.tm[20][32] = rogue.T_STAIR
+
+        game.update_fov()
+
+        self.assertFalse(game.tile_has_pass_flag(32, 20))
+        self.assertNotIn((32, 20), game.visible)
+
     def test_rogue544_lit_room_does_not_reveal_corridor_beyond_far_door(self):
         # Rogue 5.4.4 rooms.c:enter_room() lights only the room's own cells.
         # Corridor tiles beyond a door become visible only when the player is

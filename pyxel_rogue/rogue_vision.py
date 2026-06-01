@@ -12,13 +12,17 @@ def look_cell_visible(
     dy: int,
     side_y_tile: int,
     side_x_tile: int,
+    hero_pass: bool | None = None,
+    target_pass: bool | None = None,
 ) -> bool:
     """Return whether misc.c:look() would consider a nearby terrain cell."""
     if target_tile == T_VOID:
         return False
-    if hero_tile != T_DOOR and target_tile != T_DOOR and _f_pass(hero_tile) != _f_pass(target_tile):
+    hero_is_pass = _f_pass(hero_tile) if hero_pass is None else hero_pass
+    target_is_pass = _f_pass(target_tile) if target_pass is None else target_pass
+    if hero_tile != T_DOOR and target_tile != T_DOOR and hero_is_pass != target_is_pass:
         return False
-    if (_f_pass(target_tile) or target_tile == T_DOOR) and (_f_pass(hero_tile) or hero_tile == T_DOOR):
+    if (target_is_pass or target_tile == T_DOOR) and (hero_is_pass or hero_tile == T_DOOR):
         if dx != 0 and dy != 0 and not _step_ok(side_y_tile) and not _step_ok(side_x_tile):
             return False
     return True

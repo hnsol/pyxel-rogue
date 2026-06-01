@@ -292,7 +292,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260601_1528"
+UI_BUILD = "260601_1754"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -3005,6 +3005,13 @@ class Game:
     def walkable(self,x,y):
         # C: move.c:turn_ok()
         return in_play_area(x,y) and self.tm[y][x] in WALKABLE
+    def tile_has_pass_flag(self,x,y):
+        # Rogue 5.4.4 stores terrain char and F_PASS separately; stairs in maze
+        # cells keep F_PASS after chat(stairs)=STAIRS in new_level.c:new_level().
+        if not in_play_area(x,y):
+            return False
+        tile = self.tm[y][x]
+        return tile == T_CORR or (tile == T_STAIR and getattr(self.room_at(x,y), "is_maze", False))
     def diag_ok(self,sx,sy,ex,ey):
         # C: chase.c:diag_ok()
         return (
@@ -3284,6 +3291,8 @@ class Game:
                     dy,
                     self.tm[ny][px],
                     self.tm[py][nx],
+                    self.tile_has_pass_flag(px, py),
+                    self.tile_has_pass_flag(nx, ny),
                 ):
                     self.visible.add((nx,ny))
         self.explored |= self.visible
@@ -5787,6 +5796,8 @@ class Game:
                     oy,
                     self.tm[y][px],
                     self.tm[py][x],
+                    self.tile_has_pass_flag(px, py),
+                    self.tile_has_pass_flag(x, y),
                 ):
                     continue
                 if (x,y) in self.visible and (self.gi_at(x,y) or self.mon_at(x,y)):
