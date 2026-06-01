@@ -417,12 +417,12 @@ class TestDungeonBgm(unittest.TestCase):
         self.assertEqual(pyxel.sounds[0].set_calls, [])
         self.assertEqual(pyxel.sounds[1].set_calls, [])
         self.assertEqual(pyxel.sounds[2].set_calls, [])
-        self.assertEqual(pyxel.sounds[4].set_calls, [("c", "s", "7", "n", 1)])
+        self.assertEqual(pyxel.sounds[40].set_calls, [("c", "s", "7", "n", 1)])
         self.assertEqual(pyxel.play_calls[:4], [
-            ((0, 4), {"loop": True}),
-            ((1, 5), {"loop": True}),
-            ((2, 6), {"loop": True}),
-            ((3, 7), {"loop": True}),
+            ((0, 40), {"loop": True}),
+            ((1, 41), {"loop": True}),
+            ((2, 42), {"loop": True}),
+            ((3, 43), {"loop": True}),
         ])
 
     def test_dungeon_bgm_controller_leaves_ch3_untouched_while_sfx_active(self):
@@ -460,7 +460,7 @@ class TestDungeonBgm(unittest.TestCase):
 
         self.assertEqual([call for call in pyxel.stop_calls if call[0] == (3,)], [])
         self.assertEqual([call for call in pyxel.play_calls if call[0][0] == 3], [])
-        self.assertEqual(pyxel.sounds[7].set_calls, [])
+        self.assertEqual(pyxel.sounds[43].set_calls, [])
 
     def test_dungeon_bgm_controller_resumes_ch3_to_current_key_after_sfx(self):
         from pyxel_rogue import rogue_bgm
@@ -496,7 +496,7 @@ class TestDungeonBgm(unittest.TestCase):
 
         controller.resume_ch(3)
 
-        self.assertEqual(pyxel.play_calls, [((3, 7), {"loop": True})])
+        self.assertEqual(pyxel.play_calls, [((3, 43), {"loop": True})])
 
     def test_dungeon_bgm_controller_result_uses_speed_360(self):
         from pyxel_rogue import rogue_bgm
@@ -545,8 +545,8 @@ class TestDungeonBgm(unittest.TestCase):
         controller.play_result(enabled=True)
 
         self.assertEqual(pyxel.play_calls, [
-            ((0, 4), {"loop": True}),
-            ((0, 4), {"loop": True}),
+            ((0, 40), {"loop": True}),
+            ((0, 40), {"loop": True}),
         ])
 
     def test_dungeon_bgm_controller_does_not_consume_game_random(self):
@@ -711,6 +711,51 @@ class TestDungeonBgm(unittest.TestCase):
                 rogue.DungeonBgmController = old
 
         self.assertEqual(calls, [("result", True)])
+
+    def test_death_result_state_starts_result_bgm_after_death_sfx(self):
+        calls = []
+
+        class FakeController:
+            def __init__(self, pyxel_module, seed=None, sfx_active=None):
+                pass
+
+            def play_exploration(self, **kwargs):
+                calls.append(("explore", kwargs))
+
+            def play_result(self, enabled=True):
+                calls.append(("result", enabled))
+
+            def stop(self):
+                calls.append(("stop", None))
+
+        old = getattr(rogue, "DungeonBgmController", None)
+        rogue.DungeonBgmController = FakeController
+        try:
+            game = new_game(seed=7105)
+            class FakeSfx:
+                def __init__(self):
+                    self.active = True
+
+                def play_death(self):
+                    calls.append(("death", None))
+
+                def is_active(self):
+                    return self.active
+
+            game.sfx = FakeSfx()
+            calls.clear()
+            game.enter_result_state("killed")
+            game.update_death_result_bgm()
+            game.sfx.active = False
+            game.update_death_result_bgm()
+        finally:
+            if old is None:
+                delattr(rogue, "DungeonBgmController")
+            else:
+                rogue.DungeonBgmController = old
+
+        self.assertEqual(game.st, rogue.ST_DEAD)
+        self.assertEqual(calls, [("death", None), ("result", True)])
 
 
 class TestDifficultyProfiles(unittest.TestCase):
@@ -7011,6 +7056,8 @@ class RogueBaselineTest(unittest.TestCase):
         potion = rogue.Item(rogue.CAT_POT, poison)
         game.p.inv.append(potion)
         game.p.st = 10
+        requested = []
+        game.request_sfx = lambda slot: requested.append(slot)
 
         old_rnd = rogue.RNG.rnd
         try:
@@ -7023,6 +7070,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertTrue(game.ident.pk[poison])
         self.assertIn("you feel very sick now", game.msgs)
         self.assertNotIn("You feel sick. (Str -2)", game.msgs)
+        self.assertIn(rogue.rogue_sfx.SFX_ERROR, requested)
 
     def test_rogue_544_poison_potion_strength_loss_uses_rnd_3_plus_one(self):
         # Rogue 5.4.4 potions.c:P_POISON calls chg_str(-(rnd(3) + 1)).
@@ -11702,11 +11750,14 @@ class RogueBaselineTest(unittest.TestCase):
 
     def test_baseline_hunger_heal_and_pickup(self):
         game = new_game(seed=31)
+        requested = []
+        game.request_sfx = lambda slot: requested.append(slot)
         game.p.food = rogue.MORETIME * 2
         game.end_turn()
         self.assertEqual(game.p.state, "hungry")
         self.assertIn("you feel hungry", game.msgs)
         self.assertTrue(game.message_ack_pending)
+        self.assertIn(rogue.rogue_sfx.SFX_ERROR, requested)
 
         game.p.hp = 10
         game.p.quiet = 19
@@ -16039,6 +16090,43 @@ class RogueBaselineTest(unittest.TestCase):
             [(e["player_name"], e["score"]) for e in game.online_score_cache[rogue.SCOREBOARD_PERIOD_SEASON]],
             [("SUN", 500), ("ACE", 450)],
         )
+
+    def test_enter_online_scoreboard_stops_title_and_dungeon_bgm(self):
+        game = rogue.Game.__new__(rogue.Game)
+        game.settings = rogue.Settings()
+        game.st = rogue.ST_TITLE
+        game.lang = rogue.LANG_EN
+        game.player_name = "ace"
+        game.online_profile = {"user_name": "ace", "local_only": True, "profile_exists": True}
+        game.online_score_cache = {}
+        game.online_score_loaded = set()
+        game.online_rank_cache = {}
+        game.title_bgm_started = True
+        dungeon_stops = []
+
+        class FakeDungeonBgm:
+            def stop(self):
+                dungeon_stops.append("stop")
+
+        game.dungeon_bgm = FakeDungeonBgm()
+        old_load_scores = rogue.load_score_entries
+        old_load_cache = getattr(rogue, "load_online_score_cache", None)
+        rogue.pyxel.stop_calls.clear()
+        try:
+            rogue.load_score_entries = lambda: []
+            rogue.load_online_score_cache = lambda period, key, **kwargs: []
+
+            game.enter_online_scoreboard(auto_sync=False)
+        finally:
+            rogue.load_score_entries = old_load_scores
+            if old_load_cache is None:
+                delattr(rogue, "load_online_score_cache")
+            else:
+                rogue.load_online_score_cache = old_load_cache
+
+        self.assertEqual(rogue.pyxel.stop_calls, [((0,), {}), ((1,), {}), ((2,), {})])
+        self.assertFalse(game.title_bgm_started)
+        self.assertEqual(dungeon_stops, ["stop"])
 
     def test_enter_normal_online_scoreboard_keeps_nyandor_local_scores_out_of_cached_online_rows(self):
         game = rogue.Game.__new__(rogue.Game)
@@ -23402,6 +23490,8 @@ class RogueBaselineTest(unittest.TestCase):
         game.tm[py + 1][px] = rogue.T_VOID
         game.traps[(px - 1, py)] = 1
         game.tm[py][px - 1] = rogue.T_FLOOR
+        sfx_calls = []
+        game.request_sfx = lambda slot: sfx_calls.append(slot)
         old_randrange = rogue.random.randrange
         try:
             rogue.random.randrange = lambda n: 0
@@ -23416,6 +23506,7 @@ class RogueBaselineTest(unittest.TestCase):
         self.assertIn("a secret door", game.msgs)
         self.assertTrue(any("arrow trap" in msg for msg in game.msgs))
         self.assertNotIn("You found something!", game.msgs)
+        self.assertEqual(sfx_calls.count(rogue.rogue_sfx.SFX_SECRET_DOOR), 1)
 
     def test_search_failure_keeps_hidden_features_hidden(self):
         game = new_game(seed=58)
@@ -23555,6 +23646,22 @@ class RogueBaselineTest(unittest.TestCase):
 
         self.assertGreater(game.p.no_command, 0)
         self.assertTrue(game.message_ack_pending)
+
+    def test_trap_door_uses_error_sfx_not_stairs_sfx(self):
+        game = new_game(seed=612)
+        set_open_floor(game)
+        x, y = game.p.x + 1, game.p.y
+        kind = next(i for i, t in enumerate(rogue.TRAPS) if t["name"] == "trap door")
+        game.traps[(x, y)] = kind
+        requested = []
+        immediate = []
+        game.request_sfx = lambda slot: requested.append(slot)
+        game.play_sfx_immediate = lambda slot, **kwargs: immediate.append((slot, kwargs))
+
+        game.trigger_trap(x, y)
+
+        self.assertIn(rogue.rogue_sfx.SFX_ERROR, requested)
+        self.assertNotIn(rogue.rogue_sfx.SFX_STAIRS, [slot for slot, _ in immediate])
 
     def test_rogue_544_bear_trap_adds_bear_time(self):
         # Rogue 5.4.4 move.c:be_trapped() T_BEAR uses no_move += BEARTIME.

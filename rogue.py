@@ -292,7 +292,7 @@ from pyxel_rogue.rogue_ui import (
 )
 
 RNG = RogueRng(random)
-UI_BUILD = "260601_1134"
+UI_BUILD = "260601_1522"
 VARIANT_ROGUE = rogue_variant.VARIANT_ROGUE
 VARIANT_NYANDOR = rogue_variant.VARIANT_NYANDOR
 NYANDOR_TARGET_DEPTH = rogue_variant.NYANDOR_TARGET_DEPTH
@@ -1384,6 +1384,30 @@ class Game:
         if hasattr(self, "sfx"):
             self.sfx.request(slot)
 
+    def request_hit_sfx(self):
+        if hasattr(self, "sfx"):
+            self.sfx.request_random_hit()
+
+    def play_sfx_immediate(self, slot, *, stop_bgm=False):
+        if hasattr(self, "sfx"):
+            self.sfx.play_immediate(slot, stop_bgm=stop_bgm)
+
+    def play_death_sfx(self):
+        if hasattr(self, "sfx"):
+            self.death_result_bgm_pending = True
+            self.sfx.play_death()
+            self.update_death_result_bgm()
+        elif hasattr(self, "dungeon_bgm"):
+            self.play_result_bgm()
+
+    def update_death_result_bgm(self):
+        if not getattr(self, "death_result_bgm_pending", False):
+            return
+        if hasattr(self, "sfx") and self.sfx.is_active():
+            return
+        self.death_result_bgm_pending = False
+        self.play_result_bgm()
+
     def init_dungeon_bgm(self):
         if not hasattr(self, "sfx"):
             self.init_sfx()
@@ -1413,6 +1437,11 @@ class Game:
         if not hasattr(self, "dungeon_bgm"):
             return
         self.dungeon_bgm.play_result(enabled=self.dungeon_bgm_enabled())
+
+    def stop_scoreboard_bgm(self):
+        self.stop_title_bgm()
+        if hasattr(self, "dungeon_bgm"):
+            self.dungeon_bgm.stop()
 
     def load_title_background(self):
         self.title_bg = None
@@ -2397,12 +2426,14 @@ class Game:
         self.result_scores = get_top_scores(load_score_entries(), limit=10, difficulty=self.difficulty)
         if outcome == "winner":
             self.st = ST_WIN
+            self.play_result_bgm()
         elif outcome == "quit":
             self.st = ST_QUIT
+            self.play_result_bgm()
         else:
             self.capture_death_snapshot()
             self.st = ST_DEAD
-        self.play_result_bgm()
+            self.play_death_sfx()
 
     def capture_death_snapshot(self):
         self.death_frame = getattr(pyxel, "frame_count", 0)
@@ -2534,13 +2565,13 @@ class Game:
             return True
         return False
 
-    def descend(self):
+    def descend(self, *, play_stairs_sfx=True):
         # C: new_level.c:new_level() clears ISHELD before generating the level.
         self.p.held_by = None
         old_depth = self.p.depth
         self.p.depth += 1
-        if old_depth > 0:
-            self.request_sfx(rogue_sfx.SFX_STAIRS)
+        if play_stairs_sfx and old_depth > 0:
+            self.play_sfx_immediate(rogue_sfx.SFX_STAIRS, stop_bgm=True)
         self.max_depth = max(getattr(self, "max_depth", 0), self.p.depth)
         self.mons=[]; self.gitems=[]; self.traps={}; self.hidden_tiles={}
         def populate_room(tm, rooms, room):
@@ -3147,6 +3178,10 @@ class Game:
         self.msg(t, **kw)
         self.message_ack_pending = True
 
+    def msg_bad(self,t,**kw):
+        self.request_sfx(rogue_sfx.SFX_ERROR)
+        self.msg_important(t, **kw)
+
     def combat_monster_name(self,m,upper=False, article_for_something=False):
         def random_monster_name():
             spec = self.monster_spec_for_sym(chr(ord("A") + RNG.rnd(26)))
@@ -3324,7 +3359,6 @@ class Game:
         if self.p.lvlup():
             self.msg_important("misc.welcome_to_level_level", level=self.p.level)
             self.request_sfx(rogue_sfx.SFX_HEAL_LARGE)
-        self.request_sfx(rogue_sfx.SFX_KILL)
         self.remove_monster(m, was_kill=True)
         return mn
 
@@ -3340,7 +3374,7 @@ class Game:
         if hit:
             m.hp-=dmg
             self.msg_text(self.player_hit_message(mn))
-            self.request_sfx(rogue_sfx.SFX_HIT_PLAYER)
+            self.request_hit_sfx()
             self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
             if confused_by_hit:
                 m.confused=1
@@ -3520,7 +3554,7 @@ class Game:
                 self.p.hp-=dmg
             if rogue_fight.monster_attack_message_allowed(m.sym):
                 self.msg_text(self.monster_hit_message(mn))
-            self.request_sfx(rogue_sfx.SFX_HIT_MONSTER)
+            self.request_hit_sfx()
             if self.p.hp<=0:
                 if not self.death_cause:
                     self.death_cause=f"killed by a {m.name}"
@@ -3550,7 +3584,7 @@ class Game:
                     )
                     poison_msg = rogue_fight.poison_bite_message_key(poison_result, terse=False)
                     if poison_msg:
-                        self.msg_important(poison_msg)
+                        self.msg_bad(poison_msg)
                 if rogue_monsters.has_special(m, "drain_level") and rogue_fight.drain_hits("W", rnd):
                     self.p.level, self.p.exp, self.p.hp, self.p.max_hp, died = rogue_fight.wraith_drain(
                         self.p.level,
@@ -3564,7 +3598,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg_important("fight.you_suddenly_feel_weaker")
+                    self.msg_bad("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "drain") and rogue_fight.drain_hits("V", rnd):
                     self.p.hp, self.p.max_hp, died = rogue_fight.max_hp_drain(
                         self.p.hp, self.p.max_hp, lambda: roll("1d3")
@@ -3573,7 +3607,7 @@ class Game:
                         self.p.hp = 0
                         self.death_cause = f"killed by a {m.name}"
                         return
-                    self.msg_important("fight.you_suddenly_feel_weaker")
+                    self.msg_bad("fight.you_suddenly_feel_weaker")
                 if rogue_monsters.has_special(m, "freeze"):
                     self.p.no_command, should_message, hypothermia = rogue_fight.ice_freeze(
                         self.p.no_command, BORE_LEVEL, rnd
@@ -3602,6 +3636,7 @@ class Game:
                     self.clamp_player_hp()
             if rogue_fight.monster_attack_message_allowed(m.sym):
                 self.msg_text(self.monster_miss_message(mn))
+            self.request_sfx(rogue_sfx.SFX_HIT_MISS)
         return rogue_fight.attack_result(monster_removed=False)
 
     def m_turn(self,m):
@@ -3837,7 +3872,7 @@ class Game:
             if rogue_rings.is_wearing(p, rogue_rings.R_SUSTSTR):
                 self.msg("potions.you_feel_momentarily_sick")
             else:
-                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg_important("potions.you_feel_very_sick_now")
+                l=RNG.rnd(3)+1; p.st=rogue_potions.poison_strength(p.st,l); self.msg_bad("potions.you_feel_very_sick_now")
                 self.come_down()
         elif nm=="gain strength":
             self.ident.pk[it.kind]=True; p.st,p.max_st=rogue_potions.gain_strength(p.st,p.max_st); self.msg("potions.you_feel_stronger_now_what_bulging_muscles")
@@ -4862,6 +4897,7 @@ class Game:
         if not outcome:
             return
         if outcome["kind"] == "floor":
+            self.request_sfx(rogue_sfx.SFX_HIT_MISS)
             self.drop_thrown(outcome["item"], outcome["x"], outcome["y"], around=outcome["around"])
             return
         if outcome["kind"] != "monster":
@@ -4878,6 +4914,7 @@ class Game:
         if hit:
             m.hp -= dmg
             self.msg_text(self.thrown_hit_message(thrown, item, mn))
+            self.request_sfx(rogue_sfx.SFX_THROW_HIT)
             self.p.can_confuse_monster, confused_by_hit = rogue_fight.confusion_hit_effect(self.p.can_confuse_monster)
             if confused_by_hit:
                 m.confused = 1
@@ -4889,6 +4926,7 @@ class Game:
                 self.msg("fight.subject_appears_confused", subject=mn)
         else:
             self.msg_text(self.thrown_miss_message(thrown, item, mn))
+            self.request_sfx(rogue_sfx.SFX_HIT_MISS)
             self.drop_thrown(thrown, tx, ty)
 
     def throw(self,it,dx,dy):
@@ -4914,6 +4952,7 @@ class Game:
             thrown.picked_up = it.picked_up
             it.qty-=1
         else: p.rm_item(it); thrown=it
+        self.request_sfx(rogue_sfx.SFX_THROW)
         tx,ty=p.x,p.y; path=[]
         for _ in range(max(MAP_W,MAP_H)):
             nx,ny=tx+dx,ty+dy
@@ -5027,6 +5066,7 @@ class Game:
                 if hidden==T_DOOR and rogue_search.reveals_secret_door(rnd(5+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
                     if found:
+                        self.request_sfx(rogue_sfx.SFX_SECRET_DOOR)
                         self.msg("command.a_secret_door")
                 elif hidden==T_CORR and rogue_search.reveals_secret_passage(rnd(3+probinc), probinc):
                     found = self.reveal_hidden_at(nx,ny) or found
@@ -5076,25 +5116,25 @@ class Game:
     def trigger_trap(self, x, y, arrow_origin=None):
         # C: move.c:be_trapped()
         self.reveal_trap_at(x,y)
-        self.request_sfx(rogue_sfx.SFX_TRAP)
+        self.request_sfx(rogue_sfx.SFX_ERROR)
         kind=self.traps.get((x,y),0)
         name=TRAPS[kind]["name"] if 0<=kind<len(TRAPS) else ""
         self.clear_running_count()
         if name=="trap door":
-            self.msg_important("move.you_fell_into_a_trap")
-            self.descend()
+            self.msg_bad("move.you_fell_into_a_trap")
+            self.descend(play_stairs_sfx=False)
         elif name=="bear trap":
             self.p.no_move=rogue_move.bear_trap_no_move(self.p.no_move, BEARTIME)
-            self.msg_important("move.you_are_caught_in_a_bear_trap")
+            self.msg_bad("move.you_are_caught_in_a_bear_trap")
         elif name=="sleeping gas trap":
             self.p.no_command=rogue_move.sleep_trap_no_command(self.p.no_command, SLEEPTIME)
-            self.msg_important("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
+            self.msg_bad("move.a_strange_white_mist_envelops_you_and_you_fall_asleep")
         elif name=="arrow trap":
             if self.trap_hits(self.p.level-1):
                 self.p.hp-=roll("1d6")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="an arrow killed you"
-                    self.msg_important("move.an_arrow_killed_you")
+                    self.msg_bad("move.an_arrow_killed_you")
                     self.clamp_player_hp()
                 else:
                     self.msg("move.oh_no_an_arrow_shot_you")
@@ -5108,7 +5148,7 @@ class Game:
                 self.p.hp-=roll("1d4")
                 if self.p.hp<=0 and not self.death_cause:
                     self.death_cause="a poisoned dart killed you"
-                    self.msg_important("move.a_poisoned_dart_killed_you")
+                    self.msg_bad("move.a_poisoned_dart_killed_you")
                     self.clamp_player_hp()
                     return
                 poison_saved = self.save_vs_poison()
@@ -5120,7 +5160,7 @@ class Game:
                 if poison_saved or rogue_rings.is_wearing(self.p, rogue_rings.R_SUSTSTR):
                     self.msg("move.a_small_dart_just_hit_you_in_the_shoulder")
                 else:
-                    self.msg_important("move.a_small_dart_just_hit_you_in_the_shoulder")
+                    self.msg_bad("move.a_small_dart_just_hit_you_in_the_shoulder")
             else:
                 self.msg("move.a_small_dart_whizzes_by_your_ear_and_vanishes")
         elif name=="rust trap":
@@ -5140,14 +5180,14 @@ class Game:
         )
         if result == "vanish":
             if important:
-                self.msg_important("move.the_rust_vanishes_instantly")
+                self.msg_bad("move.the_rust_vanishes_instantly")
             else:
                 self.msg("move.the_rust_vanishes_instantly")
             return
         arm.ench-=1
         self.p.recalc_ac()
         if important:
-            self.msg_important("move.your_armor_weakens")
+            self.msg_bad("move.your_armor_weakens")
         else:
             self.msg("move.your_armor_weakens")
 
@@ -5663,7 +5703,7 @@ class Game:
         old_state = self.p.state
         m=self.p.hunger()
         if m:
-            self.msg_important(m)
+            self.msg_bad(m)
         if rogue_daemons.stomach_stops_running(old_state, self.p.state):
             self.clear_running_count()
             self.clear_to_death_only()
@@ -7217,6 +7257,7 @@ class Game:
         self.online_sync_result = str(result.get("message") or result.get("status") or "Registration failed.")
 
     def enter_online_scoreboard(self, auto_sync=False, difficulty=None):
+        self.stop_scoreboard_bgm()
         self.apply_palette()
         self.ensure_online_score_state()
         if not hasattr(self, "online_profile"):
@@ -7793,6 +7834,7 @@ class Game:
     def update(self):
         if hasattr(self, "sfx"):
             self.sfx.update()
+        self.update_death_result_bgm()
         if self.st in (ST_LOGO, ST_LANGUAGE, ST_TITLE, ST_DIFFICULTY, ST_NYANDOR_BRIEF, ST_NYANDOR_GUIDE, ST_NAME, ST_ONLINE_SCORE, ST_ONLINE_REGISTER, ST_ONLINE_PIN, ST_ONLINE_CONFIRM, ST_ONLINE_LOCAL_CONFIRM):
             self.begin_input()
             if self.st == ST_LOGO: self.upd_logo()

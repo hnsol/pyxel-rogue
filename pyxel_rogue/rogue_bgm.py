@@ -86,7 +86,7 @@ class DungeonBgmController:
         generator_factory=BGMGenerator,
         seed: int | None = None,
         first_channel: int = 0,
-        first_sound: int = 4,
+        first_sound: int = 40,
         sfx_active=None,
     ):
         self.pyxel = pyxel_module

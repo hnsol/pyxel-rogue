@@ -16,9 +16,9 @@
 - Create: `pyxel_rogue/rogue_sfx.py`
 - Create: `tests/test_rogue_sfx.py`
 
-- [x] Write failing unittest coverage for priority arbitration, playback on ch3, BGM resume after completion, missing asset disabling, and sound copy without numpy.
+- [x] Write failing unittest coverage for priority arbitration, playback on ch3, BGM resume after completion, missing asset disabling, and upstream sound numbering.
 - [x] Run `python3 -m unittest tests.test_rogue_sfx` and confirm expected failures.
-- [x] Implement `SfxController`, constants, priority table, `copy_sound()`, `copy_se_pack_slots()`, and `load_se_pack()`.
+- [x] Implement `SfxController`, constants, priority table, `copy_sound()`, and `load_se_pack()`.
 - [x] Run `python3 -m unittest tests.test_rogue_sfx` and confirm pass.
 
 ### Task 2: BGM/SFX Channel Cooperation
